@@ -2,43 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ZaraFix - Provider Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }
-    h2 { text-align: center; margin-bottom: 20px; }
+    body { font-family: Arial; background: #f5f7fa; padding: 20px; }
+    h2 { text-align: center; }
     .card {
-      background: #fff; padding: 15px; margin: 10px auto;
-      border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.05);
-      max-width: 700px;
+      background: white; padding: 15px; margin: 10px auto;
+      border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 700px;
     }
-    .card strong { display: inline-block; width: 120px; color: #333; }
-    .accept-btn {
-      background: #4caf50; color: white; padding: 8px 12px;
-      border: none; border-radius: 5px; margin-top: 10px; cursor: pointer;
+    .card strong { display: inline-block; width: 130px; color: #333; }
+    .btn3d {
+      background: linear-gradient(to bottom, #2196f3, #1976d2);
+      color: white; padding: 10px; border-radius: 6px;
+      border: none; cursor: pointer; font-weight: bold;
+      box-shadow: 0 6px #0d47a1; transition: 0.2s;
     }
-    .accepted-list {
-      margin-top: 10px; background: #e8f5e9; padding: 10px;
-      border-radius: 5px; font-size: 14px;
+    .btn3d:active {
+      transform: translateY(3px);
+      box-shadow: 0 3px #0d47a1;
     }
     .whatsapp-btn {
       display: inline-block; background: linear-gradient(to bottom, #25D366, #128C7E);
       color: white; padding: 8px 14px; border-radius: 6px;
       text-decoration: none; margin-top: 10px; box-shadow: 0 4px #0b5e4e;
     }
+    #walletSection {
+      text-align: center; margin: 10px auto; font-weight: bold; color: green;
+    }
   </style>
 </head>
 <body>
   <h2>ZaraFix - Provider Dashboard</h2>
 
-  <!-- Provider Login Info -->
+  <div id="walletSection">Wallet Balance: ₹0</div>
+
+  <!-- Provider Login -->
   <div id="providerInfo" style="max-width: 700px; margin: auto;">
     <input type="text" id="providerName" placeholder="Your Name" required />
     <input type="text" id="shopName" placeholder="Shop Name" required />
     <input type="text" id="providerAddress" placeholder="Address" required />
     <input type="text" id="providerPhone" placeholder="WhatsApp Number" required />
+
     <select id="providerCategory" required>
       <option value="">-- Select Category --</option>
       <option value="appliance">Appliance Repair</option>
@@ -51,10 +58,12 @@
       <option value="logistics">Logistics</option>
       <option value="commercial">Commercial Services</option>
     </select>
+
     <select id="providerSubcategory" required>
       <option value="">-- Select Subcategory --</option>
     </select>
-    <button onclick="loadRequests()">Login as Provider</button>
+
+    <button class="btn3d" onclick="loadRequests()">Login as Provider</button>
   </div>
 
   <div id="requestsContainer" style="margin-top: 30px;"></div>
@@ -86,17 +95,19 @@
 
     document.getElementById("providerCategory").addEventListener("change", function () {
       const selected = this.value;
-      const subcategorySelect = document.getElementById("providerSubcategory");
-      subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
+      const subcat = document.getElementById("providerSubcategory");
+      subcat.innerHTML = '<option value="">-- Select Subcategory --</option>';
       if (subcategories[selected]) {
-        subcategories[selected].forEach(service => {
-          const opt = document.createElement('option');
-          opt.value = service;
-          opt.textContent = service;
-          subcategorySelect.appendChild(opt);
+        subcategories[selected].forEach(sc => {
+          const opt = document.createElement("option");
+          opt.value = sc;
+          opt.textContent = sc;
+          subcat.appendChild(opt);
         });
       }
     });
+
+    let providerData = {};
 
     function loadRequests() {
       const name = document.getElementById("providerName").value;
@@ -107,23 +118,28 @@
       const subcategory = document.getElementById("providerSubcategory").value;
 
       if (!name || !shop || !address || !phone || !category || !subcategory) {
-        alert("Please fill in all provider details.");
+        alert("Please fill all provider details");
         return;
       }
+
+      providerData = { name, shop, address, phone, category, subcategory };
+
+      db.ref("providerWallets/" + phone).once("value", snap => {
+        const balance = (snap.val() && snap.val().balance) || 0;
+        providerData.balance = balance;
+        document.getElementById("walletSection").innerText = "Wallet Balance: ₹" + balance;
+      });
 
       db.ref("serviceRequests").on("value", snapshot => {
         const container = document.getElementById("requestsContainer");
         container.innerHTML = "";
-
         if (snapshot.exists()) {
           snapshot.forEach(child => {
             const key = child.key;
             const data = child.val();
-
+            const accepted = data.acceptedBy || [];
+            const alreadyAccepted = accepted.some(p => p.phone === phone);
             if (data.category === category && data.subcategory === subcategory) {
-              const accepted = data.acceptedBy || [];
-              const alreadyAccepted = accepted.some(p => p.phone === phone);
-
               const card = document.createElement("div");
               card.className = "card";
               card.innerHTML = `
@@ -132,14 +148,10 @@
                 <div><strong>Category:</strong> ${data.category}</div>
                 <div><strong>Service:</strong> ${data.subcategory}</div>
                 <div><strong>Description:</strong> ${data.description}</div>
-                ${alreadyAccepted ?
-                  `<a class="whatsapp-btn" href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>` :
-                  `<button class="accept-btn" onclick="acceptRequest('${key}', '${name}', '${shop}', '${address}', '${phone}')">Accept</button>`
+                ${alreadyAccepted
+                  ? `<a class="whatsapp-btn" href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>`
+                  : `<button class="btn3d" onclick="acceptRequest('${key}', '${data.phone}')">Accept for ₹20</button>`
                 }
-                <div class="accepted-list">
-                  <strong>Accepted By:</strong><br>
-                  ${(accepted.map(p => `• ${p.name} (${p.shop})`).join("<br>") || "None")}
-                </div>
               `;
               container.appendChild(card);
             }
@@ -148,19 +160,36 @@
       });
     }
 
-    function acceptRequest(requestId, name, shop, address, phone) {
-      const ref = db.ref("serviceRequests/" + requestId + "/acceptedBy");
-      ref.once("value", snap => {
-        const accepted = snap.val() || [];
-        const alreadyAccepted = accepted.some(p => p.phone === phone);
-
-        if (!alreadyAccepted) {
-          accepted.push({ name, shop, address, phone });
-          ref.set(accepted).then(() => {
-            alert("Request accepted successfully!");
-            loadRequests();
-          });
+    function acceptRequest(requestId, userPhone) {
+      const phone = providerData.phone;
+      db.ref("providerWallets/" + phone).once("value", snap => {
+        let balance = (snap.val() && snap.val().balance) || 0;
+        if (balance < 20) {
+          alert("Insufficient balance! ₹20 needed.");
+          return;
         }
+
+        const ref = db.ref("serviceRequests/" + requestId + "/acceptedBy");
+        ref.once("value", snap2 => {
+          const accepted = snap2.val() || [];
+          const alreadyAccepted = accepted.some(p => p.phone === phone);
+          if (!alreadyAccepted) {
+            balance -= 20;
+            db.ref("providerWallets/" + phone).set({ balance }).then(() => {
+              document.getElementById("walletSection").innerText = "Wallet Balance: ₹" + balance;
+              accepted.push({
+                name: providerData.name,
+                shop: providerData.shop,
+                address: providerData.address,
+                phone
+              });
+              ref.set(accepted).then(() => {
+                alert("Accepted successfully! ₹20 deducted.");
+                loadRequests();
+              });
+            });
+          }
+        });
       });
     }
   </script>
