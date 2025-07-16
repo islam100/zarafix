@@ -2,194 +2,158 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>ZaraFix - Request a Service</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - Book a Service</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f5f7fa;
-      padding: 20px;
-    }
-
-    form, #dashboard {
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 700px;
-      margin: 20px auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-    }
-
-    label {
-      font-weight: bold;
-      margin-top: 10px;
-      display: block;
-    }
-
-    select, input, textarea {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      color: white;
-      background: linear-gradient(to bottom, #4CAF50, #388E3C);
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 6px #2E7D32;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 20px;
-    }
-
-    button:active {
-      transform: translateY(3px);
-      box-shadow: 0 3px #2E7D32;
-    }
-
-    #statusOutput {
-      background: #e8f5e9;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 6px;
-      display: none;
-    }
+    body { font-family: sans-serif; background: #f5f7fa; padding: 20px; }
+    form, #dashboard { background: #fff; padding: 20px; border-radius: 10px; max-width: 700px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    label, select, input, textarea { display: block; width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; }
+    button { width: 100%; padding: 14px; font-size: 16px; color: white; background: linear-gradient(to bottom, #4CAF50, #388E3C); border: none; border-radius: 10px; box-shadow: 0 6px #2E7D32; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
+    button:active { transform: translateY(3px); box-shadow: 0 3px #2E7D32; }
+    #statusOutput { background: #e8f5e9; padding: 15px; border-radius: 6px; display: none; }
   </style>
 </head>
 <body>
-  <form id="serviceRequestForm">
-    <h2>ZaraFix - Request a Service</h2>
 
-    <label for="name">Full Name</label>
-    <input type="text" id="name" name="name" required />
+<form id="serviceRequestForm">
+  <h2>ZaraFix - Request a Service</h2>
 
-    <label for="address">Address</label>
-    <input type="text" id="address" name="address" required />
+  <label>Full Name</label>
+  <input id="name" required>
 
-    <label for="phone">WhatsApp Number</label>
-    <input type="text" id="phone" name="phone" required />
+  <label>Address</label>
+  <input id="address" required>
 
-    <label for="category">Service Category</label>
-    <select id="category" name="category" required>
-      <option value="">-- Select Category --</option>
-      <option value="home">Home Services</option>
-      <option value="appliance">Appliance Repair</option>
-      <option value="cleaning">Cleaning Services</option>
-      <option value="auto">Auto Services</option>
-      <option value="personal">Personal Services</option>
-      <option value="relocation">Relocation & Logistics</option>
-      <option value="digital">Digital & Networking</option>
-      <option value="commercial">Commercial & Office Services</option>
-      <option value="professional">Professional Services</option>
-    </select>
+  <label>WhatsApp Number</label>
+  <input id="phone" required>
 
-    <label for="subcategory">Sub Category (Select Service)</label>
-    <select id="subcategory" name="subcategory" required>
-      <option value="">-- Select Service --</option>
-    </select>
+  <label>Category</label>
+  <select id="category" required>
+    <option value="">-- Select Category --</option>
+    <option value="home">Home Services</option>
+    <option value="appliance">Appliance Repair</option>
+    <option value="cleaning">Cleaning Services</option>
+    <option value="auto">Auto Services</option>
+    <option value="personal">Personal Services</option>
+    <option value="relocation">Relocation & Logistics</option>
+    <option value="digital">Digital & Networking</option>
+    <option value="commercial">Commercial Services</option>
+    <option value="professional">Professional Services</option>
+  </select>
 
-    <label for="description">Describe Your Issue</label>
-    <textarea id="description" name="description" rows="4" required></textarea>
+  <label>Service</label>
+  <select id="subcategory" required>
+    <option value="">-- Select Service --</option>
+  </select>
 
-    <button type="submit">Submit Request</button>
-  </form>
+  <label>Description</label>
+  <textarea id="description" rows="4" required></textarea>
 
-  <div style="text-align:center">
-    <button onclick="showDashboard()">📋 View My Request Status</button>
-  </div>
+  <button type="submit">Submit Request</button>
+</form>
 
-  <div id="dashboard" style="display:none">
-    <h2>Your Request Status</h2>
-    <div id="statusOutput">Loading...</div>
-  </div>
+<div style="text-align:center;">
+  <button id="viewStatusBtn">📋 View My Request Status</button>
+</div>
 
-  <script>
-    const subcategories = {
-      home: ["Electrician", "Plumber", "Carpenter", "Painter", "Interior Designer", "POP Ceiling", "Pest Control"],
-      appliance: ["Fridge Repair", "Washing Machine Repair", "AC Repair", "TV Repair", "Microwave Repair"],
-      cleaning: ["House Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
-      auto: ["Car Repair", "Car Wash", "Bike Repair", "Battery Replacement", "Roadside Assistance"],
-      personal: ["Babysitter", "Cook at Home", "Driver on Demand", "Makeup Artist", "Security Guard"],
-      relocation: ["Packers and Movers", "Home Shifting", "Vehicle Shifting"],
-      digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Setup"],
-      commercial: ["Office Cleaning", "Factory Electrician", "Shop Branding"],
-      professional: ["Doctor", "Advocate", "Chartered Accountant", "Architect", "Notary", "Legal Advisor", "Physiotherapist"]
+<div id="dashboard" style="display:none;">
+  <h2>Your Request Status</h2>
+  <div id="statusOutput">Loading...</div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const subcategories = {
+    home: ["Electrician", "Plumber", "Carpenter", "Painter", "Interior Designer", "Pest Control"],
+    appliance: ["Fridge Repair", "Washing Machine Repair", "AC Repair", "TV Repair", "Microwave Repair"],
+    cleaning: ["House Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
+    auto: ["Car Repair", "Car Wash", "Bike Repair", "Battery Replacement", "Roadside Assistance"],
+    personal: ["Babysitter", "Cook at Home", "Driver on Demand", "Makeup Artist", "Security Guard"],
+    relocation: ["Packers and Movers", "Home Shifting", "Vehicle Shifting"],
+    digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Setup"],
+    commercial: ["Office Cleaning", "Factory Electrician", "Shop Branding"],
+    professional: ["Doctor", "Advocate", "Chartered Accountant", "Architect", "Consultant"]
+  };
+
+  const catSelect = document.getElementById('category');
+  const subcatSelect = document.getElementById('subcategory');
+
+  catSelect.onchange = () => {
+    const selectedCat = catSelect.value;
+    subcatSelect.innerHTML = '<option value="">-- Select Service --</option>';
+    if (subcategories[selectedCat]) {
+      subcategories[selectedCat].forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub;
+        opt.textContent = sub;
+        subcatSelect.appendChild(opt);
+      });
+    }
+  };
+
+  let lastRequestId = null;
+  document.getElementById('serviceRequestForm').onsubmit = function(e) {
+    e.preventDefault();
+    const requestData = {
+      name: name.value,
+      address: address.value,
+      phone: phone.value,
+      category: category.value,
+      subcategory: subcategory.value,
+      description: description.value,
+      assignedTo: null,
+      timestamp: new Date().toISOString()
     };
 
-    const categorySelect = document.getElementById('category');
-    const subcategorySelect = document.getElementById('subcategory');
-    let lastRequest = null;
-
-    categorySelect.addEventListener('change', function() {
-      const selectedCategory = this.value;
-      subcategorySelect.innerHTML = '<option value="">-- Select Service --</option>';
-      if (subcategories[selectedCategory]) {
-        subcategories[selectedCategory].forEach(service => {
-          const option = document.createElement('option');
-          option.value = service;
-          option.textContent = service;
-          subcategorySelect.appendChild(option);
-        });
-      }
+    db.ref('serviceRequests').push(requestData).then(ref => {
+      lastRequestId = ref.key;
+      alert("✅ Request submitted successfully!");
+      this.reset();
+    }).catch(err => {
+      alert("❌ Error: " + err.message);
     });
+  };
 
-    document.getElementById('serviceRequestForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const name = document.getElementById('name').value;
-      const address = document.getElementById('address').value;
-      const phone = document.getElementById('phone').value;
-      const category = categorySelect.value;
-      const subcategory = subcategorySelect.value;
-      const description = document.getElementById('description').value;
-
-      // Save last request info
-      lastRequest = {
-        name,
-        address,
-        phone,
-        category,
-        subcategory,
-        description,
-        acceptedBy: null // Placeholder for assignment later
-      };
-
-      alert("Your request has been submitted successfully!");
-      document.getElementById('serviceRequestForm').reset();
-    });
-
-    function showDashboard() {
-      const output = document.getElementById('statusOutput');
-      document.getElementById('dashboard').style.display = 'block';
-
-      if (!lastRequest) {
-        output.innerHTML = "No request found.";
-        output.style.display = 'block';
-        return;
-      }
-
-      if (lastRequest.acceptedBy) {
-        output.innerHTML = `✅ Accepted by: <strong>${lastRequest.acceptedBy.name}</strong><br>
-        🏪 Shop: ${lastRequest.acceptedBy.shop}<br>
-        📍 Address: ${lastRequest.acceptedBy.address}<br>
-        📱 <a href='https://wa.me/${lastRequest.acceptedBy.whatsapp}' target='_blank'>WhatsApp Chat</a>`;
-      } else {
-        output.innerHTML = "❌ No one has accepted your request yet.";
-      }
-      output.style.display = 'block';
+  document.getElementById('viewStatusBtn').onclick = () => {
+    if (!lastRequestId) {
+      alert("❗ Submit your request first.");
+      return;
     }
-  </script>
+
+    const out = document.getElementById('statusOutput');
+    document.getElementById('dashboard').style.display = 'block';
+    out.textContent = "Checking..."; out.style.display = "block";
+
+    db.ref('serviceRequests/' + lastRequestId).once('value').then(snap => {
+      const data = snap.val();
+      if (data.assignedTo) {
+        db.ref('serviceProviders/' + data.assignedTo).once('value').then(provSnap => {
+          const p = provSnap.val();
+          out.innerHTML = `
+            ✅ Assigned to: <b>${p.name}</b><br>
+            🏪 ${p.shopName}<br>
+            📍 ${p.address}<br>
+            📱 <a href="https://wa.me/${p.whatsapp}" target="_blank">Contact on WhatsApp</a>
+          `;
+        });
+      } else {
+        out.textContent = "❌ No one has accepted your request yet.";
+      }
+    });
+  };
+</script>
 </body>
 </html>
