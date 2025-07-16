@@ -45,6 +45,25 @@
       height: 120px;
     }
 
+    select[multiple] option {
+      background-color: #ffffff;
+      color: #333;
+      padding: 10px;
+    }
+
+    select[multiple] option:nth-child(odd) {
+      background-color: #e3f2fd;
+    }
+
+    select[multiple] option:nth-child(even) {
+      background-color: #fce4ec;
+    }
+
+    select[multiple] option:hover {
+      background-color: #c8e6c9 !important;
+      color: #1b5e20;
+    }
+
     button {
       width: 100%;
       padding: 12px;
@@ -81,8 +100,7 @@
       <option value="Cleaning & Pest Control">Cleaning & Pest Control</option>
     </select>
 
-    <select id="subCategory" multiple required>
-      <option value="">-- Select Subcategory --</option>
+    <select id="subCategory" multiple required disabled>
     </select>
 
     <button type="submit">Submit</button>
@@ -109,16 +127,20 @@
       "Cleaning & Pest Control": ["House Cleaning", "Pest Control", "Sofa Cleaning", "Bathroom Cleaning"]
     };
 
-    document.getElementById('category').addEventListener('change', function () {
-      const subCat = document.getElementById('subCategory');
+    const categorySelect = document.getElementById('category');
+    const subCatSelect = document.getElementById('subCategory');
+
+    categorySelect.addEventListener('change', function () {
       const selected = this.value;
-      subCat.innerHTML = '';
+      subCatSelect.innerHTML = '';
+      subCatSelect.disabled = false;
+
       if (subCategories[selected]) {
         subCategories[selected].forEach(item => {
           const option = document.createElement('option');
           option.value = item;
           option.textContent = item;
-          subCat.appendChild(option);
+          subCatSelect.appendChild(option);
         });
       }
     });
@@ -126,19 +148,20 @@
     document.getElementById('serviceForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const formData = new FormData(this);
-      const subCatSelected = Array.from(document.getElementById('subCategory').selectedOptions).map(opt => opt.value);
+      const subCatSelected = Array.from(subCatSelect.selectedOptions).map(opt => opt.value);
       const data = {
         name: formData.get('name'),
         address: formData.get('address'),
         whatsapp: formData.get('whatsapp'),
         description: formData.get('description'),
-        category: document.getElementById('category').value,
+        category: categorySelect.value,
         subcategories: subCatSelected,
         timestamp: new Date().toISOString()
       };
       db.ref('serviceRequests').push(data).then(() => {
         alert('Form submitted successfully!');
         document.getElementById('serviceForm').reset();
+        subCatSelect.disabled = true;
       });
     });
   </script>
