@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Service Booking Form - ZaraFix</title>
+  <title>ZaraFix – Service Booking Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -38,23 +38,23 @@
       background: #fff;
     }
 
-    button {
+    button, #viewDashboardBtn {
       width: 100%;
       padding: 14px;
       font-size: 16px;
       color: white;
-      background: linear-gradient(to bottom, #2196f3, #1976d2);
+      background: linear-gradient(to bottom, #4CAF50, #388E3C);
       border: none;
       border-radius: 10px;
-      box-shadow: 0 6px #0d47a1;
+      box-shadow: 0 6px #2E7D32;
       cursor: pointer;
       transition: all 0.2s ease;
       margin-top: 15px;
     }
 
-    button:active {
+    button:active, #viewDashboardBtn:active {
       transform: translateY(3px);
-      box-shadow: 0 3px #0d47a1;
+      box-shadow: 0 3px #2E7D32;
     }
 
     #selectedDisplay {
@@ -65,79 +65,63 @@
       font-size: 15px;
       display: none;
     }
+
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 5px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    #dashboardSection {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: 30px auto;
+    }
   </style>
 </head>
 <body>
 
   <form id="serviceForm">
-    <h2>Book a Service</h2>
+    <h2>ZaraFix – Book a Service</h2>
     <input type="text" name="name" placeholder="Full Name" required />
     <input type="text" name="address" placeholder="Address" required />
     <input type="text" name="whatsapp" placeholder="WhatsApp Number" required />
-    <textarea name="description" placeholder="Service Description" required></textarea>
+    <textarea name="description" placeholder="Describe your issue..." required></textarea>
 
     <label>Select a Service</label>
     <select id="services" required>
-      <option disabled selected value="">-- Select a Service --</option>
-      <optgroup label="Home Appliance">
-        <option>Fridge Repair</option>
-        <option>AC Repair</option>
-        <option>Washing Machine Repair</option>
-        <option>TV Repair</option>
-        <option>Microwave Repair</option>
-        <option>Geyser Repair</option>
-        <option>Gas Stove Repair</option>
-      </optgroup>
-
-      <optgroup label="Cleaning">
-        <option>House Cleaning</option>
-        <option>Kitchen Cleaning</option>
-        <option>Bathroom Cleaning</option>
-        <option>Mattress Cleaning</option>
-        <option>Sofa Cleaning</option>
-        <option>Car Cleaning</option>
-      </optgroup>
-
-      <optgroup label="Auto Services">
-        <option>Car Repair</option>
-        <option>Car Wash</option>
-        <option>Bike Repair</option>
-        <option>Bike Servicing</option>
-        <option>Car Battery Replacement</option>
-        <option>Bike Battery Replacement</option>
-        <option>Roadside Assistance</option>
-      </optgroup>
-
-      <optgroup label="Electrical & Plumbing">
-        <option>Electrician</option>
-        <option>Plumber</option>
-        <option>Inverter Repair</option>
-        <option>Water Purifier Repair</option>
-        <option>RO Service</option>
-        <option>CCTV Installation</option>
-        <option>Solar Panel Installation</option>
-      </optgroup>
-
-      <optgroup label="Others">
-        <option>Painter</option>
-        <option>Carpenter</option>
-        <option>Interior Designer</option>
-        <option>Packers and Movers</option>
-        <option>Security Guard Service</option>
-        <option>Photographer</option>
-        <option>Makeup Artist</option>
-        <option>Cook at Home</option>
-        <option>Babysitter</option>
-        <option>Beauty Parlour at Home</option>
-      </optgroup>
+      <option disabled selected value="">-- Choose a Service --</option>
+      <option>AC Repair</option>
+      <option>Electrician</option>
+      <option>Bike Repair</option>
+      <option>Plumber</option>
+      <option>Car Wash</option>
     </select>
 
     <div id="selectedDisplay"></div>
 
     <button type="submit">Submit</button>
+    <button type="button" id="viewDashboardBtn" style="display:none;">View Assigned Provider</button>
   </form>
 
+  <div id="dashboardSection" style="display:none;">
+    <h2>Service Accepted By:</h2>
+    <p><strong>Name:</strong> <span id="providerName">...</span></p>
+    <p><strong>Shop:</strong> <span id="shopName">...</span></p>
+    <p><strong>Address:</strong> <span id="address">...</span></p>
+    <a id="whatsappBtn" class="whatsapp-btn" href="#" target="_blank">Chat on WhatsApp</a>
+  </div>
+
   <script>
+    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -147,7 +131,6 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -164,6 +147,7 @@
       }
     });
 
+    // ✅ On Form Submit
     document.getElementById('serviceForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const formData = new FormData(this);
@@ -183,13 +167,45 @@
         timestamp: new Date().toISOString()
       };
 
-      db.ref('serviceRequests').push(data).then(() => {
+      db.ref('serviceRequests').push(data).then(snapshot => {
+        const requestId = snapshot.key;
+        localStorage.setItem("userRequestId", requestId);
         alert('Form submitted successfully!');
         document.getElementById('serviceForm').reset();
         displayBox.style.display = 'none';
+        document.getElementById('viewDashboardBtn').style.display = 'block';
+        document.getElementById('dashboardSection').style.display = 'none';
+      });
+    });
+
+    // ✅ View Assigned Provider
+    document.getElementById('viewDashboardBtn').addEventListener('click', () => {
+      const requestId = localStorage.getItem("userRequestId");
+      if (!requestId) {
+        alert("No request found.");
+        return;
+      }
+
+      db.ref("serviceRequests/" + requestId).once("value").then(snapshot => {
+        const request = snapshot.val();
+        if (request && request.assignedTo) {
+          db.ref("serviceProviders/" + request.assignedTo).once("value").then(providerSnap => {
+            const provider = providerSnap.val();
+            document.getElementById("providerName").innerText = provider.name;
+            document.getElementById("shopName").innerText = provider.shopName;
+            document.getElementById("address").innerText = provider.address;
+            document.getElementById("whatsappBtn").href = `https://wa.me/${provider.whatsapp}`;
+            document.getElementById("dashboardSection").style.display = 'block';
+          });
+        } else {
+          document.getElementById("dashboardSection").style.display = 'block';
+          document.getElementById("dashboardSection").innerHTML = `
+            <h2>Service Accepted By:</h2>
+            <p style="color:red; font-weight:bold;">No one has accepted your request yet.</p>
+          `;
+        }
       });
     });
   </script>
-
 </body>
 </html>
