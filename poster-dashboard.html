@@ -1,72 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ZaraFix - Provider Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix - Provider Secure Panel</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #f5f7fa; padding: 20px; }
+    body { font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }
     h2 { text-align: center; }
     .card {
-      background: white; padding: 15px; margin: 10px auto;
-      border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 700px;
+      background: #fff; padding: 15px; margin: 10px auto;
+      border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 700px;
     }
-    .card strong { display: inline-block; width: 130px; color: #333; }
-    .btn3d {
-      background: linear-gradient(to bottom, #2196f3, #1976d2);
-      color: white; padding: 10px; border-radius: 6px;
-      border: none; cursor: pointer; font-weight: bold;
-      box-shadow: 0 6px #0d47a1; transition: 0.2s;
+    .card strong { display: inline-block; width: 120px; color: #333; }
+    .btn {
+      background: linear-gradient(to bottom, #2196f3, #1976d2); color: white;
+      padding: 10px 16px; border-radius: 8px; cursor: pointer; border: none;
+      font-size: 16px; box-shadow: 0 6px #0d47a1; margin-top: 10px;
     }
-    .btn3d:active {
-      transform: translateY(3px);
-      box-shadow: 0 3px #0d47a1;
+    .btn:active {
+      transform: translateY(3px); box-shadow: 0 3px #0d47a1;
     }
-    .whatsapp-btn {
-      display: inline-block; background: linear-gradient(to bottom, #25D366, #128C7E);
-      color: white; padding: 8px 14px; border-radius: 6px;
-      text-decoration: none; margin-top: 10px; box-shadow: 0 4px #0b5e4e;
-    }
-    #walletSection {
-      text-align: center; margin: 10px auto; font-weight: bold; color: green;
-    }
+    #wallet { text-align: center; margin-bottom: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>ZaraFix - Provider Dashboard</h2>
-
-  <div id="walletSection">Wallet Balance: ₹0</div>
-
-  <!-- Provider Login -->
-  <div id="providerInfo" style="max-width: 700px; margin: auto;">
-    <input type="text" id="providerName" placeholder="Your Name" required />
-    <input type="text" id="shopName" placeholder="Shop Name" required />
-    <input type="text" id="providerAddress" placeholder="Address" required />
-    <input type="text" id="providerPhone" placeholder="WhatsApp Number" required />
-
-    <select id="providerCategory" required>
-      <option value="">-- Select Category --</option>
-      <option value="appliance">Appliance Repair</option>
-      <option value="cleaning">Cleaning</option>
-      <option value="auto">Auto Services</option>
-      <option value="home">Home Services</option>
-      <option value="digital">Digital & Security</option>
-      <option value="legal">Medical & Legal</option>
-      <option value="professional">Professional</option>
-      <option value="logistics">Logistics</option>
-      <option value="commercial">Commercial Services</option>
-    </select>
-
-    <select id="providerSubcategory" required>
-      <option value="">-- Select Subcategory --</option>
-    </select>
-
-    <button class="btn3d" onclick="loadRequests()">Login as Provider</button>
+  <h2>ZaraFix - Provider Secure Panel</h2>
+  <div style="text-align:center">
+    <button class="btn" onclick="signInWithGoogle()">Sign in with Google</button>
+    <button class="btn" onclick="logout()">Logout</button>
   </div>
-
-  <div id="requestsContainer" style="margin-top: 30px;"></div>
+  <div id="wallet"></div>
+  <div id="requestsContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -80,66 +48,50 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
 
-    const subcategories = {
-      appliance: ["Fridge Repair", "AC Repair", "Washing Machine", "Microwave", "Geyser", "TV Repair"],
-      cleaning: ["Home Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
-      auto: ["Bike Repair", "Car Repair", "Battery Replacement", "Roadside Assistance"],
-      home: ["Electrician", "Plumber", "Carpenter", "Painter", "POP Ceiling"],
-      digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Support", "Smart Home Setup"],
-      legal: ["Doctor Consultation", "Advocate", "CA Services", "Notary", "Document Work"],
-      professional: ["Interior Designer", "Makeup Artist", "Photographer", "Babysitter", "Cook"],
-      logistics: ["Packers & Movers", "Bike Transport", "House Shifting"],
-      commercial: ["Office Cleaning", "Security Guard", "Shop Branding", "Business Setup Help"]
-    };
+    let currentUser = null;
+    let userWallet = 0;
 
-    document.getElementById("providerCategory").addEventListener("change", function () {
-      const selected = this.value;
-      const subcat = document.getElementById("providerSubcategory");
-      subcat.innerHTML = '<option value="">-- Select Subcategory --</option>';
-      if (subcategories[selected]) {
-        subcategories[selected].forEach(sc => {
-          const opt = document.createElement("option");
-          opt.value = sc;
-          opt.textContent = sc;
-          subcat.appendChild(opt);
-        });
-      }
-    });
+    function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(result => {
+          currentUser = result.user;
+          loadProviderWallet();
+          loadRequests();
+        })
+        .catch(error => alert("Login failed: " + error.message));
+    }
 
-    let providerData = {};
+    function logout() {
+      auth.signOut().then(() => {
+        location.reload();
+      });
+    }
+
+    function loadProviderWallet() {
+      const uid = currentUser.uid;
+      db.ref("providers/" + uid + "/wallet").once("value").then(snap => {
+        userWallet = snap.val() || 100; // default Rs.100 wallet
+        document.getElementById("wallet").innerText = `Wallet Balance: ₹${userWallet}`;
+      });
+    }
 
     function loadRequests() {
-      const name = document.getElementById("providerName").value;
-      const shop = document.getElementById("shopName").value;
-      const address = document.getElementById("providerAddress").value;
-      const phone = document.getElementById("providerPhone").value;
-      const category = document.getElementById("providerCategory").value;
-      const subcategory = document.getElementById("providerSubcategory").value;
+      const uid = currentUser.uid;
+      db.ref("providers/" + uid + "/category").once("value").then(catSnap => {
+        const providerCategory = catSnap.val();
 
-      if (!name || !shop || !address || !phone || !category || !subcategory) {
-        alert("Please fill all provider details");
-        return;
-      }
+        db.ref("serviceRequests").on("value", snap => {
+          const container = document.getElementById("requestsContainer");
+          container.innerHTML = "";
 
-      providerData = { name, shop, address, phone, category, subcategory };
-
-      db.ref("providerWallets/" + phone).once("value", snap => {
-        const balance = (snap.val() && snap.val().balance) || 0;
-        providerData.balance = balance;
-        document.getElementById("walletSection").innerText = "Wallet Balance: ₹" + balance;
-      });
-
-      db.ref("serviceRequests").on("value", snapshot => {
-        const container = document.getElementById("requestsContainer");
-        container.innerHTML = "";
-        if (snapshot.exists()) {
-          snapshot.forEach(child => {
+          snap.forEach(child => {
             const key = child.key;
             const data = child.val();
-            const accepted = data.acceptedBy || [];
-            const alreadyAccepted = accepted.some(p => p.phone === phone);
-            if (data.category === category && data.subcategory === subcategory) {
+
+            if (data.category === providerCategory && (!data.acceptedBy || !data.acceptedBy[uid])) {
               const card = document.createElement("div");
               card.className = "card";
               card.innerHTML = `
@@ -148,50 +100,56 @@
                 <div><strong>Category:</strong> ${data.category}</div>
                 <div><strong>Service:</strong> ${data.subcategory}</div>
                 <div><strong>Description:</strong> ${data.description}</div>
-                ${alreadyAccepted
-                  ? `<a class="whatsapp-btn" href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>`
-                  : `<button class="btn3d" onclick="acceptRequest('${key}', '${data.phone}')">Accept for ₹20</button>`
-                }
+                <button class="btn" onclick="acceptRequest('${key}')">Accept - ₹20</button>
+              `;
+              container.appendChild(card);
+            } else if (data.acceptedBy && data.acceptedBy[uid]) {
+              const card = document.createElement("div");
+              card.className = "card";
+              card.innerHTML = `
+                <div><strong>Name:</strong> ${data.name}</div>
+                <div><strong>Address:</strong> ${data.address}</div>
+                <div><strong>Category:</strong> ${data.category}</div>
+                <div><strong>Service:</strong> ${data.subcategory}</div>
+                <div><strong>Description:</strong> ${data.description}</div>
+                <a class="btn" href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>
               `;
               container.appendChild(card);
             }
           });
-        }
-      });
-    }
-
-    function acceptRequest(requestId, userPhone) {
-      const phone = providerData.phone;
-      db.ref("providerWallets/" + phone).once("value", snap => {
-        let balance = (snap.val() && snap.val().balance) || 0;
-        if (balance < 20) {
-          alert("Insufficient balance! ₹20 needed.");
-          return;
-        }
-
-        const ref = db.ref("serviceRequests/" + requestId + "/acceptedBy");
-        ref.once("value", snap2 => {
-          const accepted = snap2.val() || [];
-          const alreadyAccepted = accepted.some(p => p.phone === phone);
-          if (!alreadyAccepted) {
-            balance -= 20;
-            db.ref("providerWallets/" + phone).set({ balance }).then(() => {
-              document.getElementById("walletSection").innerText = "Wallet Balance: ₹" + balance;
-              accepted.push({
-                name: providerData.name,
-                shop: providerData.shop,
-                address: providerData.address,
-                phone
-              });
-              ref.set(accepted).then(() => {
-                alert("Accepted successfully! ₹20 deducted.");
-                loadRequests();
-              });
-            });
-          }
         });
       });
     }
+
+    function acceptRequest(requestId) {
+      const uid = currentUser.uid;
+      const ref = db.ref("serviceRequests/" + requestId + "/acceptedBy");
+
+      if (userWallet < 20) {
+        alert("Insufficient balance. Please recharge wallet.");
+        return;
+      }
+
+      ref.update({ [uid]: true }).then(() => {
+        // Deduct ₹20 from wallet
+        userWallet -= 20;
+        db.ref("providers/" + uid + "/wallet").set(userWallet);
+        document.getElementById("wallet").innerText = `Wallet Balance: ₹${userWallet}`;
+        alert("Request Accepted! ₹20 deducted from wallet.");
+        loadRequests();
+      });
+    }
+
+    // On load: check login
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loadProviderWallet();
+        loadRequests();
+        // Save default category (for demo)
+        db.ref("providers/" + user.uid).update({ category: "home" }); // Changeable by form
+      }
+    });
   </script>
 </body>
 </html>
