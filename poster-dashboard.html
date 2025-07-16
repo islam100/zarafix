@@ -1,47 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - Provider Panel (Secure)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZaraFix - Provider Login</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #eef3f7; padding: 20px; }
-    .card {
-      background: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 20px; margin: 20px auto; max-width: 700px;
+    body { font-family: Arial; padding: 30px; background: #f1f1f1; }
+    h2 { text-align: center; }
+    .box {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .btn {
-      padding: 10px 20px; border: none; border-radius: 8px;
-      background: linear-gradient(to bottom, #2196f3, #1976d2);
-      color: #fff; cursor: pointer; font-size: 16px;
-      box-shadow: 0 4px #0d47a1; transition: all 0.2s;
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
-    .btn:active { transform: translateY(2px); box-shadow: 0 2px #0d47a1; }
-    #requestsContainer a {
-      display: inline-block; margin-top: 10px;
-      padding: 8px 14px; background: #25d366; color: white; border-radius: 5px;
-      text-decoration: none;
+    button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background: linear-gradient(to bottom, #4CAF50, #388E3C);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px #2e7d32;
+      cursor: pointer;
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px #2e7d32;
     }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center">ZaraFix - Provider Panel</h2>
-  <div style="text-align:center">
-    <button class="btn" onclick="signInWithGoogle()">Login with Google</button>
-  </div>
 
-  <div id="providerInfo" class="card" style="display:none">
-    <p><strong>Welcome:</strong> <span id="providerName"></span></p>
-    <p><strong>Wallet Balance:</strong> ₹<span id="walletAmount">0</span></p>
-    <button class="btn" onclick="signOut()">Logout</button>
-  </div>
+  <h2>Provider Login</h2>
+  <div class="box">
+    <input type="text" id="shopName" placeholder="Shop Name" required>
+    <input type="text" id="phone" placeholder="WhatsApp Number" required>
 
-  <div id="requestsContainer"></div>
+    <select id="category" required>
+      <option value="">-- Select Category --</option>
+      <option value="appliance">Appliance Repair</option>
+      <option value="cleaning">Cleaning</option>
+      <option value="auto">Auto Services</option>
+      <option value="home">Home Services</option>
+      <option value="digital">Digital & Security</option>
+      <option value="legal">Medical & Legal</option>
+      <option value="professional">Professional</option>
+      <option value="logistics">Logistics</option>
+      <option value="commercial">Commercial Services</option>
+    </select>
+
+    <select id="subcategory" required>
+      <option value="">-- Select Subcategory --</option>
+    </select>
+
+    <button onclick="signIn()">Login with Google</button>
+  </div>
 
   <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -52,96 +82,73 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
-    let currentUser = null;
+    const subcategories = {
+      appliance: ["Fridge Repair", "AC Repair", "Washing Machine", "Microwave", "Geyser", "TV Repair"],
+      cleaning: ["Home Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
+      auto: ["Bike Repair", "Car Repair", "Battery Replacement", "Roadside Assistance"],
+      home: ["Electrician", "Plumber", "Carpenter", "Painter", "POP Ceiling"],
+      digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Support", "Smart Home Setup"],
+      legal: ["Doctor Consultation", "Advocate", "CA Services", "Notary", "Document Work"],
+      professional: ["Interior Designer", "Makeup Artist", "Photographer", "Babysitter", "Cook"],
+      logistics: ["Packers & Movers", "Bike Transport", "House Shifting"],
+      commercial: ["Office Cleaning", "Security Guard", "Shop Branding", "Business Setup Help"]
+    };
 
-    function signInWithGoogle() {
+    // Subcategory update
+    document.getElementById("category").addEventListener("change", function () {
+      const selected = this.value;
+      const subSelect = document.getElementById("subcategory");
+      subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
+      if (subcategories[selected]) {
+        subcategories[selected].forEach(sub => {
+          const opt = document.createElement("option");
+          opt.value = sub;
+          opt.textContent = sub;
+          subSelect.appendChild(opt);
+        });
+      }
+    });
+
+    // Sign In with Google
+    function signIn() {
+      const shopName = document.getElementById("shopName").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const category = document.getElementById("category").value;
+      const subcategory = document.getElementById("subcategory").value;
+
+      if (!shopName || !phone || !category || !subcategory) {
+        alert("Please fill all fields before login.");
+        return;
+      }
+
       const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
+      auth.signInWithPopup(provider)
         .then(result => {
-          currentUser = result.user;
-          const uid = currentUser.uid;
-          document.getElementById("providerName").textContent = currentUser.displayName;
-          document.getElementById("providerInfo").style.display = "block";
-          loadWallet();
-          loadRequests();
+          const user = result.user;
+          const providerData = {
+            uid: user.uid,
+            name: user.displayName,
+            email: user.email,
+            shopName,
+            phone,
+            category,
+            subcategory,
+            wallet: 100, // Default ₹100
+            verified: true,
+            createdAt: new Date().toISOString()
+          };
+          db.ref("providers/" + user.uid).set(providerData)
+            .then(() => {
+              alert("Login successful! Provider data saved.");
+              location.href = "dashboard.html"; // Change to your Provider Dashboard
+            });
         })
-        .catch(err => alert("Login Failed: " + err.message));
-    }
-
-    function signOut() {
-      firebase.auth().signOut().then(() => location.reload());
-    }
-
-    function loadWallet() {
-      const uid = currentUser.uid;
-      db.ref("providerWallets/" + uid).once("value", snap => {
-        const balance = snap.val() || 100; // Default ₹100
-        document.getElementById("walletAmount").textContent = balance;
-      });
-    }
-
-    function loadRequests() {
-      db.ref("serviceRequests").once("value", snap => {
-        const container = document.getElementById("requestsContainer");
-        container.innerHTML = "";
-        if (snap.exists()) {
-          snap.forEach(child => {
-            const key = child.key;
-            const data = child.val();
-            const acceptedBy = data.acceptedBy || [];
-            const alreadyAccepted = acceptedBy.includes(currentUser.uid);
-
-            if (!alreadyAccepted) {
-              const div = document.createElement("div");
-              div.className = "card";
-              div.innerHTML = `
-                <p><strong>Name:</strong> ${data.name}</p>
-                <p><strong>Address:</strong> ${data.address}</p>
-                <p><strong>Category:</strong> ${data.category}</p>
-                <p><strong>Service:</strong> ${data.subcategory}</p>
-                <p><strong>Description:</strong> ${data.description}</p>
-                <button class="btn" onclick="acceptRequest('${key}', '${data.phone}')">Accept for ₹20</button>
-              `;
-              container.appendChild(div);
-            } else {
-              const div = document.createElement("div");
-              div.className = "card";
-              div.innerHTML = `
-                <p><strong>You accepted this request.</strong></p>
-                <a href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>
-              `;
-              container.appendChild(div);
-            }
-          });
-        }
-      });
-    }
-
-    function acceptRequest(requestId, userPhone) {
-      const uid = currentUser.uid;
-      const walletRef = db.ref("providerWallets/" + uid);
-
-      walletRef.transaction(balance => {
-        if (balance >= 20) {
-          return balance - 20;
-        } else {
-          alert("Insufficient balance");
-          return;
-        }
-      }, (error, committed, snapshot) => {
-        if (committed) {
-          db.ref("serviceRequests/" + requestId + "/acceptedBy").once("value", snap => {
-            let arr = snap.val() || [];
-            arr.push(uid);
-            db.ref("serviceRequests/" + requestId + "/acceptedBy").set(arr);
-            alert("Accepted successfully. ₹20 deducted.");
-            loadWallet();
-            loadRequests();
-          });
-        }
-      });
+        .catch(error => {
+          alert("Login failed: " + error.message);
+        });
     }
   </script>
 </body>
