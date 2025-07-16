@@ -2,32 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Service Booking Form</title>
+  <title>Service Booking Form - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f0f4f8;
-      display: flex;
-      justify-content: center;
-      padding: 50px 20px;
+      background: #f5f7fa;
+      padding: 20px;
     }
 
     form {
       background: #fff;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      padding: 20px;
+      border-radius: 10px;
       max-width: 600px;
-      width: 100%;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 20px;
       color: #333;
+      margin-bottom: 20px;
     }
 
     input, select, textarea {
@@ -35,38 +33,14 @@
       padding: 12px;
       margin: 10px 0;
       font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(to bottom, #e6e9f0, #fefefe);
-      box-shadow: inset 2px 2px 5px #cfd8dc, inset -2px -2px 5px #ffffff;
-    }
-
-    select[multiple] {
-      height: 120px;
-    }
-
-    select[multiple] option {
-      padding: 10px;
-      color: #333;
-    }
-
-    select[multiple] option:nth-child(odd) {
-      background-color: #e3f2fd;
-    }
-
-    select[multiple] option:nth-child(even) {
-      background-color: #fce4ec;
-    }
-
-    select[multiple] option:hover {
-      background-color: #c8e6c9 !important;
-      color: #1b5e20;
-      font-weight: bold;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
     }
 
     button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       font-size: 16px;
       color: white;
       background: linear-gradient(to bottom, #2196f3, #1976d2);
@@ -74,6 +48,7 @@
       border-radius: 10px;
       box-shadow: 0 6px #0d47a1;
       cursor: pointer;
+      transition: all 0.2s ease;
       margin-top: 15px;
     }
 
@@ -81,9 +56,19 @@
       transform: translateY(3px);
       box-shadow: 0 3px #0d47a1;
     }
+
+    #selectedDisplay {
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-size: 15px;
+      display: none;
+    }
   </style>
 </head>
 <body>
+
   <form id="serviceForm">
     <h2>Book a Service</h2>
     <input type="text" name="name" placeholder="Full Name" required />
@@ -91,85 +76,120 @@
     <input type="text" name="whatsapp" placeholder="WhatsApp Number" required />
     <textarea name="description" placeholder="Service Description" required></textarea>
 
-    <select id="category" required>
-      <option value="" disabled selected>Select Category</option>
-      <option value="Home Services">Home Services</option>
-      <option value="Electronics Repair">Electronics Repair</option>
-      <option value="Car Services">Car Services</option>
-      <option value="Bike Services">Bike Services</option>
-      <option value="Cleaning & Pest Control">Cleaning & Pest Control</option>
+    <label>Select a Service</label>
+    <select id="services" required>
+      <option disabled selected value="">-- Select a Service --</option>
+      <optgroup label="Home Appliance">
+        <option>Fridge Repair</option>
+        <option>AC Repair</option>
+        <option>Washing Machine Repair</option>
+        <option>TV Repair</option>
+        <option>Microwave Repair</option>
+        <option>Geyser Repair</option>
+        <option>Gas Stove Repair</option>
+      </optgroup>
+
+      <optgroup label="Cleaning">
+        <option>House Cleaning</option>
+        <option>Kitchen Cleaning</option>
+        <option>Bathroom Cleaning</option>
+        <option>Mattress Cleaning</option>
+        <option>Sofa Cleaning</option>
+        <option>Car Cleaning</option>
+      </optgroup>
+
+      <optgroup label="Auto Services">
+        <option>Car Repair</option>
+        <option>Car Wash</option>
+        <option>Bike Repair</option>
+        <option>Bike Servicing</option>
+        <option>Car Battery Replacement</option>
+        <option>Bike Battery Replacement</option>
+        <option>Roadside Assistance</option>
+      </optgroup>
+
+      <optgroup label="Electrical & Plumbing">
+        <option>Electrician</option>
+        <option>Plumber</option>
+        <option>Inverter Repair</option>
+        <option>Water Purifier Repair</option>
+        <option>RO Service</option>
+        <option>CCTV Installation</option>
+        <option>Solar Panel Installation</option>
+      </optgroup>
+
+      <optgroup label="Others">
+        <option>Painter</option>
+        <option>Carpenter</option>
+        <option>Interior Designer</option>
+        <option>Packers and Movers</option>
+        <option>Security Guard Service</option>
+        <option>Photographer</option>
+        <option>Makeup Artist</option>
+        <option>Cook at Home</option>
+        <option>Babysitter</option>
+        <option>Beauty Parlour at Home</option>
+      </optgroup>
     </select>
 
-    <select id="subCategory" multiple required disabled></select>
+    <div id="selectedDisplay"></div>
 
     <button type="submit">Submit</button>
   </form>
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const subCategories = {
-      "Home Services": ["Plumber", "Electrician", "Carpenter", "Painter"],
-      "Electronics Repair": ["AC Repair", "Fridge Repair", "TV Repair", "Mobile Repair"],
-      "Car Services": ["Car Wash", "Car Repair", "Battery Replacement", "Insurance Renewal"],
-      "Bike Services": ["Bike Repair", "Bike Wash", "Engine Repair", "Tyre Change"],
-      "Cleaning & Pest Control": ["House Cleaning", "Pest Control", "Sofa Cleaning", "Bathroom Cleaning"]
-    };
+    const serviceSelect = document.getElementById('services');
+    const displayBox = document.getElementById('selectedDisplay');
 
-    const categorySelect = document.getElementById('category');
-    const subCatSelect = document.getElementById('subCategory');
-
-    categorySelect.addEventListener('change', function () {
-      const selected = this.value;
-      subCatSelect.innerHTML = '';
-      subCatSelect.disabled = false;
-
-      // Add default unselectable
-      const defaultOption = document.createElement('option');
-      defaultOption.text = '-- Select Subcategory --';
-      defaultOption.disabled = true;
-      subCatSelect.appendChild(defaultOption);
-
-      if (subCategories[selected]) {
-        subCategories[selected].forEach((item, index) => {
-          const option = document.createElement('option');
-          option.value = item;
-          option.textContent = item;
-          option.style.backgroundColor = index % 2 === 0 ? '#e3f2fd' : '#fce4ec';
-          subCatSelect.appendChild(option);
-        });
+    serviceSelect.addEventListener('change', () => {
+      const selected = serviceSelect.value;
+      if (selected) {
+        displayBox.style.display = 'block';
+        displayBox.textContent = "You selected: " + selected;
+      } else {
+        displayBox.style.display = 'none';
       }
     });
 
     document.getElementById('serviceForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const formData = new FormData(this);
-      const subCatSelected = Array.from(subCatSelect.selectedOptions).map(opt => opt.value);
+      const selectedService = serviceSelect.value;
+
+      if (!selectedService) {
+        alert("Please select a service.");
+        return;
+      }
+
       const data = {
         name: formData.get('name'),
         address: formData.get('address'),
         whatsapp: formData.get('whatsapp'),
         description: formData.get('description'),
-        category: categorySelect.value,
-        subcategories: subCatSelected,
+        services: [selectedService],
         timestamp: new Date().toISOString()
       };
+
       db.ref('serviceRequests').push(data).then(() => {
         alert('Form submitted successfully!');
         document.getElementById('serviceForm').reset();
-        subCatSelect.disabled = true;
+        displayBox.style.display = 'none';
       });
     });
   </script>
+
 </body>
 </html>
