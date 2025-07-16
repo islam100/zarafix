@@ -11,12 +11,12 @@
       padding: 20px;
     }
 
-    form {
+    form, #dashboard {
       background: #fff;
       padding: 20px;
       border-radius: 10px;
       max-width: 700px;
-      margin: auto;
+      margin: 20px auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
@@ -59,6 +59,14 @@
       transform: translateY(3px);
       box-shadow: 0 3px #2E7D32;
     }
+
+    #statusOutput {
+      background: #e8f5e9;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 6px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -85,6 +93,7 @@
       <option value="relocation">Relocation & Logistics</option>
       <option value="digital">Digital & Networking</option>
       <option value="commercial">Commercial & Office Services</option>
+      <option value="professional">Professional Services</option>
     </select>
 
     <label for="subcategory">Sub Category (Select Service)</label>
@@ -98,6 +107,15 @@
     <button type="submit">Submit Request</button>
   </form>
 
+  <div style="text-align:center">
+    <button onclick="showDashboard()">📋 View My Request Status</button>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <h2>Your Request Status</h2>
+    <div id="statusOutput">Loading...</div>
+  </div>
+
   <script>
     const subcategories = {
       home: ["Electrician", "Plumber", "Carpenter", "Painter", "Interior Designer", "POP Ceiling", "Pest Control"],
@@ -107,11 +125,13 @@
       personal: ["Babysitter", "Cook at Home", "Driver on Demand", "Makeup Artist", "Security Guard"],
       relocation: ["Packers and Movers", "Home Shifting", "Vehicle Shifting"],
       digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Setup"],
-      commercial: ["Office Cleaning", "Factory Electrician", "Shop Branding"]
+      commercial: ["Office Cleaning", "Factory Electrician", "Shop Branding"],
+      professional: ["Doctor", "Advocate", "Chartered Accountant", "Architect", "Notary", "Legal Advisor", "Physiotherapist"]
     };
 
     const categorySelect = document.getElementById('category');
     const subcategorySelect = document.getElementById('subcategory');
+    let lastRequest = null;
 
     categorySelect.addEventListener('change', function() {
       const selectedCategory = this.value;
@@ -125,6 +145,51 @@
         });
       }
     });
+
+    document.getElementById('serviceRequestForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const address = document.getElementById('address').value;
+      const phone = document.getElementById('phone').value;
+      const category = categorySelect.value;
+      const subcategory = subcategorySelect.value;
+      const description = document.getElementById('description').value;
+
+      // Save last request info
+      lastRequest = {
+        name,
+        address,
+        phone,
+        category,
+        subcategory,
+        description,
+        acceptedBy: null // Placeholder for assignment later
+      };
+
+      alert("Your request has been submitted successfully!");
+      document.getElementById('serviceRequestForm').reset();
+    });
+
+    function showDashboard() {
+      const output = document.getElementById('statusOutput');
+      document.getElementById('dashboard').style.display = 'block';
+
+      if (!lastRequest) {
+        output.innerHTML = "No request found.";
+        output.style.display = 'block';
+        return;
+      }
+
+      if (lastRequest.acceptedBy) {
+        output.innerHTML = `✅ Accepted by: <strong>${lastRequest.acceptedBy.name}</strong><br>
+        🏪 Shop: ${lastRequest.acceptedBy.shop}<br>
+        📍 Address: ${lastRequest.acceptedBy.address}<br>
+        📱 <a href='https://wa.me/${lastRequest.acceptedBy.whatsapp}' target='_blank'>WhatsApp Chat</a>`;
+      } else {
+        output.innerHTML = "❌ No one has accepted your request yet.";
+      }
+      output.style.display = 'block';
+    }
   </script>
 </body>
 </html>
