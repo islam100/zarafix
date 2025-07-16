@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZaraFix - Full Service Request Form</title>
+  <title>ZaraFix - Admin Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
@@ -12,73 +12,43 @@
       background: #f5f7fa;
       padding: 20px;
     }
-    form {
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .card {
       background: #fff;
-      padding: 20px;
+      padding: 15px;
+      margin: 10px auto;
       border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
       max-width: 700px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
+    .card strong {
+      display: inline-block;
+      width: 120px;
+      color: #333;
     }
-    input, textarea, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      margin-top: 20px;
-      padding: 12px;
-      width: 100%;
-      background: linear-gradient(to bottom, #2196f3, #1976d2);
+    .whatsapp-btn {
+      display: inline-block;
+      background: linear-gradient(to bottom, #25D366, #128C7E);
       color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 6px #0d47a1;
-      cursor: pointer;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin-top: 10px;
+      box-shadow: 0 4px #0b5e4e;
       transition: 0.2s;
     }
-    button:active {
+    .whatsapp-btn:active {
       transform: translateY(3px);
-      box-shadow: 0 3px #0d47a1;
+      box-shadow: 0 2px #0b5e4e;
     }
   </style>
 </head>
 <body>
-  <form id="serviceForm">
-    <h2>ZaraFix - Request Any Service</h2>
-
-    <label>Full Name</label>
-    <input type="text" id="name" required />
-
-    <label>Address</label>
-    <input type="text" id="address" required />
-
-    <label>WhatsApp Number</label>
-    <input type="text" id="phone" required />
-
-    <label>Category</label>
-    <select id="category" required>
-      <option value="">-- Select Category --</option>
-    </select>
-
-    <label>Subcategory / Service</label>
-    <select id="subcategory" required>
-      <option value="">-- Select Service --</option>
-    </select>
-
-    <label>Issue Description</label>
-    <textarea id="description" rows="4" required></textarea>
-
-    <button type="submit">Submit Request</button>
-  </form>
+  <h2>ZaraFix - All Service Requests</h2>
+  <div id="requestsContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -94,65 +64,29 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const allCategories = {
-      "Home Services": ["Electrician", "Plumber", "Carpenter", "Painter", "Interior Designer", "POP Ceiling", "Pest Control"],
-      "Appliance Repair": ["Fridge Repair", "Washing Machine Repair", "AC Repair", "TV Repair", "Microwave Repair", "Gas Stove Repair", "Geyser Repair"],
-      "Cleaning": ["House Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
-      "Auto Services": ["Car Repair", "Car Wash", "Bike Repair", "Bike Servicing", "Battery Replacement", "Roadside Assistance"],
-      "Personal Services": ["Babysitter", "Cook at Home", "Driver on Demand", "Makeup Artist", "Security Guard", "Beauty Parlour at Home"],
-      "Medical & Legal": ["Doctor", "Dentist", "Eye Specialist", "Physiotherapist", "Advocate", "Civil Lawyer", "Criminal Lawyer", "Property Lawyer"],
-      "Professional": ["CA (Chartered Accountant)", "Company Registration", "Tax Filing", "Notary", "Consultant"],
-      "Digital & Security": ["CCTV Installation", "WiFi Setup", "Mobile Repair", "Computer Repair", "Printer Setup", "Software Installation"],
-      "Logistics": ["Packers and Movers", "Home Shifting", "Vehicle Shifting", "Courier Pickup"],
-      "Commercial Services": ["Office Cleaning", "Factory Electrician", "Shop Branding", "Event Decorator", "Photographer"]
-    };
+    const container = document.getElementById("requestsContainer");
 
-    const categorySelect = document.getElementById('category');
-    const subcategorySelect = document.getElementById('subcategory');
-
-    Object.keys(allCategories).forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat;
-      opt.textContent = cat;
-      categorySelect.appendChild(opt);
-    });
-
-    categorySelect.addEventListener('change', () => {
-      subcategorySelect.innerHTML = '<option value="">-- Select Service --</option>';
-      const subs = allCategories[categorySelect.value];
-      if (subs) {
-        subs.forEach(service => {
-          const opt = document.createElement('option');
-          opt.value = service;
-          opt.textContent = service;
-          subcategorySelect.appendChild(opt);
+    db.ref("serviceRequests").on("value", (snapshot) => {
+      container.innerHTML = "";
+      if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+          const data = child.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div><strong>Name:</strong> ${data.name}</div>
+            <div><strong>Address:</strong> ${data.address}</div>
+            <div><strong>WhatsApp:</strong> ${data.phone}</div>
+            <div><strong>Category:</strong> ${data.category}</div>
+            <div><strong>Service:</strong> ${data.subcategory}</div>
+            <div><strong>Description:</strong> ${data.description}</div>
+            <a class="whatsapp-btn" href="https://wa.me/91${data.phone}" target="_blank">Chat on WhatsApp</a>
+          `;
+          container.appendChild(card);
         });
+      } else {
+        container.innerHTML = "<p>No service requests found.</p>";
       }
-    });
-
-    document.getElementById("serviceForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      const data = {
-        name: document.getElementById("name").value,
-        address: document.getElementById("address").value,
-        phone: document.getElementById("phone").value,
-        category: document.getElementById("category").value,
-        subcategory: document.getElementById("subcategory").value,
-        description: document.getElementById("description").value,
-        timestamp: new Date().toISOString()
-      };
-
-      db.ref("serviceRequests").push(data)
-        .then(() => {
-          alert("Request submitted successfully!");
-          document.getElementById("serviceForm").reset();
-          subcategorySelect.innerHTML = '<option value="">-- Select Service --</option>';
-        })
-        .catch((err) => {
-          alert("Error: " + err.message);
-          console.error("Firebase error:", err);
-        });
     });
   </script>
 </body>
