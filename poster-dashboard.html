@@ -1,1 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Poster Upload</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f1f1f1;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    form {
+      max-width: 400px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background: linear-gradient(to right, #4caf50, #81c784);
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 12px;
+      box-shadow: 0 6px #388e3c;
+      transition: all 0.2s ease-in-out;
+    }
+    button:hover {
+      box-shadow: 0 2px #2e7d32;
+      transform: translateY(2px);
+    }
+    #message {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>🖼️ Poster Registration</h2>
+  <form id="posterForm">
+    <input type="text" id="name" placeholder="👤 Your Name" required />
+    <input type="text" id="shopName" placeholder="🏪 Shop Name" required />
+    <input type="text" id="whatsapp" placeholder="📞 WhatsApp No." pattern="[0-9]{10}" required />
+    <input type="text" id="pincode" placeholder="📍 Pin Code" pattern="[0-9]{6}" required />
+    
+    <select id="category" required>
+      <option value="">📂 Select Category</option>
+      <option value="food">Food</option>
+      <option value="clothing">Clothing</option>
+      <option value="service">Service</option>
+      <option value="others">Others</option>
+    </select>
+
+    <input type="file" id="image" accept="image/*" required />
+    
+    <button type="submit">📤 Upload Poster</button>
+    <div id="message"></div>
+  </form>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js"></script>
+
+  <script>
+    // ✅ Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "682390963124",
+      appId: "1:682390963124:web:e3b91fd0b487bcdccbe1be"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    // Form submit
+    document.getElementById('posterForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const shopName = document.getElementById('shopName').value.trim();
+      const whatsapp = document.getElementById('whatsapp').value.trim();
+      const pincode = document.getElementById('pincode').value.trim();
+      const category = document.getElementById('category').value;
+      const imageFile = document.getElementById('image').files[0];
+
+      const messageEl = document.getElementById('message');
+      messageEl.innerText = "Uploading... Please wait...";
+
+      if (!name || !shopName || !whatsapp || !pincode || !category || !imageFile) {
+        messageEl.innerText = "❌ Please fill all fields.";
+        return;
+      }
+
+      try {
+        // Upload image to Firebase Storage
+        const imageRef = storage.ref(`posters/${Date.now()}_${imageFile.name}`);
+        await imageRef.put(imageFile);
+        const imageUrl = await imageRef.getDownloadURL();
+
+        // Save poster data
+        const newPosterRef = db.ref("posters").push();
+        await newPosterRef.set({
+          name, shopName, whatsapp, pincode, category, imageUrl,
+          timestamp: Date.now()
+        });
+
+        messageEl.innerText = "✅ Poster uploaded successfully!";
+        document.getElementById('posterForm').reset();
+      } catch (error) {
+        console.error(error);
+        messageEl.innerText = "❌ Upload failed!";
+      }
+    });
+  </script>
+</body>
+</html>
 
