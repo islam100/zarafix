@@ -7,7 +7,6 @@
   <title>Poster Registration</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * {
@@ -35,7 +34,9 @@
       text-align: center;
     }
 
-    input, select, textarea {
+    input,
+    select,
+    textarea {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
@@ -70,8 +71,10 @@
 </head>
 
 <body>
+
   <div class="container" id="form-container">
     <h2>📤 Poster Registration</h2>
+    <input type="text" id="shopname" placeholder="Shop Name" required>
     <input type="text" id="name" placeholder="Your Name" required>
     <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
     <input type="text" id="pincode" placeholder="Pincode" required>
@@ -83,9 +86,6 @@
     </select>
     <select id="subcategory">
       <option value="">Select Subcategory</option>
-      <option value="Tutoring">Tutoring</option>
-      <option value="Hospital">Hospital</option>
-      <option value="Startup">Startup</option>
     </select>
     <textarea id="message" rows="3" placeholder="Message (Optional)"></textarea>
     <button onclick="submitPoster()">Submit Poster</button>
@@ -97,6 +97,7 @@
   </div>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -110,19 +111,40 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
+    const subcategories = {
+      Education: ["Tutoring", "School", "College"],
+      Health: ["Hospital", "Clinic", "Pharmacy"],
+      Business: ["Startup", "Shop", "Freelancer"]
+    };
+
+    document.getElementById("category").addEventListener("change", function () {
+      const selectedCat = this.value;
+      const subcatSelect = document.getElementById("subcategory");
+      subcatSelect.innerHTML = "<option value=''>Select Subcategory</option>";
+      if (subcategories[selectedCat]) {
+        subcategories[selectedCat].forEach(sub => {
+          const option = document.createElement("option");
+          option.value = sub;
+          option.text = sub;
+          subcatSelect.appendChild(option);
+        });
+      }
+    });
+
     function validatePincode(pin) {
       return /^[1-9][0-9]{5}$/.test(pin);
     }
 
     function submitPoster() {
-      const name = document.getElementById("name").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const pincode = document.getElementById("pincode").value;
+      const shopname = document.getElementById("shopname").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const pincode = document.getElementById("pincode").value.trim();
       const category = document.getElementById("category").value;
       const subcategory = document.getElementById("subcategory").value;
-      const message = document.getElementById("message").value;
+      const message = document.getElementById("message").value.trim();
 
-      if (!name || !whatsapp || !pincode || !category || !subcategory) {
+      if (!shopname || !name || !whatsapp || !pincode || !category || !subcategory) {
         alert("Please fill all required fields.");
         return;
       }
@@ -133,6 +155,7 @@
       }
 
       const posterData = {
+        shopname,
         name,
         whatsapp,
         pincode,
@@ -143,12 +166,23 @@
         timestamp: new Date().toISOString()
       };
 
-      const newPosterRef = database.ref("posters/").push();
-      newPosterRef.set(posterData).then(() => {
-        document.getElementById("form-container").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
+      database.ref("posters/").push(posterData).then(() => {
+        localStorage.setItem("poster_submitted", "true");
+        showDashboard();
       });
     }
+
+    function showDashboard() {
+      document.getElementById("form-container").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+    }
+
+    // On page load
+    window.onload = function () {
+      if (localStorage.getItem("poster_submitted") === "true") {
+        showDashboard();
+      }
+    };
   </script>
 </body>
 
