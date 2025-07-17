@@ -2,133 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
+  <title>Request List</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    .card {
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
       padding: 20px;
-      margin-bottom: 20px;
-      position: relative;
     }
-    .led {
-      height: 15px;
-      width: 15px;
-      border-radius: 50%;
-      background-color: red;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      animation: blink 1s infinite;
+    .request-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: transform 0.2s;
     }
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0; }
-      100% { opacity: 1; }
+    .request-card:hover {
+      transform: scale(1.02);
     }
-    button {
-      border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
-      margin-right: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 3px 5px rgba(0,0,0,0.3);
-      transition: 0.3s;
+    .request-card p {
+      margin: 6px 0;
+      font-size: 16px;
     }
-    .approve { background: green; color: white; }
-    .reject { background: red; color: white; }
   </style>
 </head>
 <body>
-  <h2>Admin Dashboard – Live Service Requests</h2>
-  <div id="dashboard"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <h2>📋 All Requests</h2>
+  <div id="request-list"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "548580803184",
-      appId: "1:548580803184:web:23598613c2c70a9a2d6f58"
+      messagingSenderId: "447701261395",
+      appId: "1:447701261395:web:1b4f3c1b0e3f76ad47880e"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const dashboard = document.getElementById("dashboard");
+    // Show request data
+    const requestList = document.getElementById("request-list");
 
-    function createCard(key, data) {
-      const card = document.createElement("div");
-      card.className = "card";
+    db.ref("requests").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const request = child.val();
+        const timestamp = request.timestamp || "N/A";
 
-      const {
-        name = "N/A",
-        email = "N/A",
-        whatsapp = "N/A",
-        address = "N/A",
-        service = "N/A",
-        status = "Pending"
-      } = data;
+        // Format timestamp from Firebase
+        let formattedTime = "N/A";
+        if (timestamp !== "N/A") {
+          const dateObj = new Date(timestamp);
+          const options = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          };
+          formattedTime = dateObj.toLocaleString('en-IN', options);
+        }
 
-      let content = `
-        <strong>Name:</strong> ${name}<br>
-        <strong>Email:</strong> ${email}<br>
-        <strong>WhatsApp:</strong> ${whatsapp}<br>
-        <strong>Address:</strong> ${address}<br>
-        <strong>Service:</strong> ${service}<br>
-        <strong>Status:</strong> ${status}<br><br>
-      `;
-
-      if (status !== "Approved") {
-        const led = document.createElement("div");
-        led.className = "led";
-        card.appendChild(led);
-      }
-
-      card.innerHTML += content;
-
-      if (status !== "Approved") {
-        const approveBtn = document.createElement("button");
-        approveBtn.className = "approve";
-        approveBtn.textContent = "✅ Approve";
-        approveBtn.onclick = () => updateStatus(key, "Approved");
-        card.appendChild(approveBtn);
-      }
-
-      const rejectBtn = document.createElement("button");
-      rejectBtn.className = "reject";
-      rejectBtn.textContent = "❌ Reject/Delete";
-      rejectBtn.onclick = () => deleteRequest(key);
-      card.appendChild(rejectBtn);
-
-      dashboard.appendChild(card);
-    }
-
-    function updateStatus(key, status) {
-      db.ref("serviceRequests/" + key).update({ status });
-    }
-
-    function deleteRequest(key) {
-      if (confirm("Are you sure to delete this request?")) {
-        db.ref("serviceRequests/" + key).remove();
-      }
-    }
-
-    // Live Listener
-    db.ref("serviceRequests").on("value", (snapshot) => {
-      dashboard.innerHTML = "";
-      snapshot.forEach((child) => {
-        createCard(child.key, child.val());
+        const card = `
+          <div class="request-card">
+            <p><strong>🧑 Name:</strong> ${request.name || "N/A"}</p>
+            <p><strong>📞 WhatsApp:</strong> ${request.phone || "N/A"}</p>
+            <p><strong>🏠 Address:</strong> ${request.address || "N/A"}</p>
+            <p><strong>🛠️ Category:</strong> ${request.category || "N/A"} > ${request.subcategory || "N/A"}</p>
+            <p><strong>📝 Description:</strong> ${request.description || "N/A"}</p>
+            <p><strong>⏰ Date/Time:</strong> ${formattedTime}</p>
+          </div>
+        `;
+        requestList.innerHTML += card;
       });
     });
   </script>
+
 </body>
 </html>
