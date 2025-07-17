@@ -1,42 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Poster Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poster Registration</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .hidden { display: none; }
-    .btn { padding: 10px 20px; border: none; background: #4CAF50; color: white; border-radius: 10px; box-shadow: 2px 2px 5px gray; cursor: pointer; }
-    .card { background: #f9f9f9; margin: 10px 0; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px #ccc; }
+    * {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: #f1f1f1;
+      padding: 10px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 12px;
+      width: 100%;
+      background: linear-gradient(145deg, #6e8efb, #a777e3);
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .dashboard {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    @media screen and (max-width: 600px) {
+      .container {
+        margin: 10px;
+      }
+    }
   </style>
 </head>
+
 <body>
-
-  <button id="loginBtn" class="btn">🔐 Login with Google</button>
-
-  <div id="posterForm" class="hidden">
-    <h3>📩 Poster Registration</h3>
-    <input id="name" placeholder="Name" /><br/><br/>
-    <input id="shop" placeholder="Shop Name" /><br/><br/>
-    <input id="address" placeholder="Full Address" /><br/><br/>
-    <input id="pincode" placeholder="Pincode" type="number"/><br/><br/>
-    <input id="whatsapp" placeholder="WhatsApp Number" /><br/><br/>
+  <div class="container" id="form-container">
+    <h2>📤 Poster Registration</h2>
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+    <input type="text" id="pincode" placeholder="Pincode" required>
+    <select id="category">
+      <option value="">Select Category</option>
+      <option value="Education">Education</option>
+      <option value="Health">Health</option>
+      <option value="Business">Business</option>
+    </select>
     <select id="subcategory">
-      <option value="">-- Select Subcategory --</option>
-      <option value="grocery">Grocery</option>
-      <option value="electronics">Electronics</option>
-      <option value="clothing">Clothing</option>
-    </select><br/><br/>
-    <button class="btn" onclick="submitPoster()">📤 Submit Poster</button>
+      <option value="">Select Subcategory</option>
+      <option value="Tutoring">Tutoring</option>
+      <option value="Hospital">Hospital</option>
+      <option value="Startup">Startup</option>
+    </select>
+    <textarea id="message" rows="3" placeholder="Message (Optional)"></textarea>
+    <button onclick="submitPoster()">Submit Poster</button>
   </div>
 
-  <div id="dashboard" class="hidden">
+  <div class="dashboard" id="dashboard">
     <h2>🧾 Poster Dashboard</h2>
-    <div id="posterList">⌛ Loading...</div>
+    <p>⏳ Wait for approval...</p>
   </div>
 
   <script>
@@ -51,82 +108,48 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    const database = firebase.database();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const posterForm = document.getElementById("posterForm");
-    const dashboard = document.getElementById("dashboard");
-    const posterList = document.getElementById("posterList");
-
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    };
-
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        loginBtn.classList.add("hidden");
-        posterForm.classList.remove("hidden");
-        dashboard.classList.remove("hidden");
-        loadPosters();
-      }
-    });
+    function validatePincode(pin) {
+      return /^[1-9][0-9]{5}$/.test(pin);
+    }
 
     function submitPoster() {
-      const name = document.getElementById("name").value.trim();
-      const shop = document.getElementById("shop").value.trim();
-      const address = document.getElementById("address").value.trim();
-      const pincode = document.getElementById("pincode").value.trim();
-      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const name = document.getElementById("name").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const pincode = document.getElementById("pincode").value;
+      const category = document.getElementById("category").value;
       const subcategory = document.getElementById("subcategory").value;
+      const message = document.getElementById("message").value;
 
-      if (!name || !shop || !address || !pincode || !whatsapp || !subcategory) {
-        alert("❗ कृपया सभी फ़ील्ड सही से भरें");
+      if (!name || !whatsapp || !pincode || !category || !subcategory) {
+        alert("Please fill all required fields.");
         return;
       }
 
-      if (pincode.length !== 6) {
-        alert("❗ पिनकोड 6 अंकों का होना चाहिए");
+      if (!validatePincode(pincode)) {
+        alert("Please enter a valid 6-digit pincode.");
         return;
       }
 
       const posterData = {
-        name, shop, address, pincode, whatsapp, subcategory,
-        timestamp: Date.now()
+        name,
+        whatsapp,
+        pincode,
+        category,
+        subcategory,
+        message,
+        approved: false,
+        timestamp: new Date().toISOString()
       };
 
-      const userId = auth.currentUser.uid;
-      const newKey = db.ref().child("posters").push().key;
-      db.ref("posters/" + newKey).set(posterData).then(() => {
-        alert("✅ Poster Saved!");
-        posterForm.reset();
-        loadPosters();
-      });
-    }
-
-    function loadPosters() {
-      db.ref("posters").once("value", (snapshot) => {
-        const data = snapshot.val();
-        posterList.innerHTML = "";
-        if (!data) {
-          posterList.innerHTML = "❌ No posters found.";
-          return;
-        }
-        Object.values(data).forEach(poster => {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <strong>${poster.name} (${poster.shop})</strong><br/>
-            🏠 ${poster.address} - ${poster.pincode}<br/>
-            📱 ${poster.whatsapp}<br/>
-            🗂️ ${poster.subcategory}<br/>
-            🕓 ${new Date(poster.timestamp).toLocaleString()}
-          `;
-          posterList.appendChild(card);
-        });
+      const newPosterRef = database.ref("posters/").push();
+      newPosterRef.set(posterData).then(() => {
+        document.getElementById("form-container").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
       });
     }
   </script>
 </body>
+
 </html>
