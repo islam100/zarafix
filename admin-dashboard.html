@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
     body {
-      font-family: Arial;
-      background: #f0f0f0;
+      font-family: Arial, sans-serif;
       padding: 10px;
+      background: #f0f0f0;
     }
     h2 {
       text-align: center;
@@ -19,117 +16,115 @@
       background: white;
       padding: 15px;
       margin: 10px auto;
-      max-width: 500px;
-      border-radius: 10px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      width: 90%;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       position: relative;
     }
     .led {
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background-color: red;
-      animation: blink 1s infinite;
+      background: red;
       position: absolute;
       top: 15px;
       right: 15px;
+      animation: blink 1s infinite;
     }
     @keyframes blink {
-      0% { opacity: 0; }
-      50% { opacity: 1; }
-      100% { opacity: 0; }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
-    button {
-      padding: 6px 14px;
-      margin: 6px 4px;
+    .btn {
+      padding: 8px 15px;
       border: none;
-      border-radius: 6px;
+      margin: 5px 5px 0 0;
+      border-radius: 10px;
+      cursor: pointer;
       color: white;
       font-weight: bold;
-      cursor: pointer;
-      box-shadow: 2px 4px 6px rgba(0,0,0,0.2);
-      transition: transform 0.2s ease;
+      box-shadow: 2px 2px 5px gray;
     }
-    .approve { background-color: #28a745; }
-    .reject { background-color: #dc3545; }
-    button:hover {
-      transform: scale(1.05);
-    }
+    .approve { background: green; }
+    .reject { background: red; }
   </style>
 </head>
 <body>
+  <h2>Admin Dashboard</h2>
+  <div id="dashboard"></div>
 
-<h2>Admin Dashboard</h2>
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
-<div id="dashboard"></div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "388992224949",
+      appId: "1:388992224949:web:7a12a4c86ee7e2bd4e1cb6"
+    };
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "939635849605",
-    appId: "1:939635849605:web:38bdb93e65f228e7b28113"
-  };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  function renderData(path, typeLabel) {
-    db.ref(path).on("value", snapshot => {
+    function renderCards(data) {
       const container = document.getElementById("dashboard");
-      container.innerHTML = "";
+      container.innerHTML = '';
 
-      snapshot.forEach(child => {
-        const data = child.val();
-        const key = child.key;
-
+      for (let id in data) {
+        const d = data[id];
         const card = document.createElement("div");
         card.className = "card";
 
         card.innerHTML = `
-          <strong>${typeLabel}:</strong><br>
-          <b>Name:</b> ${data.name || "N/A"}<br>
-          <b>Email:</b> ${data.email || "N/A"}<br>
-          <b>Phone:</b> ${data.phone || "N/A"}<br>
-          ${data.address ? `<b>Address:</b> ${data.address}<br>` : ""}
-          ${data.service ? `<b>Service:</b> ${data.service}<br>` : ""}
-          <b>Status:</b> <span id="status-${key}">${data.status || "Pending"}</span><br>
+          <strong>Name:</strong> ${d.name || 'N/A'}<br>
+          <strong>Email:</strong> ${d.email || 'N/A'}<br>
+          <strong>Service:</strong> ${d.service || 'N/A'}<br>
+          <strong>Status:</strong> ${d.status || 'Pending'}<br><br>
         `;
 
-        if (data.status !== "Approved") {
+        if (d.status !== "Approved") {
           const led = document.createElement("div");
           led.className = "led";
           card.appendChild(led);
 
           const approveBtn = document.createElement("button");
-          approveBtn.className = "approve";
-          approveBtn.textContent = "✅ Approve";
-          approveBtn.onclick = () => {
-            db.ref(`${path}/${key}/status`).set("Approved");
-          };
+          approveBtn.className = "btn approve";
+          approveBtn.innerText = "✅ Approve";
+          approveBtn.onclick = () => updateStatus(id, "Approved");
           card.appendChild(approveBtn);
-        } else {
-          const rejectBtn = document.createElement("button");
-          rejectBtn.className = "reject";
-          rejectBtn.textContent = "❌ Reject/Delete";
-          rejectBtn.onclick = () => {
-            db.ref(`${path}/${key}`).remove();
-          };
-          card.appendChild(rejectBtn);
         }
 
+        const rejectBtn = document.createElement("button");
+        rejectBtn.className = "btn reject";
+        rejectBtn.innerText = "❌ Reject/Delete";
+        rejectBtn.onclick = () => deleteEntry(id);
+        card.appendChild(rejectBtn);
+
         container.appendChild(card);
-      });
+      }
+    }
+
+    function updateStatus(id, newStatus) {
+      firebase.database().ref("serviceRequests/" + id).update({ status: newStatus });
+    }
+
+    function deleteEntry(id) {
+      firebase.database().ref("serviceRequests/" + id).remove();
+    }
+
+    firebase.database().ref("serviceRequests").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        renderCards(data);
+      } else {
+        document.getElementById("dashboard").innerHTML = "<p>No data available.</p>";
+      }
     });
-  }
-
-  // Load data from both posterUsers and serviceRequests
-  renderData("posterUsers", "User");
-  renderData("serviceRequests", "Service");
-</script>
-
+  </script>
 </body>
 </html>
