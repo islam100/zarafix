@@ -2,144 +2,134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard - Service Requests</title>
+  <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
+      font-family: Arial;
+      background: #f0f0f0;
+      padding: 10px;
     }
     h2 {
       text-align: center;
-      color: #444;
     }
     .card {
       background: white;
-      padding: 20px;
+      padding: 15px;
       margin: 10px auto;
+      max-width: 500px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 400px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
       position: relative;
     }
-    .blinking-led {
-      width: 15px;
-      height: 15px;
+    .led {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background-color: red;
-      position: absolute;
-      top: 10px;
-      right: 10px;
       animation: blink 1s infinite;
+      position: absolute;
+      top: 15px;
+      right: 15px;
     }
     @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0; }
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
     }
-    .btn {
-      padding: 10px 20px;
-      margin: 10px 5px 0;
+    button {
+      padding: 6px 14px;
+      margin: 6px 4px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
+      color: white;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      box-shadow: 2px 4px 6px rgba(0,0,0,0.2);
       transition: transform 0.2s ease;
     }
-    .btn:hover {
+    .approve { background-color: #28a745; }
+    .reject { background-color: #dc3545; }
+    button:hover {
       transform: scale(1.05);
     }
-    .approve-btn { background: #28a745; color: white; }
-    .delete-btn { background: #dc3545; color: white; }
-    .status-approved { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Admin Dashboard - All Service Requests</h2>
-  <div id="requestsContainer"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<h2>Admin Dashboard</h2>
 
-  <script>
-    // ✅ Firebase Config (use your actual config)
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "878664327534",
-      appId: "1:878664327534:web:6cc3eaef53878b43dcf688"
-    };
+<div id="dashboard"></div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "939635849605",
+    appId: "1:939635849605:web:38bdb93e65f228e7b28113"
+  };
 
-    const container = document.getElementById("requestsContainer");
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    function createCard(key, data) {
-      const card = document.createElement("div");
-      card.className = "card";
+  function renderData(path, typeLabel) {
+    db.ref(path).on("value", snapshot => {
+      const container = document.getElementById("dashboard");
+      container.innerHTML = "";
 
-      const html = `
-        <h3>${data.name || 'No Name'}</h3>
-        <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
-        <p><strong>Service:</strong> ${data.service || 'N/A'}</p>
-        <p><strong>Status:</strong> ${data.status === "Approved" ? '<span class="status-approved">✅ Approved</span>' : data.status || 'Pending'}</p>
-      `;
-      card.innerHTML = html;
-
-      // ✅ Blinking LED if not approved
-      if (data.status !== "Approved") {
-        const led = document.createElement("div");
-        led.className = "blinking-led";
-        card.appendChild(led);
-      }
-
-      // ✅ Buttons
-      const approveBtn = document.createElement("button");
-      approveBtn.className = "btn approve-btn";
-      approveBtn.textContent = "✅ Approve";
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "btn delete-btn";
-      deleteBtn.textContent = "❌ Reject/Delete";
-
-      // ✅ Only show buttons based on status
-      if (data.status === "Approved") {
-        card.appendChild(deleteBtn);
-      } else {
-        card.appendChild(approveBtn);
-        card.appendChild(deleteBtn);
-      }
-
-      // ✅ Approve functionality
-      approveBtn.onclick = () => {
-        firebase.database().ref(`serviceRequests/${key}`).update({
-          status: "Approved"
-        });
-        alert("Approved Successfully!");
-      };
-
-      // ✅ Delete functionality
-      deleteBtn.onclick = () => {
-        if (confirm("Are you sure you want to delete this request?")) {
-          firebase.database().ref(`serviceRequests/${key}`).remove();
-          alert("Deleted Successfully!");
-        }
-      };
-
-      container.appendChild(card);
-    }
-
-    // ✅ Load all serviceRequests
-    db.ref("serviceRequests").on("value", snapshot => {
-      container.innerHTML = ""; // clear before reload
       snapshot.forEach(child => {
-        createCard(child.key, child.val());
+        const data = child.val();
+        const key = child.key;
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+          <strong>${typeLabel}:</strong><br>
+          <b>Name:</b> ${data.name || "N/A"}<br>
+          <b>Email:</b> ${data.email || "N/A"}<br>
+          <b>Phone:</b> ${data.phone || "N/A"}<br>
+          ${data.address ? `<b>Address:</b> ${data.address}<br>` : ""}
+          ${data.service ? `<b>Service:</b> ${data.service}<br>` : ""}
+          <b>Status:</b> <span id="status-${key}">${data.status || "Pending"}</span><br>
+        `;
+
+        if (data.status !== "Approved") {
+          const led = document.createElement("div");
+          led.className = "led";
+          card.appendChild(led);
+
+          const approveBtn = document.createElement("button");
+          approveBtn.className = "approve";
+          approveBtn.textContent = "✅ Approve";
+          approveBtn.onclick = () => {
+            db.ref(`${path}/${key}/status`).set("Approved");
+          };
+          card.appendChild(approveBtn);
+        } else {
+          const rejectBtn = document.createElement("button");
+          rejectBtn.className = "reject";
+          rejectBtn.textContent = "❌ Reject/Delete";
+          rejectBtn.onclick = () => {
+            db.ref(`${path}/${key}`).remove();
+          };
+          card.appendChild(rejectBtn);
+        }
+
+        container.appendChild(card);
       });
     });
-  </script>
+  }
+
+  // Load data from both posterUsers and serviceRequests
+  renderData("posterUsers", "User");
+  renderData("serviceRequests", "Service");
+</script>
+
 </body>
 </html>
