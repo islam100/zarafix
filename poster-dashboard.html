@@ -1,174 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Provider Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "971389229214",
+      appId: "1:971389229214:web:b9305e69a5e8d2c733b77b"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
   <style>
-    body {
-      font-family: Arial;
-      padding: 10px;
-    }
-    input, select, button {
-      display: block;
-      margin: 10px 0;
-      padding: 10px;
-      width: 100%;
-    }
-    .dashboard {
-      border: 1px solid #ccc;
-      padding: 20px;
-      margin-top: 20px;
-    }
-    .btn-3d {
-      background: linear-gradient(#4CAF50, #388E3C);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 5px #2e7d32;
-      cursor: pointer;
-      font-size: 18px;
-    }
-    .btn-3d:active {
-      box-shadow: none;
-      transform: translateY(4px);
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    h2, h3 { text-align: center; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #ccc; }
+    .btn-3d { background: linear-gradient(#4CAF50, #388E3C); color: white; border: none; box-shadow: 0 5px #2e7031; transition: 0.2s; }
+    .btn-3d:active { box-shadow: 0 2px #2e7031; transform: translateY(2px); }
+    #whatsappBtn { display: none; background-color: #25D366; color: white; text-align: center; padding: 12px; margin-top: 10px; border-radius: 8px; }
+    #message { color: red; text-align: center; }
   </style>
 </head>
 <body>
 
-<h2>Provider Registration</h2>
+<div class="container">
+  <h2>Provider Registration</h2>
+  <div id="message"></div>
+  <form id="providerForm">
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="shop" placeholder="Shop Name" required>
+    <input type="text" id="address" placeholder="Full Address" required>
+    <input type="text" id="pincode" placeholder="Pincode" maxlength="6" required>
+    
+    <select id="category" required>
+      <option value="">Select Category</option>
+      <option value="Electrician">Electrician</option>
+      <option value="Plumber">Plumber</option>
+      <option value="Carpenter">Carpenter</option>
+      <option value="Mechanic">Mechanic</option>
+    </select>
 
-<div id="login-section">
+    <select id="subcategory" required>
+      <option value="">Select Subcategory</option>
+      <option value="AC Repair">AC Repair</option>
+      <option value="Fan Repair">Fan Repair</option>
+      <option value="Switch Board">Switch Board</option>
+    </select>
+
+    <button type="submit" class="btn-3d">Submit</button>
+  </form>
+
+  <div id="dashboard" style="display:none;">
+    <h3>Provider Dashboard</h3>
+    <p id="userEmail"></p>
+    <p>Wallet: ₹<span id="wallet">0</span></p>
+
+    <button id="acceptBtn" class="btn-3d">Accept Request</button>
+    <div id="whatsappBtn">📞 Contact on WhatsApp</div>
+    <p id="acceptMsg" style="color:red;"></p>
+  </div>
+
+  <br>
   <button onclick="googleLogin()" class="btn-3d">Login with Google</button>
 </div>
 
-<div id="provider-form" style="display:none;">
-  <h3>Register as Provider</h3>
-  <input type="text" id="shopName" placeholder="Shop Name" required />
-  <input type="text" id="address" placeholder="Full Address" required />
-  <input type="text" id="pincode" placeholder="Pincode" required />
-  
-  <select id="category">
-    <option value="">Select Category</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Carpenter">Carpenter</option>
-    <option value="Painter">Painter</option>
-    <option value="Mechanic">Mechanic</option>
-  </select>
-  
-  <select id="subCategory">
-    <option value="">Select Subcategory</option>
-    <option value="AC Repair">AC Repair</option>
-    <option value="TV Repair">TV Repair</option>
-    <option value="Wiring">Wiring</option>
-    <option value="Furniture Repair">Furniture Repair</option>
-  </select>
-
-  <button onclick="submitForm()" class="btn-3d">Submit</button>
-</div>
-
-<div class="dashboard" id="dashboard" style="display:none;">
-  <h3>Provider Dashboard</h3>
-  <p>Welcome: <span id="providerName"></span></p>
-  <p>Wallet: ₹<span id="walletBalance">0</span></p>
-
-  <button class="btn-3d" onclick="acceptRequest()">Accept Request (₹20 deduct)</button>
-  <p id="acceptMsg"></p>
-  <div id="whatsappBtn" style="display:none;">
-    <a id="waLink" href="#" target="_blank" class="btn-3d">Contact on WhatsApp</a>
-  </div>
-</div>
-
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "1015071078868",
-    appId: "1:1015071078868:web:894e1e0b6f4bde43fd3485"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-  let currentUser;
+  let currentUser = null;
 
   function googleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result => {
-      currentUser = result.user;
-      document.getElementById("login-section").style.display = "none";
-      checkRegistration(currentUser.uid);
-    }).catch(error => alert("Login failed"));
+    firebase.auth().signInWithPopup(provider)
+      .then(result => {
+        currentUser = result.user;
+        document.getElementById("providerForm").style.display = "block";
+        document.getElementById("message").innerText = "Welcome " + currentUser.displayName;
+      }).catch(err => {
+        document.getElementById("message").innerText = "Login failed!";
+      });
   }
 
-  function checkRegistration(uid) {
-    db.ref("providers/" + uid).once("value").then(snapshot => {
-      if (snapshot.exists()) {
-        showDashboard(snapshot.val());
-      } else {
-        document.getElementById("provider-form").style.display = "block";
-      }
-    });
-  }
-
-  function submitForm() {
-    const shopName = document.getElementById("shopName").value.trim();
+  document.getElementById("providerForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const shop = document.getElementById("shop").value.trim();
     const address = document.getElementById("address").value.trim();
     const pincode = document.getElementById("pincode").value.trim();
     const category = document.getElementById("category").value;
-    const subCategory = document.getElementById("subCategory").value;
+    const subcategory = document.getElementById("subcategory").value;
 
-    if (!shopName || !address || !pincode || !category || !subCategory || pincode.length !== 6 || isNaN(pincode)) {
-      alert("Please fill all fields correctly.");
+    if (!name || !shop || !address || !/^\d{6}$/.test(pincode)) {
+      document.getElementById("message").innerText = "सभी फ़ील्ड सही से भरें";
       return;
     }
 
-    const data = {
-      name: currentUser.displayName,
-      shopName,
-      address,
-      pincode,
-      category,
-      subCategory,
-      email: currentUser.email,
-      wallet: 0
-    };
+    const userId = currentUser.uid;
+    firebase.database().ref("providers/" + userId).set({
+      name, shop, address, pincode, category, subcategory, wallet: 0, email: currentUser.email
+    }).then(() => {
+      document.getElementById("providerForm").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("userEmail").innerText = "Welcome: " + currentUser.displayName;
+      loadWallet(userId);
+    });
+  });
 
-    db.ref("providers/" + currentUser.uid).set(data).then(() => {
-      showDashboard(data);
+  function loadWallet(userId) {
+    firebase.database().ref("providers/" + userId + "/wallet").on("value", snapshot => {
+      const wallet = snapshot.val() || 0;
+      document.getElementById("wallet").innerText = wallet;
     });
   }
 
-  function showDashboard(data) {
-    document.getElementById("provider-form").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-    document.getElementById("providerName").textContent = data.name;
-    document.getElementById("walletBalance").textContent = data.wallet;
-  }
-
-  function acceptRequest() {
-    db.ref("providers/" + currentUser.uid).once("value").then(snapshot => {
-      const user = snapshot.val();
-      if (user.wallet < 100) {
-        document.getElementById("acceptMsg").textContent = "Please recharge your wallet (minimum ₹100 required)";
-        return;
+  document.getElementById("acceptBtn").addEventListener("click", function(){
+    const userId = currentUser.uid;
+    firebase.database().ref("providers/" + userId + "/wallet").once("value", snapshot => {
+      const wallet = snapshot.val();
+      if(wallet >= 100){
+        firebase.database().ref("providers/" + userId + "/wallet").set(wallet - 20);
+        document.getElementById("acceptMsg").innerText = "Request Accepted! ₹20 कटौती की गई।";
+        document.getElementById("whatsappBtn").style.display = "block";
+      } else {
+        document.getElementById("acceptMsg").innerText = "Balance कम है। Please recharge करें।";
       }
-      const newWallet = user.wallet - 20;
-      db.ref("providers/" + currentUser.uid + "/wallet").set(newWallet);
-      document.getElementById("walletBalance").textContent = newWallet;
-      document.getElementById("acceptMsg").textContent = "Request Accepted! ₹20 deducted.";
-      document.getElementById("whatsappBtn").style.display = "block";
-      document.getElementById("waLink").href = "https://wa.me/?text=Hello%20I'm%20ready%20to%20help";
     });
-  }
+  });
 </script>
 
 </body>
