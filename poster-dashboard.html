@@ -1,131 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Poster Registration</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      padding: 10px;
-    }
-    h2 {
-      text-align: center;
-    }
-    form, .message {
-      max-width: 400px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+    body { font-family: sans-serif; background: #f0f0f0; margin: 0; padding: 20px; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    h2 { text-align: center; }
+    label { font-weight: bold; }
     input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 16px;
+      width: 100%; padding: 10px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 10px;
     }
-    button {
-      width: 100%;
-      margin-top: 15px;
-      padding: 10px;
-      background: linear-gradient(to right, #4CAF50, #45a049);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    .btn {
+      background: linear-gradient(45deg, #4CAF50, #45a049);
+      color: white; padding: 12px;
+      text-align: center; border: none;
+      width: 100%; border-radius: 15px;
+      font-weight: bold; font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: 0.3s;
     }
-    .message {
-      text-align: center;
-      font-size: 18px;
-      color: green;
-    }
+    .btn:hover { background: #3e8e41; }
+    #dashboard { display: none; padding: 20px; background: #fff; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-top: 20px; }
+    #waitMsg { color: orange; text-align: center; font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
+  <div class="container" id="formDiv">
+    <h2>Poster Registration</h2>
+    <form id="posterForm">
+      <label>Full Name</label>
+      <input type="text" id="name" required>
+      
+      <label>WhatsApp Number</label>
+      <input type="tel" id="phone" pattern="[0-9]{10}" required>
 
-<h2>📌 Poster Registration</h2>
+      <label>Pincode</label>
+      <input type="text" id="pincode" pattern="[0-9]{6}" required>
 
-<form id="posterForm">
-  <input type="text" id="name" placeholder="Full Name" required />
-  <input type="text" id="phone" placeholder="WhatsApp Number" required />
-  <input type="text" id="pincode" placeholder="Pincode" required />
-  <input type="text" id="shopname" placeholder="Shop/Service Name" required />
+      <label>Shop Name</label>
+      <input type="text" id="shopname" required>
 
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option value="Clothing">Clothing</option>
-    <option value="Electronics">Electronics</option>
-    <option value="Food">Food</option>
-  </select>
+      <label>Shop Full Address</label>
+      <input type="text" id="shopaddress" required>
 
-  <select id="subcategory" required>
-    <option value="">Select Subcategory</option>
-    <option value="Kids">Kids</option>
-    <option value="Men">Men</option>
-    <option value="Women">Women</option>
-  </select>
+      <label>Category</label>
+      <select id="category" required>
+        <option value="">Select Category</option>
+        <option>Clothing</option>
+        <option>Electronics</option>
+        <option>Grocery</option>
+        <option>Medical</option>
+      </select>
 
-  <button type="submit">Submit</button>
-</form>
+      <label>Subcategory</label>
+      <select id="subcategory" required>
+        <option value="">Select Subcategory</option>
+        <option>Men</option>
+        <option>Women</option>
+        <option>Kids</option>
+        <option>Accessories</option>
+      </select>
 
-<div class="message" id="msg" style="display:none;">
-  ✅ Form submitted successfully!<br/>⏳ Wait for approval by admin.
-</div>
+      <button class="btn" type="submit">Submit</button>
+    </form>
+    <div id="waitMsg"></div>
+  </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "486189286304",
-    appId: "1:486189286304:web:e7f7d4872a7d89a0b2d1b6"
-  };
+  <div id="dashboard">
+    <h2>🧾 Poster Dashboard</h2>
+    <p>⏳ Wait for Approval...</p>
+  </div>
 
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  document.getElementById("posterForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-
-    const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const pincode = document.getElementById("pincode").value.trim();
-    const shopname = document.getElementById("shopname").value.trim();
-    const category = document.getElementById("category").value;
-    const subcategory = document.getElementById("subcategory").value;
-
-    if (pincode.length !== 6 || isNaN(pincode)) {
-      alert("Please enter a valid 6-digit pincode.");
-      return;
-    }
-
-    const posterData = {
-      name,
-      phone,
-      pincode,
-      shopname,
-      category,
-      subcategory,
-      timestamp: new Date().toISOString(),
-      approval: false
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "1088137474078",
+      appId: "1:1088137474078:web:3d6200b93dcb8d857b21e2"
     };
 
-    database.ref("posterUsers").push(posterData).then(() => {
-      document.getElementById("posterForm").style.display = "none";
-      document.getElementById("msg").style.display = "block";
-    });
-  });
-</script>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
+    const form = document.getElementById("posterForm");
+    const waitMsg = document.getElementById("waitMsg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        name: document.getElementById("name").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        pincode: document.getElementById("pincode").value.trim(),
+        shopname: document.getElementById("shopname").value.trim(),
+        shopaddress: document.getElementById("shopaddress").value.trim(),
+        category: document.getElementById("category").value,
+        subcategory: document.getElementById("subcategory").value,
+        approved: false,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const newRef = push(ref(db, "posterUsers"));
+        await set(newRef, data);
+        waitMsg.innerText = "✅ Form submitted successfully. Wait for approval.";
+        document.getElementById("formDiv").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+      } catch (err) {
+        waitMsg.innerText = "❌ Error submitting form: " + err.message;
+      }
+    });
+  </script>
 </body>
 </html>
