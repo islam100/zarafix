@@ -1,67 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial;
-      background: #f0f0f0;
-      margin: 20px;
-    }
-    h2 {
-      text-align: center;
-    }
-    .request-card {
-      background: white;
-      margin: 10px auto;
-      padding: 15px;
-      border-left: 5px solid #4caf50;
+    button {
+      margin: 10px;
+      padding: 10px;
+      font-weight: bold;
       border-radius: 8px;
-      width: 90%;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      position: relative;
-    }
-    .blinking-led {
-      height: 15px;
-      width: 15px;
-      background-color: red;
-      border-radius: 50%;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0; }
-      100% { opacity: 1; }
-    }
-    .buttons {
-      margin-top: 10px;
-    }
-    .buttons button {
-      padding: 6px 10px;
-      margin-right: 10px;
-      border: none;
-      border-radius: 4px;
       cursor: pointer;
-      color: white;
     }
-    .approve-btn { background-color: #4CAF50; }
-    .reject-btn { background-color: #f44336; }
-    .timestamp {
-      font-size: 12px;
-      color: #555;
-      margin-top: 8px;
+    .card {
+      border: 2px solid #ccc;
+      padding: 12px;
+      margin: 10px;
+      border-radius: 8px;
+      background: #f8f8f8;
     }
   </style>
 </head>
 <body>
-  <h2>📋 All Service Requests</h2>
-  <div id="requests"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <h2>📋 Admin Dashboard</h2>
+
+  <button onclick="loadUsers()">🧑‍💻 User Requests</button>
+  <button onclick="loadProviders()">🛠️ Service Provider Requests</button>
+
+  <div id="requestContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -70,66 +38,69 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "1099010604024",
-      appId: "1:1099010604024:web:1d6ab00e6a65a67acbaf3a"
+      messagingSenderId: "417651647879",
+      appId: "1:417651647879:web:ad10b907399d50107e4a8f"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function fetchRequests() {
-      db.ref('serviceRequests').on('value', (snapshot) => {
-        const container = document.getElementById('requests');
-        container.innerHTML = '';
-        snapshot.forEach(child => {
-          const data = child.val();
-          const key = child.key;
-          const status = data.status || 'Pending';
-          const name = data.name || 'N/A';
-          const email = data.email || 'N/A';
-          const phone = data.phone || 'N/A';
-          const address = data.address || 'N/A';
-          const category = data.category || 'N/A';
-          const subcategory = data.subcategory || 'N/A';
-          const description = data.description || 'N/A';
-          const timestamp = data.timestamp || 'N/A';
+    const container = document.getElementById('requestContainer');
 
-          const card = document.createElement('div');
-          card.className = 'request-card';
+    function createCard(data, id, type) {
+      const div = document.createElement('div');
+      div.className = "card";
+      div.innerHTML = `
+        <strong>Name:</strong> ${data.name || "N/A"}<br>
+        <strong>Email:</strong> ${data.email || "N/A"}<br>
+        <strong>WhatsApp:</strong> ${data.phone || "N/A"}<br>
+        <strong>Address:</strong> ${data.address || "N/A"}<br>
+        <strong>Category:</strong> ${data.category || "N/A"} (${data.subcategory || ""})<br>
+        <strong>Issue:</strong> ${data.description || "N/A"}<br>
+        <strong>Status:</strong> ${data.status || "Pending"}<br>
+        <strong>Date & Time:</strong> ${data.timestamp || "N/A"}<br><br>
 
-          card.innerHTML = `
-            <strong>Name:</strong> ${name}<br>
-            <strong>Email:</strong> ${email}<br>
-            <strong>WhatsApp:</strong> ${phone}<br>
-            <strong>Address:</strong> ${address}<br>
-            <strong>Service:</strong> ${category} - ${subcategory}<br>
-            <strong>Issue:</strong> ${description}<br>
-            <strong>Status:</strong> ${status}
-            <div class="timestamp">📅 ${timestamp}</div>
-            <div class="buttons">
-              ${status !== 'Approved' ? `<button class="approve-btn" onclick="updateStatus('${key}', 'Approved')">✅ Approve</button>` : ''}
-              <button class="reject-btn" onclick="deleteRequest('${key}')">❌ Reject</button>
-            </div>
-            ${status !== 'Approved' ? `<div class="blinking-led"></div>` : ''}
-          `;
+        ${
+          data.status === "Approved"
+          ? `<button onclick="deleteRequest('${id}', '${type}')">❌ Reject/Delete</button>`
+          : `<button onclick="approveRequest('${id}', '${type}')">✅ Approve</button>
+             <button onclick="deleteRequest('${id}', '${type}')">❌ Reject/Delete</button>`
+        }
+      `;
+      container.appendChild(div);
+    }
 
-          container.appendChild(card);
+    function loadUsers() {
+      container.innerHTML = "<h3>🧑‍💻 User Requests</h3>";
+      db.ref("serviceRequests").once("value", (snapshot) => {
+        snapshot.forEach((child) => {
+          createCard(child.val(), child.key, "serviceRequests");
         });
       });
     }
 
-    function updateStatus(key, newStatus) {
-      firebase.database().ref('serviceRequests/' + key).update({
-        status: newStatus
+    function loadProviders() {
+      container.innerHTML = "<h3>🛠️ Service Provider Requests</h3>";
+      db.ref("posterUsers").once("value", (snapshot) => {
+        snapshot.forEach((child) => {
+          createCard(child.val(), child.key, "posterUsers");
+        });
       });
     }
 
-    function deleteRequest(key) {
-      if (confirm("Are you sure to delete this request?")) {
-        firebase.database().ref('serviceRequests/' + key).remove();
-      }
+    function approveRequest(id, type) {
+      db.ref(`${type}/${id}`).update({ status: "Approved" });
+      alert("Approved ✅");
+      location.reload();
     }
 
-    fetchRequests();
+    function deleteRequest(id, type) {
+      if (confirm("Are you sure to Reject/Delete this?")) {
+        db.ref(`${type}/${id}`).remove();
+        alert("Deleted ❌");
+        location.reload();
+      }
+    }
   </script>
 </body>
 </html>
