@@ -1,60 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Provider Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
+      font-family: 'Roboto', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
       padding: 20px;
     }
-    .card {
+    .container {
+      max-width: 500px;
+      margin: auto;
       background: white;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      border-radius: 12px;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     }
-    .btn-3d {
-      background: linear-gradient(#28a745, #218838);
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
       color: white;
       border: none;
-      padding: 10px 20px;
-      font-weight: bold;
-      box-shadow: 0 4px #1c7430;
-      border-radius: 8px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
       cursor: pointer;
-      transition: 0.2s;
+      transition: all 0.3s ease;
     }
-    .btn-3d:active {
-      box-shadow: 0 2px #1c7430;
-      transform: translateY(2px);
+    .btn:hover {
+      transform: translateY(-2px);
     }
-    .wallet {
-      margin: 10px 0;
+    .hidden { display: none; }
+    #requests { margin-top: 20px; }
+    .request {
+      border: 1px solid #ccc;
       padding: 10px;
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      border-radius: 6px;
-    }
-    .whatsapp {
-      margin-top: 10px;
-      display: inline-block;
-      background: #25d366;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      text-decoration: none;
+      margin-bottom: 10px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>Provider Dashboard</h2>
-  <div id="wallet" class="wallet">Wallet: ₹<span id="walletAmount">0</span></div>
-  <div id="requests"></div>
+  <div class="container">
+    <h2>Provider Dashboard</h2>
+    <button id="loginBtn" class="btn">Login with Google</button>
+    <div id="userPanel" class="hidden">
+      <p><strong>Welcome:</strong> <span id="username"></span></p>
+      <p><strong>Wallet:</strong> ₹<span id="wallet">0</span></p>
+      <div id="requests"></div>
+    </div>
+  </div>
 
   <script>
     const firebaseConfig = {
@@ -63,78 +67,78 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_ID",
-      appId: "YOUR_APP_ID"
+      messagingSenderId: "627330528879",
+      appId: "1:627330528879:web:8b0304a7e6f00b9fc8b7c5"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const loginBtn = document.getElementById('loginBtn');
+    const userPanel = document.getElementById('userPanel');
+    const username = document.getElementById('username');
+    const walletEl = document.getElementById('wallet');
+    const requestsEl = document.getElementById('requests');
 
     let currentUser = null;
-    let currentProvider = null;
+    let currentUID = null;
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        firebase.database().ref('providers/' + user.uid).once('value', snap => {
-          currentProvider = snap.val();
-          loadWallet();
-          loadRequests();
-        });
-      } else {
-        firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      }
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        currentUser = result.user;
+        currentUID = currentUser.uid;
+        username.textContent = currentUser.displayName;
+        loginBtn.classList.add('hidden');
+        userPanel.classList.remove('hidden');
+        loadWallet();
+        loadRequests();
+      }).catch(error => {
+        alert('Login failed: ' + error.message);
+      });
     });
 
     function loadWallet() {
-      firebase.database().ref('wallets/' + currentUser.uid).on('value', snap => {
-        document.getElementById("walletAmount").innerText = snap.val() || 0;
+      db.ref('wallets/' + currentUID).once('value').then(snapshot => {
+        const balance = snapshot.val() || 0;
+        walletEl.textContent = balance;
       });
     }
 
     function loadRequests() {
-      firebase.database().ref('requests').on('value', snap => {
-        const container = document.getElementById("requests");
-        container.innerHTML = '';
-        snap.forEach(req => {
-          const data = req.val();
-          const id = req.key;
-
-          if (data.category === currentProvider.category && data.subcategory === currentProvider.subcategory) {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <b>${data.name}</b><br>
-              Address: ${data.address}<br>
-              Shop: ${data.shop}<br>
-              ${data.acceptedBy && data.acceptedBy.includes(currentUser.uid) ? `<a class="whatsapp" href="https://wa.me/${data.phone}" target="_blank">WhatsApp</a>` : `<button class="btn-3d" onclick="acceptRequest('${id}')">Accept</button>`}
+      db.ref('requests').on('value', snapshot => {
+        requestsEl.innerHTML = '';
+        snapshot.forEach(child => {
+          const data = child.val();
+          if (data.provider === currentUID && data.accepted !== true) {
+            const div = document.createElement('div');
+            div.className = 'request';
+            div.innerHTML = `
+              <p><strong>User:</strong> ${data.name}</p>
+              <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
+              <button class="btn" onclick="acceptRequest('${child.key}', '${data.whatsapp}')">Accept (₹20)</button>
             `;
-            container.appendChild(card);
+            requestsEl.appendChild(div);
           }
         });
       });
     }
 
-    function acceptRequest(requestId) {
-      const walletRef = firebase.database().ref('wallets/' + currentUser.uid);
+    window.acceptRequest = function(key, whatsapp) {
+      const walletRef = db.ref('wallets/' + currentUID);
       walletRef.once('value').then(snapshot => {
         let balance = snapshot.val() || 0;
-        if (balance < 100) {
-          alert("Please recharge. Minimum wallet balance required is ₹100");
+        if (balance < 20) {
+          alert('Please recharge your wallet (min ₹20 required).');
           return;
         }
-
-        firebase.database().ref('requests/' + requestId).once('value').then(snap => {
-          let data = snap.val();
-          if (!data.acceptedBy) data.acceptedBy = [];
-          if (!data.acceptedBy.includes(currentUser.uid)) {
-            data.acceptedBy.push(currentUser.uid);
-          }
-          firebase.database().ref('requests/' + requestId).update({
-            acceptedBy: data.acceptedBy
-          });
-
-          // ₹20 कटे
-          walletRef.set(balance - 20);
-        });
+        balance -= 20;
+        walletRef.set(balance);
+        walletEl.textContent = balance;
+        db.ref('requests/' + key + '/accepted').set(true);
+        db.ref('requests/' + key + '/acceptedBy').set(currentUID);
+        alert('Request Accepted!');
+        window.open('https://wa.me/' + whatsapp, '_blank');
       });
     }
   </script>
