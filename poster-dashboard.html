@@ -1,103 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Poster Registration</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Poster Submission</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      font-family: 'Poppins', sans-serif;
-    }
-
     body {
-      background: #f1f1f1;
-      padding: 10px;
+      font-family: sans-serif;
+      padding: 1rem;
+      background: #f0f0f0;
     }
-
-    .container {
-      max-width: 500px;
-      margin: 20px auto;
+    .card {
       background: #fff;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: auto;
     }
-
-    h2 {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    input,
-    select,
-    textarea {
+    input, select, button {
       width: 100%;
+      margin-bottom: 1rem;
       padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
+      font-size: 16px;
+      border-radius: 10px;
       border: 1px solid #ccc;
     }
-
     button {
-      padding: 12px;
-      width: 100%;
-      background: linear-gradient(145deg, #6e8efb, #a777e3);
+      background: linear-gradient(to right, #4CAF50, #81C784);
       color: white;
       font-weight: bold;
       border: none;
-      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
       cursor: pointer;
-      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      transition: 0.3s;
     }
-
-    .dashboard {
-      display: none;
+    button:hover {
+      background: linear-gradient(to right, #388E3C, #66BB6A);
+    }
+    #message {
       text-align: center;
-      padding: 20px;
-    }
-
-    @media screen and (max-width: 600px) {
-      .container {
-        margin: 10px;
-      }
+      font-weight: bold;
+      margin-top: 1rem;
+      color: green;
     }
   </style>
 </head>
-
 <body>
+  <div class="card" id="formCard">
+    <h2>📤 Submit Your Poster</h2>
+    <form id="posterForm">
+      <input type="text" id="name" placeholder="Your Name" required />
+      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+      <input type="text" id="location" placeholder="City / Area" required />
+      <input type="text" id="pincode" placeholder="Pin Code" pattern="\\d{6}" required />
 
-  <div class="container" id="form-container">
-    <h2>📤 Poster Registration</h2>
-    <input type="text" id="shopname" placeholder="Shop Name" required>
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <input type="text" id="pincode" placeholder="Pincode" required>
-    <select id="category">
-      <option value="">Select Category</option>
-      <option value="Education">Education</option>
-      <option value="Health">Health</option>
-      <option value="Business">Business</option>
-    </select>
-    <select id="subcategory">
-      <option value="">Select Subcategory</option>
-    </select>
-    <textarea id="message" rows="3" placeholder="Message (Optional)"></textarea>
-    <button onclick="submitPoster()">Submit Poster</button>
+      <select id="category" required>
+        <option value="">📂 Select Category</option>
+        <option value="Education">Education</option>
+        <option value="Jobs">Jobs</option>
+        <option value="Services">Services</option>
+        <option value="Real Estate">Real Estate</option>
+      </select>
+
+      <select id="subcategory" required>
+        <option value="">📁 Select Subcategory</option>
+        <option value="Tutor">Tutor</option>
+        <option value="Part Time Job">Part Time Job</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Flat for Rent">Flat for Rent</option>
+      </select>
+
+      <textarea id="description" placeholder="Describe your poster..." rows="4" required></textarea>
+
+      <button type="submit">🚀 Submit</button>
+    </form>
+    <div id="message"></div>
   </div>
 
-  <div class="dashboard" id="dashboard">
-    <h2>🧾 Poster Dashboard</h2>
-    <p>⏳ Wait for approval...</p>
-  </div>
-
-  <script>
+  <script type="module">
     // Firebase config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -108,82 +93,40 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    const subcategories = {
-      Education: ["Tutoring", "School", "College"],
-      Health: ["Hospital", "Clinic", "Pharmacy"],
-      Business: ["Startup", "Shop", "Freelancer"]
-    };
+    const posterForm = document.getElementById("posterForm");
+    const message = document.getElementById("message");
+    const formCard = document.getElementById("formCard");
 
-    document.getElementById("category").addEventListener("change", function () {
-      const selectedCat = this.value;
-      const subcatSelect = document.getElementById("subcategory");
-      subcatSelect.innerHTML = "<option value=''>Select Subcategory</option>";
-      if (subcategories[selectedCat]) {
-        subcategories[selectedCat].forEach(sub => {
-          const option = document.createElement("option");
-          option.value = sub;
-          option.text = sub;
-          subcatSelect.appendChild(option);
-        });
-      }
-    });
+    posterForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    function validatePincode(pin) {
-      return /^[1-9][0-9]{5}$/.test(pin);
-    }
-
-    function submitPoster() {
-      const shopname = document.getElementById("shopname").value.trim();
-      const name = document.getElementById("name").value.trim();
-      const whatsapp = document.getElementById("whatsapp").value.trim();
-      const pincode = document.getElementById("pincode").value.trim();
+      const name = document.getElementById("name").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const location = document.getElementById("location").value;
+      const pincode = document.getElementById("pincode").value;
       const category = document.getElementById("category").value;
       const subcategory = document.getElementById("subcategory").value;
-      const message = document.getElementById("message").value.trim();
+      const description = document.getElementById("description").value;
 
-      if (!shopname || !name || !whatsapp || !pincode || !category || !subcategory) {
-        alert("Please fill all required fields.");
-        return;
-      }
-
-      if (!validatePincode(pincode)) {
-        alert("Please enter a valid 6-digit pincode.");
-        return;
-      }
-
-      const posterData = {
-        shopname,
+      // Save to Firebase
+      const postRef = push(ref(db, "posters"));
+      await set(postRef, {
         name,
         whatsapp,
+        location,
         pincode,
         category,
         subcategory,
-        message,
+        description,
         approved: false,
-        timestamp: new Date().toISOString()
-      };
-
-      database.ref("posters/").push(posterData).then(() => {
-        localStorage.setItem("poster_submitted", "true");
-        showDashboard();
+        createdAt: new Date().toISOString()
       });
-    }
 
-    function showDashboard() {
-      document.getElementById("form-container").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-    }
-
-    // On page load
-    window.onload = function () {
-      if (localStorage.getItem("poster_submitted") === "true") {
-        showDashboard();
-      }
-    };
+      formCard.innerHTML = `<h2>✅ Wait for Approval</h2><p>Your poster has been submitted successfully.</p>`;
+    });
   </script>
 </body>
-
 </html>
