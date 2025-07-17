@@ -1,92 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Request List</title>
+  <title>Admin Dashboard</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      padding: 20px;
+      font-family: Arial;
+      background: #f0f0f0;
+      margin: 20px;
+    }
+    h2 {
+      text-align: center;
     }
     .request-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 16px;
-      margin-bottom: 16px;
-      transition: transform 0.2s;
+      background: white;
+      margin: 10px auto;
+      padding: 15px;
+      border-left: 5px solid #4caf50;
+      border-radius: 8px;
+      width: 90%;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      position: relative;
     }
-    .request-card:hover {
-      transform: scale(1.02);
+    .blinking-led {
+      height: 15px;
+      width: 15px;
+      background-color: red;
+      border-radius: 50%;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      animation: blink 1s infinite;
     }
-    .request-card p {
-      margin: 6px 0;
-      font-size: 16px;
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+    .buttons button {
+      padding: 6px 10px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+    }
+    .approve-btn { background-color: #4CAF50; }
+    .reject-btn { background-color: #f44336; }
+    .timestamp {
+      font-size: 12px;
+      color: #555;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
+  <h2>📋 All Service Requests</h2>
+  <div id="requests"></div>
 
-  <h2>📋 All Requests</h2>
-  <div id="request-list"></div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "447701261395",
-      appId: "1:447701261395:web:1b4f3c1b0e3f76ad47880e"
+      messagingSenderId: "1099010604024",
+      appId: "1:1099010604024:web:1d6ab00e6a65a67acbaf3a"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Show request data
-    const requestList = document.getElementById("request-list");
+    function fetchRequests() {
+      db.ref('serviceRequests').on('value', (snapshot) => {
+        const container = document.getElementById('requests');
+        container.innerHTML = '';
+        snapshot.forEach(child => {
+          const data = child.val();
+          const key = child.key;
+          const status = data.status || 'Pending';
+          const name = data.name || 'N/A';
+          const email = data.email || 'N/A';
+          const phone = data.phone || 'N/A';
+          const address = data.address || 'N/A';
+          const category = data.category || 'N/A';
+          const subcategory = data.subcategory || 'N/A';
+          const description = data.description || 'N/A';
+          const timestamp = data.timestamp || 'N/A';
 
-    db.ref("requests").once("value", snapshot => {
-      snapshot.forEach(child => {
-        const request = child.val();
-        const timestamp = request.timestamp || "N/A";
+          const card = document.createElement('div');
+          card.className = 'request-card';
 
-        // Format timestamp from Firebase
-        let formattedTime = "N/A";
-        if (timestamp !== "N/A") {
-          const dateObj = new Date(timestamp);
-          const options = {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          };
-          formattedTime = dateObj.toLocaleString('en-IN', options);
-        }
+          card.innerHTML = `
+            <strong>Name:</strong> ${name}<br>
+            <strong>Email:</strong> ${email}<br>
+            <strong>WhatsApp:</strong> ${phone}<br>
+            <strong>Address:</strong> ${address}<br>
+            <strong>Service:</strong> ${category} - ${subcategory}<br>
+            <strong>Issue:</strong> ${description}<br>
+            <strong>Status:</strong> ${status}
+            <div class="timestamp">📅 ${timestamp}</div>
+            <div class="buttons">
+              ${status !== 'Approved' ? `<button class="approve-btn" onclick="updateStatus('${key}', 'Approved')">✅ Approve</button>` : ''}
+              <button class="reject-btn" onclick="deleteRequest('${key}')">❌ Reject</button>
+            </div>
+            ${status !== 'Approved' ? `<div class="blinking-led"></div>` : ''}
+          `;
 
-        const card = `
-          <div class="request-card">
-            <p><strong>🧑 Name:</strong> ${request.name || "N/A"}</p>
-            <p><strong>📞 WhatsApp:</strong> ${request.phone || "N/A"}</p>
-            <p><strong>🏠 Address:</strong> ${request.address || "N/A"}</p>
-            <p><strong>🛠️ Category:</strong> ${request.category || "N/A"} > ${request.subcategory || "N/A"}</p>
-            <p><strong>📝 Description:</strong> ${request.description || "N/A"}</p>
-            <p><strong>⏰ Date/Time:</strong> ${formattedTime}</p>
-          </div>
-        `;
-        requestList.innerHTML += card;
+          container.appendChild(card);
+        });
       });
-    });
-  </script>
+    }
 
+    function updateStatus(key, newStatus) {
+      firebase.database().ref('serviceRequests/' + key).update({
+        status: newStatus
+      });
+    }
+
+    function deleteRequest(key) {
+      if (confirm("Are you sure to delete this request?")) {
+        firebase.database().ref('serviceRequests/' + key).remove();
+      }
+    }
+
+    fetchRequests();
+  </script>
 </body>
 </html>
