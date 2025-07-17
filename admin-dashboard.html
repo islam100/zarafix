@@ -1,31 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #f0f0f0;
-    }
-    h2 {
-      text-align: center;
+      background: #f5f5f5;
+      padding: 20px;
     }
     .card {
       background: white;
-      padding: 15px;
-      margin: 10px auto;
-      width: 90%;
       border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px #aaa;
+      padding: 15px;
+      margin-bottom: 15px;
       position: relative;
+    }
+    .btn {
+      padding: 8px 12px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px #999;
+    }
+    .approve-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .reject-btn {
+      background-color: #f44336;
+      color: white;
     }
     .led {
       width: 12px;
       height: 12px;
+      background-color: red;
       border-radius: 50%;
-      background: red;
       position: absolute;
       top: 15px;
       right: 15px;
@@ -35,27 +50,11 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
     }
-    .btn {
-      padding: 8px 15px;
-      border: none;
-      margin: 5px 5px 0 0;
-      border-radius: 10px;
-      cursor: pointer;
-      color: white;
-      font-weight: bold;
-      box-shadow: 2px 2px 5px gray;
-    }
-    .approve { background: green; }
-    .reject { background: red; }
   </style>
 </head>
 <body>
   <h2>Admin Dashboard</h2>
-  <div id="dashboard"></div>
-
-  <!-- Firebase Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <div id="requestsContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -64,66 +63,70 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "388992224949",
-      appId: "1:388992224949:web:7a12a4c86ee7e2bd4e1cb6"
+      messagingSenderId: "1070525821959",
+      appId: "1:1070525821959:web:c77151f0e3c58cfb5363fc"
     };
-
     firebase.initializeApp(firebaseConfig);
+
     const db = firebase.database();
+    const container = document.getElementById("requestsContainer");
 
-    function renderCards(data) {
-      const container = document.getElementById("dashboard");
-      container.innerHTML = '';
+    function renderCard(id, data) {
+      const card = document.createElement("div");
+      card.className = "card";
 
-      for (let id in data) {
-        const d = data[id];
-        const card = document.createElement("div");
-        card.className = "card";
+      const name = data.fullname || "N/A";
+      const email = data.email || "N/A";
+      const whatsapp = data.whatsapp || "N/A";
+      const address = data.address || "N/A";
+      const service = data.service || "N/A";
+      const status = data.status || "Pending";
 
-        card.innerHTML = `
-          <strong>Name:</strong> ${d.name || 'N/A'}<br>
-          <strong>Email:</strong> ${d.email || 'N/A'}<br>
-          <strong>Service:</strong> ${d.service || 'N/A'}<br>
-          <strong>Status:</strong> ${d.status || 'Pending'}<br><br>
-        `;
+      card.innerHTML = `
+        <h3>${name}</h3>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>WhatsApp:</strong> ${whatsapp}</p>
+        <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Service:</strong> ${service}</p>
+        <p><strong>Status:</strong> ${status}</p>
+      `;
 
-        if (d.status !== "Approved") {
-          const led = document.createElement("div");
-          led.className = "led";
-          card.appendChild(led);
+      // LED if not approved
+      if (status !== "Approved") {
+        const led = document.createElement("div");
+        led.className = "led";
+        card.appendChild(led);
+      }
 
-          const approveBtn = document.createElement("button");
-          approveBtn.className = "btn approve";
-          approveBtn.innerText = "✅ Approve";
-          approveBtn.onclick = () => updateStatus(id, "Approved");
-          card.appendChild(approveBtn);
+      // Buttons
+      if (status !== "Approved") {
+        const approveBtn = document.createElement("button");
+        approveBtn.textContent = "✅ Approve";
+        approveBtn.className = "btn approve-btn";
+        approveBtn.onclick = () => {
+          db.ref("serviceRequests/" + id).update({ status: "Approved" });
+        };
+        card.appendChild(approveBtn);
+      }
+
+      const rejectBtn = document.createElement("button");
+      rejectBtn.textContent = "❌ Reject/Delete";
+      rejectBtn.className = "btn reject-btn";
+      rejectBtn.onclick = () => {
+        if (confirm("Are you sure to delete this request?")) {
+          db.ref("serviceRequests/" + id).remove();
         }
+      };
+      card.appendChild(rejectBtn);
 
-        const rejectBtn = document.createElement("button");
-        rejectBtn.className = "btn reject";
-        rejectBtn.innerText = "❌ Reject/Delete";
-        rejectBtn.onclick = () => deleteEntry(id);
-        card.appendChild(rejectBtn);
-
-        container.appendChild(card);
-      }
+      container.appendChild(card);
     }
 
-    function updateStatus(id, newStatus) {
-      firebase.database().ref("serviceRequests/" + id).update({ status: newStatus });
-    }
-
-    function deleteEntry(id) {
-      firebase.database().ref("serviceRequests/" + id).remove();
-    }
-
-    firebase.database().ref("serviceRequests").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        renderCards(data);
-      } else {
-        document.getElementById("dashboard").innerHTML = "<p>No data available.</p>";
-      }
+    db.ref("serviceRequests").on("value", (snapshot) => {
+      container.innerHTML = ""; // Clear old
+      snapshot.forEach((child) => {
+        renderCard(child.key, child.val());
+      });
     });
   </script>
 </body>
