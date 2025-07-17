@@ -1,136 +1,134 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>User / Provider View</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    button { padding: 10px 15px; margin: 5px; }
+    .box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-      <span class="navbar-brand">🔧 Service Dashboard</span>
-      <div id="user-info" class="text-white"></div>
-      <button class="btn btn-danger" onclick="logout()">Logout</button>
-    </div>
-  </nav>
 
-  <div class="container my-4">
-    <div id="dashboard"></div>
-  </div>
+<h2>Login as User or Provider</h2>
+<button onclick="login()">Login with Google</button>
+<button onclick="logout()">Logout</button>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_MSG_ID",
-      appId: "YOUR_APP_ID"
-    };
+<div id="userView" class="box hidden">
+  <h3>User Dashboard</h3>
+  <p id="userName"></p>
+  <p id="userWallet"></p>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+  <h4>Recharge Request</h4>
+  <input type="number" id="rechargeAmount" placeholder="Enter amount">
+  <button onclick="sendRechargeRequest()">Send Recharge</button>
+  <p id="rechargeStatus"></p>
+</div>
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        const uid = user.uid;
-        db.ref(`users/${uid}`).once("value").then(snapshot => {
-          if (snapshot.exists()) {
-            renderUserDashboard(snapshot.val(), uid);
+<div id="providerView" class="box hidden">
+  <h3>Provider Dashboard</h3>
+  <p id="providerName"></p>
+  <p id="providerCategory"></p>
+  <p id="providerWallet"></p>
+</div>
+
+<script>
+  // 🔧 Replace this with your own Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "99236472578",
+    appId: "1:99236472578:web:9b6747c163b83f3f0e4eec"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let currentUser = null;
+
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then(res => {
+        currentUser = res.user;
+        const uid = currentUser.uid;
+        // Check role
+        db.ref(`users/${uid}`).once('value', snap => {
+          if (snap.exists()) {
+            showUserView(uid);
           } else {
-            db.ref(`providers/${uid}`).once("value").then(snap => {
-              if (snap.exists()) {
-                renderProviderDashboard(snap.val(), uid);
+            db.ref(`providers/${uid}`).once('value', snap2 => {
+              if (snap2.exists()) {
+                showProviderView(uid);
               } else {
-                document.getElementById("dashboard").innerHTML = `<div class="alert alert-danger">User not found in database.</div>`;
+                alert("User not found in database.");
               }
             });
           }
         });
-        document.getElementById("user-info").innerHTML = `<small>${user.email}</small>`;
-      } else {
-        window.location.href = "login.html";
-      }
+      })
+      .catch(err => alert(err.message));
+  }
+
+  function logout() {
+    auth.signOut();
+    currentUser = null;
+    document.getElementById('userView').classList.add('hidden');
+    document.getElementById('providerView').classList.add('hidden');
+  }
+
+  function showUserView(uid) {
+    db.ref(`users/${uid}`).once('value').then(snap => {
+      const user = snap.val();
+      document.getElementById('userName').innerText = `Name: ${user.name}`;
+      document.getElementById('userWallet').innerText = `Wallet: ₹${user.wallet}`;
+      document.getElementById('userView').classList.remove('hidden');
+      document.getElementById('providerView').classList.add('hidden');
     });
+  }
 
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "login.html";
-      });
+  function showProviderView(uid) {
+    db.ref(`providers/${uid}`).once('value').then(snap => {
+      const provider = snap.val();
+      document.getElementById('providerName').innerText = `Name: ${provider.name}`;
+      document.getElementById('providerCategory').innerText = `Category: ${provider.category} (${provider.subcategory})`;
+      document.getElementById('providerWallet').innerText = `Wallet: ₹${provider.wallet}`;
+      document.getElementById('providerView').classList.remove('hidden');
+      document.getElementById('userView').classList.add('hidden');
+    });
+  }
+
+  function sendRechargeRequest() {
+    const amount = parseInt(document.getElementById('rechargeAmount').value);
+    if (!amount || amount < 1) {
+      alert("Please enter a valid amount.");
+      return;
     }
-
-    function renderUserDashboard(user, uid) {
-      db.ref(`wallet/${uid}`).once("value").then(wSnap => {
-        const wallet = wSnap.val();
-        db.ref(`requests`).orderByChild("uid").equalTo(uid).once("value").then(rSnap => {
-          const requests = rSnap.val();
-          db.ref(`rechargeRequests`).orderByChild("uid").equalTo(uid).once("value").then(reSnap => {
-            const recharges = reSnap.val();
-
-            document.getElementById("dashboard").innerHTML = `
-              <h3>👤 User Dashboard</h3>
-              <hr/>
-              <p><strong>Name:</strong> ${user.name}</p>
-              <p><strong>Phone:</strong> ${user.phone}</p>
-              <p><strong>Wallet Balance:</strong> ₹${wallet?.balance || 0}</p>
-
-              <h4>🧾 My Requests</h4>
-              ${requests ? Object.values(requests).map(r => `
-                <div class="card mb-2">
-                  <div class="card-body">
-                    <strong>${r.category} - ${r.subcategory}</strong><br/>
-                    ${r.description}<br/>
-                    <span class="badge bg-warning">${r.status}</span>
-                  </div>
-                </div>
-              `).join("") : "No requests found."}
-
-              <h4>💳 Recharge Requests</h4>
-              ${recharges ? Object.values(recharges).map(rec => `
-                <div class="border p-2 mb-2">
-                  ₹${rec.amount} - <strong>${rec.status}</strong> (${rec.timestamp})
-                </div>
-              `).join("") : "No recharge requests found."}
-            `;
-          });
-        });
+    const uid = currentUser.uid;
+    db.ref(`users/${uid}`).once('value').then(snap => {
+      const user = snap.val();
+      const reqId = db.ref().child("rechargeRequests").push().key;
+      const data = {
+        uid: uid,
+        name: user.name,
+        phone: user.phone,
+        amount: amount,
+        status: "Pending",
+        timestamp: new Date().toISOString()
+      };
+      db.ref(`rechargeRequests/${reqId}`).set(data).then(() => {
+        document.getElementById('rechargeStatus').innerText = "Recharge request sent!";
       });
-    }
-
-    function renderProviderDashboard(provider, uid) {
-      db.ref(`wallet/${uid}`).once("value").then(wSnap => {
-        const wallet = wSnap.val();
-        db.ref(`requests`).once("value").then(rSnap => {
-          const allRequests = rSnap.val();
-
-          document.getElementById("dashboard").innerHTML = `
-            <h3>🔧 Provider Dashboard</h3>
-            <hr/>
-            <p><strong>Name:</strong> ${provider.name}</p>
-            <p><strong>Category:</strong> ${provider.category} > ${provider.subcategory}</p>
-            <p><strong>Status:</strong> ${provider.status}</p>
-            <p><strong>Wallet Balance:</strong> ₹${wallet?.balance || 0}</p>
-
-            <h4>📋 All Requests</h4>
-            ${allRequests ? Object.values(allRequests).map(r => `
-              <div class="card mb-2">
-                <div class="card-body">
-                  <strong>${r.name}</strong> (${r.category})<br/>
-                  ${r.description}<br/>
-                  <span class="badge bg-info">${r.status}</span>
-                </div>
-              </div>
-            `).join("") : "No requests found."}
-          `;
-        });
-      });
-    }
-  </script>
+    });
+  }
+</script>
 </body>
 </html>
