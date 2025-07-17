@@ -3,165 +3,202 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Zara Poster Form</title>
+  <title>Poster Registration</title>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-    }
-    .container {
-      max-width: 500px;
-      margin: 40px auto;
-      padding: 20px;
+    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+    form, #dashboard {
       background: white;
+      padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: auto;
+      box-shadow: 0 0 10px #ccc;
     }
-    h2 {
-      text-align: center;
-    }
-    input, textarea, select {
+    input, select {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
-      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 5px;
     }
     button {
-      width: 100%;
-      padding: 12px;
-      background: #007bff;
-      color: white;
+      padding: 10px 15px;
       border: none;
       border-radius: 5px;
-      font-size: 16px;
+      background: teal;
+      color: white;
       cursor: pointer;
     }
-    button:hover {
-      background: #0056b3;
-    }
-    .hidden {
-      display: none;
-    }
-    #dashboard {
-      text-align: center;
-      font-size: 20px;
-      padding: 50px;
+    button:hover { background: #006666; }
+    .hidden { display: none; }
+    @media(max-width: 600px) {
+      form, #dashboard { width: 95%; }
     }
   </style>
 </head>
 <body>
-  <div class="container" id="formDiv">
-    <h2>Poster Profile Form</h2>
-    <input type="text" id="name" placeholder="Full Name" required />
-    <input type="text" id="phone" placeholder="Phone Number" required />
-    <input type="text" id="pincode" placeholder="Pincode" required />
-    <input type="text" id="address" placeholder="Shop Address (Optional)" />
-    <textarea id="description" placeholder="Shop Description (Optional)"></textarea>
-    <button id="submitBtn">Submit</button>
-  </div>
 
-  <div id="dashboard" class="hidden">
-    ✅ आपका प्रोफ़ाइल सबमिट हो चुका है।<br/>धन्यवाद!
-  </div>
+<h2 style="text-align:center;">Poster Registration</h2>
 
-  <!-- Firebase Scripts -->
-  <script type="module">
-    // Firebase imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<div id="loginBox" style="text-align: center; margin-bottom: 20px;">
+  <button onclick="loginWithGoogle()">Login with Google</button>
+</div>
 
-    // Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "587126848877",
-      appId: "1:587126848877:web:5e42f08b1ab6a4e83aa9de"
-    };
+<div id="logoutBox" class="hidden" style="text-align: center; margin-bottom: 20px;">
+  <p id="userName"></p>
+  <button onclick="logout()">Logout</button>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<form id="posterForm" class="hidden">
+  <input type="text" id="name" placeholder="Your Name" required />
+  <input type="tel" id="phone" placeholder="Phone Number" required />
+  <input type="text" id="pincode" placeholder="Pincode (6 digits)" maxlength="6" required />
 
-    const formDiv = document.getElementById("formDiv");
-    const dashboard = document.getElementById("dashboard");
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Salon">Salon</option>
+  </select>
 
-    const phoneField = document.getElementById("phone");
+  <select id="subcategory" required>
+    <option value="">Select Subcategory</option>
+  </select>
 
-    // 🔍 Check if user already exists
-    function checkExistingUser(phoneNumber, callback) {
-      const usersRef = ref(db, "posterUsers/");
-      onValue(usersRef, (snapshot) => {
-        let found = false;
-        snapshot.forEach((child) => {
-          const user = child.val();
-          if (user.phone === phoneNumber) found = true;
-        });
-        callback(found);
-      }, { onlyOnce: true });
+  <input type="text" id="location" placeholder="Shop Full Address" required />
+  <button type="submit">Submit</button>
+</form>
+
+<div id="dashboard" class="hidden">
+  <h3>🧾 Poster Dashboard</h3>
+  <p>⏳ Your poster is submitted. Please <strong>wait for approval</strong>.</p>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "5010031414",
+    appId: "1:5010031414:web:7c7ddc8b2e9187db6b7a88"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  const form = document.getElementById("posterForm");
+  const dashboard = document.getElementById("dashboard");
+  const loginBox = document.getElementById("loginBox");
+  const logoutBox = document.getElementById("logoutBox");
+  const userName = document.getElementById("userName");
+
+  const categoryDropdown = document.getElementById("category");
+  const subcategoryDropdown = document.getElementById("subcategory");
+
+  const subcategories = {
+    Electrician: ["Fan Repair", "Switch Fitting", "New Wiring"],
+    Plumber: ["Tap Leak", "Pipeline Setup", "Bathroom Fitting"],
+    Salon: ["Haircut", "Facial", "Threading"]
+  };
+
+  categoryDropdown.addEventListener("change", () => {
+    const cat = categoryDropdown.value;
+    subcategoryDropdown.innerHTML = `<option value="">Select Subcategory</option>`;
+    if (subcategories[cat]) {
+      subcategories[cat].forEach(sub => {
+        let opt = document.createElement("option");
+        opt.value = sub;
+        opt.innerText = sub;
+        subcategoryDropdown.appendChild(opt);
+      });
+    }
+  });
+
+  function loginWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then(result => {
+        const user = result.user;
+        userName.textContent = `Welcome, ${user.displayName}`;
+        loginBox.classList.add("hidden");
+        logoutBox.classList.remove("hidden");
+
+        const uid = user.uid;
+        checkFormStatus(uid);
+      })
+      .catch(err => alert("Login failed: " + err.message));
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      location.reload();
+    });
+  }
+
+  function checkFormStatus(uid) {
+    db.ref("posterUsers/" + uid).once("value").then(snapshot => {
+      if (snapshot.exists()) {
+        form.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+      } else {
+        form.classList.remove("hidden");
+        dashboard.classList.add("hidden");
+      }
+    });
+  }
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const pincode = document.getElementById("pincode").value.trim();
+    const category = categoryDropdown.value;
+    const subcategory = subcategoryDropdown.value;
+    const location = document.getElementById("location").value.trim();
+
+    if (!/^\d{6}$/.test(pincode)) {
+      alert("❌ Invalid Pincode. Please enter a 6-digit number.");
+      return;
     }
 
-    // 🧠 On page load, check localStorage
-    window.addEventListener("DOMContentLoaded", () => {
-      if (localStorage.getItem("registered") === "true") {
-        formDiv.classList.add("hidden");
+    const user = auth.currentUser;
+    if (!user) return alert("Please login first");
+
+    const uid = user.uid;
+    const data = {
+      name,
+      phone,
+      pincode,
+      category,
+      subcategory,
+      location,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+      approved: false
+    };
+
+    db.ref("posterUsers/" + uid).set(data)
+      .then(() => {
+        form.classList.add("hidden");
         dashboard.classList.remove("hidden");
-      }
-    });
+      })
+      .catch(err => alert("Submit failed: " + err.message));
+  });
 
-    // 🔔 On phone number input change, check Firebase
-    phoneField.addEventListener("change", () => {
-      const phone = phoneField.value.trim();
-      if (phone.length < 10) return;
-      checkExistingUser(phone, (exists) => {
-        if (exists) {
-          localStorage.setItem("registered", "true");
-          formDiv.classList.add("hidden");
-          dashboard.classList.remove("hidden");
-        }
-      });
-    });
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      userName.textContent = `Welcome, ${user.displayName}`;
+      loginBox.classList.add("hidden");
+      logoutBox.classList.remove("hidden");
+      checkFormStatus(user.uid);
+    }
+  });
+</script>
 
-    // 🚀 On Submit
-    document.getElementById("submitBtn").addEventListener("click", () => {
-      const name = document.getElementById("name").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const pincode = document.getElementById("pincode").value.trim();
-      const address = document.getElementById("address").value.trim();
-      const description = document.getElementById("description").value.trim();
-
-      if (!name || !phone || !pincode) {
-        alert("कृपया Name, Phone और Pincode भरें।");
-        return;
-      }
-
-      if (phone.length < 10 || pincode.length < 4) {
-        alert("Valid Phone और Pincode दर्ज करें।");
-        return;
-      }
-
-      // Save to Firebase
-      const data = {
-        name,
-        phone,
-        pincode,
-        address,
-        description,
-        createdAt: new Date().toISOString()
-      };
-
-      push(ref(db, "posterUsers/"), data)
-        .then(() => {
-          localStorage.setItem("registered", "true");
-          formDiv.classList.add("hidden");
-          dashboard.classList.remove("hidden");
-        })
-        .catch((error) => {
-          alert("Error: " + error.message);
-        });
-    });
-  </script>
 </body>
 </html>
