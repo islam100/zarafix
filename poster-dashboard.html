@@ -3,144 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Provider Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
+  <title>Provider Registration</title>
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 20px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    }
-    .btn {
-      display: inline-block;
-      padding: 12px 24px;
-      font-size: 16px;
-      font-weight: bold;
-      background: linear-gradient(145deg, #00c6ff, #0072ff);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .btn:hover {
-      transform: translateY(-2px);
-    }
-    .hidden { display: none; }
-    #requests { margin-top: 20px; }
-    .request {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-    }
+    body { font-family: Arial; padding: 20px; }
+    h2 { text-align: center; }
+    form { max-width: 500px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 10px; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: linear-gradient(#0f0, #0c0); color: white; font-weight: bold; border: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Provider Dashboard</h2>
-    <button id="loginBtn" class="btn">Login with Google</button>
-    <div id="userPanel" class="hidden">
-      <p><strong>Welcome:</strong> <span id="username"></span></p>
-      <p><strong>Wallet:</strong> ₹<span id="wallet">0</span></p>
-      <div id="requests"></div>
-    </div>
-  </div>
+  <h2>Provider Registration</h2>
+  <form id="providerForm">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="text" id="mobile" placeholder="Mobile Number" required />
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+    <input type="text" id="city" placeholder="City" required />
 
-  <script>
+    <select id="category" required>
+      <option value="">Select Category</option>
+      <option value="Electrician">Electrician</option>
+      <option value="Plumber">Plumber</option>
+      <option value="Carpenter">Carpenter</option>
+      <option value="Painter">Painter</option>
+      <option value="AC Repair">AC Repair</option>
+      <option value="Mobile Repair">Mobile Repair</option>
+      <option value="CCTV">CCTV</option>
+      <option value="RO / Water Purifier">RO / Water Purifier</option>
+      <option value="Computer / Laptop">Computer / Laptop</option>
+      <option value="Driver">Driver</option>
+      <option value="Tutor">Tutor</option>
+      <option value="Maid / Cook">Maid / Cook</option>
+      <option value="Delivery Boy">Delivery Boy</option>
+      <option value="Others">Others</option>
+    </select>
+
+    <select id="subCategory" required>
+      <option value="">Select Sub-Category</option>
+    </select>
+
+    <button type="submit">Register</button>
+  </form>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "627330528879",
-      appId: "1:627330528879:web:8b0304a7e6f00b9fc8b7c5"
+      messagingSenderId: "382569715227",
+      appId: "1:382569715227:web:5421ab7e2a4240a5d71cfb"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
 
-    const loginBtn = document.getElementById('loginBtn');
-    const userPanel = document.getElementById('userPanel');
-    const username = document.getElementById('username');
-    const walletEl = document.getElementById('wallet');
-    const requestsEl = document.getElementById('requests');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+    const auth = getAuth();
 
-    let currentUser = null;
-    let currentUID = null;
+    const subCategories = {
+      Electrician: ["Fan Fitting", "Wiring", "Inverter Setup"],
+      Plumber: ["Tap Fix", "Pipe Leakage", "Geyser Fitting"],
+      Carpenter: ["Door Repair", "Furniture Making", "Polish Work"],
+      Painter: ["Interior Paint", "Exterior Paint"],
+      "AC Repair": ["Gas Filling", "Cooling Issue"],
+      "Mobile Repair": ["Screen Replace", "Battery Issue"],
+      CCTV: ["Installation", "Repair"],
+      "RO / Water Purifier": ["Filter Change", "Installation"],
+      "Computer / Laptop": ["Windows Install", "Hardware Repair"],
+      Driver: ["Full Time", "Part Time"],
+      Tutor: ["Home Tutor", "Online Tutor"],
+      "Maid / Cook": ["Cleaning", "Cooking"],
+      "Delivery Boy": ["Bike Delivery", "Cycle Delivery"],
+      Others: ["Misc"]
+    };
 
-    loginBtn.addEventListener('click', () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(result => {
-        currentUser = result.user;
-        currentUID = currentUser.uid;
-        username.textContent = currentUser.displayName;
-        loginBtn.classList.add('hidden');
-        userPanel.classList.remove('hidden');
-        loadWallet();
-        loadRequests();
-      }).catch(error => {
-        alert('Login failed: ' + error.message);
-      });
+    document.getElementById("category").addEventListener("change", function() {
+      const selected = this.value;
+      const subCatSelect = document.getElementById("subCategory");
+      subCatSelect.innerHTML = "<option value=''>Select Sub-Category</option>";
+      if (subCategories[selected]) {
+        subCategories[selected].forEach(sub => {
+          const opt = document.createElement("option");
+          opt.value = sub;
+          opt.textContent = sub;
+          subCatSelect.appendChild(opt);
+        });
+      }
     });
 
-    function loadWallet() {
-      db.ref('wallets/' + currentUID).once('value').then(snapshot => {
-        const balance = snapshot.val() || 0;
-        walletEl.textContent = balance;
-      });
-    }
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        const form = document.getElementById("providerForm");
+        form.addEventListener("submit", function(e) {
+          e.preventDefault();
+          const name = document.getElementById("name").value;
+          const mobile = document.getElementById("mobile").value;
+          const whatsapp = document.getElementById("whatsapp").value;
+          const city = document.getElementById("city").value;
+          const category = document.getElementById("category").value;
+          const subCategory = document.getElementById("subCategory").value;
 
-    function loadRequests() {
-      db.ref('requests').on('value', snapshot => {
-        requestsEl.innerHTML = '';
-        snapshot.forEach(child => {
-          const data = child.val();
-          if (data.provider === currentUID && data.accepted !== true) {
-            const div = document.createElement('div');
-            div.className = 'request';
-            div.innerHTML = `
-              <p><strong>User:</strong> ${data.name}</p>
-              <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
-              <button class="btn" onclick="acceptRequest('${child.key}', '${data.whatsapp}')">Accept (₹20)</button>
-            `;
-            requestsEl.appendChild(div);
-          }
+          set(ref(db, 'providers/' + user.uid), {
+            name, mobile, whatsapp, city, category, subCategory, wallet: 0
+          }).then(() => {
+            window.location.href = "dashboard.html";
+          });
         });
-      });
-    }
-
-    window.acceptRequest = function(key, whatsapp) {
-      const walletRef = db.ref('wallets/' + currentUID);
-      walletRef.once('value').then(snapshot => {
-        let balance = snapshot.val() || 0;
-        if (balance < 20) {
-          alert('Please recharge your wallet (min ₹20 required).');
-          return;
-        }
-        balance -= 20;
-        walletRef.set(balance);
-        walletEl.textContent = balance;
-        db.ref('requests/' + key + '/accepted').set(true);
-        db.ref('requests/' + key + '/acceptedBy').set(currentUID);
-        alert('Request Accepted!');
-        window.open('https://wa.me/' + whatsapp, '_blank');
-      });
-    }
+      }
+    });
   </script>
 </body>
 </html>
