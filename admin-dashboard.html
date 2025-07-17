@@ -3,90 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard | ZaraFix</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"/>
-  <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      margin: 0;
-      background: #f4f4f4;
-    }
-    nav {
-      background: #2d3436;
-      color: #fff;
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.2rem;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .container {
-      padding: 1rem;
-      max-width: 900px;
-      margin: auto;
-    }
-    .btn-3d {
-      background: linear-gradient(145deg, #6c5ce7, #a29bfe);
-      border: none;
-      color: white;
-      padding: 10px 16px;
-      font-size: 14px;
-      margin: 5px;
-      border-radius: 12px;
-      box-shadow: 4px 4px 8px #aaa, -4px -4px 8px #fff;
-      cursor: pointer;
-      transition: 0.2s ease;
-    }
-    .btn-3d:hover {
-      transform: scale(1.05);
-    }
-    .card {
-      background: white;
-      margin: 1rem 0;
-      padding: 1rem;
-      border-radius: 10px;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-      position: relative;
-    }
-    .led {
-      height: 12px;
-      width: 12px;
-      background-color: red;
-      border-radius: 50%;
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-    .section-title {
-      font-size: 18px;
-      margin-bottom: 10px;
-      color: #2d3436;
-      font-weight: bold;
-    }
-  </style>
+  <title>Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-  <nav>
-    📋 ZaraFix Dashboard
-    <button id="logoutBtn" class="btn-3d" style="float:right;">Logout</button>
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <span class="navbar-brand">🔧 Service Dashboard</span>
+      <div id="user-info" class="text-white"></div>
+      <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
   </nav>
 
-  <div class="container">
-    <div style="text-align: center;">
-      <button class="btn-3d" onclick="loadRequests('user')">User Dashboard</button>
-      <button class="btn-3d" onclick="loadRequests('provider')">Provider Dashboard</button>
-    </div>
-
-    <div id="requestList">
-      <p>📋 All Requests</p>
-    </div>
+  <div class="container my-4">
+    <div id="dashboard"></div>
   </div>
 
   <script>
@@ -96,82 +29,107 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_ID",
-      appId: "YOUR_ID"
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
     };
-    firebase.initializeApp(firebaseConfig);
 
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let currentUser;
-
-    firebase.auth().onAuthStateChanged(user => {
+    auth.onAuthStateChanged(user => {
       if (user) {
-        currentUser = user;
-        loadRequests("user");
+        const uid = user.uid;
+        db.ref(`users/${uid}`).once("value").then(snapshot => {
+          if (snapshot.exists()) {
+            renderUserDashboard(snapshot.val(), uid);
+          } else {
+            db.ref(`providers/${uid}`).once("value").then(snap => {
+              if (snap.exists()) {
+                renderProviderDashboard(snap.val(), uid);
+              } else {
+                document.getElementById("dashboard").innerHTML = `<div class="alert alert-danger">User not found in database.</div>`;
+              }
+            });
+          }
+        });
+        document.getElementById("user-info").innerHTML = `<small>${user.email}</small>`;
       } else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        firebase.auth().signInWithPopup(provider);
+        window.location.href = "login.html";
       }
     });
 
-    document.getElementById("logoutBtn").onclick = () => {
-      auth.signOut();
-    };
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
 
-    function loadRequests(mode) {
-      document.getElementById("requestList").innerHTML = "<p>📋 All Requests</p>";
-      db.ref("requests").once("value", snapshot => {
-        if (!snapshot.exists()) {
-          document.getElementById("requestList").innerHTML += "<p>No requests found.</p>";
-          return;
-        }
+    function renderUserDashboard(user, uid) {
+      db.ref(`wallet/${uid}`).once("value").then(wSnap => {
+        const wallet = wSnap.val();
+        db.ref(`requests`).orderByChild("uid").equalTo(uid).once("value").then(rSnap => {
+          const requests = rSnap.val();
+          db.ref(`rechargeRequests`).orderByChild("uid").equalTo(uid).once("value").then(reSnap => {
+            const recharges = reSnap.val();
 
-        snapshot.forEach(child => {
-          const data = child.val();
-          const id = child.key;
+            document.getElementById("dashboard").innerHTML = `
+              <h3>👤 User Dashboard</h3>
+              <hr/>
+              <p><strong>Name:</strong> ${user.name}</p>
+              <p><strong>Phone:</strong> ${user.phone}</p>
+              <p><strong>Wallet Balance:</strong> ₹${wallet?.balance || 0}</p>
 
-          let card = document.createElement("div");
-          card.className = "card";
+              <h4>🧾 My Requests</h4>
+              ${requests ? Object.values(requests).map(r => `
+                <div class="card mb-2">
+                  <div class="card-body">
+                    <strong>${r.category} - ${r.subcategory}</strong><br/>
+                    ${r.description}<br/>
+                    <span class="badge bg-warning">${r.status}</span>
+                  </div>
+                </div>
+              `).join("") : "No requests found."}
 
-          let content = `
-            <div class="section-title">${data.name || "N/A"}</div>
-            <div><b>Email:</b> ${data.email || "N/A"}</div>
-            <div><b>WhatsApp:</b> ${data.phone || "N/A"}</div>
-            <div><b>Address:</b> ${data.address || "N/A"}</div>
-            <div><b>Service:</b> ${data.category || "N/A"} - ${data.subcategory || "N/A"}</div>
-            <div><b>Problem:</b> ${data.description || "N/A"}</div>
-            <div><b>Status:</b> ${data.status || "Pending"}</div>
-            <div><b>Date:</b> ${data.timestamp || "N/A"}</div>
-          `;
-
-          if (data.status !== "Approved") {
-            content += `<div class="led"></div>`;
-            content += `<button class="btn-3d" onclick="updateStatus('${id}', 'Approved')">✅ Approve</button>`;
-          }
-
-          if (data.status !== "Deleted") {
-            content += `<button class="btn-3d" onclick="deleteRequest('${id}')">❌ Reject/Delete</button>`;
-          }
-
-          card.innerHTML = content;
-          document.getElementById("requestList").appendChild(card);
+              <h4>💳 Recharge Requests</h4>
+              ${recharges ? Object.values(recharges).map(rec => `
+                <div class="border p-2 mb-2">
+                  ₹${rec.amount} - <strong>${rec.status}</strong> (${rec.timestamp})
+                </div>
+              `).join("") : "No recharge requests found."}
+            `;
+          });
         });
       });
     }
 
-    function updateStatus(id, status) {
-      db.ref("requests/" + id).update({ status: status });
-      alert("Status updated!");
-      loadRequests("provider");
-    }
+    function renderProviderDashboard(provider, uid) {
+      db.ref(`wallet/${uid}`).once("value").then(wSnap => {
+        const wallet = wSnap.val();
+        db.ref(`requests`).once("value").then(rSnap => {
+          const allRequests = rSnap.val();
 
-    function deleteRequest(id) {
-      if (confirm("Delete this request?")) {
-        db.ref("requests/" + id).remove();
-        loadRequests("provider");
-      }
+          document.getElementById("dashboard").innerHTML = `
+            <h3>🔧 Provider Dashboard</h3>
+            <hr/>
+            <p><strong>Name:</strong> ${provider.name}</p>
+            <p><strong>Category:</strong> ${provider.category} > ${provider.subcategory}</p>
+            <p><strong>Status:</strong> ${provider.status}</p>
+            <p><strong>Wallet Balance:</strong> ₹${wallet?.balance || 0}</p>
+
+            <h4>📋 All Requests</h4>
+            ${allRequests ? Object.values(allRequests).map(r => `
+              <div class="card mb-2">
+                <div class="card-body">
+                  <strong>${r.name}</strong> (${r.category})<br/>
+                  ${r.description}<br/>
+                  <span class="badge bg-info">${r.status}</span>
+                </div>
+              </div>
+            `).join("") : "No requests found."}
+          `;
+        });
+      });
     }
   </script>
 </body>
