@@ -3,164 +3,193 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Poster Registration</title>
+  <title>Poster Register</title>
   <style>
     body {
       font-family: sans-serif;
-      background: #f3f3f3;
+      background: #f9f9f9;
       padding: 20px;
-    }
-    .card {
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
     h2 {
       text-align: center;
     }
+    form, .dashboard, .wait-msg {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 5px 5px 15px #ccc;
+    }
     input, select, textarea {
       width: 100%;
       padding: 10px;
-      margin: 8px 0;
-      border-radius: 8px;
+      margin-top: 10px;
+      border-radius: 10px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
+      font-size: 16px;
     }
     button {
-      background: linear-gradient(to right, #4CAF50, #388E3C);
-      color: white;
-      padding: 12px;
+      margin-top: 15px;
       width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
       border: none;
-      border-radius: 12px;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      transform: scale(1);
-      transition: transform 0.2s;
+      border-radius: 10px;
+      font-size: 16px;
+      box-shadow: 0 5px #388E3C;
+      transition: 0.2s ease;
     }
     button:hover {
-      transform: scale(1.05);
+      background: #45a049;
     }
-    #waitMessage {
+    .dashboard, .wait-msg {
+      display: none;
       text-align: center;
-      font-weight: bold;
+      font-size: 18px;
       color: #333;
     }
   </style>
 </head>
 <body>
 
-<div class="card" id="formCard">
-  <h2>Poster Registration</h2>
-  <input type="text" id="name" placeholder="Name" required />
-  <input type="text" id="shopname" placeholder="Shop Name" required />
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option value="Electronics">Electronics</option>
-    <option value="Clothing">Clothing</option>
-    <option value="Beauty">Beauty</option>
-  </select>
-  <select id="subcategory" required>
-    <option value="">Select Subcategory</option>
-  </select>
-  <input type="tel" id="whatsapp" placeholder="WhatsApp Number" pattern="[0-9]{10}" required inputmode="numeric" />
-  <input type="tel" id="pincode" placeholder="Pincode" pattern="[0-9]{6}" required inputmode="numeric" />
-  <textarea id="address" placeholder="Full Shop Address" rows="3" required></textarea>
-  <button onclick="submitForm()">Submit</button>
-</div>
+  <form id="posterForm">
+    <h2>🧾 Poster Register</h2>
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="text" id="shopname" placeholder="Shop Name" required />
+    <input type="number" id="whatsapp" placeholder="WhatsApp Number" required inputmode="numeric" pattern="\d*" />
+    <input type="text" id="pincode" placeholder="Pincode" required inputmode="numeric" maxlength="6" />
+    <textarea id="address" placeholder="Full Address" required></textarea>
 
-<div id="waitMessage" style="display:none;">
-  ✅ Registration Done!<br>⏳ Wait for Approval...
-</div>
+    <select id="category" required>
+      <option value="">Select Category</option>
+      <option value="Clothing">Clothing</option>
+      <option value="Electronics">Electronics</option>
+    </select>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <select id="subcategory" required>
+      <option value="">Select Subcategory</option>
+    </select>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "160456924853",
-    appId: "1:160456924853:web:6d3075a2e3c1167e6cc6ae"
-  };
-  firebase.initializeApp(firebaseConfig);
+    <button type="submit">Submit</button>
+  </form>
 
-  const categorySelect = document.getElementById("category");
-  const subcategorySelect = document.getElementById("subcategory");
+  <div class="wait-msg" id="waitMessage">
+    ✅ Registration submitted. <br> ⏳ <strong>Wait for approval...</strong>
+  </div>
 
-  const subcategoryMap = {
-    Electronics: ["Mobile", "TV", "Laptop"],
-    Clothing: ["Men", "Women", "Kids"],
-    Beauty: ["Salon", "Makeup", "Parlour"]
-  };
+  <div class="dashboard" id="dashboard">
+    <h2>🎉 Welcome to Your Poster Dashboard</h2>
+    <p>Your registration has been approved.</p>
+    <!-- Poster data can be shown here -->
+  </div>
 
-  categorySelect.addEventListener("change", () => {
-    subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
-    const selected = categorySelect.value;
-    if (subcategoryMap[selected]) {
-      subcategoryMap[selected].forEach(sub => {
-        const opt = document.createElement("option");
-        opt.value = sub;
-        opt.innerText = sub;
-        subcategorySelect.appendChild(opt);
-      });
-    }
-  });
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-  function submitForm() {
-    const name = document.getElementById("name").value.trim();
-    const shopname = document.getElementById("shopname").value.trim();
-    const category = categorySelect.value;
-    const subcategory = subcategorySelect.value;
-    const whatsapp = document.getElementById("whatsapp").value.trim();
-    const pincode = document.getElementById("pincode").value.trim();
-    const address = document.getElementById("address").value.trim();
-
-    if (!name || !shopname || !category || !subcategory || !whatsapp || !pincode || !address) {
-      alert("⚠️ Please fill all fields.");
-      return;
-    }
-
-    if (pincode.length !== 6 || isNaN(pincode)) {
-      alert("❌ Invalid Pincode");
-      return;
-    }
-
-    const data = {
-      name,
-      shopname,
-      category,
-      subcategory,
-      whatsapp,
-      pincode,
-      address,
-      timestamp: new Date().toISOString(),
-      status: false
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_ID"
     };
 
-    firebase.database().ref("posterUsers").push(data)
-      .then(() => {
-        document.getElementById("formCard").style.display = "none";
-        document.getElementById("waitMessage").style.display = "block";
-      })
-      .catch(err => alert("Error: " + err.message));
-  }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // Page reload check
-  window.onload = () => {
-    const submitted = localStorage.getItem("posterSubmitted");
-    if (submitted) {
-      document.getElementById("formCard").style.display = "none";
-      document.getElementById("waitMessage").style.display = "block";
+    const posterForm = document.getElementById("posterForm");
+    const waitMsg = document.getElementById("waitMessage");
+    const dashboard = document.getElementById("dashboard");
+
+    const category = document.getElementById("category");
+    const subcategory = document.getElementById("subcategory");
+
+    const subCats = {
+      "Clothing": ["Men", "Women", "Kids"],
+      "Electronics": ["Mobiles", "TV", "Laptops"]
+    };
+
+    category.addEventListener("change", () => {
+      subcategory.innerHTML = "<option value=''>Select Subcategory</option>";
+      if (subCats[category.value]) {
+        subCats[category.value].forEach(sub => {
+          const opt = document.createElement("option");
+          opt.value = sub;
+          opt.textContent = sub;
+          subcategory.appendChild(opt);
+        });
+      }
+    });
+
+    // Check approval from Firebase (based on phone or other unique field)
+    function checkApproval(whatsapp) {
+      db.ref("posterUsers").orderByChild("whatsapp").equalTo(whatsapp).once("value", (snapshot) => {
+        if (snapshot.exists()) {
+          const userData = Object.values(snapshot.val())[0];
+          if (userData.approved === true) {
+            posterForm.style.display = "none";
+            waitMsg.style.display = "none";
+            dashboard.style.display = "block";
+          } else {
+            posterForm.style.display = "none";
+            waitMsg.style.display = "block";
+          }
+        }
+      });
     }
-  };
-</script>
 
+    // On Form Submit
+    posterForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const shopname = document.getElementById("shopname").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const pincode = document.getElementById("pincode").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const cat = category.value;
+      const subcat = subcategory.value;
+
+      if (pincode.length !== 6) {
+        alert("Please enter valid 6-digit Pincode.");
+        return;
+      }
+
+      const newUserRef = db.ref("posterUsers").push();
+      newUserRef.set({
+        name,
+        shopname,
+        whatsapp,
+        pincode,
+        address,
+        category: cat,
+        subcategory: subcat,
+        approved: false,
+        timestamp: new Date().toISOString()
+      }).then(() => {
+        posterForm.reset();
+        posterForm.style.display = "none";
+        waitMsg.style.display = "block";
+      });
+    });
+
+    // On load, check approval by WhatsApp number (if stored in localStorage)
+    window.addEventListener("load", () => {
+      const savedWhatsapp = localStorage.getItem("whatsapp");
+      if (savedWhatsapp) {
+        checkApproval(savedWhatsapp);
+      }
+    });
+
+    // Save whatsapp to localStorage for session persistence
+    document.getElementById("whatsapp").addEventListener("blur", (e) => {
+      localStorage.setItem("whatsapp", e.target.value.trim());
+    });
+  </script>
 </body>
 </html>
