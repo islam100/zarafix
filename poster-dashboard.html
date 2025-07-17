@@ -1,30 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Poster Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    .card {
-      box-shadow: 5px 5px 10px rgba(0,0,0,0.2);
-      border-radius: 20px;
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
     }
-    .btn-3d {
+    .poster-card {
+      border: 1px solid #ccc;
+      border-radius: 15px;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .btn {
+      padding: 8px 12px;
       border: none;
-      background: #007bff;
+      border-radius: 10px;
+      background: linear-gradient(to right, #4CAF50, #45a049);
       color: white;
-      padding: 8px 16px;
-      border-radius: 12px;
-      box-shadow: 3px 3px 0px #004080;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn:hover {
+      background: linear-gradient(to right, #45a049, #4CAF50);
     }
   </style>
 </head>
-<body class="p-4">
-  <div id="userInfo" class="mb-3 text-center fw-bold"></div>
-  <div id="posterList" class="row gy-4"></div>
-  <div id="noPosters" class="text-danger text-center fw-bold mt-4" style="display: none;">No posters found.</div>
+<body>
+
+  <h2>🧾 Poster Dashboard</h2>
+  <div id="dashboard"></div>
 
   <script>
     const firebaseConfig = {
@@ -38,74 +50,66 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const auth = firebase.auth();
+    const db = firebase.database();
 
     let currentUser;
 
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
-        document.getElementById("userInfo").textContent = "Logged in: " + user.displayName;
-        loadPosters();
+        loadPosters(user.uid);
       } else {
         window.location.href = "index.html";
       }
     });
 
-    function loadPosters() {
-      db.ref("posters").once("value", snapshot => {
-        const posters = snapshot.val();
-        const posterList = document.getElementById("posterList");
-        posterList.innerHTML = "";
-        let found = false;
+    function loadPosters(uid) {
+      const dashboard = document.getElementById("dashboard");
+      dashboard.innerHTML = "🔄 Loading...";
 
-        for (let id in posters) {
-          const poster = posters[id];
-          if (poster.approved === true && poster.acceptedBy !== currentUser.uid) {
-            found = true;
+      db.ref("posters").orderByChild("uid").equalTo(uid).once("value", snapshot => {
+        if (snapshot.exists()) {
+          dashboard.innerHTML = "";
+          snapshot.forEach(child => {
+            const data = child.val();
+            const key = child.key;
 
             const card = document.createElement("div");
-            card.className = "col-md-6";
+            card.className = "poster-card";
+
             card.innerHTML = `
-              <div class="card p-3">
-                <h5>${poster.shopName}</h5>
-                <p><strong>Full Address:</strong> ${poster.address}, ${poster.pincode}</p>
-                <p><strong>Category:</strong> ${poster.category}</p>
-                <button class="btn-3d" onclick="acceptPoster('${id}', '${poster.whatsapp}')">Accept</button>
+              <b>Name:</b> ${data.name}<br>
+              <b>Shop:</b> ${data.shop}<br>
+              <b>WhatsApp:</b> ${data.whatsapp}<br>
+              <b>Category:</b> ${data.category} > ${data.subcategory}<br>
+              <b>Address:</b> ${data.address}, Pincode: ${data.pincode}<br>
+              <b>Status:</b> ${data.approved ? "✅ Approved" : "⏳ Waiting"}<br>
+              <div id="action-${key}">
+                ${!data.approved ? `<button class="btn" onclick="acceptPoster('${key}')">Accept - ₹20</button>` : `<a href="https://wa.me/${data.whatsapp}" class="btn">WhatsApp</a>`}
               </div>
             `;
-            posterList.appendChild(card);
-          }
-        }
-
-        if (!found) {
-          document.getElementById("noPosters").style.display = "block";
+            dashboard.appendChild(card);
+          });
+        } else {
+          dashboard.innerHTML = "❌ No posters found.";
         }
       });
     }
 
-    function acceptPoster(postId, whatsapp) {
-      const userWalletRef = db.ref("users/" + currentUser.uid + "/wallet");
-
+    function acceptPoster(key) {
+      // Dummy ₹20 deduction from wallet
+      const userWalletRef = db.ref("wallets/" + currentUser.uid);
       userWalletRef.once("value", snap => {
-        let balance = snap.val() || 0;
-
-        if (balance < 20) {
-          alert("Insufficient wallet balance. ₹20 needed.");
-          return;
+        const currentBalance = snap.val() || 0;
+        if (currentBalance >= 20) {
+          userWalletRef.set(currentBalance - 20);
+          db.ref("posters/" + key).update({ approved: true });
+          document.getElementById("action-" + key).innerHTML = `<a href="https://wa.me/${currentUser.phoneNumber}" class="btn">WhatsApp</a>`;
+          alert("✅ Accepted & ₹20 deducted!");
+        } else {
+          alert("❌ Insufficient Balance!");
         }
-
-        // Deduct and update
-        userWalletRef.set(balance - 20);
-
-        // Mark poster as accepted
-        db.ref("posters/" + postId).update({
-          acceptedBy: currentUser.uid
-        });
-
-        alert("Accepted. Now you can contact on WhatsApp.");
-        location.href = `https://wa.me/${whatsapp}`;
       });
     }
   </script>
