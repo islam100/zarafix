@@ -1,10 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Provider Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zara Shop Approval</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+    #form, #dashboard, #waiting { display: none; }
+    input, select, button { display: block; margin: 10px 0; padding: 10px; width: 100%; max-width: 400px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2 id="status">Zara Shop Form</h2>
+
+  <button id="loginBtn">Login with Google</button>
+  <button id="logoutBtn" class="hidden">Logout</button>
+
+  <div id="form">
+    <input type="text" id="shopName" placeholder="Shop Name" required />
+    <input type="text" id="address" placeholder="Full Address" required />
+    <input type="text" id="pincode" placeholder="Pincode" required />
+    <select id="category">
+      <option value="">Select Category</option>
+      <option value="electrician">Electrician</option>
+      <option value="plumber">Plumber</option>
+      <option value="technician">Technician</option>
+    </select>
+    <select id="subcategory">
+      <option value="">Select Subcategory</option>
+      <option value="ac">AC Repair</option>
+      <option value="fan">Fan Repair</option>
+      <option value="light">Light Install</option>
+    </select>
+    <button id="submitForm">Submit</button>
+    <p id="errorMsg" style="color:red;"></p>
+  </div>
+
+  <div id="waiting">
+    <p>⏳ Waiting for approval...</p>
+  </div>
+
+  <div id="dashboard">
+    <h3>✅ Approved Dashboard</h3>
+    <p><b>Wallet Balance:</b> ₹<span id="wallet">0</span></p>
+    <div id="taskView"></div>
+    <p><button id="acceptBtn">Accept Work (-₹20)</button></p>
+    <a id="whatsappBtn" href="#" class="hidden">Chat on WhatsApp</a>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
@@ -12,127 +59,89 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "971389229214",
-      appId: "1:971389229214:web:b9305e69a5e8d2c733b77b"
+      messagingSenderId: "730768653800",
+      appId: "1:730768653800:web:e46e3b95db077cc9d319fb",
+      measurementId: "G-N0BQ5ZW9NV"
     };
     firebase.initializeApp(firebaseConfig);
-  </script>
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
-    h2, h3 { text-align: center; }
-    input, select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #ccc; }
-    .btn-3d { background: linear-gradient(#4CAF50, #388E3C); color: white; border: none; box-shadow: 0 5px #2e7031; transition: 0.2s; }
-    .btn-3d:active { box-shadow: 0 2px #2e7031; transform: translateY(2px); }
-    #whatsappBtn { display: none; background-color: #25D366; color: white; text-align: center; padding: 12px; margin-top: 10px; border-radius: 8px; }
-    #message { color: red; text-align: center; }
-  </style>
-</head>
-<body>
+    let currentUser = null;
 
-<div class="container">
-  <h2>Provider Registration</h2>
-  <div id="message"></div>
-  <form id="providerForm">
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="shop" placeholder="Shop Name" required>
-    <input type="text" id="address" placeholder="Full Address" required>
-    <input type="text" id="pincode" placeholder="Pincode" maxlength="6" required>
-    
-    <select id="category" required>
-      <option value="">Select Category</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Plumber">Plumber</option>
-      <option value="Carpenter">Carpenter</option>
-      <option value="Mechanic">Mechanic</option>
-    </select>
-
-    <select id="subcategory" required>
-      <option value="">Select Subcategory</option>
-      <option value="AC Repair">AC Repair</option>
-      <option value="Fan Repair">Fan Repair</option>
-      <option value="Switch Board">Switch Board</option>
-    </select>
-
-    <button type="submit" class="btn-3d">Submit</button>
-  </form>
-
-  <div id="dashboard" style="display:none;">
-    <h3>Provider Dashboard</h3>
-    <p id="userEmail"></p>
-    <p>Wallet: ₹<span id="wallet">0</span></p>
-
-    <button id="acceptBtn" class="btn-3d">Accept Request</button>
-    <div id="whatsappBtn">📞 Contact on WhatsApp</div>
-    <p id="acceptMsg" style="color:red;"></p>
-  </div>
-
-  <br>
-  <button onclick="googleLogin()" class="btn-3d">Login with Google</button>
-</div>
-
-<script>
-  let currentUser = null;
-
-  function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then(result => {
-        currentUser = result.user;
-        document.getElementById("providerForm").style.display = "block";
-        document.getElementById("message").innerText = "Welcome " + currentUser.displayName;
-      }).catch(err => {
-        document.getElementById("message").innerText = "Login failed!";
-      });
-  }
-
-  document.getElementById("providerForm").addEventListener("submit", function(e){
-    e.preventDefault();
-    const name = document.getElementById("name").value.trim();
-    const shop = document.getElementById("shop").value.trim();
-    const address = document.getElementById("address").value.trim();
-    const pincode = document.getElementById("pincode").value.trim();
-    const category = document.getElementById("category").value;
-    const subcategory = document.getElementById("subcategory").value;
-
-    if (!name || !shop || !address || !/^\d{6}$/.test(pincode)) {
-      document.getElementById("message").innerText = "सभी फ़ील्ड सही से भरें";
-      return;
-    }
-
-    const userId = currentUser.uid;
-    firebase.database().ref("providers/" + userId).set({
-      name, shop, address, pincode, category, subcategory, wallet: 0, email: currentUser.email
-    }).then(() => {
-      document.getElementById("providerForm").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("userEmail").innerText = "Welcome: " + currentUser.displayName;
-      loadWallet(userId);
-    });
-  });
-
-  function loadWallet(userId) {
-    firebase.database().ref("providers/" + userId + "/wallet").on("value", snapshot => {
-      const wallet = snapshot.val() || 0;
-      document.getElementById("wallet").innerText = wallet;
-    });
-  }
-
-  document.getElementById("acceptBtn").addEventListener("click", function(){
-    const userId = currentUser.uid;
-    firebase.database().ref("providers/" + userId + "/wallet").once("value", snapshot => {
-      const wallet = snapshot.val();
-      if(wallet >= 100){
-        firebase.database().ref("providers/" + userId + "/wallet").set(wallet - 20);
-        document.getElementById("acceptMsg").innerText = "Request Accepted! ₹20 कटौती की गई।";
-        document.getElementById("whatsappBtn").style.display = "block";
-      } else {
-        document.getElementById("acceptMsg").innerText = "Balance कम है। Please recharge करें।";
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").classList.remove("hidden");
+        checkUserStatus();
       }
     });
-  });
-</script>
 
+    document.getElementById("loginBtn").onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    document.getElementById("logoutBtn").onclick = () => {
+      auth.signOut();
+      location.reload();
+    };
+
+    function checkUserStatus() {
+      db.ref("users/" + currentUser.uid).once("value", snap => {
+        if (snap.exists()) {
+          const data = snap.val();
+          if (data.status === "approved") showDashboard(data);
+          else document.getElementById("waiting").style.display = "block";
+        } else {
+          document.getElementById("form").style.display = "block";
+        }
+      });
+    }
+
+    document.getElementById("submitForm").onclick = () => {
+      const shopName = document.getElementById("shopName").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const pincode = document.getElementById("pincode").value.trim();
+      const category = document.getElementById("category").value;
+      const subcategory = document.getElementById("subcategory").value;
+      const error = document.getElementById("errorMsg");
+
+      if (!shopName || !address || !pincode || !category || !subcategory) {
+        error.innerText = "गलत है - कृपया सभी जानकारी सही भरें";
+        return;
+      }
+
+      db.ref("users/" + currentUser.uid).set({
+        shopName, address, pincode, category, subcategory,
+        wallet: 100, status: "pending", uid: currentUser.uid
+      }, () => {
+        document.getElementById("form").style.display = "none";
+        document.getElementById("waiting").style.display = "block";
+      });
+    };
+
+    function showDashboard(data) {
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("wallet").innerText = data.wallet;
+      document.getElementById("taskView").innerHTML = `<p><b>Category:</b> ${data.category} / ${data.subcategory}</p>`;
+
+      const acceptBtn = document.getElementById("acceptBtn");
+      const whatsappBtn = document.getElementById("whatsappBtn");
+
+      acceptBtn.onclick = () => {
+        if (data.wallet >= 20) {
+          const newBalance = data.wallet - 20;
+          db.ref("users/" + currentUser.uid + "/wallet").set(newBalance);
+          document.getElementById("wallet").innerText = newBalance;
+          whatsappBtn.classList.remove("hidden");
+          whatsappBtn.href = `https://wa.me/91XXXXXXXXXX`;
+        } else {
+          alert("पैसे कम हैं Wallet में!");
+        }
+      };
+    }
+  </script>
 </body>
 </html>
