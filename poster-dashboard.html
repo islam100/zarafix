@@ -3,182 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Provider Form - ZaraFix</title>
+  <title>Service Post - ZaraFix</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 0;
+      padding: 20px;
+      background: #f0f0f0;
     }
-
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      background: #fff;
-      padding: 25px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    .form-box {
+      background: white;
+      padding: 20px;
       border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: auto;
     }
-
-    input, select, button {
-      display: block;
+    h2 {
+      text-align: center;
+    }
+    input, select {
       width: 100%;
-      margin-bottom: 15px;
       padding: 10px;
-      font-size: 16px;
+      margin: 8px 0;
       border-radius: 10px;
       border: 1px solid #ccc;
     }
-
     button {
-      background: linear-gradient(145deg, #4CAF50, #388E3C);
-      color: white;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(145deg, #3f87a6, #ebf8e1);
+      color: black;
       border: none;
-      box-shadow: 0 6px #2e7d32;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:active {
-      box-shadow: 0 2px #2e7d32;
-      transform: translateY(4px);
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    #status {
-      padding: 10px;
-      background: #ffecb3;
-      text-align: center;
-      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 3px 3px 6px #ccc;
       font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #ccc;
+    }
+    #status {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      color: green;
+    }
+    #wallet {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    #loginBtn {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Service Provider Form</h2>
-    
-    <div id="loginSection">
-      <button onclick="googleLogin()">Google Login</button>
-    </div>
+<div id="wallet">Wallet: ₹<span id="walletAmount">0</span></div>
+<div id="loginArea">
+  <button id="loginBtn">Login with Google</button>
+</div>
 
-    <div id="formSection" class="hidden">
-      <p>Welcome: <span id="userName"></span> | Wallet: ₹<span id="wallet">100</span></p>
+<div class="form-box" id="formBox" style="display: none;">
+  <h2>Post Your Service</h2>
+  <form id="serviceForm">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="text" id="shopName" placeholder="Shop Name" required />
+    <input type="text" id="address" placeholder="Full Address" required />
+    <input type="text" id="pincode" placeholder="Pincode" pattern="\\d{6}" required />
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" pattern="\\d{10}" required />
 
-      <form id="providerForm">
-        <input type="text" id="shopName" placeholder="Shop Name" required />
-        <select id="category">
-          <option value="">Select Category</option>
-          <option value="Electrician">Electrician</option>
-          <option value="Plumber">Plumber</option>
-          <option value="Carpenter">Carpenter</option>
-        </select>
-        <select id="subcategory">
-          <option value="">Select Sub-Category</option>
-          <option value="Fan Fixing">Fan Fixing</option>
-          <option value="Pipe Repair">Pipe Repair</option>
-          <option value="Furniture Repair">Furniture Repair</option>
-        </select>
-        <input type="text" id="address" placeholder="Full Address" required />
-        <input type="text" id="pincode" placeholder="Pincode" maxlength="6" />
-        <button type="submit">Submit</button>
-      </form>
+    <select id="category" required>
+      <option value="">Select Category</option>
+      <option value="Electrician">Electrician</option>
+      <option value="Plumber">Plumber</option>
+      <option value="Carpenter">Carpenter</option>
+      <option value="AC Service">AC Service</option>
+    </select>
 
-      <div id="status" class="hidden">Waiting for approval...</div>
-    </div>
-  </div>
+    <select id="subcategory" required>
+      <option value="">Select Subcategory</option>
+      <option value="Installation">Installation</option>
+      <option value="Repair">Repair</option>
+      <option value="Cleaning">Cleaning</option>
+    </select>
 
-  <script type="module">
-    // Firebase imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      signInWithPopup,
-      GoogleAuthProvider,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getDatabase,
-      ref,
-      set
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    <button type="submit">Submit</button>
+  </form>
+  <div id="status"></div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const formBox = document.getElementById("formBox");
+  const serviceForm = document.getElementById("serviceForm");
+  const statusDiv = document.getElementById("status");
+  const walletSpan = document.getElementById("walletAmount");
+
+  let currentUser = null;
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("loginArea").style.display = "none";
+      formBox.style.display = "block";
+      loadWallet();
+    }
+  });
+
+  loginBtn.onclick = () => {
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  };
+
+  function loadWallet() {
+    db.ref("wallets/" + currentUser.uid).once("value", snap => {
+      const amount = snap.val() || 0;
+      walletSpan.innerText = amount;
+    });
+  }
+
+  serviceForm.onsubmit = e => {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const shop = document.getElementById("shopName").value.trim();
+    const address = document.getElementById("address").value.trim();
+    const pincode = document.getElementById("pincode").value.trim();
+    const whatsapp = document.getElementById("whatsapp").value.trim();
+    const cat = document.getElementById("category").value;
+    const subcat = document.getElementById("subcategory").value;
+
+    if (!name || !shop || !address || !pincode.match(/^\d{6}$/) || !whatsapp.match(/^\d{10}$/) || !cat || !subcat) {
+      statusDiv.innerText = "गलत है, कृपया सभी जानकारी सही भरें!";
+      statusDiv.style.color = "red";
+      return;
+    }
+
+    const data = {
+      name,
+      shop,
+      address,
+      pincode,
+      whatsapp,
+      category: cat,
+      subcategory: subcat,
+      uid: currentUser.uid,
+      status: "pending"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getDatabase();
-
-    let currentUser = null;
-    let walletAmount = 100;
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        document.getElementById("loginSection").classList.add("hidden");
-        document.getElementById("formSection").classList.remove("hidden");
-        document.getElementById("userName").textContent = user.displayName;
-        document.getElementById("wallet").textContent = walletAmount;
-      }
+    db.ref("services/" + currentUser.uid).set(data).then(() => {
+      formBox.innerHTML = "<h3 style='text-align:center'>Waiting for Approval</h3>";
     });
+  };
+</script>
 
-    window.googleLogin = () => {
-      const provider = new GoogleAuthProvider();
-      signInWithPopup(auth, provider).then((result) => {
-        // User signed in
-      }).catch((error) => {
-        alert("Login Error: " + error.message);
-      });
-    };
-
-    document.getElementById("providerForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const shopName = document.getElementById("shopName").value.trim();
-      const category = document.getElementById("category").value;
-      const subcategory = document.getElementById("subcategory").value;
-      const address = document.getElementById("address").value.trim();
-      const pincode = document.getElementById("pincode").value.trim();
-
-      if (!shopName || !category || !subcategory || !address || !/^\d{6}$/.test(pincode)) {
-        alert("गलत या अधूरा डाटा! कृपया सभी फ़ील्ड सही भरें।");
-        return;
-      }
-
-      const formData = {
-        shopName,
-        category,
-        subcategory,
-        address,
-        pincode,
-        uid: currentUser.uid,
-        name: currentUser.displayName,
-        email: currentUser.email,
-        approved: false
-      };
-
-      set(ref(db, "providers/" + currentUser.uid), formData)
-        .then(() => {
-          document.getElementById("providerForm").classList.add("hidden");
-          document.getElementById("status").classList.remove("hidden");
-        })
-        .catch((err) => {
-          alert("Error: " + err.message);
-        });
-    });
-  </script>
 </body>
 </html>
