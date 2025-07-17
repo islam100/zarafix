@@ -1,245 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>👑 ZaraFix Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - Service Requests</title>
   <style>
-    body { font-family: sans-serif; background: #f4f4f4; padding: 10px; }
-    h1, h2 { text-align: center; }
-    .nav {
-      display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
     }
-    .nav button {
-      padding: 10px 16px; border: none; border-radius: 10px;
-      background: linear-gradient(to right, #00b09b, #96c93d);
-      color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      cursor: pointer; position: relative;
+    h2 {
+      text-align: center;
+      color: #444;
     }
-    .led {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 10px;
-      height: 10px;
-      background: red;
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 10px auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      position: relative;
+    }
+    .blinking-led {
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
+      background-color: red;
+      position: absolute;
+      top: 10px;
+      right: 10px;
       animation: blink 1s infinite;
     }
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-    .section { display: none; }
-    .active { display: block; }
-    .grid {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
-    }
-    .card {
-      background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 16px; width: 90%; max-width: 340px;
-      position: relative;
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
     }
     .btn {
-      padding: 10px 14px; margin: 8px 4px 0 0;
-      border: none; border-radius: 10px; cursor: pointer; color: white;
+      padding: 10px 20px;
+      margin: 10px 5px 0;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
     }
-    .approve { background-color: #2ecc71; }
-    .delete { background-color: #e74c3c; }
-    .view { background-color: #3498db; }
-    .danger {
-      background: crimson; color: white; padding: 10px 16px; border-radius: 10px;
-      margin: 10px auto; display: block; cursor: pointer; font-weight: bold;
+    .btn:hover {
+      transform: scale(1.05);
     }
+    .approve-btn { background: #28a745; color: white; }
+    .delete-btn { background: #dc3545; color: white; }
+    .status-approved { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
+  <h2>Admin Dashboard - All Service Requests</h2>
+  <div id="requestsContainer"></div>
 
-<h1>👑 ZaraFix Admin Dashboard</h1>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<div class="nav">
-  <button onclick="showSection('posterSection')">👷 Posters <span id="posterLed" class="led" style="display:none;"></span></button>
-  <button onclick="showSection('userSection')">🧑‍💻 Users</button>
-  <button onclick="showSection('rechargeRequestSection')">🔋 Recharge Requests <span id="rechargeLed" class="led" style="display:none;"></span></button>
-</div>
+  <script>
+    // ✅ Firebase Config (use your actual config)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "878664327534",
+      appId: "1:878664327534:web:6cc3eaef53878b43dcf688"
+    };
 
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
+    const container = document.getElementById("requestsContainer");
 
-<div id="posterSection" class="section">
-  <h2>👷 Posters</h2>
-  <div id="posterList" class="grid"></div>
-</div>
+    function createCard(key, data) {
+      const card = document.createElement("div");
+      card.className = "card";
 
-<div id="userSection" class="section active">
-  <h2>🧑‍💻 Users - Service Requests</h2>
-  <div id="userList" class="grid"></div>
-</div>
-
-<div id="rechargeRequestSection" class="section">
-  <h2>🔋 Recharge Requests</h2>
-  <div id="rechargeList" class="grid"></div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-  authDomain: "zara-fix.firebaseapp.com",
-  databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-  projectId: "zara-fix",
-  storageBucket: "zara-fix.appspot.com",
-  messagingSenderId: "476473209200",
-  appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-
-function showSection(id) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-auth.onAuthStateChanged(user => {
-  if (!user) return location.href = "index.html";
-  db.ref("users/" + user.uid).once("value").then(snap => {
-    if (snap.exists() && snap.val().isAdmin === true) {
-      loadPosters();
-      loadUsers();
-      loadRechargeRequests();
-    } else {
-      alert("Access denied. Admin only.");
-      location.href = "index.html";
-    }
-  });
-});
-
-function loadUsers() {
-  const list = document.getElementById("userList");
-  db.ref("requests").once("value").then(snapshot => {
-    list.innerHTML = "";
-    snapshot.forEach(userSnap => {
-      const userId = userSnap.key;
-      const userRequests = userSnap.val();
-      if (typeof userRequests === 'object') {
-        Object.entries(userRequests).forEach(([requestId, req]) => {
-          if (!req || !req.whatsapp || !req.address) return;
-          const accepted = req.acceptedBy ? Object.keys(req.acceptedBy).join(", ") : "❌ Not accepted yet";
-          list.innerHTML += `
-            <div class="card">
-              <strong>${req.name || "Unnamed"}</strong><br>
-              🆔 UID: <code>${req.userId || userId}</code><br>
-              📞 <a href="https://wa.me/${req.whatsapp}" target="_blank">${req.whatsapp}</a><br>
-              📍 ${req.address || "N/A"}<br>
-              🏩 ${req.city || "N/A"}<br>
-              📬 ${req.pincode || "N/A"}<br>
-              🔧 ${req.category || "N/A"}<br>
-              📋 ${req.issue || "N/A"}<br>
-              🕒 ${req.timestamp || "N/A"}<br>
-              👷 Accepted By: ${accepted}<br>
-              <button class="btn delete" onclick="deleteRequest('${userId}', '${requestId}')">🗑️ Delete</button>
-            </div>
-          `;
-        });
-      }
-    });
-  });
-}
-
-function deleteRequest(userId, requestId) {
-  if (confirm("Delete this request?")) {
-    db.ref(`requests/${userId}/${requestId}`).remove().then(loadUsers);
-  }
-}
-
-function cleanUpOldRequests() {
-  db.ref("requests").once("value").then(snapshot => {
-    snapshot.forEach(child => {
-      if (child.key.startsWith("-")) {
-        db.ref("requests/" + child.key).remove();
-      }
-    });
-    alert("Deleted old wrong format requests.");
-    loadUsers();
-  });
-}
-
-function loadPosters() {
-  const list = document.getElementById("posterList");
-  let unapprovedFound = false;
-  db.ref("posters").once("value").then(snapshot => {
-    list.innerHTML = "";
-    snapshot.forEach(child => {
-      const p = child.val();
-      const uid = child.key;
-      const notApproved = !p.approved;
-      if (notApproved) unapprovedFound = true;
-      list.innerHTML += `
-        <div class="card">
-          ${notApproved ? `<span class="led" style="top:10px; right:10px;"></span>` : ""}
-          <strong>${p.name}</strong><br>
-          🔑 UID: <code>${uid}</code><br>
-          🏪 ${p.shop}<br>
-          📍 ${p.address}<br>
-          🔧 ${p.category}<br>
-          📞 ${p.whatsapp}<br>
-          💰 Wallet: ₹${p.wallet || 0}<br>
-          ${p.approved ? "✅ Approved" : "<span style='color:red'>⏳ Not Approved</span>"}<br>
-          <button class="btn approve" onclick="approvePoster('${uid}')">✅ Approve</button>
-          <button class="btn delete" onclick="deletePoster('${uid}')">🗑️ Delete</button>
-        </div>
+      const html = `
+        <h3>${data.name || 'No Name'}</h3>
+        <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
+        <p><strong>Service:</strong> ${data.service || 'N/A'}</p>
+        <p><strong>Status:</strong> ${data.status === "Approved" ? '<span class="status-approved">✅ Approved</span>' : data.status || 'Pending'}</p>
       `;
-    });
-    document.getElementById("posterLed").style.display = unapprovedFound ? "inline-block" : "none";
-  });
-}
+      card.innerHTML = html;
 
-function approvePoster(uid) {
-  db.ref("posters/" + uid).update({ approved: true }).then(loadPosters);
-}
-
-function deletePoster(uid) {
-  if (confirm("Delete this poster?")) {
-    db.ref("posters/" + uid).remove().then(loadPosters);
-  }
-}
-
-function loadRechargeRequests() {
-  const list = document.getElementById("rechargeList");
-  let anyPending = false;
-  db.ref("rechargeRequests").once("value").then(snapshot => {
-    list.innerHTML = "";
-    snapshot.forEach(child => {
-      const r = child.val();
-      if (r.status === "pending") {
-        anyPending = true;
-        list.innerHTML += `
-          <div class="card">
-            <strong>${r.name}</strong><br>
-            🏧 UID: <code>${r.userId}</code><br>
-            📞 <a href="https://wa.me/${r.whatsapp}" target="_blank">${r.whatsapp}</a><br>
-            💰 Amount: ₹${r.amount}<br>
-            ⏰ ${new Date(r.timestamp).toLocaleString()}<br>
-            <img src="${r.image}" style="width:100%;border-radius:10px;"><br>
-            <button class="btn approve" onclick="approveRecharge('${r.userId}')">✅ Approve</button>
-          </div>
-        `;
+      // ✅ Blinking LED if not approved
+      if (data.status !== "Approved") {
+        const led = document.createElement("div");
+        led.className = "blinking-led";
+        card.appendChild(led);
       }
-    });
-    document.getElementById("rechargeLed").style.display = anyPending ? "inline-block" : "none";
-  });
-}
 
-function approveRecharge(uid) {
-  const walletRef = db.ref("posters/" + uid + "/wallet");
-  walletRef.once("value").then(snap => {
-    const current = snap.val() || 0;
-    walletRef.set(current + 100);
-    db.ref("rechargeRequests/" + uid).update({ status: "approved" });
-    loadRechargeRequests();
-  });
-}
-</script>
+      // ✅ Buttons
+      const approveBtn = document.createElement("button");
+      approveBtn.className = "btn approve-btn";
+      approveBtn.textContent = "✅ Approve";
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn delete-btn";
+      deleteBtn.textContent = "❌ Reject/Delete";
+
+      // ✅ Only show buttons based on status
+      if (data.status === "Approved") {
+        card.appendChild(deleteBtn);
+      } else {
+        card.appendChild(approveBtn);
+        card.appendChild(deleteBtn);
+      }
+
+      // ✅ Approve functionality
+      approveBtn.onclick = () => {
+        firebase.database().ref(`serviceRequests/${key}`).update({
+          status: "Approved"
+        });
+        alert("Approved Successfully!");
+      };
+
+      // ✅ Delete functionality
+      deleteBtn.onclick = () => {
+        if (confirm("Are you sure you want to delete this request?")) {
+          firebase.database().ref(`serviceRequests/${key}`).remove();
+          alert("Deleted Successfully!");
+        }
+      };
+
+      container.appendChild(card);
+    }
+
+    // ✅ Load all serviceRequests
+    db.ref("serviceRequests").on("value", snapshot => {
+      container.innerHTML = ""; // clear before reload
+      snapshot.forEach(child => {
+        createCard(child.key, child.val());
+      });
+    });
+  </script>
 </body>
 </html>
