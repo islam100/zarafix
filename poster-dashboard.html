@@ -8,32 +8,41 @@
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
     form, #dashboard {
       background: white;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 12px;
       max-width: 500px;
       margin: auto;
-      box-shadow: 0 0 10px #ccc;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     input, select {
       width: 100%;
       padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
     button {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 5px;
+      padding: 12px;
       background: teal;
       color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
       cursor: pointer;
     }
-    button:hover { background: #006666; }
-    .hidden { display: none; }
+    button:hover {
+      background: #004d4d;
+    }
+    .hidden {
+      display: none;
+    }
     @media(max-width: 600px) {
       form, #dashboard { width: 95%; }
     }
@@ -54,7 +63,7 @@
 
 <form id="posterForm" class="hidden">
   <input type="text" id="name" placeholder="Your Name" required />
-  <input type="tel" id="whatsapp" placeholder="whatsapp Number" required />
+  <input type="tel" id="phone" placeholder="Phone Number" required />
   <input type="text" id="pincode" placeholder="Pincode (6 digits)" maxlength="6" required />
 
   <select id="category" required>
@@ -74,7 +83,7 @@
 
 <div id="dashboard" class="hidden">
   <h3>🧾 Poster Dashboard</h3>
-  <p>⏳ Your poster is submitted. Please <strong>wait for approval</strong>.</p>
+  <p>✅ Your poster has been submitted. <strong>Wait for approval.</strong></p>
 </div>
 
 <script>
@@ -87,6 +96,7 @@
     messagingSenderId: "5010031414",
     appId: "1:5010031414:web:7c7ddc8b2e9187db6b7a88"
   };
+
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const auth = firebase.auth();
@@ -96,7 +106,6 @@
   const loginBox = document.getElementById("loginBox");
   const logoutBox = document.getElementById("logoutBox");
   const userName = document.getElementById("userName");
-
   const categoryDropdown = document.getElementById("category");
   const subcategoryDropdown = document.getElementById("subcategory");
 
@@ -127,17 +136,13 @@
         userName.textContent = `Welcome, ${user.displayName}`;
         loginBox.classList.add("hidden");
         logoutBox.classList.remove("hidden");
-
-        const uid = user.uid;
-        checkFormStatus(uid);
+        checkFormStatus(user.uid);
       })
       .catch(err => alert("Login failed: " + err.message));
   }
 
   function logout() {
-    auth.signOut().then(() => {
-      location.reload();
-    });
+    auth.signOut().then(() => location.reload());
   }
 
   function checkFormStatus(uid) {
@@ -171,12 +176,7 @@
 
     const uid = user.uid;
     const data = {
-      name,
-      phone,
-      pincode,
-      category,
-      subcategory,
-      location,
+      name, phone, pincode, category, subcategory, location,
       email: user.email,
       timestamp: new Date().toISOString(),
       approved: false
