@@ -1,77 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ZaraFix - Provider Login</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <title>🛠️ Posters - ZaraFix Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; padding: 30px; background: #f1f1f1; }
+    body { font-family: Arial; padding: 20px; background: #f2f2f2; }
     h2 { text-align: center; }
-    .box {
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      margin-top: 15px;
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background: linear-gradient(to bottom, #4CAF50, #388E3C);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 4px #2e7d32;
-      cursor: pointer;
-    }
-    button:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px #2e7d32;
+    .card {
+      background: white; padding: 15px; margin: 10px 0;
+      border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ All Posters (Service Providers)</h2>
+  <div id="posterList">Loading...</div>
 
-  <h2>Provider Login</h2>
-  <div class="box">
-    <input type="text" id="shopName" placeholder="Shop Name" required>
-    <input type="text" id="phone" placeholder="WhatsApp Number" required>
-
-    <select id="category" required>
-      <option value="">-- Select Category --</option>
-      <option value="appliance">Appliance Repair</option>
-      <option value="cleaning">Cleaning</option>
-      <option value="auto">Auto Services</option>
-      <option value="home">Home Services</option>
-      <option value="digital">Digital & Security</option>
-      <option value="legal">Medical & Legal</option>
-      <option value="professional">Professional</option>
-      <option value="logistics">Logistics</option>
-      <option value="commercial">Commercial Services</option>
-    </select>
-
-    <select id="subcategory" required>
-      <option value="">-- Select Subcategory --</option>
-    </select>
-
-    <button onclick="signIn()">Login with Google</button>
-  </div>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -82,74 +30,23 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
 
-    const subcategories = {
-      appliance: ["Fridge Repair", "AC Repair", "Washing Machine", "Microwave", "Geyser", "TV Repair"],
-      cleaning: ["Home Cleaning", "Kitchen Cleaning", "Bathroom Cleaning", "Sofa Cleaning", "Mattress Cleaning"],
-      auto: ["Bike Repair", "Car Repair", "Battery Replacement", "Roadside Assistance"],
-      home: ["Electrician", "Plumber", "Carpenter", "Painter", "POP Ceiling"],
-      digital: ["CCTV Installation", "Wi-Fi Setup", "Printer Support", "Smart Home Setup"],
-      legal: ["Doctor Consultation", "Advocate", "CA Services", "Notary", "Document Work"],
-      professional: ["Interior Designer", "Makeup Artist", "Photographer", "Babysitter", "Cook"],
-      logistics: ["Packers & Movers", "Bike Transport", "House Shifting"],
-      commercial: ["Office Cleaning", "Security Guard", "Shop Branding", "Business Setup Help"]
-    };
-
-    // Subcategory update
-    document.getElementById("category").addEventListener("change", function () {
-      const selected = this.value;
-      const subSelect = document.getElementById("subcategory");
-      subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-      if (subcategories[selected]) {
-        subcategories[selected].forEach(sub => {
-          const opt = document.createElement("option");
-          opt.value = sub;
-          opt.textContent = sub;
-          subSelect.appendChild(opt);
-        });
-      }
+    const list = document.getElementById("posterList");
+    firebase.database().ref("posters").once("value", snap => {
+      list.innerHTML = "";
+      snap.forEach(child => {
+        const p = child.val();
+        list.innerHTML += `
+          <div class="card">
+            <b>${p.name}</b> (${p.category})<br>
+            🏪 ${p.shop}<br>
+            📍 ${p.address}<br>
+            📱 ${p.whatsapp}<br>
+            💰 Wallet: ₹${p.wallet || 0}
+          </div>
+        `;
+      });
     });
-
-    // Sign In with Google
-    function signIn() {
-      const shopName = document.getElementById("shopName").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const category = document.getElementById("category").value;
-      const subcategory = document.getElementById("subcategory").value;
-
-      if (!shopName || !phone || !category || !subcategory) {
-        alert("Please fill all fields before login.");
-        return;
-      }
-
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(result => {
-          const user = result.user;
-          const providerData = {
-            uid: user.uid,
-            name: user.displayName,
-            email: user.email,
-            shopName,
-            phone,
-            category,
-            subcategory,
-            wallet: 100, // Default ₹100
-            verified: true,
-            createdAt: new Date().toISOString()
-          };
-          db.ref("providers/" + user.uid).set(providerData)
-            .then(() => {
-              alert("Login successful! Provider data saved.");
-              location.href = "dashboard.html"; // Change to your Provider Dashboard
-            });
-        })
-        .catch(error => {
-          alert("Login failed: " + error.message);
-        });
-    }
   </script>
 </body>
 </html>
