@@ -1,142 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Service Form - ZaraFix</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Poster Dashboard</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
-    #form-container, #waiting { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-    h2 { text-align: center; }
-    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 12px; border: 1px solid #ccc; }
-    button { background: #4CAF50; color: white; border: none; font-weight: bold; transition: 0.3s; box-shadow: 0 5px #3e8e41; }
-    button:hover { background: #45a049; transform: translateY(-2px); box-shadow: 0 7px #3e8e41; }
-    .error { color: red; font-size: 14px; }
-    #logoutBtn { background: #ff4444; box-shadow: 0 5px #bb0000; }
-    #waiting { display: none; text-align: center; font-size: 18px; color: #555; }
-    #loginBtn { background: #4285F4; margin-bottom: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #1f2937;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #1f2937;
+      color: white;
+    }
+
+    tr:hover {
+      background: #f1f5f9;
+    }
+
+    .btn {
+      background: linear-gradient(145deg, #6ee7b7, #3b82f6);
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      font-size: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: all 0.2s ease-in-out;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .center {
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <h2>🎯 Approved Posters Dashboard</h2>
+  <div class="center">
+    <button class="btn" onclick="logout()">Logout</button>
+  </div>
+  <table id="posterTable">
+    <thead>
+      <tr>
+        <th>Shop Name</th>
+        <th>Category</th>
+        <th>Address</th>
+        <th>WhatsApp</th>
+        <th>Wallet</th>
+      </tr>
+    </thead>
+    <tbody id="posterBody">
+      <tr><td colspan="5" class="center">🔄 Loading...</td></tr>
+    </tbody>
+  </table>
 
-<div id="login-section">
-  <button id="loginBtn">Login with Google</button>
-</div>
+  <script type="module">
+    // Firebase import
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-<div id="form-container" style="display:none;">
-  <h2>Service Registration</h2>
-  <form id="serviceForm">
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="shop" placeholder="Shop Name" required>
-    <input type="text" id="address" placeholder="Full Address" required>
-    <input type="number" id="pincode" placeholder="Pincode" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    
-    <select id="category" required>
-      <option value="">-- Select Category --</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Plumber">Plumber</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-    <select id="subcategory" required>
-      <option value="">-- Select Sub-category --</option>
-      <option value="Fan Repair">Fan Repair</option>
-      <option value="Pipe Fix">Pipe Fix</option>
-      <option value="Furniture Polish">Furniture Polish</option>
-    </select>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    <div class="error" id="errorMsg"></div>
-    <button type="submit">Submit</button>
-    <button id="logoutBtn" type="button">Logout</button>
-  </form>
-</div>
+    function loadPosters() {
+      const posterRef = ref(db, "approvedUsers/");
+      const tableBody = document.getElementById("posterBody");
+      tableBody.innerHTML = "";
 
-<div id="waiting">Waiting for approval...</div>
+      onValue(posterRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          tableBody.innerHTML = `<tr><td colspan="5" class="center">❌ No Approved Posters Found</td></tr>`;
+          return;
+        }
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+        snapshot.forEach((childSnapshot) => {
+          const data = childSnapshot.val();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+          const row = `
+            <tr>
+              <td>${data.shopname || "N/A"}</td>
+              <td>${data.category || "N/A"}</td>
+              <td>${data.address || "N/A"}</td>
+              <td><a class="btn" href="https://wa.me/${data.whatsapp}" target="_blank">Chat</a></td>
+              <td>₹20 deducted</td>
+            </tr>
+          `;
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const formContainer = document.getElementById("form-container");
-  const loginSection = document.getElementById("login-section");
-  const waitingDiv = document.getElementById("waiting");
-  const errorMsg = document.getElementById("errorMsg");
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      loginSection.style.display = "none";
-      formContainer.style.display = "block";
-    } else {
-      loginSection.style.display = "block";
-      formContainer.style.display = "none";
-    }
-  });
-
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  document.getElementById("serviceForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-
-    const name = document.getElementById("name").value.trim();
-    const shop = document.getElementById("shop").value.trim();
-    const address = document.getElementById("address").value.trim();
-    const pincode = document.getElementById("pincode").value.trim();
-    const whatsapp = document.getElementById("whatsapp").value.trim();
-    const category = document.getElementById("category").value;
-    const subcategory = document.getElementById("subcategory").value;
-
-    if (!name || !shop || !address || !pincode || !whatsapp || !category || !subcategory) {
-      errorMsg.innerText = "गलत है ये लाइन: कृपया सभी फ़ील्ड सही भरें";
-      return;
+          tableBody.innerHTML += row;
+        });
+      });
     }
 
-    if (!/^\d{6}$/.test(pincode)) {
-      errorMsg.innerText = "गलत है ये लाइन: 6 अंकों का सही पिनकोड डालें";
-      return;
+    function logout() {
+      signOut(auth).then(() => {
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      });
     }
 
-    if (!/^[6-9]\d{9}$/.test(whatsapp)) {
-      errorMsg.innerText = "गलत है ये लाइन: वैध व्हाट्सएप नंबर डालें";
-      return;
-    }
-
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const uid = user.uid;
-
-    db.ref("requests/" + uid).set({
-      name, shop, address, pincode, whatsapp, category, subcategory, status: "pending"
-    }).then(() => {
-      document.getElementById("serviceForm").reset();
-      formContainer.style.display = "none";
-      waitingDiv.style.display = "block";
-    });
-  });
-</script>
+    // On Load
+    window.onload = () => {
+      const user = sessionStorage.getItem("user");
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        loadPosters();
+      }
+    };
+  </script>
 </body>
 </html>
