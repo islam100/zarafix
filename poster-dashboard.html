@@ -1,103 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Service Post - ZaraFix</title>
+  <meta charset="UTF-8">
+  <title>Service Form - ZaraFix</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f0f0f0;
-    }
-    .form-box {
-      background: white;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      max-width: 500px;
-      margin: auto;
-    }
-    h2 {
-      text-align: center;
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(145deg, #3f87a6, #ebf8e1);
-      color: black;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 3px 3px 6px #ccc;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #ccc;
-    }
-    #status {
-      margin-top: 20px;
-      text-align: center;
-      font-weight: bold;
-      color: green;
-    }
-    #wallet {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-    #loginBtn {
-      margin-bottom: 20px;
-    }
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    #form-container, #waiting { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    h2 { text-align: center; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 12px; border: 1px solid #ccc; }
+    button { background: #4CAF50; color: white; border: none; font-weight: bold; transition: 0.3s; box-shadow: 0 5px #3e8e41; }
+    button:hover { background: #45a049; transform: translateY(-2px); box-shadow: 0 7px #3e8e41; }
+    .error { color: red; font-size: 14px; }
+    #logoutBtn { background: #ff4444; box-shadow: 0 5px #bb0000; }
+    #waiting { display: none; text-align: center; font-size: 18px; color: #555; }
+    #loginBtn { background: #4285F4; margin-bottom: 20px; }
   </style>
 </head>
 <body>
 
-<div id="wallet">Wallet: ₹<span id="walletAmount">0</span></div>
-<div id="loginArea">
+<div id="login-section">
   <button id="loginBtn">Login with Google</button>
 </div>
 
-<div class="form-box" id="formBox" style="display: none;">
-  <h2>Post Your Service</h2>
+<div id="form-container" style="display:none;">
+  <h2>Service Registration</h2>
   <form id="serviceForm">
-    <input type="text" id="name" placeholder="Full Name" required />
-    <input type="text" id="shopName" placeholder="Shop Name" required />
-    <input type="text" id="address" placeholder="Full Address" required />
-    <input type="text" id="pincode" placeholder="Pincode" pattern="\\d{6}" required />
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" pattern="\\d{10}" required />
-
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="shop" placeholder="Shop Name" required>
+    <input type="text" id="address" placeholder="Full Address" required>
+    <input type="number" id="pincode" placeholder="Pincode" required>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+    
     <select id="category" required>
-      <option value="">Select Category</option>
+      <option value="">-- Select Category --</option>
       <option value="Electrician">Electrician</option>
       <option value="Plumber">Plumber</option>
       <option value="Carpenter">Carpenter</option>
-      <option value="AC Service">AC Service</option>
     </select>
 
     <select id="subcategory" required>
-      <option value="">Select Subcategory</option>
-      <option value="Installation">Installation</option>
-      <option value="Repair">Repair</option>
-      <option value="Cleaning">Cleaning</option>
+      <option value="">-- Select Sub-category --</option>
+      <option value="Fan Repair">Fan Repair</option>
+      <option value="Pipe Fix">Pipe Fix</option>
+      <option value="Furniture Polish">Furniture Polish</option>
     </select>
 
+    <div class="error" id="errorMsg"></div>
     <button type="submit">Submit</button>
+    <button id="logoutBtn" type="button">Logout</button>
   </form>
-  <div id="status"></div>
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<div id="waiting">Waiting for approval...</div>
 
 <script>
   const firebaseConfig = {
@@ -109,71 +67,76 @@
     messagingSenderId: "476473209200",
     appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
   };
+
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
   const loginBtn = document.getElementById("loginBtn");
-  const formBox = document.getElementById("formBox");
-  const serviceForm = document.getElementById("serviceForm");
-  const statusDiv = document.getElementById("status");
-  const walletSpan = document.getElementById("walletAmount");
-
-  let currentUser = null;
+  const logoutBtn = document.getElementById("logoutBtn");
+  const formContainer = document.getElementById("form-container");
+  const loginSection = document.getElementById("login-section");
+  const waitingDiv = document.getElementById("waiting");
+  const errorMsg = document.getElementById("errorMsg");
 
   auth.onAuthStateChanged(user => {
     if (user) {
-      currentUser = user;
-      document.getElementById("loginArea").style.display = "none";
-      formBox.style.display = "block";
-      loadWallet();
+      loginSection.style.display = "none";
+      formContainer.style.display = "block";
+    } else {
+      loginSection.style.display = "block";
+      formContainer.style.display = "none";
     }
   });
 
   loginBtn.onclick = () => {
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   };
 
-  function loadWallet() {
-    db.ref("wallets/" + currentUser.uid).once("value", snap => {
-      const amount = snap.val() || 0;
-      walletSpan.innerText = amount;
-    });
-  }
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-  serviceForm.onsubmit = e => {
+  document.getElementById("serviceForm").addEventListener("submit", function (e) {
     e.preventDefault();
+
     const name = document.getElementById("name").value.trim();
-    const shop = document.getElementById("shopName").value.trim();
+    const shop = document.getElementById("shop").value.trim();
     const address = document.getElementById("address").value.trim();
     const pincode = document.getElementById("pincode").value.trim();
     const whatsapp = document.getElementById("whatsapp").value.trim();
-    const cat = document.getElementById("category").value;
-    const subcat = document.getElementById("subcategory").value;
+    const category = document.getElementById("category").value;
+    const subcategory = document.getElementById("subcategory").value;
 
-    if (!name || !shop || !address || !pincode.match(/^\d{6}$/) || !whatsapp.match(/^\d{10}$/) || !cat || !subcat) {
-      statusDiv.innerText = "गलत है, कृपया सभी जानकारी सही भरें!";
-      statusDiv.style.color = "red";
+    if (!name || !shop || !address || !pincode || !whatsapp || !category || !subcategory) {
+      errorMsg.innerText = "गलत है ये लाइन: कृपया सभी फ़ील्ड सही भरें";
       return;
     }
 
-    const data = {
-      name,
-      shop,
-      address,
-      pincode,
-      whatsapp,
-      category: cat,
-      subcategory: subcat,
-      uid: currentUser.uid,
-      status: "pending"
-    };
+    if (!/^\d{6}$/.test(pincode)) {
+      errorMsg.innerText = "गलत है ये लाइन: 6 अंकों का सही पिनकोड डालें";
+      return;
+    }
 
-    db.ref("services/" + currentUser.uid).set(data).then(() => {
-      formBox.innerHTML = "<h3 style='text-align:center'>Waiting for Approval</h3>";
+    if (!/^[6-9]\d{9}$/.test(whatsapp)) {
+      errorMsg.innerText = "गलत है ये लाइन: वैध व्हाट्सएप नंबर डालें";
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const uid = user.uid;
+
+    db.ref("requests/" + uid).set({
+      name, shop, address, pincode, whatsapp, category, subcategory, status: "pending"
+    }).then(() => {
+      document.getElementById("serviceForm").reset();
+      formContainer.style.display = "none";
+      waitingDiv.style.display = "block";
     });
-  };
+  });
 </script>
-
 </body>
 </html>
