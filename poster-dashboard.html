@@ -1,150 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>Provider Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f1f1f1;
+      font-family: sans-serif;
+      background: #f4f4f4;
       padding: 20px;
     }
-
-    .container {
-      max-width: 600px;
-      margin: auto;
+    .card {
       background: white;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    }
-
-    h2 {
-      text-align: center;
-    }
-
-    .request-card {
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
+      padding: 16px;
+      margin-bottom: 12px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    .btn-3d {
-      background: linear-gradient(#4CAF50, #388E3C);
-      color: white;
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
       border-radius: 12px;
-      box-shadow: 0 5px #2e7031;
+    }
+    .btn-3d {
+      background: linear-gradient(#28a745, #218838);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      box-shadow: 0 4px #1c7430;
+      border-radius: 8px;
       cursor: pointer;
+      transition: 0.2s;
     }
-
     .btn-3d:active {
-      box-shadow: 0 2px #2e7031;
-      transform: translateY(3px);
+      box-shadow: 0 2px #1c7430;
+      transform: translateY(2px);
     }
-
     .wallet {
-      font-weight: bold;
-      color: green;
-      margin-bottom: 10px;
+      margin: 10px 0;
+      padding: 10px;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      border-radius: 6px;
     }
-
-    .error-msg {
-      color: red;
-      font-weight: bold;
+    .whatsapp {
       margin-top: 10px;
+      display: inline-block;
+      background: #25d366;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
+  <h2>Provider Dashboard</h2>
+  <div id="wallet" class="wallet">Wallet: ₹<span id="walletAmount">0</span></div>
+  <div id="requests"></div>
 
-<div class="container">
-  <h2>Provider Panel</h2>
-  <p class="wallet">Wallet: ₹<span id="walletAmount">0</span></p>
-  <div id="requestList"></div>
-  <div id="error" class="error-msg"></div>
-</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "1052314014797",
-    appId: "1:1052314014797:web:e5c29d3db4cb1edcf07745"
-  };
+    let currentUser = null;
+    let currentProvider = null;
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  let currentUser = null;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      loadWallet();
-      loadRequests();
-    } else {
-      alert("Please login first.");
-      window.location.href = "index.html";
-    }
-  });
-
-  function loadWallet() {
-    db.ref("providers/" + currentUser.uid + "/wallet").on("value", snap => {
-      const wallet = snap.val() || 0;
-      document.getElementById("walletAmount").innerText = wallet;
-    });
-  }
-
-  function loadRequests() {
-    db.ref("requests").on("value", snapshot => {
-      const data = snapshot.val();
-      const requestList = document.getElementById("requestList");
-      requestList.innerHTML = "";
-
-      for (let id in data) {
-        const request = data[id];
-
-        if (request.category === currentUser.displayName && !request.acceptedBy) {
-          const div = document.createElement("div");
-          div.className = "request-card";
-          div.innerHTML = `
-            <p><strong>Name:</strong> ${request.name}</p>
-            <p><strong>Category:</strong> ${request.category}</p>
-            <button class="btn-3d" onclick="acceptRequest('${id}')">Accept</button>
-          `;
-          requestList.appendChild(div);
-        }
-      }
-    });
-  }
-
-  function acceptRequest(requestId) {
-    const walletRef = db.ref("providers/" + currentUser.uid + "/wallet");
-    walletRef.once("value", snap => {
-      const balance = snap.val() || 0;
-
-      if (balance >= 100) {
-        walletRef.set(balance - 20);
-        db.ref("requests/" + requestId + "/acceptedBy").set(currentUser.uid);
-        document.getElementById("error").innerText = "";
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        firebase.database().ref('providers/' + user.uid).once('value', snap => {
+          currentProvider = snap.val();
+          loadWallet();
+          loadRequests();
+        });
       } else {
-        document.getElementById("error").innerText = "Please recharge. Minimum ₹100 required to accept requests.";
+        firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
       }
     });
-  }
-</script>
 
+    function loadWallet() {
+      firebase.database().ref('wallets/' + currentUser.uid).on('value', snap => {
+        document.getElementById("walletAmount").innerText = snap.val() || 0;
+      });
+    }
+
+    function loadRequests() {
+      firebase.database().ref('requests').on('value', snap => {
+        const container = document.getElementById("requests");
+        container.innerHTML = '';
+        snap.forEach(req => {
+          const data = req.val();
+          const id = req.key;
+
+          if (data.category === currentProvider.category && data.subcategory === currentProvider.subcategory) {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <b>${data.name}</b><br>
+              Address: ${data.address}<br>
+              Shop: ${data.shop}<br>
+              ${data.acceptedBy && data.acceptedBy.includes(currentUser.uid) ? `<a class="whatsapp" href="https://wa.me/${data.phone}" target="_blank">WhatsApp</a>` : `<button class="btn-3d" onclick="acceptRequest('${id}')">Accept</button>`}
+            `;
+            container.appendChild(card);
+          }
+        });
+      });
+    }
+
+    function acceptRequest(requestId) {
+      const walletRef = firebase.database().ref('wallets/' + currentUser.uid);
+      walletRef.once('value').then(snapshot => {
+        let balance = snapshot.val() || 0;
+        if (balance < 100) {
+          alert("Please recharge. Minimum wallet balance required is ₹100");
+          return;
+        }
+
+        firebase.database().ref('requests/' + requestId).once('value').then(snap => {
+          let data = snap.val();
+          if (!data.acceptedBy) data.acceptedBy = [];
+          if (!data.acceptedBy.includes(currentUser.uid)) {
+            data.acceptedBy.push(currentUser.uid);
+          }
+          firebase.database().ref('requests/' + requestId).update({
+            acceptedBy: data.acceptedBy
+          });
+
+          // ₹20 कटे
+          walletRef.set(balance - 20);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
