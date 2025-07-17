@@ -1,35 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard</title>
   <style>
-    button {
-      margin: 10px;
-      padding: 10px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+    h2 {
+      text-align: center;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    .board-type {
+      text-align: center;
+      font-size: 16px;
       font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
+      margin-top: -10px;
+      color: #555;
+    }
+    .container {
+      max-width: 700px;
+      margin: 10px auto;
+      padding: 10px;
     }
     .card {
-      border: 2px solid #ccc;
-      padding: 12px;
-      margin: 10px;
-      border-radius: 8px;
-      background: #f8f8f8;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: all 0.3s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .field {
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .field b {
+      color: #444;
+    }
+    .buttons {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: 0.3s;
+    }
+    .approve { background: linear-gradient(145deg, #28a745, #218838); }
+    .reject { background: linear-gradient(145deg, #dc3545, #c82333); }
+    .view { background: linear-gradient(145deg, #007bff, #0056b3); }
+
+    .pending-led {
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 8px;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @media screen and (max-width: 480px) {
+      .buttons {
+        flex-direction: column;
+      }
+      .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
+  <h2>📋 All Requests</h2>
+  <div class="board-type" id="boardType">Loading Dashboard...</div>
+  <div class="container" id="requestContainer"></div>
 
-  <h2>📋 Admin Dashboard</h2>
-
-  <button onclick="loadUsers()">🧑‍💻 User Requests</button>
-  <button onclick="loadProviders()">🛠️ Service Provider Requests</button>
-
-  <div id="requestContainer"></div>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -38,69 +107,60 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "417651647879",
-      appId: "1:417651647879:web:ad10b907399d50107e4a8f"
+      messagingSenderId: "993869136952",
+      appId: "1:993869136952:web:b6cfe45f1b0b79f6401637"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const requestContainer = document.getElementById("requestContainer");
+    const boardType = document.getElementById("boardType");
+
+    // 👉 Current Logged-in User Type:
+    const isAdmin = true; // 🔄 Replace with actual check in real project
+
+    boardType.textContent = isAdmin ? "🛠️ Provider Dashboard" : "👤 User Dashboard";
+
+    const loadData = () => {
+      firebase.database().ref("requests/").on("value", (snapshot) => {
+        requestContainer.innerHTML = "";
+        const data = snapshot.val();
+        if (!data) return requestContainer.innerHTML = "<p>No requests found.</p>";
+        Object.entries(data).forEach(([id, req]) => {
+          if (!req.name || !req.category) return;
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="field"><b>Name:</b> ${req.name}</div>
+            <div class="field"><b>Phone:</b> ${req.phone || 'N/A'}</div>
+            <div class="field"><b>Address:</b> ${req.address || 'N/A'}</div>
+            <div class="field"><b>Category:</b> ${req.category || 'N/A'} > ${req.subcategory || 'N/A'}</div>
+            <div class="field"><b>Description:</b> ${req.description || 'N/A'}</div>
+            <div class="field"><b>Status:</b> ${req.status || 'Pending'}
+              ${req.status !== "Approved" ? '<span class="pending-led"></span>' : ''}
+            </div>
+            <div class="field"><b>Timestamp:</b> ${req.timestamp || 'N/A'}</div>
+            <div class="buttons">
+              ${req.status !== "Approved" && isAdmin ? `<button class="btn approve" onclick="updateStatus('${id}', 'Approved')">Approve</button>` : ""}
+              ${isAdmin ? `<button class="btn reject" onclick="deleteRequest('${id}')">Reject</button>` : ""}
+              <button class="btn view" onclick="alert('Details: ${req.name}, ${req.phone}')">View</button>
+            </div>
+          `;
+          requestContainer.appendChild(card);
+        });
+      });
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    const container = document.getElementById('requestContainer');
-
-    function createCard(data, id, type) {
-      const div = document.createElement('div');
-      div.className = "card";
-      div.innerHTML = `
-        <strong>Name:</strong> ${data.name || "N/A"}<br>
-        <strong>Email:</strong> ${data.email || "N/A"}<br>
-        <strong>WhatsApp:</strong> ${data.phone || "N/A"}<br>
-        <strong>Address:</strong> ${data.address || "N/A"}<br>
-        <strong>Category:</strong> ${data.category || "N/A"} (${data.subcategory || ""})<br>
-        <strong>Issue:</strong> ${data.description || "N/A"}<br>
-        <strong>Status:</strong> ${data.status || "Pending"}<br>
-        <strong>Date & Time:</strong> ${data.timestamp || "N/A"}<br><br>
-
-        ${
-          data.status === "Approved"
-          ? `<button onclick="deleteRequest('${id}', '${type}')">❌ Reject/Delete</button>`
-          : `<button onclick="approveRequest('${id}', '${type}')">✅ Approve</button>
-             <button onclick="deleteRequest('${id}', '${type}')">❌ Reject/Delete</button>`
-        }
-      `;
-      container.appendChild(div);
+    function updateStatus(id, status) {
+      firebase.database().ref("requests/" + id).update({ status });
     }
 
-    function loadUsers() {
-      container.innerHTML = "<h3>🧑‍💻 User Requests</h3>";
-      db.ref("serviceRequests").once("value", (snapshot) => {
-        snapshot.forEach((child) => {
-          createCard(child.val(), child.key, "serviceRequests");
-        });
-      });
-    }
-
-    function loadProviders() {
-      container.innerHTML = "<h3>🛠️ Service Provider Requests</h3>";
-      db.ref("posterUsers").once("value", (snapshot) => {
-        snapshot.forEach((child) => {
-          createCard(child.val(), child.key, "posterUsers");
-        });
-      });
-    }
-
-    function approveRequest(id, type) {
-      db.ref(`${type}/${id}`).update({ status: "Approved" });
-      alert("Approved ✅");
-      location.reload();
-    }
-
-    function deleteRequest(id, type) {
-      if (confirm("Are you sure to Reject/Delete this?")) {
-        db.ref(`${type}/${id}`).remove();
-        alert("Deleted ❌");
-        location.reload();
+    function deleteRequest(id) {
+      if (confirm("Are you sure you want to reject/delete this request?")) {
+        firebase.database().ref("requests/" + id).remove();
       }
     }
+
+    loadData();
   </script>
 </body>
 </html>
