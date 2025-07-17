@@ -3,130 +3,153 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Poster Submission</title>
+  <title>Poster Form</title>
   <style>
     body {
       font-family: sans-serif;
-      padding: 1rem;
       background: #f0f0f0;
+      padding: 20px;
     }
     .card {
-      background: #fff;
-      padding: 1.5rem;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
       max-width: 500px;
       margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
     input, select, button {
       width: 100%;
-      margin-bottom: 1rem;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
       border: 1px solid #ccc;
+      box-sizing: border-box;
     }
     button {
-      background: linear-gradient(to right, #4CAF50, #81C784);
+      background: #4CAF50;
       color: white;
       font-weight: bold;
-      border: none;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
       cursor: pointer;
-      transition: 0.3s;
     }
     button:hover {
-      background: linear-gradient(to right, #388E3C, #66BB6A);
+      background: #45a049;
     }
-    #message {
+    h2 {
       text-align: center;
-      font-weight: bold;
-      margin-top: 1rem;
-      color: green;
     }
   </style>
 </head>
 <body>
+
   <div class="card" id="formCard">
-    <h2>📤 Submit Your Poster</h2>
-    <form id="posterForm">
-      <input type="text" id="name" placeholder="Your Name" required />
-      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
-      <input type="text" id="location" placeholder="City / Area" required />
-      <input type="text" id="pincode" placeholder="Pin Code" pattern="\\d{6}" required />
+    <h2>📝 Post Your Free Poster</h2>
 
-      <select id="category" required>
-        <option value="">📂 Select Category</option>
-        <option value="Education">Education</option>
-        <option value="Jobs">Jobs</option>
-        <option value="Services">Services</option>
-        <option value="Real Estate">Real Estate</option>
-      </select>
+    <input type="text" id="shopname" placeholder="Shop Name (Optional)" />
 
-      <select id="subcategory" required>
-        <option value="">📁 Select Subcategory</option>
-        <option value="Tutor">Tutor</option>
-        <option value="Part Time Job">Part Time Job</option>
-        <option value="Electrician">Electrician</option>
-        <option value="Flat for Rent">Flat for Rent</option>
-      </select>
+    <input type="text" id="name" placeholder="Your Name" required />
+    <input type="text" id="phone" placeholder="Phone Number" maxlength="10" required />
+    <input type="text" id="pincode" placeholder="Pin Code" maxlength="6" required />
 
-      <textarea id="description" placeholder="Describe your poster..." rows="4" required></textarea>
+    <select id="category" required>
+      <option value="">-- Select Category --</option>
+      <option value="Electronics">Electronics</option>
+      <option value="Clothing">Clothing</option>
+      <option value="Food">Food</option>
+      <option value="Education">Education</option>
+    </select>
 
-      <button type="submit">🚀 Submit</button>
-    </form>
-    <div id="message"></div>
+    <select id="subcategory" required>
+      <option value="">-- Select Subcategory --</option>
+    </select>
+
+    <button onclick="submitForm()">Submit Poster</button>
   </div>
 
-  <script type="module">
-    // Firebase config
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+      messagingSenderId: "528280958455",
+      appId: "1:528280958455:web:68f7c08eb709f3fcd98bde"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const posterForm = document.getElementById("posterForm");
-    const message = document.getElementById("message");
     const formCard = document.getElementById("formCard");
 
-    posterForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    // Reload protection
+    if (localStorage.getItem("submitted") === "true") {
+      formCard.innerHTML = `<h2>✅ Wait for Approval</h2><p>Your poster has already been submitted.</p>`;
+    }
 
-      const name = document.getElementById("name").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const location = document.getElementById("location").value;
-      const pincode = document.getElementById("pincode").value;
+    const categoryMap = {
+      Electronics: ["Mobile", "Laptop", "Repair", "Accessories"],
+      Clothing: ["Men", "Women", "Kids"],
+      Food: ["Restaurant", "Tiffin", "Catering", "Snacks"],
+      Education: ["School", "Tuition", "Online", "Books"]
+    };
+
+    document.getElementById("category").addEventListener("change", function () {
+      const subSelect = document.getElementById("subcategory");
+      subSelect.innerHTML = `<option value="">-- Select Subcategory --</option>`;
+      const subcats = categoryMap[this.value] || [];
+      subcats.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        subSelect.appendChild(opt);
+      });
+    });
+
+    function submitForm() {
+      const shopname = document.getElementById("shopname").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const pincode = document.getElementById("pincode").value.trim();
       const category = document.getElementById("category").value;
       const subcategory = document.getElementById("subcategory").value;
-      const description = document.getElementById("description").value;
 
-      // Save to Firebase
-      const postRef = push(ref(db, "posters"));
-      await set(postRef, {
+      if (!name || !phone || !pincode || !category || !subcategory) {
+        alert("Please fill all required fields.");
+        return;
+      }
+
+      if (!/^\d{10}$/.test(phone)) {
+        alert("Please enter a valid 10-digit phone number.");
+        return;
+      }
+
+      if (!/^\d{6}$/.test(pincode)) {
+        alert("Please enter a valid 6-digit pin code.");
+        return;
+      }
+
+      const data = {
+        shopname,
         name,
-        whatsapp,
-        location,
+        phone,
         pincode,
         category,
         subcategory,
-        description,
-        approved: false,
-        createdAt: new Date().toISOString()
-      });
+        timestamp: new Date().toISOString()
+      };
 
-      formCard.innerHTML = `<h2>✅ Wait for Approval</h2><p>Your poster has been submitted successfully.</p>`;
-    });
+      firebase.database().ref("posterUsers").push(data)
+        .then(() => {
+          localStorage.setItem("submitted", "true");
+          formCard.innerHTML = `<h2>✅ Wait for Approval</h2><p>Thank you ${name}, we’ve received your poster request.</p>`;
+        })
+        .catch(err => {
+          alert("Error submitting. Try again.");
+          console.error(err);
+        });
+    }
   </script>
 </body>
 </html>
