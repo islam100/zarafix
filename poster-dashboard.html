@@ -4,199 +4,148 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Poster Registration</title>
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: #f4f4f4;
       padding: 20px;
     }
-    form, #dashboard {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 500px;
+    form, .dashboard {
+      max-width: 400px;
       margin: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 10px;
     }
-    input, select {
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
       width: 100%;
       padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      margin-top: 5px;
+      font-size: 16px;
     }
-    button {
-      padding: 12px;
-      background: teal;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #004d4d;
-    }
-    .hidden {
+    .dashboard {
       display: none;
-    }
-    @media(max-width: 600px) {
-      form, #dashboard { width: 95%; }
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-<h2 style="text-align:center;">Poster Registration</h2>
+<form id="posterForm">
+  <h2>📝 Poster Registration</h2>
+  
+  <label>Name:</label>
+  <input type="text" id="name" required />
 
-<div id="loginBox" style="text-align: center; margin-bottom: 20px;">
-  <button onclick="loginWithGoogle()">Login with Google</button>
-</div>
+  <label>WhatsApp Number:</label>
+  <input type="tel" id="whatsapp" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required />
 
-<div id="logoutBox" class="hidden" style="text-align: center; margin-bottom: 20px;">
-  <p id="userName"></p>
-  <button onclick="logout()">Logout</button>
-</div>
+  <label>Shop Name:</label>
+  <input type="text" id="shopname" required />
 
-<form id="posterForm" class="hidden">
-  <input type="text" id="name" placeholder="Your Name" required />
-  <input type="tel" id="phone" placeholder="Phone Number" required />
-  <input type="text" id="pincode" placeholder="Pincode (6 digits)" maxlength="6" required />
-
+  <label>Category:</label>
   <select id="category" required>
     <option value="">Select Category</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Salon">Salon</option>
+    <option value="Clothing">Clothing</option>
+    <option value="Electronics">Electronics</option>
   </select>
 
+  <label>Subcategory:</label>
   <select id="subcategory" required>
     <option value="">Select Subcategory</option>
   </select>
 
-  <input type="text" id="location" placeholder="Shop Full Address" required />
+  <label>Pincode:</label>
+  <input type="tel" id="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required />
+
   <button type="submit">Submit</button>
 </form>
 
-<div id="dashboard" class="hidden">
-  <h3>🧾 Poster Dashboard</h3>
-  <p>✅ Your poster has been submitted. <strong>Wait for approval.</strong></p>
+<div class="dashboard" id="dashboard">
+  <h2>🧾 Poster Dashboard</h2>
+  <p>✅ Wait for Approval</p>
 </div>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "5010031414",
-    appId: "1:5010031414:web:7c7ddc8b2e9187db6b7a88"
+    messagingSenderId: "241770233045",
+    appId: "1:241770233045:web:fe2d82b256dc431a9ae11e"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const auth = firebase.auth();
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
   const form = document.getElementById("posterForm");
   const dashboard = document.getElementById("dashboard");
-  const loginBox = document.getElementById("loginBox");
-  const logoutBox = document.getElementById("logoutBox");
-  const userName = document.getElementById("userName");
-  const categoryDropdown = document.getElementById("category");
-  const subcategoryDropdown = document.getElementById("subcategory");
 
-  const subcategories = {
-    Electrician: ["Fan Repair", "Switch Fitting", "New Wiring"],
-    Plumber: ["Tap Leak", "Pipeline Setup", "Bathroom Fitting"],
-    Salon: ["Haircut", "Facial", "Threading"]
+  // Category to subcategory options
+  const subcategoryMap = {
+    "Clothing": ["Men", "Women", "Kids"],
+    "Electronics": ["Mobile", "Laptop", "TV"]
   };
 
-  categoryDropdown.addEventListener("change", () => {
-    const cat = categoryDropdown.value;
-    subcategoryDropdown.innerHTML = `<option value="">Select Subcategory</option>`;
-    if (subcategories[cat]) {
-      subcategories[cat].forEach(sub => {
-        let opt = document.createElement("option");
-        opt.value = sub;
-        opt.innerText = sub;
-        subcategoryDropdown.appendChild(opt);
+  document.getElementById("category").addEventListener("change", function () {
+    const subcat = document.getElementById("subcategory");
+    subcat.innerHTML = "<option value=''>Select Subcategory</option>";
+    const selected = this.value;
+    if (subcategoryMap[selected]) {
+      subcategoryMap[selected].forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.text = opt;
+        subcat.appendChild(option);
       });
     }
   });
 
-  function loginWithGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(result => {
-        const user = result.user;
-        userName.textContent = `Welcome, ${user.displayName}`;
-        loginBox.classList.add("hidden");
-        logoutBox.classList.remove("hidden");
-        checkFormStatus(user.uid);
-      })
-      .catch(err => alert("Login failed: " + err.message));
-  }
-
-  function logout() {
-    auth.signOut().then(() => location.reload());
-  }
-
-  function checkFormStatus(uid) {
-    db.ref("posterUsers/" + uid).once("value").then(snapshot => {
-      if (snapshot.exists()) {
-        form.classList.add("hidden");
-        dashboard.classList.remove("hidden");
-      } else {
-        form.classList.remove("hidden");
-        dashboard.classList.add("hidden");
-      }
-    });
-  }
-
-  form.addEventListener("submit", e => {
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
-    const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const pincode = document.getElementById("pincode").value.trim();
-    const category = categoryDropdown.value;
-    const subcategory = subcategoryDropdown.value;
-    const location = document.getElementById("location").value.trim();
 
-    if (!/^\d{6}$/.test(pincode)) {
-      alert("❌ Invalid Pincode. Please enter a 6-digit number.");
+    const name = document.getElementById("name").value.trim();
+    const whatsapp = document.getElementById("whatsapp").value.trim();
+    const shopname = document.getElementById("shopname").value.trim();
+    const category = document.getElementById("category").value;
+    const subcategory = document.getElementById("subcategory").value;
+    const pincode = document.getElementById("pincode").value.trim();
+
+    if (pincode.length !== 6 || isNaN(pincode)) {
+      alert("Please enter a valid 6-digit Pincode");
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) return alert("Please login first");
+    if (whatsapp.length !== 10 || isNaN(whatsapp)) {
+      alert("Enter valid 10-digit WhatsApp number");
+      return;
+    }
 
-    const uid = user.uid;
     const data = {
-      name, phone, pincode, category, subcategory, location,
-      email: user.email,
+      name,
+      whatsapp,
+      shopname,
+      category,
+      subcategory,
+      pincode,
       timestamp: new Date().toISOString(),
       approved: false
     };
 
-    db.ref("posterUsers/" + uid).set(data)
-      .then(() => {
-        form.classList.add("hidden");
-        dashboard.classList.remove("hidden");
-      })
-      .catch(err => alert("Submit failed: " + err.message));
-  });
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      userName.textContent = `Welcome, ${user.displayName}`;
-      loginBox.classList.add("hidden");
-      logoutBox.classList.remove("hidden");
-      checkFormStatus(user.uid);
-    }
+    push(ref(db, "posterUsers"), data).then(() => {
+      form.style.display = "none";
+      dashboard.style.display = "block";
+    }).catch(err => {
+      alert("Error saving data: " + err);
+    });
   });
 </script>
 
