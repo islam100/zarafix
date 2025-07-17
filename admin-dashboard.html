@@ -1,134 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User / Provider View</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    button { padding: 10px 15px; margin: 5px; }
-    .box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
-    .hidden { display: none; }
+    body {
+      font-family: Arial;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    .led.red {
+      background-color: red;
+    }
+    .led.green {
+      background-color: green;
+    }
+    button {
+      margin: 5px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .approve { background-color: #4CAF50; color: white; }
+    .delete { background-color: #f44336; color: white; }
+    h2 { margin-top: 30px; }
   </style>
 </head>
 <body>
 
-<h2>Login as User or Provider</h2>
-<button onclick="login()">Login with Google</button>
-<button onclick="logout()">Logout</button>
+  <h1>🛠️ Admin Dashboard</h1>
+  <div id="providerList"></div>
 
-<div id="userView" class="box hidden">
-  <h3>User Dashboard</h3>
-  <p id="userName"></p>
-  <p id="userWallet"></p>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  <h4>Recharge Request</h4>
-  <input type="number" id="rechargeAmount" placeholder="Enter amount">
-  <button onclick="sendRechargeRequest()">Send Recharge</button>
-  <p id="rechargeStatus"></p>
-</div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<div id="providerView" class="box hidden">
-  <h3>Provider Dashboard</h3>
-  <p id="providerName"></p>
-  <p id="providerCategory"></p>
-  <p id="providerWallet"></p>
-</div>
+    function loadProviders() {
+      const container = document.getElementById("providerList");
+      container.innerHTML = "<h2>📋 All Providers</h2>";
 
-<script>
-  // 🔧 Replace this with your own Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "99236472578",
-    appId: "1:99236472578:web:9b6747c163b83f3f0e4eec"
-  };
+      db.ref("providers").once("value", (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+          container.innerHTML += "<p>No providers found.</p>";
+          return;
+        }
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+        Object.entries(data).forEach(([uid, provider]) => {
+          const card = document.createElement("div");
+          card.className = "card";
 
-  let currentUser = null;
-
-  function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(res => {
-        currentUser = res.user;
-        const uid = currentUser.uid;
-        // Check role
-        db.ref(`users/${uid}`).once('value', snap => {
-          if (snap.exists()) {
-            showUserView(uid);
-          } else {
-            db.ref(`providers/${uid}`).once('value', snap2 => {
-              if (snap2.exists()) {
-                showProviderView(uid);
-              } else {
-                alert("User not found in database.");
-              }
-            });
-          }
+          const statusLed = `<span class="led ${provider.status === 'Approved' ? 'green' : 'red'}"></span>`;
+          card.innerHTML = `
+            ${statusLed}<strong>${provider.name}</strong><br>
+            Email: ${provider.email}<br>
+            Phone: ${provider.phone}<br>
+            Address: ${provider.address}<br>
+            Category: ${provider.category} - ${provider.subcategory}<br>
+            Status: <strong>${provider.status}</strong><br>
+            Wallet: ₹${provider.wallet || 0}<br>
+            <button class="approve" onclick="approveProvider('${uid}')">✅ Approve</button>
+            <button class="delete" onclick="deleteProvider('${uid}')">❌ Delete</button>
+          `;
+          container.appendChild(card);
         });
-      })
-      .catch(err => alert(err.message));
-  }
-
-  function logout() {
-    auth.signOut();
-    currentUser = null;
-    document.getElementById('userView').classList.add('hidden');
-    document.getElementById('providerView').classList.add('hidden');
-  }
-
-  function showUserView(uid) {
-    db.ref(`users/${uid}`).once('value').then(snap => {
-      const user = snap.val();
-      document.getElementById('userName').innerText = `Name: ${user.name}`;
-      document.getElementById('userWallet').innerText = `Wallet: ₹${user.wallet}`;
-      document.getElementById('userView').classList.remove('hidden');
-      document.getElementById('providerView').classList.add('hidden');
-    });
-  }
-
-  function showProviderView(uid) {
-    db.ref(`providers/${uid}`).once('value').then(snap => {
-      const provider = snap.val();
-      document.getElementById('providerName').innerText = `Name: ${provider.name}`;
-      document.getElementById('providerCategory').innerText = `Category: ${provider.category} (${provider.subcategory})`;
-      document.getElementById('providerWallet').innerText = `Wallet: ₹${provider.wallet}`;
-      document.getElementById('providerView').classList.remove('hidden');
-      document.getElementById('userView').classList.add('hidden');
-    });
-  }
-
-  function sendRechargeRequest() {
-    const amount = parseInt(document.getElementById('rechargeAmount').value);
-    if (!amount || amount < 1) {
-      alert("Please enter a valid amount.");
-      return;
-    }
-    const uid = currentUser.uid;
-    db.ref(`users/${uid}`).once('value').then(snap => {
-      const user = snap.val();
-      const reqId = db.ref().child("rechargeRequests").push().key;
-      const data = {
-        uid: uid,
-        name: user.name,
-        phone: user.phone,
-        amount: amount,
-        status: "Pending",
-        timestamp: new Date().toISOString()
-      };
-      db.ref(`rechargeRequests/${reqId}`).set(data).then(() => {
-        document.getElementById('rechargeStatus').innerText = "Recharge request sent!";
       });
-    });
-  }
-</script>
+    }
+
+    function approveProvider(uid) {
+      db.ref("providers/" + uid + "/status").set("Approved").then(() => {
+        alert("Approved!");
+        loadProviders();
+      });
+    }
+
+    function deleteProvider(uid) {
+      if (confirm("Are you sure you want to delete this provider?")) {
+        db.ref("providers/" + uid).remove().then(() => {
+          alert("Deleted!");
+          loadProviders();
+        });
+      }
+    }
+
+    loadProviders();
+  </script>
 </body>
 </html>
