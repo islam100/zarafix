@@ -3,139 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Poster Upload</title>
+  <title>Poster Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f1f1f1;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    form {
-      max-width: 400px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 15px;
-      background: linear-gradient(to right, #4caf50, #81c784);
-      border: none;
-      color: white;
-      font-weight: bold;
-      border-radius: 12px;
-      box-shadow: 0 6px #388e3c;
-      transition: all 0.2s ease-in-out;
-    }
-    button:hover {
-      box-shadow: 0 2px #2e7d32;
-      transform: translateY(2px);
-    }
-    #message {
-      text-align: center;
-      margin-top: 15px;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; padding: 20px; }
+    .hidden { display: none; }
+    .btn { padding: 10px 20px; border: none; background: #4CAF50; color: white; border-radius: 10px; box-shadow: 2px 2px 5px gray; cursor: pointer; }
+    .card { background: #f9f9f9; margin: 10px 0; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px #ccc; }
   </style>
 </head>
 <body>
-  <h2>🖼️ Poster Registration</h2>
-  <form id="posterForm">
-    <input type="text" id="name" placeholder="👤 Your Name" required />
-    <input type="text" id="shopName" placeholder="🏪 Shop Name" required />
-    <input type="text" id="whatsapp" placeholder="📞 WhatsApp No." pattern="[0-9]{10}" required />
-    <input type="text" id="pincode" placeholder="📍 Pin Code" pattern="[0-9]{6}" required />
-    
-    <select id="category" required>
-      <option value="">📂 Select Category</option>
-      <option value="food">Food</option>
+
+  <button id="loginBtn" class="btn">🔐 Login with Google</button>
+
+  <div id="posterForm" class="hidden">
+    <h3>📩 Poster Registration</h3>
+    <input id="name" placeholder="Name" /><br/><br/>
+    <input id="shop" placeholder="Shop Name" /><br/><br/>
+    <input id="address" placeholder="Full Address" /><br/><br/>
+    <input id="pincode" placeholder="Pincode" type="number"/><br/><br/>
+    <input id="whatsapp" placeholder="WhatsApp Number" /><br/><br/>
+    <select id="subcategory">
+      <option value="">-- Select Subcategory --</option>
+      <option value="grocery">Grocery</option>
+      <option value="electronics">Electronics</option>
       <option value="clothing">Clothing</option>
-      <option value="service">Service</option>
-      <option value="others">Others</option>
-    </select>
+    </select><br/><br/>
+    <button class="btn" onclick="submitPoster()">📤 Submit Poster</button>
+  </div>
 
-    <input type="file" id="image" accept="image/*" required />
-    
-    <button type="submit">📤 Upload Poster</button>
-    <div id="message"></div>
-  </form>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js"></script>
+  <div id="dashboard" class="hidden">
+    <h2>🧾 Poster Dashboard</h2>
+    <div id="posterList">⌛ Loading...</div>
+  </div>
 
   <script>
-    // ✅ Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "682390963124",
-      appId: "1:682390963124:web:e3b91fd0b487bcdccbe1be"
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const storage = firebase.storage();
+    const auth = firebase.auth();
 
-    // Form submit
-    document.getElementById('posterForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    const loginBtn = document.getElementById("loginBtn");
+    const posterForm = document.getElementById("posterForm");
+    const dashboard = document.getElementById("dashboard");
+    const posterList = document.getElementById("posterList");
 
-      const name = document.getElementById('name').value.trim();
-      const shopName = document.getElementById('shopName').value.trim();
-      const whatsapp = document.getElementById('whatsapp').value.trim();
-      const pincode = document.getElementById('pincode').value.trim();
-      const category = document.getElementById('category').value;
-      const imageFile = document.getElementById('image').files[0];
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
 
-      const messageEl = document.getElementById('message');
-      messageEl.innerText = "Uploading... Please wait...";
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        loginBtn.classList.add("hidden");
+        posterForm.classList.remove("hidden");
+        dashboard.classList.remove("hidden");
+        loadPosters();
+      }
+    });
 
-      if (!name || !shopName || !whatsapp || !pincode || !category || !imageFile) {
-        messageEl.innerText = "❌ Please fill all fields.";
+    function submitPoster() {
+      const name = document.getElementById("name").value.trim();
+      const shop = document.getElementById("shop").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const pincode = document.getElementById("pincode").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const subcategory = document.getElementById("subcategory").value;
+
+      if (!name || !shop || !address || !pincode || !whatsapp || !subcategory) {
+        alert("❗ कृपया सभी फ़ील्ड सही से भरें");
         return;
       }
 
-      try {
-        // Upload image to Firebase Storage
-        const imageRef = storage.ref(`posters/${Date.now()}_${imageFile.name}`);
-        await imageRef.put(imageFile);
-        const imageUrl = await imageRef.getDownloadURL();
-
-        // Save poster data
-        const newPosterRef = db.ref("posters").push();
-        await newPosterRef.set({
-          name, shopName, whatsapp, pincode, category, imageUrl,
-          timestamp: Date.now()
-        });
-
-        messageEl.innerText = "✅ Poster uploaded successfully!";
-        document.getElementById('posterForm').reset();
-      } catch (error) {
-        console.error(error);
-        messageEl.innerText = "❌ Upload failed!";
+      if (pincode.length !== 6) {
+        alert("❗ पिनकोड 6 अंकों का होना चाहिए");
+        return;
       }
-    });
+
+      const posterData = {
+        name, shop, address, pincode, whatsapp, subcategory,
+        timestamp: Date.now()
+      };
+
+      const userId = auth.currentUser.uid;
+      const newKey = db.ref().child("posters").push().key;
+      db.ref("posters/" + newKey).set(posterData).then(() => {
+        alert("✅ Poster Saved!");
+        posterForm.reset();
+        loadPosters();
+      });
+    }
+
+    function loadPosters() {
+      db.ref("posters").once("value", (snapshot) => {
+        const data = snapshot.val();
+        posterList.innerHTML = "";
+        if (!data) {
+          posterList.innerHTML = "❌ No posters found.";
+          return;
+        }
+        Object.values(data).forEach(poster => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <strong>${poster.name} (${poster.shop})</strong><br/>
+            🏠 ${poster.address} - ${poster.pincode}<br/>
+            📱 ${poster.whatsapp}<br/>
+            🗂️ ${poster.subcategory}<br/>
+            🕓 ${new Date(poster.timestamp).toLocaleString()}
+          `;
+          posterList.appendChild(card);
+        });
+      });
+    }
   </script>
 </body>
 </html>
-
