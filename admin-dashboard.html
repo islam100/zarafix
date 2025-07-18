@@ -3,183 +3,177 @@
 <head>
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
       margin: 0;
-      background: linear-gradient(to bottom, #f0f0f0, #ffffff);
-      padding: 0;
+      padding: 20px;
     }
-    .tabs {
-      display: flex;
-      justify-content: space-around;
-      background: #1976d2;
-      color: white;
-      font-size: 18px;
-    }
-    .tab {
-      padding: 15px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .tab:hover, .tab.active {
-      background: #1565c0;
+    h2 {
+      text-align: center;
     }
     .section {
-      display: none;
-      padding: 15px;
-    }
-    .section.active {
-      display: block;
+      margin-bottom: 30px;
     }
     .card {
       background: white;
-      margin: 10px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin: 10px;
       padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      position: relative;
+      transition: 0.3s;
     }
-    .led {
-      width: 10px;
-      height: 10px;
-      background: red;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-      position: absolute;
-      top: 15px;
-      right: 15px;
+    .card:hover {
+      transform: scale(1.02);
     }
-    @keyframes blink {
-      0%, 100% { background: red; }
-      50% { background: limegreen; }
+    .grid {
+      display: grid;
+      gap: 10px;
     }
-    .wallet {
-      font-weight: bold;
-      color: #2e7d32;
+    button {
+      background: #1976d2;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
     }
-    .title {
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 5px;
+    button:hover {
+      background: #135ba1;
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
 
-<div class="tabs">
-  <div class="tab active" onclick="showSection('requests')">📋 Service Requests</div>
-  <div class="tab" onclick="showSection('posters')">🧰 Service Providers</div>
-  <div class="tab" onclick="showSection('recharges')">💰 Recharge Requests</div>
-</div>
+  <div id="adminContent" style="display:none">
+    <div class="section">
+      <h3>📋 All Service Requests</h3>
+      <div id="requests" class="grid"></div>
+    </div>
 
-<div id="requests" class="section active"></div>
-<div id="posters" class="section"></div>
-<div id="recharges" class="section"></div>
+    <div class="section">
+      <h3>🧰 All Posters</h3>
+      <div id="posters" class="grid"></div>
+    </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <div class="section">
+      <h3>💰 Recharge Requests</h3>
+      <div id="recharges" class="grid"></div>
+    </div>
+  </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) return location.href = 'index.html';
-    db.ref("admins/" + user.uid).once("value", snap => {
-      if (!snap.exists()) return alert("Access denied. Admins only.");
-      loadRequests();
-      loadPosters();
-      loadRecharges();
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        firebase.database().ref(`admins/${user.uid}`).once('value').then(snapshot => {
+          if (snapshot.exists()) {
+            document.getElementById("adminContent").style.display = "block";
+            loadRequests();
+            loadPosters();
+            loadRecharges();
+          } else {
+            alert("Access Denied. Admins only.");
+            window.location.href = "index.html";
+          }
+        });
+      } else {
+        alert("Please login first.");
+        window.location.href = "index.html";
+      }
     });
-  });
 
-  function showSection(id) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelector(`.tab[onclick="showSection('${id}')"]`).classList.add('active');
-  }
-
-  function loadRequests() {
-    const container = document.getElementById('requests');
-    container.innerHTML = "<h3>Loading...</h3>";
-    db.ref("users").once("value", snap => {
-      container.innerHTML = "";
-      snap.forEach(userSnap => {
-        const uid = userSnap.key;
-        const user = userSnap.val();
-        if (user.requests) {
-          Object.entries(user.requests).forEach(([reqId, req]) => {
+    function loadRequests() {
+      const requestsDiv = document.getElementById("requests");
+      firebase.database().ref("requests").once('value', snapshot => {
+        snapshot.forEach(userSnap => {
+          const userId = userSnap.key;
+          userSnap.forEach(reqSnap => {
+            const data = reqSnap.val();
             const card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
-              <div class="led"></div>
-              <div class="title">🧑‍🔧 ${user.name} (${user.category} > ${user.subCategory})</div>
-              <div>📍 ${user.address}</div>
-              <div>📝 ${req.description || "No details"}</div>
-              <div>📍 Lat: ${req.location?.lat || '-'} / Lng: ${req.location?.lng || '-'}</div>
-              <div>✅ Accepted By: ${req.acceptedBy ? Object.keys(req.acceptedBy).length : 0}</div>
+              <strong>Category:</strong> ${data.category}<br>
+              <strong>Description:</strong> ${data.description}<br>
+              <strong>Location:</strong> ${data.location}<br>
+              <strong>Accepted By:</strong> ${data.acceptedBy ? Object.keys(data.acceptedBy).join(", ") : 'None'}
             `;
-            container.appendChild(card);
+            requestsDiv.appendChild(card);
           });
-        }
+        });
       });
-    });
-  }
+    }
 
-  function loadPosters() {
-    const container = document.getElementById('posters');
-    container.innerHTML = "<h3>Loading...</h3>";
-    db.ref("posters").once("value", snap => {
-      container.innerHTML = "";
-      snap.forEach(posterSnap => {
-        const poster = posterSnap.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="led"></div>
-          <div class="title">🏪 ${poster.name} (${poster.category} > ${poster.subCategory})</div>
-          <div>📍 ${poster.address}</div>
-          <div>☎️ ${poster.whatsapp}</div>
-          <div class="wallet">💰 Wallet: ₹${poster.wallet || 0}</div>
-        `;
-        container.appendChild(card);
+    function loadPosters() {
+      const postersDiv = document.getElementById("posters");
+      firebase.database().ref("posters").once('value', snapshot => {
+        snapshot.forEach(posterSnap => {
+          const id = posterSnap.key;
+          const data = posterSnap.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <strong>Name:</strong> ${data.name}<br>
+            <strong>Shop:</strong> ${data.shop}<br>
+            <strong>Category:</strong> ${data.category}<br>
+            <strong>WhatsApp:</strong> ${data.whatsapp}<br>
+            <strong>Wallet:</strong> ₹${data.wallet}
+          `;
+          postersDiv.appendChild(card);
+        });
       });
-    });
-  }
+    }
 
-  function loadRecharges() {
-    const container = document.getElementById('recharges');
-    container.innerHTML = "<h3>Loading...</h3>";
-    db.ref("rechargeRequests").once("value", snap => {
-      container.innerHTML = "";
-      snap.forEach(recSnap => {
-        const rec = recSnap.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="title">🔁 Poster ID: ${rec.posterId}</div>
-          <div>✅ Approved: ${rec.approved ? "Yes" : "No"}</div>
-          <div>🕒 ${new Date(rec.timestamp * 1000).toLocaleString()}</div>
-          <div><a href="${rec.screenshot}" target="_blank">📸 View Screenshot</a></div>
-        `;
-        container.appendChild(card);
+    function loadRecharges() {
+      const rechargesDiv = document.getElementById("recharges");
+      firebase.database().ref("recharges").once('value', snapshot => {
+        snapshot.forEach(posterSnap => {
+          const posterId = posterSnap.key;
+          posterSnap.forEach(rechargeSnap => {
+            const rechargeId = rechargeSnap.key;
+            const data = rechargeSnap.val();
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <strong>Poster ID:</strong> ${posterId}<br>
+              <img src="${data.screenshotUrl}" width="100"><br>
+              <strong>Approved:</strong> ${data.approved}<br>
+            `;
+            if (!data.approved) {
+              const btn = document.createElement("button");
+              btn.innerText = "Approve ₹100";
+              btn.onclick = () => {
+                firebase.database().ref(`recharges/${posterId}/${rechargeId}/approved`).set(true);
+                firebase.database().ref(`posters/${posterId}/wallet`).once('value').then(walletSnap => {
+                  const current = walletSnap.val() || 0;
+                  firebase.database().ref(`posters/${posterId}/wallet`).set(current + 100);
+                  alert("Recharge approved.");
+                  location.reload();
+                });
+              };
+              card.appendChild(btn);
+            }
+            rechargesDiv.appendChild(card);
+          });
+        });
       });
-    });
-  }
-</script>
-
+    }
+  </script>
 </body>
 </html>
