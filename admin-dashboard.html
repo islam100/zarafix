@@ -19,6 +19,7 @@
       padding: 15px;
       min-height: 250px;
       transition: transform 0.3s;
+      width: 300px;
     }
 
     .provider-card:hover {
@@ -90,11 +91,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const providerRef = ref(db, 'serviceProviders');
-    const rechargeRefRoot = ref(db, 'rechargeRequests');
     const container = document.getElementById('container');
 
     get(providerRef).then(async (snapshot) => {
-      container.innerHTML = ""; // clear loading
+      container.innerHTML = "";
       if (!snapshot.exists()) {
         container.innerHTML = "No service providers found.";
         return;
@@ -107,28 +107,34 @@
         const card = document.createElement("div");
         card.className = "provider-card";
 
-        // Header
         const title = document.createElement("h3");
         title.textContent = provider.name || "No Name";
         card.appendChild(title);
 
-        // Details
         const details = `
-          <p><strong>Shop:</strong> ${provider.shopName || 'N/A'}</p>
+          <p><strong>Shop:</strong> ${provider.shopname || 'N/A'}</p>
           <p><strong>Address:</strong> ${provider.address || 'N/A'}</p>
           <p><strong>Category:</strong> ${provider.category || 'N/A'}</p>
           <p><strong>WhatsApp:</strong> ${provider.whatsapp || 'N/A'}</p>
           <p><strong>Wallet:</strong> ₹${provider.wallet || 0}</p>
+          <p><strong>Approved:</strong> ${provider.approved ? '✅ Yes' : '❌ No'}</p>
         `;
         card.innerHTML += details;
 
-        // 🔄 Recharge Image (if available)
+        // ✅ Recharge Image Handling (safe way)
         try {
           const rechargeSnap = await get(ref(db, `rechargeRequests/${id}`));
           if (rechargeSnap.exists()) {
             const reqs = rechargeSnap.val();
-            const firstKey = Object.keys(reqs)[0];
-            const imageUrl = reqs[firstKey]?.imageUrl;
+            let imageUrl = null;
+
+            if (reqs.imageUrl) {
+              imageUrl = reqs.imageUrl;
+            } else {
+              const firstKey = Object.keys(reqs)[0];
+              imageUrl = reqs[firstKey]?.imageUrl;
+            }
+
             if (imageUrl) {
               const img = document.createElement("img");
               img.src = imageUrl;
@@ -140,16 +146,16 @@
           console.error("Recharge image fetch error:", err);
         }
 
-        // Buttons
         const approveBtn = document.createElement("button");
         approveBtn.textContent = "Approve ₹100";
         approveBtn.className = "approve-btn";
         approveBtn.onclick = async () => {
           try {
             await update(ref(db, 'serviceProviders/' + id), {
-              wallet: (provider.wallet || 0) + 100
+              wallet: (provider.wallet || 0) + 100,
+              approved: true
             });
-            alert("Wallet recharged ₹100 successfully.");
+            alert("Wallet recharged and approved.");
             location.reload();
           } catch (err) {
             alert("Recharge failed.");
@@ -179,7 +185,7 @@
         container.appendChild(card);
       }
     }).catch((err) => {
-      container.innerHTML = "Failed to load posters.";
+      container.innerHTML = "❌ Failed to load posters.";
       console.error("Provider load error:", err);
     });
 
