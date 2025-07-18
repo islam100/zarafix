@@ -1,156 +1,176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard</title>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 20px;
+    body { font-family: Arial; background: #eaf4ff; margin: 0; padding: 20px; }
+    h2 { text-align: center; }
+    .section { margin-bottom: 30px; }
+    .card {
+      background: #fff;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
     }
-    .topbar {
+    .card:hover { transform: scale(1.03); }
+    .cards-container {
       display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
     }
     button {
-      padding: 10px 20px;
-      background: #007bff;
-      color: white;
+      padding: 8px 15px;
       border: none;
-      cursor: pointer;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .card {
-      background: white;
-      padding: 15px;
-      margin: 15px 0;
       border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    .card h3 {
-      margin: 0 0 5px;
-      color: #333;
-    }
-    .card p {
-      margin: 4px 0;
-      color: #555;
-    }
-    .actions button {
-      margin-right: 10px;
-      background: #28a745;
-    }
-    .actions button.reject {
-      background: #dc3545;
-    }
-    .actions button.delete {
-      background: #6c757d;
+      background: #2196f3;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <button onclick="posterUsers()">🛠️ posterUsers</button>
-    <button onclick="loadRequests()">🧾 Load Service Requests</button>
+  <h2>🔐 ZaraFix Admin Dashboard</h2>
+
+  <div id="notAdmin" style="display:none; text-align:center; color:red;">Access Denied. Admins only.</div>
+  
+  <div id="adminContent" style="display:none;">
+    
+    <!-- Section 1: Service Requests -->
+    <div class="section">
+      <h3>📋 All Service Requests</h3>
+      <div id="requestsContainer" class="cards-container"></div>
+    </div>
+
+    <!-- Section 2: Posters -->
+    <div class="section">
+      <h3>🧑‍🔧 All Service Providers (Posters)</h3>
+      <div id="postersContainer" class="cards-container"></div>
+    </div>
+
+    <!-- Section 3: Recharge Requests -->
+    <div class="section">
+      <h3>💸 Recharge Requests</h3>
+      <div id="rechargeContainer" class="cards-container"></div>
+    </div>
+
   </div>
 
-  <div id="dataContainer"></div>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "384489978324",
-      appId: "1:384489978324:web:287ccbe98d9b63a9ec1dc1"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const container = document.getElementById("dataContainer");
+    const adminUid = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // Your admin UID
 
-    function createCard(user, type) {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      if (type === "providers") {
-        card.innerHTML = `
-          <h3>👨‍💼 Provider</h3>
-          <p><strong>Shop Name:</strong> ${user.shopname || "-"}</p>
-        `;
+    firebase.auth().onAuthStateChanged(user => {
+      if (user && user.uid === adminUid) {
+        document.getElementById("adminContent").style.display = "block";
+        loadAllData();
       } else {
-        card.innerHTML = `<h3>📥 Service Request</h3>`;
+        document.getElementById("notAdmin").style.display = "block";
       }
+    });
 
-      card.innerHTML += `
-        <p><strong>Name:</strong> ${user.name || "-"} </p>
-        <p><strong>WhatsApp:</strong> ${user.whatsapp || "-"}</p>
-        <p><strong>Address:</strong> ${user.address || "-"}</p>
-        <p><strong>Category:</strong> ${user.category || "-"} / ${user.subcategory || "-"}</p>
-        <p><strong>Pincode:</strong> ${user.pincode || "-"}</p>
-        <p><strong>Status:</strong> ${user.status || "unapproved"}</p>
-        <div class="actions">
-          <button onclick="updateStatus('${type}', '${user.id}', 'approved')">Approve</button>
-          <button class="reject" onclick="updateStatus('${type}', '${user.id}', 'rejected')">Reject</button>
-          <button class="delete" onclick="deleteUser('${type}', '${user.id}')">Delete</button>
-        </div>
-      `;
-      container.appendChild(card);
+    function loadAllData() {
+      const db = firebase.database();
+
+      // Load Service Requests
+      db.ref("requests").once("value", snap => {
+        const requests = snap.val();
+        const container = document.getElementById("requestsContainer");
+        container.innerHTML = "";
+        for (let uid in requests) {
+          for (let rid in requests[uid]) {
+            const r = requests[uid][rid];
+            container.innerHTML += `
+              <div class="card">
+                <b>Name:</b> ${r.name}<br>
+                <b>Category:</b> ${r.category} → ${r.subcategory}<br>
+                <b>Problem:</b> ${r.problem}<br>
+                <b>Address:</b> ${r.address}, ${r.pincode}<br>
+                <b>Location:</b> <a href="${r.mapLink}" target="_blank">Map</a><br>
+                <b>Accepted By:</b> ${r.acceptedBy ? Object.keys(r.acceptedBy).join(", ") : "None"}
+              </div>`;
+          }
+        }
+      });
+
+      // Load Posters
+      db.ref("posters").once("value", snap => {
+        const posters = snap.val();
+        const container = document.getElementById("postersContainer");
+        container.innerHTML = "";
+        for (let uid in posters) {
+          const p = posters[uid];
+          container.innerHTML += `
+            <div class="card">
+              <b>Name:</b> ${p.name}<br>
+              <b>Shop:</b> ${p.shop}<br>
+              <b>Category:</b> ${p.category} → ${p.subcategory}<br>
+              <b>WhatsApp:</b> <a href="https://wa.me/${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
+              <b>Wallet:</b> ₹${p.wallet || 0}<br>
+              <button onclick="rechargeWallet('${uid}')">+ ₹100 Recharge</button>
+            </div>`;
+        }
+      });
+
+      // Load Recharge Requests
+      db.ref("rechargeRequests").once("value", snap => {
+        const requests = snap.val();
+        const container = document.getElementById("rechargeContainer");
+        container.innerHTML = "";
+        for (let rid in requests) {
+          const r = requests[rid];
+          if (!r.approved) {
+            container.innerHTML += `
+              <div class="card">
+                <b>User ID:</b> ${r.uid}<br>
+                <b>Screenshot:</b> <a href="${r.screenshot}" target="_blank">View</a><br>
+                <button onclick="approveRecharge('${rid}', '${r.uid}')">Approve ₹100</button>
+              </div>`;
+          }
+        }
+      });
     }
 
-    window.loadProviders = () => {
-      container.innerHTML = "";
-      const refUsers = ref(db, "providers/");
-      onValue(refUsers, (snapshot) => {
-        container.innerHTML = "";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          data.id = child.key;
-          createCard(data, "providers");
-        });
+    function rechargeWallet(uid) {
+      const walletRef = firebase.database().ref("posters/" + uid + "/wallet");
+      walletRef.once("value", snap => {
+        const current = snap.val() || 0;
+        walletRef.set(current + 100);
+        alert("Recharged ₹100!");
+        loadAllData();
       });
-    };
+    }
 
-    window.loadRequests = () => {
-      container.innerHTML = "";
-      const refUsers = ref(db, "posterUsers/");
-      onValue(refUsers, (snapshot) => {
-        container.innerHTML = "";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          data.id = child.key;
-          createCard(data, "posterUsers");
-        });
+    function approveRecharge(rid, uid) {
+      const reqRef = firebase.database().ref("rechargeRequests/" + rid);
+      const walletRef = firebase.database().ref("posters/" + uid + "/wallet");
+
+      reqRef.update({ approved: true });
+      walletRef.once("value", snap => {
+        const current = snap.val() || 0;
+        walletRef.set(current + 100);
+        alert("Recharge approved & ₹100 added!");
+        loadAllData();
       });
-    };
-
-    window.updateStatus = (type, id, newStatus) => {
-      const userRef = ref(db, `${type}/${id}`);
-      update(userRef, { status: newStatus });
-      alert("Status updated to " + newStatus);
-    };
-
-    window.deleteUser = (type, id) => {
-      const userRef = ref(db, `${type}/${id}`);
-      if (confirm("Are you sure you want to delete this entry?")) {
-        remove(userRef);
-        alert("User deleted");
-      }
-    };
+    }
   </script>
 </body>
 </html>
