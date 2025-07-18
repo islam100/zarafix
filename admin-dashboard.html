@@ -4,89 +4,183 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
+    body { font-family: Arial; margin: 0; background: #eef2f3; padding: 10px; }
+    h2 { text-align: center; }
 
-    h2 {
-      margin-top: 10px;
-      font-size: 24px;
-    }
-
-    .tab-buttons {
+    .nav-buttons {
       display: flex;
-      justify-content: space-around;
-      margin: 20px 0;
+      justify-content: center;
+      gap: 10px;
       flex-wrap: wrap;
+      margin-bottom: 15px;
     }
-
-    .tab-button {
-      background: linear-gradient(145deg, #6dd5ed, #2193b0);
+    .nav-buttons button {
+      padding: 10px 20px;
       border: none;
-      padding: 15px 20px;
-      border-radius: 15px;
-      box-shadow: 4px 4px 10px #aaa;
+      background: linear-gradient(to right, #00c6ff, #0072ff);
       color: white;
-      font-size: 18px;
-      cursor: pointer;
-      margin: 10px;
-      transition: transform 0.2s ease-in-out;
+      font-weight: bold;
+      border-radius: 20px;
+      box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease;
     }
-
-    .tab-button:hover {
+    .nav-buttons button:hover {
       transform: scale(1.05);
+      cursor: pointer;
     }
 
     .section {
       display: none;
-      padding: 20px;
-      margin: 10px;
-      border-radius: 10px;
-      background-color: #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
-    .active {
-      display: block;
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 500px;
     }
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    .led.green { background: green; }
+    .led.red { background: red; }
+    .btn {
+      padding: 6px 12px;
+      margin-top: 5px;
+      border: none;
+      border-radius: 10px;
+      background: #2196f3;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn.delete { background: #e91e63; }
   </style>
 </head>
 <body>
-  <h2>🔐 ZaraFix Admin Dashboard</h2>
-  <div class="tab-buttons">
-    <button class="tab-button" onclick="showSection('posters')">🧰 Posters</button>
-    <button class="tab-button" onclick="showSection('requests')">📋 Requests</button>
-    <button class="tab-button" onclick="showSection('recharges')">💸 Recharges</button>
+  <h2>🛠️ ZaraFix Admin Panel</h2>
+
+  <div class="nav-buttons">
+    <button onclick="showSection('posters')">🧰 Posters</button>
+    <button onclick="showSection('requests')">📋 Requests</button>
+    <button onclick="showSection('recharges')">💸 Recharges</button>
   </div>
 
-  <div id="posters" class="section">
-    <h3>All Service Providers</h3>
-    <!-- Poster Cards will load here -->
-  </div>
+  <div id="posters" class="section"></div>
+  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
 
-  <div id="requests" class="section">
-    <h3>All Customer Requests</h3>
-    <!-- Request Cards will load here -->
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-  <div id="recharges" class="section">
-    <h3>Recharge Requests</h3>
-    <!-- Recharge Cards will load here -->
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-  <script>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const postersDiv = document.getElementById("posters");
+    const requestsDiv = document.getElementById("requests");
+    const rechargesDiv = document.getElementById("recharges");
+
     function showSection(id) {
-      const sections = document.querySelectorAll('.section');
-      sections.forEach(sec => sec.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
 
-    // Load default section
-    showSection('posters');
+    // Load Posters
+    onValue(ref(db, 'posters'), snap => {
+      postersDiv.innerHTML = '';
+      snap.forEach(child => {
+        const data = child.val();
+        postersDiv.innerHTML += `
+          <div class="card">
+            <strong>${data.name}</strong><br>
+            📞 ${data.whatsapp}<br>
+            🏠 ${data.address}<br>
+            🏪 ${data.shop}<br>
+            📂 ${data.category} > ${data.subcategory || 'N/A'}<br>
+            💰 Wallet: ₹${data.wallet || 0}<br>
+            <button class="btn delete" onclick="deleteData('posters/${child.key}')">Delete</button>
+          </div>
+        `;
+      });
+    });
+
+    // Load Requests
+    onValue(ref(db, 'requests'), snap => {
+      requestsDiv.innerHTML = '';
+      snap.forEach(user => {
+        const userId = user.key;
+        const requests = user.val();
+        Object.keys(requests).forEach(reqKey => {
+          const data = requests[reqKey];
+          const accepted = data.acceptedBy ? Object.keys(data.acceptedBy).length : 0;
+          requestsDiv.innerHTML += `
+            <div class="card">
+              <strong>${data.name || 'No Name'}</strong><br>
+              📞 ${data.whatsapp || ''}<br>
+              🧾 ${data.category || ''} - ${data.description || ''}<br>
+              📍 ${data.address || ''}<br>
+              👥 Accepted By: ${accepted}<br>
+              <span class="led ${accepted > 0 ? 'green' : 'red'}"></span>
+              <button class="btn delete" onclick="deleteData('requests/${userId}/${reqKey}')">Delete</button>
+            </div>
+          `;
+        });
+      });
+    });
+
+    // Load Recharge Requests
+    onValue(ref(db, 'recharges'), snap => {
+      rechargesDiv.innerHTML = '';
+      snap.forEach(child => {
+        const data = child.val();
+        const uid = child.key;
+        const approved = data.approved === true;
+        rechargesDiv.innerHTML += `
+          <div class="card">
+            <strong>${data.name || 'User'}</strong><br>
+            UID: ${uid}<br>
+            <img src="${data.screenshot}" width="100%" /><br>
+            <span class="led ${approved ? 'green' : 'red'}"></span> ${approved ? 'Approved' : 'Pending'}<br>
+            ${!approved ? `<button class="btn" onclick="approveRecharge('${uid}')">Approve</button>` : ''}
+            <button class="btn delete" onclick="deleteData('recharges/${uid}')">Delete</button>
+          </div>
+        `;
+      });
+    });
+
+    // Delete Function
+    window.deleteData = function (path) {
+      if (confirm("Are you sure to delete?")) {
+        remove(ref(db, path));
+      }
+    };
+
+    // Approve Recharge
+    window.approveRecharge = async function (uid) {
+      await update(ref(db, `recharges/${uid}`), { approved: true });
+      const posterRef = ref(db, `posters/${uid}`);
+      onValue(posterRef, snap => {
+        const currentWallet = snap.val().wallet || 0;
+        update(posterRef, { wallet: currentWallet + 100 });
+      }, { onlyOnce: true });
+    };
   </script>
 </body>
 </html>
