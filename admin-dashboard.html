@@ -4,55 +4,29 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 10px;
-      background: linear-gradient(to bottom, #f9f9f9, #e0f7fa);
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    .section-title {
-      font-size: 18px;
-      margin-top: 20px;
-      color: #006064;
-    }
-    .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-      padding: 15px;
-      margin: 10px 0;
-      transition: transform 0.3s ease;
-    }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    .bold { font-weight: bold; }
+    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 10px; text-align: center; }
+    h2 { color: #333; }
+    .btn { margin: 10px; padding: 12px 20px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px #999; }
+    .btn:hover { background: #45a049; }
+    .card { background: white; margin: 10px auto; padding: 15px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); max-width: 400px; text-align: left; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
 
-  <h2>🛠️ ZaraFix - Admin Dashboard</h2>
+  <button class="btn" onclick="showSection('posters')">📋 Posters</button>
+  <button class="btn" onclick="showSection('requests')">📬 Requests</button>
+  <button class="btn" onclick="showSection('recharges')">💰 Recharge Requests</button>
 
-  <div>
-    <h3 class="section-title">📋 All Service Requests</h3>
-    <div id="requestsContainer"></div>
-  </div>
+  <div id="posters" class="hidden"></div>
+  <div id="requests" class="hidden"></div>
+  <div id="recharges" class="hidden"></div>
 
-  <div>
-    <h3 class="section-title">🧰 All Service Providers (Posters)</h3>
-    <div id="postersContainer"></div>
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -62,69 +36,90 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    const requestsContainer = document.getElementById("requestsContainer");
-    const postersContainer = document.getElementById("postersContainer");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    // 🔹 Load all service requests
-    function loadRequests() {
-      db.ref("requests").once("value").then(snapshot => {
-        snapshot.forEach(userSnap => {
-          userSnap.forEach(reqSnap => {
-            const data = reqSnap.val();
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <div><span class="bold">Name:</span> ${data.name || "N/A"}</div>
-              <div><span class="bold">Category:</span> ${data.category || "N/A"}</div>
-              <div><span class="bold">WhatsApp:</span> ${data.whatsapp || "Hidden"}</div>
-              <div><span class="bold">Address:</span> ${data.address || "N/A"}</div>
-              <div><span class="bold">Pincode:</span> ${data.pincode || "N/A"}</div>
-              <div><span class="bold">Accepted By:</span> ${formatAccepted(data.acceptedBy)}</div>
-            `;
-            requestsContainer.appendChild(card);
+    function showSection(section) {
+      document.getElementById("posters").classList.add("hidden");
+      document.getElementById("requests").classList.add("hidden");
+      document.getElementById("recharges").classList.add("hidden");
+      document.getElementById(section).classList.remove("hidden");
+    }
+
+    // Posters
+    const postersRef = ref(db, 'posters');
+    onValue(postersRef, (snapshot) => {
+      const data = snapshot.val();
+      const postersDiv = document.getElementById('posters');
+      postersDiv.innerHTML = '';
+      if (data) {
+        Object.entries(data).forEach(([uid, details]) => {
+          postersDiv.innerHTML += `
+            <div class="card">
+              <h3>${details.name} (${details.category})</h3>
+              <p><strong>Shop:</strong> ${details.shopName}</p>
+              <p><strong>Address:</strong> ${details.address}</p>
+              <p><strong>WhatsApp:</strong> ${details.whatsapp}</p>
+              <p><strong>Wallet:</strong> ₹${details.wallet}</p>
+            </div>`;
+        });
+      } else {
+        postersDiv.innerHTML = "<p>No posters found.</p>";
+      }
+    });
+
+    // Requests
+    const requestsRef = ref(db, 'requests');
+    onValue(requestsRef, (snapshot) => {
+      const data = snapshot.val();
+      const requestsDiv = document.getElementById('requests');
+      requestsDiv.innerHTML = '';
+      if (data) {
+        Object.entries(data).forEach(([userId, userRequests]) => {
+          Object.entries(userRequests).forEach(([reqId, details]) => {
+            let acceptedBy = '';
+            if (details.acceptedBy) {
+              acceptedBy = Object.entries(details.acceptedBy).map(([pid, info]) => {
+                return `<p>✅ Accepted By: ${info.name} (${info.whatsapp})</p>`;
+              }).join('');
+            }
+            requestsDiv.innerHTML += `
+              <div class="card">
+                <h3>${details.service}</h3>
+                <p><strong>Address:</strong> ${details.address}</p>
+                <p><strong>Pincode:</strong> ${details.pincode}</p>
+                <p><strong>User WhatsApp:</strong> ${details.whatsapp}</p>
+                ${acceptedBy}
+              </div>`;
           });
         });
-      });
-    }
-
-    // 🔹 Load all posters
-    function loadPosters() {
-      db.ref("posters").once("value").then(snapshot => {
-        snapshot.forEach(posterSnap => {
-          const poster = posterSnap.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div><span class="bold">Name:</span> ${poster.name}</div>
-            <div><span class="bold">Category:</span> ${poster.category}</div>
-            <div><span class="bold">Shop:</span> ${poster.shop}</div>
-            <div><span class="bold">WhatsApp:</span> ${poster.whatsapp}</div>
-            <div><span class="bold">Address:</span> ${poster.address}</div>
-            <div><span class="bold">Wallet:</span> ₹${poster.wallet || 0}</div>
-          `;
-          postersContainer.appendChild(card);
-        });
-      });
-    }
-
-    // 🔹 Format acceptedBy field
-    function formatAccepted(acceptedBy) {
-      if (!acceptedBy) return "No one accepted yet";
-      let html = "<ul>";
-      for (let uid in acceptedBy) {
-        const person = acceptedBy[uid];
-        html += `<li>${person.name} - <a href="https://wa.me/${person.whatsapp}" target="_blank">WhatsApp</a></li>`;
+      } else {
+        requestsDiv.innerHTML = "<p>No requests found.</p>";
       }
-      html += "</ul>";
-      return html;
-    }
+    });
 
-    // ✅ Start loading
-    loadRequests();
-    loadPosters();
+    // Recharge Requests
+    const rechargeRef = ref(db, 'rechargeRequests');
+    onValue(rechargeRef, (snapshot) => {
+      const data = snapshot.val();
+      const rechargesDiv = document.getElementById('recharges');
+      rechargesDiv.innerHTML = '';
+      if (data) {
+        Object.entries(data).forEach(([uid, details]) => {
+          rechargesDiv.innerHTML += `
+            <div class="card">
+              <h3>Recharge by ${uid}</h3>
+              <p><strong>WhatsApp:</strong> ${details.whatsapp}</p>
+              <p><strong>Status:</strong> ${details.status}</p>
+              <img src="${details.screenshot}" alt="Payment Proof" width="100%">
+            </div>`;
+        });
+      } else {
+        rechargesDiv.innerHTML = "<p>No recharge requests.</p>";
+      }
+    });
+
   </script>
 </body>
 </html>
