@@ -5,61 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial;
+      font-family: sans-serif;
       background: #f2f2f2;
-      padding: 10px;
+      padding: 20px;
     }
-
     h2 {
       text-align: center;
     }
-
+    .btn-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .led-btn {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 25px;
+      background: #ccc;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .led-btn.active {
+      background: #00c853;
+      color: #fff;
+    }
+    .section {
+      display: none;
+    }
     .card {
       background: #fff;
       margin: 10px auto;
       padding: 15px;
-      border-radius: 15px;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      box-shadow: 2px 2px 8px #aaa;
       max-width: 500px;
-      position: relative;
     }
-
-    .led {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      position: absolute;
-      top: 10px;
-      right: 10px;
-    }
-
-    .approved { background: green; }
-    .pending { background: red; }
-
     button {
-      padding: 8px 12px;
       margin: 5px;
+      padding: 5px 10px;
       border: none;
-      border-radius: 8px;
-      background: #007bff;
-      color: white;
+      background: #2196f3;
+      color: #fff;
+      border-radius: 5px;
       cursor: pointer;
     }
-
     button.delete {
-      background: crimson;
+      background: #e53935;
+    }
+    button.approve {
+      background: #00c853;
     }
   </style>
 </head>
 <body>
-  <h2>👨‍🔧 Admin Dashboard</h2>
-  <div id="content"></div>
+  <h2>🛠️ Admin Dashboard</h2>
+
+  <div class="btn-container">
+    <button class="led-btn" onclick="showSection('recharge')">Recharge Requests</button>
+    <button class="led-btn" onclick="showSection('posters')">Service Providers</button>
+    <button class="led-btn" onclick="showSection('requests')">Service Requests</button>
+  </div>
+
+  <div id="recharge" class="section"></div>
+  <div id="posters" class="section"></div>
+  <div id="requests" class="section"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getDatabase, ref, onValue, update, remove
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
@@ -74,82 +88,92 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const content = document.getElementById("content");
+    const rechargeDiv = document.getElementById("recharge");
+    const postersDiv = document.getElementById("posters");
+    const requestsDiv = document.getElementById("requests");
 
-    // Load Recharge Requests
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.led-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).style.display = 'block';
+      event.target.classList.add('active');
+    }
+
+    // Recharge Requests
     const rechargeRef = ref(db, "rechargeRequests");
-    onValue(rechargeRef, (snapshot) => {
-      content.innerHTML = "";
-      const data = snapshot.val();
-      if (data) {
-        Object.keys(data).forEach((uid) => {
-          const req = data[uid];
-          const card = document.createElement("div");
-          card.className = "card";
-
-          const ledClass = req.status === "approved" ? "approved" : "pending";
-          card.innerHTML = `
-            <div class="led ${ledClass}"></div>
-            <h3>Recharge Request</h3>
-            <p><strong>UID:</strong> ${uid}</p>
-            <p><strong>WhatsApp:</strong> ${req.whatsapp}</p>
-            <img src="${req.screenshot}" width="100%" />
-            <p><strong>Status:</strong> ${req.status}</p>
-            <button onclick="approveRecharge('${uid}')">✅ Approve</button>
-            <button class="delete" onclick="deleteRecharge('${uid}')">🗑️ Delete</button>
-          `;
-          content.appendChild(card);
-        });
-      }
+    onValue(rechargeRef, (snap) => {
+      rechargeDiv.innerHTML = "<h3>Recharge Requests</h3>";
+      snap.forEach(child => {
+        const data = child.val();
+        rechargeDiv.innerHTML += `
+          <div class="card">
+            <p><b>UID:</b> ${child.key}</p>
+            <p><b>WhatsApp:</b> ${data.whatsapp}</p>
+            <p><b>Status:</b> ${data.status}</p>
+            <img src="${data.screenshot}" width="100%" />
+            <button class="approve" onclick="approveRecharge('${child.key}')">✅ Approve</button>
+            <button class="delete" onclick="deleteRecharge('${child.key}')">🗑️ Delete</button>
+          </div>
+        `;
+      });
     });
 
-    // Approve Recharge
     window.approveRecharge = function(uid) {
-      const rechargeStatusRef = ref(db, `rechargeRequests/${uid}`);
-      update(rechargeStatusRef, { status: "approved" });
+      update(ref(db, "posters/" + uid), { wallet: 100 });
+      update(ref(db, "rechargeRequests/" + uid), { status: "approved" });
+      alert("Recharge Approved!");
+    }
 
-      const walletRef = ref(db, `posters/${uid}/wallet`);
-      onValue(walletRef, (snap) => {
-        const current = snap.val() || 0;
-        update(ref(db, `posters/${uid}`), {
-          wallet: current + 100
-        });
-      }, { onlyOnce: true });
-    };
-
-    // Delete Recharge Request
     window.deleteRecharge = function(uid) {
-      remove(ref(db, `rechargeRequests/${uid}`));
-    };
+      remove(ref(db, "rechargeRequests/" + uid));
+    }
 
-    // Load Poster Approvals
-    const postersRef = ref(db, "posters");
-    onValue(postersRef, (snapshot) => {
-      const posters = snapshot.val();
-      if (posters) {
-        Object.keys(posters).forEach((uid) => {
-          const p = posters[uid];
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="led approved"></div>
-            <h3>Service Provider</h3>
-            <p><strong>Name:</strong> ${p.name}</p>
-            <p><strong>Shop:</strong> ${p.shopName}</p>
-            <p><strong>WhatsApp:</strong> ${p.whatsapp}</p>
-            <p><strong>Category:</strong> ${p.category}</p>
-            <p><strong>Wallet:</strong> ₹${p.wallet || 0}</p>
-            <button class="delete" onclick="deletePoster('${uid}')">🗑️ Delete Poster</button>
-          `;
-          content.appendChild(card);
-        });
-      }
+    // Posters List
+    const posterRef = ref(db, "posters");
+    onValue(posterRef, (snap) => {
+      postersDiv.innerHTML = "<h3>Service Providers</h3>";
+      snap.forEach(child => {
+        const d = child.val();
+        postersDiv.innerHTML += `
+          <div class="card">
+            <p><b>Name:</b> ${d.name}</p>
+            <p><b>Category:</b> ${d.category}</p>
+            <p><b>Wallet:</b> ₹${d.wallet}</p>
+            <button class="delete" onclick="deletePoster('${child.key}')">🗑️ Delete</button>
+          </div>
+        `;
+      });
     });
 
-    // Delete poster
     window.deletePoster = function(uid) {
-      remove(ref(db, `posters/${uid}`));
-    };
+      remove(ref(db, "posters/" + uid));
+    }
+
+    // Requests List
+    const reqRef = ref(db, "requests");
+    onValue(reqRef, (snap) => {
+      requestsDiv.innerHTML = "<h3>Service Requests</h3>";
+      snap.forEach(userNode => {
+        const userId = userNode.key;
+        const userRequests = userNode.val();
+        for (const reqKey in userRequests) {
+          const r = userRequests[reqKey];
+          requestsDiv.innerHTML += `
+            <div class="card">
+              <p><b>User:</b> ${userId}</p>
+              <p><b>Service:</b> ${r.service}</p>
+              <p><b>Address:</b> ${r.address}</p>
+              <p><b>Pin:</b> ${r.pincode}</p>
+              <button class="delete" onclick="deleteRequest('${userId}', '${reqKey}')">🗑️ Delete</button>
+            </div>
+          `;
+        }
+      });
+    });
+
+    window.deleteRequest = function(userId, reqKey) {
+      remove(ref(db, `requests/${userId}/${reqKey}`));
+    }
   </script>
 </body>
 </html>
