@@ -1,151 +1,188 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Panel</title>
+  <title>🛠️ ZaraFix Admin - Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: Arial;
+      background: #f2f2f2;
       margin: 0;
       padding: 10px;
     }
-    .tab {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 20px;
-    }
-    .tab button {
-      padding: 10px 20px;
-      font-weight: bold;
-      border: none;
-      background: #1976d2;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .tab button.active {
-      background: #0d47a1;
-    }
-    .card {
+
+    .provider-card {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin: 15px;
       padding: 15px;
-      margin-bottom: 15px;
+      min-height: 250px;
+      transition: transform 0.3s;
     }
-    .card img {
-      max-width: 100%;
-      border-radius: 10px;
+
+    .provider-card:hover {
+      transform: scale(1.02);
     }
-    .approve-btn {
-      margin-top: 10px;
-      padding: 5px 10px;
-      background: green;
-      color: white;
+
+    h3 {
+      margin: 0 0 10px;
+      color: #333;
+    }
+
+    button {
+      margin: 8px 5px 0 0;
+      padding: 8px 14px;
+      border-radius: 8px;
       border: none;
-      border-radius: 5px;
       cursor: pointer;
-    }
-    .wallet {
-      color: green;
       font-weight: bold;
+    }
+
+    .approve-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    #container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin - Posters</h2>
+  <div id="container">Loading...</div>
 
-<div class="tab">
-  <button onclick="showTab('recharges')" class="active">📋 Recharge Requests</button>
-  <button onclick="showTab('providers')">🧰 All Providers</button>
-</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      get,
+      remove,
+      update
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-<div id="recharges"></div>
-<div id="providers" style="display:none;"></div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE0CZ4O2L6_6YniFdUu2ZBG3VAeTy0JvM",
+      authDomain: "zarafix3.firebaseapp.com",
+      databaseURL: "https://zarafix3-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "zarafix3",
+      storageBucket: "zarafix3.appspot.com",
+      messagingSenderId: "803091397932",
+      appId: "1:803091397932:web:28550195ef9b496383e99c"
+    };
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getDatabase, ref, onValue, update
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const providerRef = ref(db, 'serviceProviders');
+    const rechargeRefRoot = ref(db, 'rechargeRequests');
+    const container = document.getElementById('container');
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+    get(providerRef).then(async (snapshot) => {
+      container.innerHTML = ""; // clear loading
+      if (!snapshot.exists()) {
+        container.innerHTML = "No service providers found.";
+        return;
+      }
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+      const data = snapshot.val();
 
-  const rechargeDiv = document.getElementById("recharges");
-  const providerDiv = document.getElementById("providers");
+      for (const id in data) {
+        const provider = data[id];
+        const card = document.createElement("div");
+        card.className = "provider-card";
 
-  function showTab(tabName) {
-    document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.tab button[onclick*="${tabName}"]`).classList.add('active');
-    rechargeDiv.style.display = tabName === 'recharges' ? 'block' : 'none';
-    providerDiv.style.display = tabName === 'providers' ? 'block' : 'none';
-  }
+        // Header
+        const title = document.createElement("h3");
+        title.textContent = provider.name || "No Name";
+        card.appendChild(title);
 
-  // Load recharge requests
-  onValue(ref(db, 'recharges'), (snapshot) => {
-    rechargeDiv.innerHTML = '';
-    const data = snapshot.val();
-    if (data) {
-      Object.entries(data).forEach(([posterId, recharges]) => {
-        Object.entries(recharges).forEach(([rechargeId, recharge]) => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <h4>Poster ID: ${posterId}</h4>
-            <img src="${recharge.screenshotUrl}" alt="Payment Screenshot" />
-            <p>Approved: ${recharge.approved}</p>
-            ${recharge.approved ? '' : `<button class="approve-btn">✅ Approve ₹100</button>`}
-          `;
-          if (!recharge.approved) {
-            card.querySelector('.approve-btn').onclick = () => {
-              update(ref(db, `recharges/${posterId}/${rechargeId}`), { approved: true });
-              update(ref(db, `posters/${posterId}`), {
-                wallet: (data.wallet || 0) + 100
-              });
-              alert('Recharge approved and ₹100 added to wallet!');
-            };
-          }
-          rechargeDiv.appendChild(card);
-        });
-      });
-    } else {
-      rechargeDiv.innerHTML = '<p>No recharge requests found.</p>';
-    }
-  });
-
-  // Load all providers (posters)
-  onValue(ref(db, 'posters'), (snapshot) => {
-    providerDiv.innerHTML = '';
-    const data = snapshot.val();
-    if (data) {
-      Object.entries(data).forEach(([posterId, poster]) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h4>Name: ${poster.name}</h4>
-          <p>Shop: ${poster.shop || poster.shopname}</p>
-          <p>Category: ${poster.category}</p>
-          <p>WhatsApp: ${poster.whatsapp}</p>
-          <p class="wallet">Wallet: ₹${poster.wallet || 0}</p>
+        // Details
+        const details = `
+          <p><strong>Shop:</strong> ${provider.shopName || 'N/A'}</p>
+          <p><strong>Address:</strong> ${provider.address || 'N/A'}</p>
+          <p><strong>Category:</strong> ${provider.category || 'N/A'}</p>
+          <p><strong>WhatsApp:</strong> ${provider.whatsapp || 'N/A'}</p>
+          <p><strong>Wallet:</strong> ₹${provider.wallet || 0}</p>
         `;
-        providerDiv.appendChild(card);
-      });
-    } else {
-      providerDiv.innerHTML = '<p>No providers found.</p>';
-    }
-  });
-</script>
+        card.innerHTML += details;
 
+        // 🔄 Recharge Image (if available)
+        try {
+          const rechargeSnap = await get(ref(db, `rechargeRequests/${id}`));
+          if (rechargeSnap.exists()) {
+            const reqs = rechargeSnap.val();
+            const firstKey = Object.keys(reqs)[0];
+            const imageUrl = reqs[firstKey]?.imageUrl;
+            if (imageUrl) {
+              const img = document.createElement("img");
+              img.src = imageUrl;
+              img.alt = "Recharge Screenshot";
+              card.appendChild(img);
+            }
+          }
+        } catch (err) {
+          console.error("Recharge image fetch error:", err);
+        }
+
+        // Buttons
+        const approveBtn = document.createElement("button");
+        approveBtn.textContent = "Approve ₹100";
+        approveBtn.className = "approve-btn";
+        approveBtn.onclick = async () => {
+          try {
+            await update(ref(db, 'serviceProviders/' + id), {
+              wallet: (provider.wallet || 0) + 100
+            });
+            alert("Wallet recharged ₹100 successfully.");
+            location.reload();
+          } catch (err) {
+            alert("Recharge failed.");
+            console.error(err);
+          }
+        };
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete Poster";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = async () => {
+          if (confirm("Are you sure you want to delete this poster?")) {
+            try {
+              await remove(ref(db, 'serviceProviders/' + id));
+              alert("Poster deleted.");
+              location.reload();
+            } catch (err) {
+              alert("Failed to delete.");
+              console.error(err);
+            }
+          }
+        };
+
+        card.appendChild(approveBtn);
+        card.appendChild(deleteBtn);
+
+        container.appendChild(card);
+      }
+    }).catch((err) => {
+      container.innerHTML = "Failed to load posters.";
+      console.error("Provider load error:", err);
+    });
+
+  </script>
 </body>
 </html>
