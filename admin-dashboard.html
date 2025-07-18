@@ -1,67 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Admin Dashboard</title>
-  <script type="module">
-    // Firebase v9 imports
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      onValue
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      background-color: #f4f4f4;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    }
+    .card {
+      background-color: white;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 400px;
+    }
+    .tag {
+      font-size: 14px;
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .user-tag {
+      background-color: #ffeb3b;
+      color: #333;
+    }
+    .provider-tag {
+      background-color: #2196f3;
+      color: white;
+    }
+    .led {
+      font-size: 18px;
+      margin-left: 5px;
+    }
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .actions button {
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_ID",
-      appId: "YOUR_APP_ID"
-    };
+<h2>🛠️ Admin Dashboard</h2>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<div class="btn-group">
+  <button onclick="loadUsers()">👤 Load Users</button>
+  <button onclick="loadProviders()">🏪 Load Providers</button>
+</div>
 
-    const providerList = document.getElementById("providerList");
+<div id="dashboard"></div>
 
-    // Load posterUsers
-    function loadProviders() {
-      const posterRef = ref(db, "posterUsers");
-      onValue(posterRef, (snapshot) => {
-        providerList.innerHTML = "";
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          Object.entries(data).forEach(([uid, provider]) => {
-            const div = document.createElement("div");
-            div.innerHTML = `
-              <h3>👤 ${provider.name}</h3>
-              <p>📱 WhatsApp: ${provider.whatsapp}</p>
-              <p>🏪 Shop: ${provider.shopname}</p>
-              <p>📍 Pincode: ${provider.pincode}</p>
-              <p>📦 Category: ${provider.category} / ${provider.subcategory}</p>
-              <p>✅ Approved: ${provider.approved ? "Yes" : "No"}</p>
-              <p>🕒 ${new Date(provider.timestamp).toLocaleString()}</p>
-              <hr/>
-            `;
-            providerList.appendChild(div);
-          });
-        } else {
-          providerList.innerHTML = "No providers found.";
-        }
-      });
+<script>
+  const users = [
+    {
+      type: "User",
+      name: "Ali Khan",
+      whatsapp: "9876543210",
+      time: "16/07/2025, 11:30:00"
+    },
+    {
+      type: "User",
+      name: "Rehana Shaikh",
+      whatsapp: "9876501234",
+      time: "16/07/2025, 12:15:00"
+    }
+  ];
+
+  const providers = [
+    {
+      type: "Provider",
+      name: "Ali Khan",
+      whatsapp: "9876543210",
+      shop: "Ali Cloth Store",
+      pincode: "400001",
+      category: "Clothing / Men",
+      approved: false,
+      time: "16/07/2025, 11:30:00"
+    },
+    {
+      type: "Provider",
+      name: "Rohit Sharma",
+      whatsapp: "9123456780",
+      shop: "Rohit Electronics",
+      pincode: "110001",
+      category: "Electronics / TV",
+      approved: true,
+      time: "16/07/2025, 11:45:00"
+    }
+  ];
+
+  function loadUsers() {
+    const dash = document.getElementById("dashboard");
+    dash.innerHTML = "";
+    if (users.length === 0) {
+      dash.innerHTML = "<p>No users found.</p>";
+      return;
     }
 
-    document.getElementById("loadProvidersBtn").addEventListener("click", loadProviders);
-  </script>
-</head>
-<body style="font-family: Arial; padding: 20px;">
-  <h2>Admin Dashboard</h2>
-  <button id="loadProvidersBtn">🛠️ Load Providers</button>
+    users.forEach(user => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="tag user-tag">👤 User</div>
+        <b>👤 ${user.name}</b><br>
+        📱 WhatsApp: ${user.whatsapp}<br>
+        🕒 ${user.time}
+        <div class="actions">
+          <button onclick="deleteEntry('${user.name}', 'User')">🗑️ Delete</button>
+        </div>
+      `;
+      dash.appendChild(card);
+    });
+  }
 
-  <h3>Providers</h3>
-  <div id="providerList">Loading...</div>
+  function loadProviders() {
+    const dash = document.getElementById("dashboard");
+    dash.innerHTML = "";
+    if (providers.length === 0) {
+      dash.innerHTML = "<p>No providers found.</p>";
+      return;
+    }
+
+    providers.forEach((provider, index) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      const led = provider.approved ? '🟢' : '🔴';
+      const btnText = provider.approved ? '❌ Disapprove' : '✅ Approve';
+      card.innerHTML = `
+        <div class="tag provider-tag">🏪 Provider ${led}</div>
+        <b>👤 ${provider.name}</b><br>
+        📱 WhatsApp: ${provider.whatsapp}<br>
+        🏪 Shop: ${provider.shop}<br>
+        📍 Pincode: ${provider.pincode}<br>
+        📦 Category: ${provider.category}<br>
+        ✅ Approved: ${provider.approved ? 'Yes' : 'No'}<br>
+        🕒 ${provider.time}
+        <div class="actions">
+          <button onclick="toggleApprove(${index})">${btnText}</button>
+          <button onclick="deleteEntry('${provider.name}', 'Provider')">🗑️ Delete</button>
+        </div>
+      `;
+      dash.appendChild(card);
+    });
+  }
+
+  function toggleApprove(index) {
+    providers[index].approved = !providers[index].approved;
+    loadProviders();
+  }
+
+  function deleteEntry(name, type) {
+    if (type === "User") {
+      const index = users.findIndex(u => u.name === name);
+      if (index > -1) users.splice(index, 1);
+      loadUsers();
+    } else {
+      const index = providers.findIndex(p => p.name === name);
+      if (index > -1) providers.splice(index, 1);
+      loadProviders();
+    }
+  }
+</script>
+
 </body>
 </html>
