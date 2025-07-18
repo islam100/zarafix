@@ -1,122 +1,128 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-auth.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    .card {
-      @apply bg-white rounded-xl shadow-md p-4 mb-4 transition-transform transform hover:scale-105;
-    }
-    .led-red {
-      width: 10px;
-      height: 10px;
-      background-color: red;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-    .led-green {
-      width: 10px;
-      height: 10px;
-      background-color: green;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
+    body { font-family: Arial; padding: 20px; background: #f4f4f4; }
+    h2 { background: #333; color: white; padding: 10px; }
+    .section { margin-bottom: 30px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    th { background: #eee; }
   </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-5xl mx-auto">
-    <h1 class="text-2xl font-bold mb-4 text-center">👨‍💼 Admin Dashboard</h1>
-    <div class="flex justify-center gap-4 mb-6">
-      <button onclick="loadProviders()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-full shadow-lg hover:bg-blue-700">🛠️ Load Providers</button>
-      <button onclick="loadPosterUsers()" class="bg-green-600 text-white font-bold px-4 py-2 rounded-full shadow-lg hover:bg-green-700">🧾 Load Poster Users</button>
-    </div>
+<body>
+  <h1>Admin Dashboard</h1>
 
-    <div id="dataContainer"></div>
+  <div class="section">
+    <h2>1. Login Logs</h2>
+    <table id="loginLogsTable">
+      <tr><th>Name</th><th>Method</th><th>Last Login</th><th>WhatsApp</th></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>2. Poster Users</h2>
+    <table id="posterUsersTable">
+      <tr><th>Name</th><th>Shop</th><th>Category</th><th>Approved</th><th>WhatsApp</th></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>3. Recharge Requests</h2>
+    <table id="rechargeTable">
+      <tr><th>Name</th><th>Amount</th><th>Status</th><th>WhatsApp</th><th>Time</th></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>4. Service Requests</h2>
+    <table id="serviceTable">
+      <tr><th>Name</th><th>Category</th><th>Description</th><th>Address</th><th>WhatsApp</th></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>5. Wallets</h2>
+    <table id="walletTable">
+      <tr><th>User ID</th><th>Balance</th><th>Transaction Type</th><th>Status</th><th>Date</th></tr>
+    </table>
   </div>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "",
-      appId: ""
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function createCard(user, type, key) {
-      const ledClass = user.approved ? "led-green" : "led-red";
-      return `
-        <div class="card">
-          <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold">${user.shopName || 'No Shop Name'}</h2>
-            <div class="${ledClass}"></div>
-          </div>
-          <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
-          <p><strong>WhatsApp:</strong> ${user.whatsapp || 'N/A'}</p>
-          <p><strong>Address:</strong> ${user.address || 'N/A'}</p>
-          <p><strong>Category:</strong> ${user.category || 'N/A'} / ${user.subcategory || 'N/A'}</p>
-          <div class="mt-2 flex gap-2">
-            ${user.approved ? '' : `<button onclick="approveUser('${type}', '${key}')" class="bg-green-500 text-white px-3 py-1 rounded shadow">Approve</button>`}
-            <button onclick="rejectUser('${type}', '${key}')" class="bg-yellow-500 text-white px-3 py-1 rounded shadow">Reject</button>
-            <button onclick="deleteUser('${type}', '${key}')" class="bg-red-600 text-white px-3 py-1 rounded shadow">Delete</button>
-          </div>
-        </div>
-      `;
-    }
-
-    function loadProviders() {
-      db.ref('serviceRequests').once('value', snapshot => {
-        const container = document.getElementById('dataContainer');
-        container.innerHTML = '';
-        snapshot.forEach(child => {
-          container.innerHTML += createCard(child.val(), 'serviceRequests', child.key);
-        });
+    // 1. Load Login Logs
+    db.ref("loginLogs").once("value", snap => {
+      const table = document.getElementById("loginLogsTable");
+      snap.forEach(child => {
+        const data = child.val();
+        const row = `<tr><td>${data.name}</td><td>${data.method}</td><td>${data.lastLogin}</td><td>${data.whatsapp}</td></tr>`;
+        table.innerHTML += row;
       });
-    }
+    });
 
-    function loadPosterUsers() {
-      db.ref('posterUsers').once('value', snapshot => {
-        const container = document.getElementById('dataContainer');
-        container.innerHTML = '';
-        snapshot.forEach(child => {
-          container.innerHTML += createCard(child.val(), 'posterUsers', child.key);
-        });
+    // 2. Poster Users
+    db.ref("posterUsers").once("value", snap => {
+      const table = document.getElementById("posterUsersTable");
+      snap.forEach(child => {
+        const d = child.val();
+        const row = `<tr><td>${d.name}</td><td>${d.shopname}</td><td>${d.category}/${d.subcategory}</td><td>${d.approved}</td><td>${d.whatsapp}</td></tr>`;
+        table.innerHTML += row;
       });
-    }
+    });
 
-    function approveUser(type, key) {
-      db.ref(`${type}/${key}`).update({ approved: true });
-      alert('Approved successfully');
-      if (type === 'serviceRequests') loadProviders();
-      else loadPosterUsers();
-    }
+    // 3. Recharge Requests
+    db.ref("rechargeRequests").once("value", snap => {
+      const table = document.getElementById("rechargeTable");
+      snap.forEach(child => {
+        const d = child.val();
+        const row = `<tr><td>${d.name}</td><td>${d.amount}</td><td>${d.status}</td><td>${d.whatsapp}</td><td>${d.timestamp}</td></tr>`;
+        table.innerHTML += row;
+      });
+    });
 
-    function rejectUser(type, key) {
-      db.ref(`${type}/${key}`).update({ approved: false });
-      alert('Rejected');
-      if (type === 'serviceRequests') loadProviders();
-      else loadPosterUsers();
-    }
+    // 4. Service Requests
+    db.ref("serviceRequests").once("value", snap => {
+      const table = document.getElementById("serviceTable");
+      snap.forEach(child => {
+        const d = child.val();
+        const row = `<tr><td>${d.name}</td><td>${d.category}/${d.subcategory}</td><td>${d.description}</td><td>${d.address}</td><td>${d.whatsapp}</td></tr>`;
+        table.innerHTML += row;
+      });
+    });
 
-    function deleteUser(type, key) {
-      db.ref(`${type}/${key}`).remove();
-      alert('Deleted successfully');
-      if (type === 'serviceRequests') loadProviders();
-      else loadPosterUsers();
-    }
+    // 5. Wallets
+    db.ref("wallets").once("value", snap => {
+      const table = document.getElementById("walletTable");
+      snap.forEach(child => {
+        const uid = child.key;
+        const d = child.val();
+        if (d.transactions) {
+          Object.values(d.transactions).forEach(txn => {
+            const row = `<tr><td>${uid}</td><td>${d.balance}</td><td>${txn.type}</td><td>${txn.status}</td><td>${txn.date}</td></tr>`;
+            table.innerHTML += row;
+          });
+        } else {
+          const row = `<tr><td>${uid}</td><td>${d.balance}</td><td>-</td><td>-</td><td>-</td></tr>`;
+          table.innerHTML += row;
+        }
+      });
+    });
   </script>
 </body>
 </html>
