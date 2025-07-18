@@ -3,61 +3,61 @@
 <head>
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #eef2f3; margin: 0; padding: 20px; }
+    body { font-family: Arial; background: #eef2f3; margin: 0; padding: 10px; }
     h2 { text-align: center; }
     .card {
       background: white;
+      border-radius: 12px;
       padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
+      margin: 15px 5px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      border-left: 6px solid #2196F3;
-      border-radius: 10px;
+      transition: 0.3s;
     }
-    .btn {
-      padding: 8px 12px;
-      margin: 5px;
-      background: #4CAF50;
-      color: white;
+    .card:hover {
+      transform: scale(1.02);
+    }
+    button {
+      padding: 6px 10px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
+      margin: 5px 4px;
+      font-weight: bold;
       cursor: pointer;
     }
-    .btn-danger {
-      background: #f44336;
-    }
-    .led {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      background: red;
-      border-radius: 50%;
-      margin-right: 8px;
-    }
-    .led.green {
-      background: green;
+    .approve { background: #4caf50; color: white; }
+    .delete { background: #f44336; color: white; }
+    .led { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .on { background: green; }
+    .off { background: gray; }
+    .section-title {
+      background: #333;
+      color: white;
+      padding: 8px;
+      border-radius: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>🔧 ZaraFix Admin Panel</h2>
-  <div id="postersContainer"></div>
-  <hr>
-  <div id="requestsContainer"></div>
-  <hr>
-  <div id="rechargesContainer"></div>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      onValue,
-      update,
-      remove
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <div id="posterList">
+    <div class="section-title">👷 Service Providers (Posters)</div>
+  </div>
 
+  <div id="rechargeList">
+    <div class="section-title">💰 Recharge Requests</div>
+  </div>
+
+  <div id="requestList">
+    <div class="section-title">📋 Service Requests</div>
+  </div>
+
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -67,96 +67,113 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const postersDiv = document.getElementById("postersContainer");
-    const rechargesDiv = document.getElementById("rechargesContainer");
-    const requestsDiv = document.getElementById("requestsContainer");
-
-    // Load Posters
-    onValue(ref(db, 'posters'), (snap) => {
-      postersDiv.innerHTML = "<h3>📦 All Posters</h3>";
-      const posters = snap.val();
-      for (let uid in posters) {
-        const p = posters[uid];
-        postersDiv.innerHTML += `
-          <div class="card">
-            <b>${p.name}</b> (${p.shopName})<br>
-            📍 ${p.address}<br>
-            📞 ${p.whatsapp}<br>
-            🔧 ${p.category}<br>
-            💰 Wallet: ₹${p.wallet}<br>
-            <button class="btn btn-danger" onclick="deletePoster('${uid}')">🗑 Delete Poster</button>
-          </div>`;
-      }
-    });
-
-    // Load Recharge Requests
-    onValue(ref(db, 'rechargeRequests'), (snap) => {
-      rechargesDiv.innerHTML = "<h3>💸 Recharge Requests</h3>";
-      const data = snap.val();
-      for (let uid in data) {
-        const r = data[uid];
-        const approved = r.status === "approved";
-        rechargesDiv.innerHTML += `
-          <div class="card">
-            <span class="led ${approved ? 'green' : ''}"></span>
-            <b>${uid}</b><br>
-            📞 ${r.whatsapp}<br>
-            🖼️ <a href="${r.screenshot}" target="_blank">View Screenshot</a><br>
-            ✅ Status: ${r.status}<br>
-            ${!approved ? `<button class="btn" onclick="approveRecharge('${uid}')">Approve</button>` : ''}
-            <button class="btn btn-danger" onclick="deleteRecharge('${uid}')">🗑 Delete</button>
-          </div>`;
-      }
-    });
-
-    // Load Requests
-    onValue(ref(db, 'requests'), (snap) => {
-      requestsDiv.innerHTML = "<h3>📝 Service Requests</h3>";
-      const users = snap.val();
-      for (let userId in users) {
-        for (let reqId in users[userId]) {
-          const r = users[userId][reqId];
-          requestsDiv.innerHTML += `
+    function loadPosters() {
+      db.ref("posters").once("value", snap => {
+        const data = snap.val();
+        const div = document.getElementById("posterList");
+        for (const uid in data) {
+          const p = data[uid];
+          const led = p.approved ? "on" : "off";
+          div.innerHTML += `
             <div class="card">
-              🛠️ ${r.service}<br>
-              📍 ${r.address}<br>
-              📞 ${r.whatsapp}<br>
-              🗺️ Location: ${r.location}<br>
-              <button class="btn btn-danger" onclick="deleteRequest('${userId}', '${reqId}')">🗑 Delete Request</button>
+              <div><span class="led ${led}"></span><b>${p.name}</b> (${p.category} / ${p.subCategory || "-"})</div>
+              <div>📍 ${p.address}</div>
+              <div>💬 WhatsApp: ${p.whatsapp}</div>
+              <div>🏪 Shop: ${p.shopName || '-'}</div>
+              <div>💰 Wallet: ₹${p.wallet || 0}</div>
+              <button class="approve" onclick="approvePoster('${uid}')">✅ Approve</button>
+              <button class="delete" onclick="deletePoster('${uid}')">🗑️ Delete</button>
             </div>`;
         }
-      }
-    });
+      });
+    }
 
-    // Admin Action Functions
-    window.deletePoster = function(uid) {
+    function approvePoster(uid) {
+      db.ref("posters/" + uid).update({ approved: true });
+      alert("Poster approved!");
+      location.reload();
+    }
+
+    function deletePoster(uid) {
       if (confirm("Delete this poster?")) {
-        remove(ref(db, `posters/${uid}`));
+        db.ref("posters/" + uid).remove();
+        alert("Deleted!");
+        location.reload();
       }
     }
 
-    window.deleteRecharge = function(uid) {
+    function loadRecharges() {
+      db.ref("rechargeRequests").once("value", snap => {
+        const data = snap.val();
+        const div = document.getElementById("rechargeList");
+        for (const uid in data) {
+          const r = data[uid];
+          div.innerHTML += `
+            <div class="card">
+              <div><b>📞 WhatsApp:</b> ${r.whatsapp}</div>
+              <div><img src="${r.screenshot}" width="100" /></div>
+              <div>Status: <b>${r.status}</b></div>
+              <button class="approve" onclick="approveRecharge('${uid}')">✅ Approve</button>
+              <button class="delete" onclick="deleteRecharge('${uid}')">🗑️ Delete</button>
+            </div>`;
+        }
+      });
+    }
+
+    function approveRecharge(uid) {
+      db.ref("posters/" + uid + "/wallet").once("value", snap => {
+        const current = snap.val() || 0;
+        db.ref("posters/" + uid + "/wallet").set(current + 100);
+        db.ref("rechargeRequests/" + uid + "/status").set("approved");
+        alert("Recharge approved!");
+        location.reload();
+      });
+    }
+
+    function deleteRecharge(uid) {
       if (confirm("Delete recharge request?")) {
-        remove(ref(db, `rechargeRequests/${uid}`));
+        db.ref("rechargeRequests/" + uid).remove();
+        alert("Deleted!");
+        location.reload();
       }
     }
 
-    window.approveRecharge = function(uid) {
-      if (confirm("Approve this recharge? ₹100 will be added.")) {
-        update(ref(db, `rechargeRequests/${uid}`), { status: "approved" });
-        update(ref(db, `posters/${uid}`), { wallet: 100 });
-      }
+    function loadRequests() {
+      db.ref("requests").once("value", snap => {
+        const data = snap.val();
+        const div = document.getElementById("requestList");
+        for (const userId in data) {
+          const userReqs = data[userId];
+          for (const reqId in userReqs) {
+            const r = userReqs[reqId];
+            div.innerHTML += `
+              <div class="card">
+                <div><b>🛠️ Service:</b> ${r.service}</div>
+                <div>📍 Address: ${r.address}</div>
+                <div>📞 WhatsApp: ${r.whatsapp}</div>
+                <div>📌 Pin: ${r.pincode}</div>
+                <button class="delete" onclick="deleteRequest('${userId}', '${reqId}')">🗑️ Delete</button>
+              </div>`;
+          }
+        }
+      });
     }
 
-    window.deleteRequest = function(userId, reqId) {
+    function deleteRequest(userId, reqId) {
       if (confirm("Delete this service request?")) {
-        remove(ref(db, `requests/${userId}/${reqId}`));
+        db.ref("requests/" + userId + "/" + reqId).remove();
+        alert("Deleted!");
+        location.reload();
       }
     }
+
+    // Run everything
+    loadPosters();
+    loadRecharges();
+    loadRequests();
   </script>
 </body>
 </html>
