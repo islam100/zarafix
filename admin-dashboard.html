@@ -4,165 +4,132 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f2f2f2; margin: 0; padding: 10px; }
-    h2 { text-align: center; margin: 10px 0; }
+    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
+    h2 { text-align: center; }
     .card {
-      background: white;
-      border-radius: 15px;
-      padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      background: white; padding: 15px; margin: 10px auto;
+      max-width: 500px; border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .btn {
-      background: #4caf50;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      margin-top: 10px;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: #388e3c;
+    button {
+      background: #28a745; color: white; padding: 8px 12px;
+      border: none; border-radius: 5px; cursor: pointer;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <div id="adminSection"></div>
 
-<h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
-<div id="content">Loading...</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-<!-- Firebase + Google Auth -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert("Login First");
+        window.location.href = "index.html";
+        return;
+      }
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  function showLogin() {
-    document.getElementById("content").innerHTML = `
-      <div style="text-align:center">
-        <p>Please login first to access Admin Dashboard</p>
-        <button class="btn" onclick="login()">Login with Google</button>
-      </div>`;
-  }
-
-  function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(result => {
-        checkAdmin(result.user.uid);
-      }).catch(error => {
-        alert("Login Failed: " + error.message);
+      const uid = user.uid;
+      db.ref("admins/" + uid).once("value", snap => {
+        if (snap.exists()) {
+          loadDashboard();
+        } else {
+          alert("Access Denied");
+          window.location.href = "index.html";
+        }
       });
-  }
-
-  function checkAdmin(uid) {
-    db.ref("admins/" + uid).once("value", snap => {
-      if (snap.exists()) {
-        loadDashboard(uid);
-      } else {
-        document.getElementById("content").innerHTML = "❌ Access Denied. Admins Only.";
-      }
     });
-  }
 
-  function loadDashboard(uid) {
-    document.getElementById("content").innerHTML = "<h3>✔️ Welcome Admin</h3>";
+    function loadDashboard() {
+      const adminSection = document.getElementById("adminSection");
+      adminSection.innerHTML = "<h3>✔️ Welcome Admin</h3>";
 
-    // Load Posters
-    db.ref("posters").once("value", postersSnap => {
-      const posters = postersSnap.val();
-      if (posters) {
-        document.getElementById("content").innerHTML += `<h3>🧰 Service Providers</h3>`;
-        Object.entries(posters).forEach(([pid, pdata]) => {
-          document.getElementById("content").innerHTML += `
+      // Posters
+      db.ref("posters").once("value", snap => {
+        adminSection.innerHTML += "<h3>🧰 Service Providers</h3>";
+        snap.forEach(child => {
+          const p = child.val();
+          adminSection.innerHTML += `
             <div class="card">
-              <b>Name:</b> ${pdata.name}<br>
-              <b>Shop:</b> ${pdata.shop}<br>
-              <b>Category:</b> ${pdata.category}<br>
-              <b>WhatsApp:</b> ${pdata.whatsapp}<br>
-              <b>Wallet:</b> ₹${pdata.wallet}<br>
-              <button class="btn" onclick="recharge('${pid}', ${pdata.wallet})">+ ₹100 Recharge</button>
-            </div>`;
+              <b>Name:</b> ${p.name}<br>
+              <b>Shop:</b> ${p.shop}<br>
+              <b>Category:</b> ${p.category}<br>
+              <b>WhatsApp:</b> ${p.whatsapp}<br>
+              <b>Wallet:</b> ₹${p.wallet}
+            </div>
+          `;
         });
-      }
-    });
+      });
 
-    // Load Service Requests
-    db.ref("requests").once("value", snap => {
-      const data = snap.val();
-      if (data) {
-        document.getElementById("content").innerHTML += `<h3>📋 Service Requests</h3>`;
-        Object.entries(data).forEach(([uid, requests]) => {
-          Object.entries(requests).forEach(([rid, rdata]) => {
-            document.getElementById("content").innerHTML += `
+      // Service Requests
+      db.ref("requests").once("value", snap => {
+        adminSection.innerHTML += "<h3>📋 Service Requests</h3>";
+        snap.forEach(userSnap => {
+          const userId = userSnap.key;
+          userSnap.forEach(reqSnap => {
+            const req = reqSnap.val();
+            const acceptedBy = req.acceptedBy ? Object.keys(req.acceptedBy).join(", ") : "None";
+            adminSection.innerHTML += `
               <div class="card">
-                <b>User ID:</b> ${uid}<br>
-                <b>Category:</b> ${rdata.category}<br>
-                <b>Description:</b> ${rdata.description}<br>
-                <b>Accepted By:</b> ${rdata.acceptedBy ? Object.keys(rdata.acceptedBy).join(", ") : "None"}
-              </div>`;
+                <b>User ID:</b> ${userId}<br>
+                <b>Category:</b> ${req.category}<br>
+                <b>Description:</b> ${req.description}<br>
+                <b>Accepted By:</b> ${acceptedBy}
+              </div>
+            `;
           });
         });
-      }
-    });
+      });
 
-    // Load Recharge Requests
-    db.ref("recharges").once("value", snap => {
-      const recharges = snap.val();
-      if (recharges) {
-        document.getElementById("content").innerHTML += `<h3>💰 Recharge Requests</h3>`;
-        Object.entries(recharges).forEach(([posterId, requests]) => {
-          Object.entries(requests).forEach(([rid, rdata]) => {
-            if (!rdata.approved) {
-              document.getElementById("content").innerHTML += `
+      // Recharges
+      db.ref("recharges").once("value", snap => {
+        adminSection.innerHTML += "<h3>💰 Recharge Requests</h3>";
+        snap.forEach(posterSnap => {
+          const posterId = posterSnap.key;
+          posterSnap.forEach(rSnap => {
+            const r = rSnap.val();
+            if (!r.approved) {
+              adminSection.innerHTML += `
                 <div class="card">
                   <b>Poster ID:</b> ${posterId}<br>
-                  <img src="${rdata.screenshotUrl}" width="100"><br>
-                  <button class="btn" onclick="approveRecharge('${posterId}', '${rid}')">Approve</button>
-                </div>`;
+                  <img src="${r.screenshotUrl}" width="100"><br>
+                  <button onclick="approveRecharge('${posterId}', '${rSnap.key}')">Approve</button>
+                </div>
+              `;
             }
           });
         });
-      }
-    });
-  }
-
-  function approveRecharge(pid, rid) {
-    // Mark approved and add ₹100
-    db.ref("recharges/" + pid + "/" + rid).update({ approved: true });
-    db.ref("posters/" + pid + "/wallet").once("value", snap => {
-      const current = snap.val() || 0;
-      db.ref("posters/" + pid).update({ wallet: current + 100 });
-      alert("Recharge Approved");
-      location.reload();
-    });
-  }
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      checkAdmin(user.uid);
-    } else {
-      showLogin();
+      });
     }
-  });
-</script>
 
+    function approveRecharge(posterId, rechargeId) {
+      db.ref(`recharges/${posterId}/${rechargeId}/approved`).set(true);
+      db.ref(`posters/${posterId}/wallet`).once("value", snap => {
+        const oldWallet = snap.val() || 0;
+        db.ref(`posters/${posterId}/wallet`).set(oldWallet + 100);
+        alert("Recharge Approved");
+        location.reload();
+      });
+    }
+  </script>
 </body>
 </html>
