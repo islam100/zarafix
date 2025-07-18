@@ -1,136 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ Admin Dashboard</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin: 0; padding: 20px; background: #f0f0f0; }
-    h2 { text-align: center; }
-    .nav { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
-    .nav button {
-      padding: 10px 20px;
-      border: none;
-      background: #007bff;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: linear-gradient(to bottom, #f9f9f9, #e0f7fa);
     }
-    .nav button:hover { background: #0056b3; }
-    .section { display: none; }
-    .active { display: block; }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .section-title {
+      font-size: 18px;
+      margin-top: 20px;
+      color: #006064;
+    }
     .card {
-      background: white; border-radius: 10px; padding: 15px;
-      margin: 10px auto; max-width: 600px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      padding: 15px;
+      margin: 10px 0;
+      transition: transform 0.3s ease;
     }
-    .approve-btn {
-      background: green; color: white; padding: 6px 12px;
-      border: none; border-radius: 5px; margin-top: 10px; cursor: pointer;
+    .card:hover {
+      transform: scale(1.03);
     }
+    .bold { font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>🛠️ Admin Dashboard</h2>
-  <div class="nav">
-    <button onclick="showSection('posters')">🧰 Posters</button>
-    <button onclick="showSection('requests')">📋 Requests</button>
-    <button onclick="showSection('recharges')">💸 Recharges</button>
+
+  <h2>🛠️ ZaraFix - Admin Dashboard</h2>
+
+  <div>
+    <h3 class="section-title">📋 All Service Requests</h3>
+    <div id="requestsContainer"></div>
   </div>
 
-  <div id="posters" class="section"></div>
-  <div id="requests" class="section"></div>
-  <div id="recharges" class="section"></div>
+  <div>
+    <h3 class="section-title">🧰 All Service Providers (Posters)</h3>
+    <div id="postersContainer"></div>
+  </div>
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script>
-    // ✅ Your Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSy...yourKey",
-      authDomain: "your-project.firebaseapp.com",
-      databaseURL: "https://your-project.firebaseio.com",
-      projectId: "your-project-id",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123:web:abc"
-    };
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function showSection(id) {
-      document.querySelectorAll('.section').forEach(div => div.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
+    const requestsContainer = document.getElementById("requestsContainer");
+    const postersContainer = document.getElementById("postersContainer");
 
-    // Posters Load
-    db.ref('posters').on('value', (snapshot) => {
-      const data = snapshot.val();
-      const container = document.getElementById('posters');
-      container.innerHTML = '';
-      for (let uid in data) {
-        const p = data[uid];
-        container.innerHTML += `
-          <div class="card">
-            <b>${p.name}</b> (${p.category})<br>
-            📍 ${p.address}<br>
-            📞 <a href="https://wa.me/91${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
-            💰 Wallet: ₹${p.wallet}
-          </div>`;
-      }
-    });
-
-    // Requests Load
-    db.ref('requests').on('value', (snapshot) => {
-      const data = snapshot.val();
-      const container = document.getElementById('requests');
-      container.innerHTML = '';
-      for (let userId in data) {
-        for (let reqId in data[userId]) {
-          const r = data[userId][reqId];
-          container.innerHTML += `
-            <div class="card">
-              📍 <b>${r.address}</b> (${r.pincode})<br>
-              🔧 ${r.service}<br>
-              📞 <a href="https://wa.me/91${r.whatsapp}" target="_blank">${r.whatsapp}</a><br>
-              ${r.acceptedBy ? '<b>✅ Accepted By:</b><br>' + Object.values(r.acceptedBy).map(p => `✔️ ${p.name} - <a href="https://wa.me/91${p.whatsapp}" target="_blank">${p.whatsapp}</a>`).join('<br>') : '❌ Not accepted yet'}
-            </div>`;
-        }
-      }
-    });
-
-    // Recharge Requests Load
-    db.ref('rechargeRequests').on('value', (snapshot) => {
-      const data = snapshot.val();
-      const container = document.getElementById('recharges');
-      container.innerHTML = '';
-      for (let uid in data) {
-        const r = data[uid];
-        if (r.status === 'pending') {
-          container.innerHTML += `
-            <div class="card">
-              🧑 UID: ${uid}<br>
-              📞 <a href="https://wa.me/91${r.whatsapp}" target="_blank">${r.whatsapp}</a><br>
-              🖼️ <img src="${r.screenshot}" width="100"><br>
-              <button class="approve-btn" onclick="approveRecharge('${uid}')">✅ Approve ₹100</button>
-            </div>`;
-        }
-      }
-    });
-
-    function approveRecharge(uid) {
-      // Step 1: Add ₹100 to poster's wallet
-      const posterRef = db.ref('posters/' + uid + '/wallet');
-      posterRef.once('value').then((snap) => {
-        const current = snap.val() || 0;
-        posterRef.set(current + 100);
+    // 🔹 Load all service requests
+    function loadRequests() {
+      db.ref("requests").once("value").then(snapshot => {
+        snapshot.forEach(userSnap => {
+          userSnap.forEach(reqSnap => {
+            const data = reqSnap.val();
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <div><span class="bold">Name:</span> ${data.name || "N/A"}</div>
+              <div><span class="bold">Category:</span> ${data.category || "N/A"}</div>
+              <div><span class="bold">WhatsApp:</span> ${data.whatsapp || "Hidden"}</div>
+              <div><span class="bold">Address:</span> ${data.address || "N/A"}</div>
+              <div><span class="bold">Pincode:</span> ${data.pincode || "N/A"}</div>
+              <div><span class="bold">Accepted By:</span> ${formatAccepted(data.acceptedBy)}</div>
+            `;
+            requestsContainer.appendChild(card);
+          });
+        });
       });
-
-      // Step 2: Update status to approved
-      db.ref('rechargeRequests/' + uid + '/status').set('approved');
-
-      alert('Recharge approved!');
     }
+
+    // 🔹 Load all posters
+    function loadPosters() {
+      db.ref("posters").once("value").then(snapshot => {
+        snapshot.forEach(posterSnap => {
+          const poster = posterSnap.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div><span class="bold">Name:</span> ${poster.name}</div>
+            <div><span class="bold">Category:</span> ${poster.category}</div>
+            <div><span class="bold">Shop:</span> ${poster.shop}</div>
+            <div><span class="bold">WhatsApp:</span> ${poster.whatsapp}</div>
+            <div><span class="bold">Address:</span> ${poster.address}</div>
+            <div><span class="bold">Wallet:</span> ₹${poster.wallet || 0}</div>
+          `;
+          postersContainer.appendChild(card);
+        });
+      });
+    }
+
+    // 🔹 Format acceptedBy field
+    function formatAccepted(acceptedBy) {
+      if (!acceptedBy) return "No one accepted yet";
+      let html = "<ul>";
+      for (let uid in acceptedBy) {
+        const person = acceptedBy[uid];
+        html += `<li>${person.name} - <a href="https://wa.me/${person.whatsapp}" target="_blank">WhatsApp</a></li>`;
+      }
+      html += "</ul>";
+      return html;
+    }
+
+    // ✅ Start loading
+    loadRequests();
+    loadPosters();
   </script>
 </body>
 </html>
