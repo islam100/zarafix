@@ -1,113 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-    h1 { text-align: center; }
-    .btn { padding: 6px 12px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
-    .approve { background: #28a745; color: white; }
-    .reject { background: #dc3545; color: white; }
-    .delete { background: #6c757d; color: white; }
-    .led { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .section { margin-bottom: 40px; }
+    h2 { margin-bottom: 10px; }
+    .card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .led {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
     .green { background-color: green; }
     .red { background-color: red; }
-    .card { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    button { margin: 5px; padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; }
+    .approve { background: #28a745; color: white; }
+    .delete { background: #dc3545; color: white; }
   </style>
 </head>
 <body>
+  <h1>Admin Dashboard</h1>
 
-<h1>Admin Dashboard</h1>
-<button class="btn" onclick="loadUsers()">👤 Load Users</button>
-<button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
+  <div class="section">
+    <h2>🧑 Users</h2>
+    <div id="userList">Loading...</div>
+  </div>
 
-<div id="userList"></div>
-<div id="providerList"></div>
+  <div class="section">
+    <h2>🏪 Providers</h2>
+    <div id="providerList">Loading...</div>
+  </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "1081192536486",
-    appId: "1:1081192536486:web:bcbb8d0c157e5b7d83c451"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "69088854066",
+      appId: "1:69088854066:web:18070bdc3d1d2a5a75c16f"
+    };
 
-  function loadUsers() {
-    document.getElementById('userList').innerHTML = "<h2>Users</h2>";
-    db.ref("posterUsers").once("value", snap => {
-      if (!snap.exists()) {
-        document.getElementById('userList').innerHTML += "No users found.";
-        return;
-      }
-      snap.forEach(child => {
-        const u = child.val();
-        document.getElementById('userList').innerHTML += `
-          <div class="card">
-            <strong>👤 ${u.name}</strong><br>
-            📱 WhatsApp: ${u.whatsapp}<br>
-            🗑️ <button class="btn delete" onclick="deleteUser('${child.key}')">Delete</button>
-          </div>`;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Load Users
+    function loadUsers() {
+      const userList = document.getElementById("userList");
+      db.ref("posterUsers").once("value", snapshot => {
+        userList.innerHTML = "";
+        if (!snapshot.exists()) {
+          userList.innerHTML = "No users found.";
+          return;
+        }
+        snapshot.forEach(child => {
+          const data = child.val();
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <strong>👤 ${data.name}</strong><br>
+            📧 ${data.email}<br>
+            📱 WhatsApp: ${data.whatsapp}<br>
+            🕒 ${data.joinedAt}<br>
+            <button class="delete" onclick="deleteUser('${child.key}')">Delete</button>
+          `;
+          userList.appendChild(div);
+        });
       });
-    });
-  }
+    }
 
-  function loadProviders() {
-    document.getElementById('providerList').innerHTML = "<h2>Providers</h2>";
-    db.ref("serviceRequests").once("value", snap => {
-      if (!snap.exists()) {
-        document.getElementById('providerList').innerHTML += "No providers found.";
-        return;
-      }
-      snap.forEach(child => {
-        const p = child.val();
-        const approved = p.approved === true;
-        const led = approved ? "green" : "red";
-        const label = approved ? "Yes" : "No";
-        const timestamp = new Date(p.timestamp || Date.now()).toLocaleString();
-        document.getElementById('providerList').innerHTML += `
-          <div class="card">
-            <span class="led ${led}"></span> <strong>${p.name}</strong><br>
-            📱 WhatsApp: ${p.whatsapp}<br>
-            🏪 Shop: ${p.shopName}<br>
-            📍 Pincode: ${p.pincode}<br>
-            📦 Category: ${p.category}<br>
-            ✅ Approved: ${label}<br>
-            🕒 ${timestamp}<br>
-            <button class="btn approve" onclick="approveProvider('${child.key}', true)">Approve</button>
-            <button class="btn reject" onclick="approveProvider('${child.key}', false)">Reject</button>
-            <button class="btn delete" onclick="deleteProvider('${child.key}')">Delete</button>
-          </div>`;
+    // Load Providers
+    function loadProviders() {
+      const providerList = document.getElementById("providerList");
+      db.ref("serviceRequests").once("value", snapshot => {
+        providerList.innerHTML = "";
+        if (!snapshot.exists()) {
+          providerList.innerHTML = "No providers found.";
+          return;
+        }
+        snapshot.forEach(child => {
+          const data = child.val();
+          const ledColor = data.approved ? "green" : "red";
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <span class="led ${ledColor}"></span>
+            <strong>👤 ${data.name}</strong><br>
+            📱 WhatsApp: ${data.whatsapp}<br>
+            🏪 Shop: ${data.shop}<br>
+            📍 Pincode: ${data.pincode}<br>
+            📦 Category: ${data.category}<br>
+            ✅ Approved: ${data.approved ? "Yes" : "No"}<br>
+            🕒 ${data.joinedAt}<br>
+            <button class="approve" onclick="approveProvider('${child.key}', ${!data.approved})">${data.approved ? "Unapprove" : "Approve"}</button>
+            <button class="delete" onclick="deleteProvider('${child.key}')">Delete</button>
+          `;
+          providerList.appendChild(div);
+        });
       });
-    });
-  }
+    }
 
-  function approveProvider(id, val) {
-    db.ref("serviceRequests/" + id).update({ approved: val });
+    function approveProvider(id, status) {
+      db.ref("serviceRequests/" + id).update({ approved: status }).then(loadProviders);
+    }
+
+    function deleteProvider(id) {
+      db.ref("serviceRequests/" + id).remove().then(loadProviders);
+    }
+
+    function deleteUser(id) {
+      db.ref("posterUsers/" + id).remove().then(loadUsers);
+    }
+
+    loadUsers();
     loadProviders();
-  }
-
-  function deleteUser(id) {
-    if (confirm("Delete this user?")) {
-      db.ref("posterUsers/" + id).remove();
-      loadUsers();
-    }
-  }
-
-  function deleteProvider(id) {
-    if (confirm("Delete this provider?")) {
-      db.ref("serviceRequests/" + id).remove();
-      loadProviders();
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
