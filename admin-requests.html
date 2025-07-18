@@ -1,69 +1,203 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📦 User Requests - ZaraFix</title>
+  <title>🛠️ ZaraFix - Admin Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 10px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
     .card {
       background: #fff;
       padding: 15px;
+      border-radius: 15px;
       margin: 15px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .led {
+      height: 12px;
+      width: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% {opacity: 0.2;}
+      50% {opacity: 1;}
+      100% {opacity: 0.2;}
+    }
+    .search-box {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .search-box input {
+      width: 80%;
+      padding: 10px;
+      font-size: 16px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border: 1px solid #ccc;
+    }
+    .filter {
+      margin: 10px 0;
+      text-align: center;
+    }
+    .filter select {
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+    .button {
+      background: #ff4444;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .approve-btn {
+      background: #28a745;
+      margin-left: 10px;
+    }
+    .status-approved {
+      color: green;
+      font-weight: bold;
+    }
+    .status-pending {
+      color: red;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h2>📦 All User Requests</h2>
-  <div id="requests"></div>
+<h2>🛠️ All Service Requests (Admin Only)</h2>
+<div class="search-box">
+  <input type="text" id="search" placeholder="Search by name, category, or subcategory">
+</div>
+<div class="filter">
+  <label>Filter by Category: </label>
+  <select id="categoryFilter">
+    <option value="">All</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Carpenter">Carpenter</option>
+    <option value="AC Repair">AC Repair</option>
+  </select>
+</div>
+<div id="container"></div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
-    firebase.initializeApp(firebaseConfig);
+const firebaseConfig = {
+  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+  authDomain: "zara-fix.firebaseapp.com",
+  databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+  projectId: "zara-fix",
+  storageBucket: "zara-fix.appspot.com",
+  messagingSenderId: "476473209200",
+  appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+};
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) window.location.href = "login.html";
-    });
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-    const requestsDiv = document.getElementById("requests");
+const adminUID = "FSyqQ3XXXXXXXXXXXXXXX"; // ✅ Set your admin UID here
 
-    firebase.database().ref("requests").once("value", snapshot => {
-      if (!snapshot.exists()) {
-        requestsDiv.innerHTML = "<p>No requests found.</p>";
-        return;
-      }
+onAuthStateChanged(auth, user => {
+  if (!user || user.uid !== adminUID) {
+    alert("Access denied. Admins only.");
+    window.location.href = "/index.html";
+  } else {
+    loadRequests();
+  }
+});
 
-      snapshot.forEach(child => {
-        const r = child.val();
-        const accepted = r.acceptedBy
-          ? Object.values(r.acceptedBy).map(p => `<li>${p.name || 'Poster'}</li>`).join("")
-          : "<i>No one accepted</i>";
+function loadRequests() {
+  const container = document.getElementById("container");
+  const searchInput = document.getElementById("search");
+  const filterSelect = document.getElementById("categoryFilter");
 
-        requestsDiv.innerHTML += `
-          <div class="card">
-            <b>${r.name}</b> (${r.category})<br>
-            Address: ${r.address}, ${r.city} - ${r.pincode}<br>
-            Issue: ${r.issue}<br>
-            WhatsApp: ${r.whatsapp}<br>
-            <b>Accepted By:</b> <ul>${accepted}</ul>
-          </div>
+  const requestsRef = ref(db, "requests");
+  onValue(requestsRef, snapshot => {
+    container.innerHTML = "";
+    const data = snapshot.val();
+    if (!data) {
+      container.innerHTML = "<p>No requests found.</p>";
+      return;
+    }
+
+    let allCards = [];
+
+    Object.entries(data).forEach(([userId, userRequests]) => {
+      Object.entries(userRequests).forEach(([reqId, req]) => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const isApproved = req.adminApproved;
+        const statusText = isApproved ? "✅ Approved" : "⏳ Pending";
+        const statusClass = isApproved ? "status-approved" : "status-pending";
+        const ledColor = isApproved ? "green" : "red";
+
+        card.innerHTML = `
+          <div><span class="led" style="background:${ledColor}"></span> <span class="${statusClass}">${statusText}</span></div>
+          <p><b>Name:</b> ${req.name || ""}</p>
+          <p><b>Category:</b> ${req.category || ""}</p>
+          <p><b>Subcategory:</b> ${req.subcategory || ""}</p>
+          <p><b>Address:</b> ${req.address || ""}</p>
+          <p><b>Issue:</b> ${req.issue || ""}</p>
+          <p><b>WhatsApp:</b> <a href="https://wa.me/${req.whatsapp}" target="_blank">${req.whatsapp}</a></p>
+          <p><b>Date:</b> ${new Date(req.date || Date.now()).toLocaleString()}</p>
+          <button class="button" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+          <button class="button approve-btn" onclick="approveRequest('${userId}', '${reqId}')">Approve</button>
         `;
+
+        allCards.push(card);
       });
     });
-  </script>
+
+    function renderCards(filter = "", search = "") {
+      container.innerHTML = "";
+      allCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (
+          (!filter || text.includes(filter.toLowerCase())) &&
+          (!search || text.includes(search.toLowerCase()))
+        ) {
+          container.appendChild(card);
+        }
+      });
+    }
+
+    searchInput.addEventListener("input", () => renderCards(filterSelect.value, searchInput.value));
+    filterSelect.addEventListener("change", () => renderCards(filterSelect.value, searchInput.value));
+
+    renderCards();
+  });
+}
+
+window.deleteRequest = function(userId, reqId) {
+  if (confirm("Are you sure to delete this request?")) {
+    remove(ref(db, `requests/${userId}/${reqId}`));
+  }
+};
+
+window.approveRequest = function(userId, reqId) {
+  update(ref(db, `requests/${userId}/${reqId}`), { adminApproved: true });
+};
+</script>
 </body>
 </html>
