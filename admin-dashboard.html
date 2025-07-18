@@ -3,174 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f2f2f2;
+      font-family: 'Roboto', sans-serif;
+      background: #f5f5f5;
       margin: 0;
-      padding: 10px;
+      padding: 1rem;
     }
-
-    h1 {
-      text-align: center;
-    }
-
-    .dashboard {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
+    h2 { text-align: center; }
     button {
-      margin: 10px;
+      margin: 4px;
       padding: 10px 20px;
-      background: linear-gradient(to right, #4CAF50, #45a049);
       border: none;
-      border-radius: 12px;
-      color: white;
-      font-size: 16px;
-      box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+      border-radius: 8px;
+      font-weight: bold;
       cursor: pointer;
+      background: linear-gradient(to right, #4CAF50, #81C784);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease-in-out;
     }
-
+    button:hover {
+      transform: scale(1.05);
+    }
     .card {
       background: white;
-      padding: 15px;
       margin: 10px auto;
-      border-radius: 12px;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 400px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      width: 95%;
-      max-width: 500px;
-      position: relative;
     }
-
     .led {
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background-color: green;
+      display: inline-block;
+      margin-right: 10px;
       animation: blink 1s infinite;
-      position: absolute;
-      top: 10px;
-      right: 10px;
     }
+    .red { background: red; }
+    .green { background: green; }
 
     @keyframes blink {
-      0% {opacity: 1;}
-      50% {opacity: 0.2;}
-      100% {opacity: 1;}
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
 
-    .info {
-      text-align: left;
-      margin-bottom: 10px;
-    }
-
-    .info strong {
-      display: inline-block;
-      width: 120px;
-    }
-
-    .actions button {
-      background-color: #007bff;
-      margin: 5px;
-    }
-
-    .actions .delete {
-      background-color: #dc3545;
-    }
-
-    .actions .reject {
-      background-color: #ff9800;
-    }
-
-    .actions .approve {
-      background-color: #4CAF50;
+    @media(max-width: 480px) {
+      .card {
+        width: 95%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>👨‍💼 Admin Dashboard</h1>
-  <div class="dashboard">
-    <button onclick="loadProviders()">🛠️ Load Providers</button>
-    <button onclick="loadPosters()">📄 Load Service Requests</button>
-  </div>
 
-  <div id="userCards"></div>
+<h2>👨‍💼 Admin Dashboard</h2>
+<div style="text-align: center;">
+  <button onclick="loadProviders()">🛠️ Load Providers</button>
+  <button onclick="loadPosterUsers()">🧾 Load Service Requests</button>
+</div>
 
-  <script src="firebase-config.js"></script>
-  <script>
-    const userCards = document.getElementById('userCards');
+<div id="led-container" style="text-align:center; margin-top:10px;"></div>
+<div id="data-container"></div>
 
-    function renderUser(user, key, type) {
-      const card = document.createElement('div');
-      card.className = 'card';
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "355030238130",
+    appId: "1:355030238130:web:5e18e6a729898e0b9795fd"
+  };
 
-      if (!user.approved) {
-        const led = document.createElement('div');
-        led.className = 'led';
-        card.appendChild(led);
-      }
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const container = document.getElementById("data-container");
+  const ledContainer = document.getElementById("led-container");
 
-      card.innerHTML += `
-        <div class="info"><strong>Shop Name:</strong> ${user.shopname || 'No Shop Name'}</div>
-        <div class="info"><strong>Name:</strong> ${user.name}</div>
-        <div class="info"><strong>WhatsApp:</strong> ${user.whatsapp}</div>
-        <div class="info"><strong>Address:</strong> ${user.address}</div>
-        <div class="info"><strong>Pincode:</strong> ${user.pincode || '-'}</div>
-        <div class="info"><strong>Category:</strong> ${user.category || '-'} / ${user.subcategory || '-'}</div>
-        <div class="info"><strong>Wallet:</strong> ₹${user.wallet || 0}</div>
-        <div class="actions">
-          ${type === 'provider' && !user.approved ? `<button class="approve" onclick="approveUser('${key}')">Approve</button>` : ''}
-          <button class="reject" onclick="rejectUser('${key}')">Reject</button>
-          <button class="delete" onclick="deleteUser('${key}')">Delete</button>
-        </div>
-      `;
-
-      userCards.appendChild(card);
-    }
-
-    function loadProviders() {
-      userCards.innerHTML = '';
-      firebase.database().ref('users').once('value', snap => {
-        snap.forEach(child => {
-          const user = child.val();
-          if (user.shopname) {
-            renderUser(user, child.key, 'provider');
-          }
-        });
+  function loadProviders() {
+    container.innerHTML = '';
+    ledContainer.innerHTML = '';
+    db.ref("providers").once("value", (snap) => {
+      let hasUnapproved = false;
+      snap.forEach(child => {
+        const data = child.val();
+        if (!data.approved) hasUnapproved = true;
+        renderCard(child.key, data, "providers");
       });
-    }
+      if (hasUnapproved) ledContainer.innerHTML = '<span class="led red"></span> Unapproved Providers';
+    });
+  }
 
-    function loadPosters() {
-      userCards.innerHTML = '';
-      firebase.database().ref('users').once('value', snap => {
-        snap.forEach(child => {
-          const user = child.val();
-          if (!user.shopname) {
-            renderUser(user, child.key, 'poster');
-          }
-        });
+  function loadPosterUsers() {
+    container.innerHTML = '';
+    ledContainer.innerHTML = '';
+    db.ref("posterUsers").once("value", (snap) => {
+      let hasUnapproved = false;
+      snap.forEach(child => {
+        const data = child.val();
+        if (!data.approved) hasUnapproved = true;
+        renderCard(child.key, data, "posterUsers");
       });
-    }
+      if (hasUnapproved) ledContainer.innerHTML = '<span class="led green"></span> Unapproved Service Requests';
+    });
+  }
 
-    function approveUser(key) {
-      firebase.database().ref('users/' + key).update({ approved: true });
-      alert("User Approved");
-      loadProviders();
-    }
+  function renderCard(id, data, path) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <h3>${data.shopname || "No Shop Name"}</h3>
+      <p><strong>Name:</strong> ${data.name}</p>
+      <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
+      <p><strong>Address:</strong> ${data.address}</p>
+      <p><strong>Category:</strong> ${data.category} / ${data.subcategory}</p>
+      <button onclick="approve('${path}', '${id}')">Approve</button>
+      <button onclick="reject('${path}', '${id}')">Reject</button>
+      <button onclick="remove('${path}', '${id}')">Delete</button>
+    `;
+    container.appendChild(card);
+  }
 
-    function rejectUser(key) {
-      firebase.database().ref('users/' + key).update({ approved: false });
-      alert("User Rejected");
-    }
+  function approve(path, id) {
+    db.ref(`${path}/${id}`).update({ approved: true });
+    alert("Approved!");
+    location.reload();
+  }
 
-    function deleteUser(key) {
-      if (confirm("Are you sure to delete this user?")) {
-        firebase.database().ref('users/' + key).remove();
-        alert("User Deleted");
-        loadProviders();
-      }
-    }
-  </script>
+  function reject(path, id) {
+    db.ref(`${path}/${id}`).update({ approved: false });
+    alert("Rejected!");
+    location.reload();
+  }
+
+  function remove(path, id) {
+    db.ref(`${path}/${id}`).remove();
+    alert("Deleted!");
+    location.reload();
+  }
+</script>
+
 </body>
 </html>
