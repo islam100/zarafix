@@ -6,182 +6,177 @@
   <style>
     body {
       font-family: Arial;
-      background: #f0f0f0;
       margin: 0;
-      padding: 10px;
+      background: linear-gradient(to bottom, #f0f0f0, #ffffff);
+      padding: 0;
     }
-    .button-bar {
+    .tabs {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-    .dash-btn {
-      padding: 15px 25px;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 3px 3px 8px #aaa;
-      cursor: pointer;
-      background: linear-gradient(to right, #4CAF50, #81C784);
+      justify-content: space-around;
+      background: #1976d2;
       color: white;
+      font-size: 18px;
+    }
+    .tab {
+      padding: 15px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .tab:hover, .tab.active {
+      background: #1565c0;
     }
     .section {
       display: none;
+      padding: 15px;
+    }
+    .section.active {
+      display: block;
     }
     .card {
       background: white;
-      margin: 10px auto;
+      margin: 10px 0;
       padding: 15px;
-      max-width: 500px;
-      border-radius: 15px;
-      box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: relative;
     }
     .led {
-      height: 10px;
       width: 10px;
+      height: 10px;
+      background: red;
       border-radius: 50%;
-      display: inline-block;
-      margin-right: 5px;
+      animation: blink 1s infinite;
+      position: absolute;
+      top: 15px;
+      right: 15px;
     }
-    .green { background-color: green; }
-    .red { background-color: red; }
-    .card button {
-      margin: 5px;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 8px;
-      background: #2196F3;
-      color: white;
-      cursor: pointer;
+    @keyframes blink {
+      0%, 100% { background: red; }
+      50% { background: limegreen; }
     }
-    img { max-width: 100%; }
+    .wallet {
+      font-weight: bold;
+      color: #2e7d32;
+    }
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
 
-<h2>🛠️ ZaraFix Admin Dashboard</h2>
-
-<div class="button-bar">
-  <button class="dash-btn" onclick="showSection('requests')">📋 Service Requests</button>
-  <button class="dash-btn" onclick="showSection('providers')">🧰 Service Providers</button>
-  <button class="dash-btn" onclick="showSection('recharges')">💰 Recharge Requests</button>
+<div class="tabs">
+  <div class="tab active" onclick="showSection('requests')">📋 Service Requests</div>
+  <div class="tab" onclick="showSection('posters')">🧰 Service Providers</div>
+  <div class="tab" onclick="showSection('recharges')">💰 Recharge Requests</div>
 </div>
 
-<div id="requests" class="section"></div>
-<div id="providers" class="section"></div>
+<div id="requests" class="section active"></div>
+<div id="posters" class="section"></div>
 <div id="recharges" class="section"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-    apiKey: "AIzaSyDx8m7yo...",
-    authDomain: "zarafix.firebaseapp.com",
-    databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
-    projectId: "zarafix",
-    storageBucket: "zarafix.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcd1234"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // your admin UID
-
   firebase.auth().onAuthStateChanged(user => {
-    if (!user || user.uid !== adminUID) {
-      alert("Access Denied. Admins only.");
-      window.location.href = "index.html";
-    } else {
-      loadAllData();
-    }
+    if (!user) return location.href = 'index.html';
+    db.ref("admins/" + user.uid).once("value", snap => {
+      if (!snap.exists()) return alert("Access denied. Admins only.");
+      loadRequests();
+      loadPosters();
+      loadRecharges();
+    });
   });
 
   function showSection(id) {
-    document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelector(`.tab[onclick="showSection('${id}')"]`).classList.add('active');
   }
 
-  function loadAllData() {
-    // Load Service Requests
-    db.ref("requests").once('value', snap => {
-      const div = document.getElementById("requests");
-      div.innerHTML = "<h3>Service Requests</h3>";
+  function loadRequests() {
+    const container = document.getElementById('requests');
+    container.innerHTML = "<h3>Loading...</h3>";
+    db.ref("users").once("value", snap => {
+      container.innerHTML = "";
       snap.forEach(userSnap => {
-        userSnap.forEach(reqSnap => {
-          const d = reqSnap.val();
-          div.innerHTML += `
-            <div class="card">
-              <span class="led ${d.acceptedBy ? 'green' : 'red'}"></span>
-              <b>${d.name}</b> - ${d.category}<br>
-              📍 ${d.address}<br>📞 ${d.whatsapp}<br>
-              <button onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">Delete</button>
-            </div>`;
-        });
-      });
-    });
-
-    // Load Providers
-    db.ref("providers").once('value', snap => {
-      const div = document.getElementById("providers");
-      div.innerHTML = "<h3>Service Providers</h3>";
-      snap.forEach(child => {
-        const d = child.val();
-        div.innerHTML += `
-          <div class="card">
-            <span class="led ${d.approved ? 'green' : 'red'}"></span>
-            <b>${d.name}</b> - ${d.category}/${d.subcategory}<br>
-            📞 ${d.whatsapp} | 🏪 ${d.shopName}<br>
-            💰 Wallet: ₹${d.wallet || 0}<br>
-            <button onclick="approveProvider('${child.key}')">Approve</button>
-            <button onclick="deleteProvider('${child.key}')">Delete</button>
-          </div>`;
-      });
-    });
-
-    // Load Recharge Requests
-    db.ref("recharges").once('value', snap => {
-      const div = document.getElementById("recharges");
-      div.innerHTML = "<h3>Recharge Requests</h3>";
-      snap.forEach(child => {
-        const d = child.val();
-        div.innerHTML += `
-          <div class="card">
-            <span class="led ${d.approved ? 'green' : 'red'}"></span>
-            UID: ${child.key}<br>
-            <img src="${d.screenshot}" alt="screenshot"/><br>
-            <button onclick="approveRecharge('${child.key}')">Approve</button>
-          </div>`;
+        const uid = userSnap.key;
+        const user = userSnap.val();
+        if (user.requests) {
+          Object.entries(user.requests).forEach(([reqId, req]) => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <div class="led"></div>
+              <div class="title">🧑‍🔧 ${user.name} (${user.category} > ${user.subCategory})</div>
+              <div>📍 ${user.address}</div>
+              <div>📝 ${req.description || "No details"}</div>
+              <div>📍 Lat: ${req.location?.lat || '-'} / Lng: ${req.location?.lng || '-'}</div>
+              <div>✅ Accepted By: ${req.acceptedBy ? Object.keys(req.acceptedBy).length : 0}</div>
+            `;
+            container.appendChild(card);
+          });
+        }
       });
     });
   }
 
-  function deleteRequest(userId, requestId) {
-    db.ref(`requests/${userId}/${requestId}`).remove().then(() => {
-      alert("Deleted!");
-      loadAllData();
+  function loadPosters() {
+    const container = document.getElementById('posters');
+    container.innerHTML = "<h3>Loading...</h3>";
+    db.ref("posters").once("value", snap => {
+      container.innerHTML = "";
+      snap.forEach(posterSnap => {
+        const poster = posterSnap.val();
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="led"></div>
+          <div class="title">🏪 ${poster.name} (${poster.category} > ${poster.subCategory})</div>
+          <div>📍 ${poster.address}</div>
+          <div>☎️ ${poster.whatsapp}</div>
+          <div class="wallet">💰 Wallet: ₹${poster.wallet || 0}</div>
+        `;
+        container.appendChild(card);
+      });
     });
   }
 
-  function approveProvider(uid) {
-    db.ref(`providers/${uid}`).update({ approved: true }).then(loadAllData);
-  }
-
-  function deleteProvider(uid) {
-    db.ref(`providers/${uid}`).remove().then(loadAllData);
-  }
-
-  function approveRecharge(uid) {
-    db.ref(`recharges/${uid}`).update({ approved: true }).then(() => {
-      db.ref(`providers/${uid}`).once('value', snap => {
-        const wallet = (snap.val().wallet || 0) + 100;
-        db.ref(`providers/${uid}`).update({ wallet });
+  function loadRecharges() {
+    const container = document.getElementById('recharges');
+    container.innerHTML = "<h3>Loading...</h3>";
+    db.ref("rechargeRequests").once("value", snap => {
+      container.innerHTML = "";
+      snap.forEach(recSnap => {
+        const rec = recSnap.val();
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="title">🔁 Poster ID: ${rec.posterId}</div>
+          <div>✅ Approved: ${rec.approved ? "Yes" : "No"}</div>
+          <div>🕒 ${new Date(rec.timestamp * 1000).toLocaleString()}</div>
+          <div><a href="${rec.screenshot}" target="_blank">📸 View Screenshot</a></div>
+        `;
+        container.appendChild(card);
       });
-      loadAllData();
     });
   }
 </script>
