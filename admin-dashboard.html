@@ -1,142 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>👨‍💼 Admin Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f8f8f8;
-    }
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
     h2 { margin-top: 30px; }
-    button { margin: 5px; padding: 6px 12px; cursor: pointer; }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .led {
-      height: 12px;
-      width: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .btn { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
+    .provider, .user { background: #fff; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-left: 5px; }
     .led.green { background-color: green; }
     .led.red { background-color: red; }
+    .section { margin-top: 40px; }
   </style>
 </head>
 <body>
 
   <h1>👨‍💼 Admin Dashboard</h1>
-  <button onclick="loadProviders()">🛠️ Load Providers</button>
-  <button onclick="loadUsers()">👤 Load Users</button>
+  <button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
+  <button class="btn" onclick="loadUsers()">👤 Load Users</button>
 
-  <h2>Providers</h2>
-  <div id="providerList">Loading...</div>
+  <div class="section">
+    <h2>Providers</h2>
+    <div id="providerList">Click 'Load Providers'</div>
+  </div>
 
-  <h2>Users</h2>
-  <div id="userList">Loading...</div>
+  <div class="section">
+    <h2>Users</h2>
+    <div id="userList">Click 'Load Users'</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // 🔐 Your Firebase Config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "67732322470",
+      appId: "1:67732322470:web:55cf67a4fc9bc1e1b3f4fc"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     function loadProviders() {
-      const providerList = document.getElementById('providerList');
-      providerList.innerHTML = 'Loading...';
-      db.ref('serviceRequests').once('value', snapshot => {
-        providerList.innerHTML = '';
-        const data = snapshot.val();
-        if (data) {
-          Object.keys(data).forEach(key => {
-            const p = data[key];
-            const approved = p.approved === true;
-            const ledClass = approved ? 'green' : 'red';
-
-            providerList.innerHTML += `
-              <div class="card">
-                <strong>👤 ${p.name}</strong><br>
-                📱 WhatsApp: ${p.whatsapp || 'N/A'}<br>
-                🏪 Shop: ${p.shopName || 'N/A'}<br>
-                📍 Pincode: ${p.pincode || 'N/A'}<br>
-                📦 Category: ${p.category || 'N/A'}<br>
-                ✅ Approved: <span class="led ${ledClass}"></span> ${approved ? 'Yes' : 'No'}<br>
-                🕒 ${p.timestamp || 'N/A'}<br>
-                <button onclick="approveProvider('${key}')">✅ Approve</button>
-                <button onclick="deleteProvider('${key}')">🗑️ Delete</button>
-              </div>
-            `;
-          });
-        } else {
-          providerList.innerHTML = 'No providers found.';
-        }
-      });
-    }
-
-    function approveProvider(id) {
-      db.ref('serviceRequests/' + id).update({ approved: true }).then(() => {
-        alert("Provider approved");
-        loadProviders();
-      });
-    }
-
-    function deleteProvider(id) {
-      if (confirm("Are you sure to delete this provider?")) {
-        db.ref('serviceRequests/' + id).remove().then(() => {
-          alert("Provider deleted");
-          loadProviders();
+      const list = document.getElementById("providerList");
+      list.innerHTML = "Loading...";
+      db.ref("posterUsers").once("value", snapshot => {
+        if (!snapshot.exists()) return list.innerHTML = "No providers found.";
+        list.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const approved = data.approved ? "Yes" : "No";
+          const ledColor = data.approved ? "green" : "red";
+          const div = document.createElement("div");
+          div.className = "provider";
+          div.innerHTML = `
+            👤 ${data.fullname || "No Name"}<br>
+            📱 WhatsApp: ${data.whatsapp || "N/A"}<br>
+            🏪 Shop: ${data.shopName || "N/A"}<br>
+            📍 Pincode: ${data.pincode || "N/A"}<br>
+            📦 Category: ${data.category || "N/A"}<br>
+            ✅ Approved: ${approved} <span class="led ${ledColor}"></span><br>
+            🕒 ${data.timestamp || "N/A"}<br><br>
+            <button class="btn" onclick="approveProvider('${child.key}')">✅ Approve</button>
+            <button class="btn" onclick="deleteProvider('${child.key}')">🗑️ Delete</button>
+          `;
+          list.appendChild(div);
         });
+      });
+    }
+
+    function approveProvider(key) {
+      firebase.database().ref("posterUsers/" + key).update({ approved: true });
+      alert("Provider approved");
+      loadProviders();
+    }
+
+    function deleteProvider(key) {
+      if (confirm("Delete this provider?")) {
+        firebase.database().ref("posterUsers/" + key).remove();
+        alert("Deleted");
+        loadProviders();
       }
     }
 
     function loadUsers() {
-      const userList = document.getElementById('userList');
-      userList.innerHTML = 'Loading...';
-      db.ref('posterUsers').once('value', snapshot => {
-        userList.innerHTML = '';
-        const data = snapshot.val();
-        if (data) {
-          Object.keys(data).forEach(key => {
-            const u = data[key];
-            userList.innerHTML += `
-              <div class="card">
-                <strong>👤 ${u.name}</strong><br>
-                📱 WhatsApp: ${u.whatsapp || 'N/A'}<br>
-                🎯 Pincode: ${u.pincode || 'N/A'}<br>
-                🕒 ${u.timestamp || 'N/A'}<br>
-                <button onclick="deleteUser('${key}')">🗑️ Delete</button>
-              </div>
-            `;
-          });
-        } else {
-          userList.innerHTML = 'No users found.';
-        }
+      const list = document.getElementById("userList");
+      list.innerHTML = "Loading...";
+      db.ref("loginLogs").once("value", snapshot => {
+        if (!snapshot.exists()) return list.innerHTML = "No users found.";
+        list.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const div = document.createElement("div");
+          div.className = "user";
+          div.innerHTML = `
+            👤 ${data.fullname || "No Name"}<br>
+            📱 WhatsApp: ${data.whatsapp || "N/A"}<br>
+            🎯 Pincode: ${data.pincode || "N/A"}<br>
+            🕒 ${data.timestamp || "N/A"}<br><br>
+            <button class="btn" onclick="deleteUser('${child.key}')">🗑️ Delete</button>
+          `;
+          list.appendChild(div);
+        });
       });
     }
 
-    function deleteUser(id) {
-      if (confirm("Are you sure to delete this user?")) {
-        db.ref('posterUsers/' + id).remove().then(() => {
-          alert("User deleted");
-          loadUsers();
-        });
+    function deleteUser(key) {
+      if (confirm("Delete this user?")) {
+        firebase.database().ref("loginLogs/" + key).remove();
+        alert("Deleted");
+        loadUsers();
       }
     }
   </script>
