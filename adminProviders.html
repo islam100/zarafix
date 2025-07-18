@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🧰 All Providers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="firebase.js"></script>
+  <style>
+    body { font-family: Arial; background: #f0f0f0; padding: 10px; }
+    h2 { text-align: center; }
+    .card {
+      background: white; padding: 15px; margin: 10px auto; border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px;
+    }
+    button { margin-top: 10px; padding: 5px 10px; border: none; background: green; color: white; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h2>🧰 All Service Providers</h2>
+  <div id="posterList">Loading...</div>
+
+  <script>
+    firebase.database().ref("posters").on("value", snap => {
+      const container = document.getElementById("posterList");
+      container.innerHTML = "";
+      snap.forEach(child => {
+        const data = child.val();
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <strong>${data.name}</strong><br>
+          Category: ${data.category}<br>
+          WhatsApp: ${data.whatsapp}<br>
+          Wallet: ₹${data.wallet || 0}<br>
+          <button onclick="recharge('${child.key}')">Recharge ₹100</button>
+        `;
+        container.appendChild(card);
+      });
+    });
+
+    function recharge(uid) {
+      const ref = firebase.database().ref("posters/" + uid + "/wallet");
+      ref.once("value", snap => {
+        let wallet = snap.val() || 0;
+        ref.set(wallet + 100);
+        alert("Wallet recharged!");
+      });
+    }
+  </script>
+</body>
+</html>
