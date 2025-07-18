@@ -1,214 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard</title>
+  <title>🛠️ ZaraFix - Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f4f8;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    .navbar {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .navbar button {
-      padding: 10px 20px;
-      border: none;
-      background: linear-gradient(to right, #6a11cb, #2575fc);
-      color: white;
-      font-weight: bold;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      cursor: pointer;
-    }
-    .navbar button.active {
-      background: #333;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 10px; }
+    h2 { text-align: center; margin-bottom: 20px; }
     .card {
-      background: white;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      background: white; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 15px; margin-bottom: 15px;
+      transition: transform 0.2s;
     }
-    .card .info {
-      margin-bottom: 10px;
+    .card:hover { transform: scale(1.02); }
+    .section-title { font-size: 20px; margin-top: 30px; }
+    button {
+      background: #4CAF50; color: white; border: none;
+      padding: 8px 15px; border-radius: 8px; cursor: pointer;
     }
-    .card .actions button {
-      margin-right: 10px;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .approve {
-      background: #4caf50;
-      color: white;
-    }
-    .reject {
-      background: #f44336;
-      color: white;
-    }
-    .led {
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 5px;
-    }
-    .led.approved {
-      background: green;
-    }
-    .led.pending {
-      background: orange;
-    }
-    .wallet {
-      font-weight: bold;
-      color: #444;
+    button:hover { background: #45a049; }
+    img { max-width: 100px; display: block; margin-top: 10px; }
+    .whatsapp-link {
+      display: inline-block; background: #25D366; color: white;
+      padding: 6px 10px; border-radius: 5px; margin-top: 5px;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <div id="posterSection"></div>
+  <div id="requestSection"></div>
+  <div id="rechargeSection"></div>
 
-<h1>Admin Dashboard</h1>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<div class="navbar">
-  <button id="userBtn" class="active">User Dashboard</button>
-  <button id="providerBtn">Provider Dashboard</button>
-</div>
-
-<div id="content"></div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script>
-  // ✅ Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "YOUR_MSG_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const content = document.getElementById("content");
-  const userBtn = document.getElementById("userBtn");
-  const providerBtn = document.getElementById("providerBtn");
-
-  userBtn.onclick = () => {
-    userBtn.classList.add("active");
-    providerBtn.classList.remove("active");
-    loadUsers();
-  };
-
-  providerBtn.onclick = () => {
-    providerBtn.classList.add("active");
-    userBtn.classList.remove("active");
-    loadProviders();
-  };
-
-  function loadUsers() {
-    content.innerHTML = '';
-    db.ref("requests").once("value", snapshot => {
-      if (!snapshot.exists()) {
-        content.innerHTML = "<p>No user requests found.</p>";
-        return;
-      }
-
+    // ✅ Show Posters
+    db.ref("posters").on("value", snapshot => {
+      const posterDiv = document.getElementById("posterSection");
+      posterDiv.innerHTML = "<h3 class='section-title'>👨‍🔧 Service Providers</h3>";
       snapshot.forEach(child => {
-        const data = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="info">
-            <span class="led ${data.status === "Approved" ? "approved" : "pending"}"></span>
-            <strong>${data.name}</strong><br>
-            Email: ${data.email}<br>
-            Phone: ${data.phone}<br>
-            Address: ${data.address}<br>
-            Service: ${data.service}<br>
-            Problem: ${data.problem}<br>
-            Status: ${data.status || 'Pending'}<br>
-            Date: ${data.date}
-          </div>
-          <div class="actions">
-            <button class="approve">✅ Approve</button>
-            <button class="reject">❌ Reject/Delete</button>
+        const p = child.val();
+        posterDiv.innerHTML += `
+          <div class="card">
+            <b>${p.name}</b> (${p.category})<br>
+            📍 ${p.address}<br>
+            🛠️ Shop: ${p.shopName}<br>
+            💰 Wallet: ₹${p.wallet}<br>
+            📱 WhatsApp: <a href="https://wa.me/${p.whatsapp}" class="whatsapp-link" target="_blank">${p.whatsapp}</a>
           </div>
         `;
-        card.querySelector(".approve").onclick = () => {
-          db.ref(`requests/${child.key}`).update({ status: "Approved" });
-          loadUsers();
-        };
-        card.querySelector(".reject").onclick = () => {
-          db.ref(`requests/${child.key}`).remove();
-          loadUsers();
-        };
-        content.appendChild(card);
       });
     });
-  }
 
-  function loadProviders() {
-    content.innerHTML = '';
-    db.ref("providers").once("value", snapshot => {
-      if (!snapshot.exists()) {
-        content.innerHTML = "<p>No providers found.</p>";
-        return;
+    // ✅ Show Requests and who accepted
+    db.ref("requests").on("value", snap => {
+      const reqDiv = document.getElementById("requestSection");
+      reqDiv.innerHTML = "<h3 class='section-title'>📋 User Service Requests</h3>";
+      snap.forEach(user => {
+        const userId = user.key;
+        Object.entries(user.val()).forEach(([rid, r]) => {
+          let acceptHtml = "❌ No one accepted yet.";
+          if (r.acceptedBy) {
+            acceptHtml = Object.entries(r.acceptedBy).map(([aid, a]) => `
+              <div style="margin-top:5px;">
+                ✅ Accepted By: <b>${a.name}</b><br>
+                📱 <a class="whatsapp-link" href="https://wa.me/${a.whatsapp}" target="_blank">${a.whatsapp}</a><br>
+                🗺️ Location: ${a.location}
+              </div>
+            `).join("");
+          }
+          reqDiv.innerHTML += `
+            <div class="card">
+              <b>Category:</b> ${r.category}<br>
+              📍 ${r.address}, ${r.pincode}<br>
+              📱 Hidden WhatsApp: ${r.whatsapp}<br>
+              🗺️ Location: ${r.location}<br>
+              <b>Accepted:</b><br>${acceptHtml}
+            </div>
+          `;
+        });
+      });
+    });
+
+    // ✅ Recharge Requests
+    db.ref("rechargeRequests").on("value", snap => {
+      const rechargeDiv = document.getElementById("rechargeSection");
+      rechargeDiv.innerHTML = "<h3 class='section-title'>💳 Recharge Requests</h3>";
+      snap.forEach(child => {
+        const uid = child.key;
+        const r = child.val();
+        if (!r.approved) {
+          rechargeDiv.innerHTML += `
+            <div class="card">
+              🧑 Poster ID: ${uid}<br>
+              🕒 ${r.time}<br>
+              🖼️ Screenshot:<br><img src="${r.screenshot}" alt="Payment"><br>
+              <button onclick="approveRecharge('${uid}')">✅ Approve Recharge</button>
+            </div>
+          `;
+        }
+      });
+    });
+
+    // ✅ Approve Recharge
+    function approveRecharge(uid) {
+      if (confirm("Recharge ₹100 to this poster?")) {
+        db.ref("posters/" + uid + "/wallet").get().then(snapshot => {
+          let current = snapshot.val() || 0;
+          db.ref("posters/" + uid).update({ wallet: current + 100 });
+          db.ref("rechargeRequests/" + uid).update({ approved: true });
+          alert("Recharge successful!");
+        });
       }
-
-      snapshot.forEach(child => {
-        const data = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <div class="info">
-            <span class="led ${data.status === "Approved" ? "approved" : "pending"}"></span>
-            <strong>${data.name}</strong><br>
-            Email: ${data.email}<br>
-            Phone: ${data.phone}<br>
-            Address: ${data.address}<br>
-            Category: ${data.category} - ${data.subcategory}<br>
-            Wallet: ₹<span class="wallet">${data.wallet || 0}</span><br>
-            Status: ${data.status || 'Pending'}<br>
-            Joined: ${data.joinedAt}
-          </div>
-          <div class="actions">
-            <button class="approve">✅ Approve</button>
-            <button class="reject">❌ Delete</button>
-          </div>
-        `;
-        card.querySelector(".approve").onclick = () => {
-          db.ref(`providers/${child.key}`).update({ status: "Approved" });
-          loadProviders();
-        };
-        card.querySelector(".reject").onclick = () => {
-          db.ref(`providers/${child.key}`).remove();
-          loadProviders();
-        };
-        content.appendChild(card);
-      });
-    });
-  }
-
-  // Load default
-  loadUsers();
-</script>
+    }
+  </script>
 </body>
 </html>
