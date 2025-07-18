@@ -4,179 +4,147 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f4f4;
-      padding: 10px;
-    }
-    h2 {
-      text-align: center;
-      margin-top: 0;
-    }
-    .section {
-      margin: 20px 0;
-    }
+    body { font-family: sans-serif; background: #f0f0f0; padding: 10px; margin: 0; }
+    h2 { text-align: center; }
     .card {
-      background: white;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
-    button {
-      margin-top: 10px;
-      padding: 8px 12px;
+    .btn {
+      padding: 5px 10px;
+      margin: 5px;
       border: none;
-      border-radius: 10px;
-      background: #007BFF;
-      color: white;
+      border-radius: 6px;
       cursor: pointer;
+      font-weight: bold;
     }
-    button.delete {
-      background: #e53935;
-    }
-    button.approve {
-      background: #43a047;
-    }
+    .approve { background: green; color: white; }
+    .delete { background: red; color: white; }
     .led {
-      height: 12px;
-      width: 12px;
-      border-radius: 50%;
       display: inline-block;
-      margin-left: 5px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: 10px;
     }
-    .led.green {
-      background-color: green;
-    }
-    .led.red {
-      background-color: red;
-    }
+    .green { background: green; }
+    .red { background: red; }
+    img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 5px; }
     @media (max-width: 600px) {
-      .card {
-        font-size: 14px;
-      }
+      .card { font-size: 15px; }
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Dashboard</h2>
-  <div class="section" id="providers">
-    <h3>🧰 Service Providers</h3>
-  </div>
-
-  <div class="section" id="requests">
-    <h3>📋 Service Requests</h3>
-  </div>
+  <h2>🔧 ZaraFix Admin Dashboard</h2>
+  <div id="requests"></div>
+  <h3>💳 Recharge Requests</h3>
+  <div id="recharges"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getDatabase, ref, onValue, update, remove
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth();
 
-    const providersDiv = document.getElementById('providers');
-    const requestsDiv = document.getElementById('requests');
-
-    // Load Posters
-    onValue(ref(db, 'posters'), (snapshot) => {
-      providersDiv.innerHTML = "<h3>🧰 Service Providers</h3>";
-      const posters = snapshot.val() || {};
-      for (let posterId in posters) {
-        const p = posters[posterId];
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <b>Name:</b> ${p.name} <br>
-          <b>Shop:</b> ${p.shop} <br>
-          <b>Category:</b> ${p.category} <br>
-          <b>WhatsApp:</b> <a href="https://wa.me/91${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
-          <b>Address:</b> ${p.address || "N/A"} <br>
-          <b>Wallet:</b> ₹${p.wallet || 0}<br>
-          <button onclick="recharge('${posterId}')">+ ₹100 Recharge</button>
-          <button class="delete" onclick="deletePoster('${posterId}')">🗑️ Delete</button>
-          <button class="approve" onclick="approvePoster('${posterId}')">✔️ Approve</button>
-        `;
-        providersDiv.appendChild(card);
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const uid = user.uid;
+        onValue(ref(db, 'admins/' + uid), (snap) => {
+          if (!snap.exists()) {
+            alert("Access Denied: Admins only.");
+            window.location.href = "index.html";
+          }
+        });
+      } else {
+        alert("Please login first.");
+        window.location.href = "index.html";
       }
     });
 
-    // Load Requests
-    onValue(ref(db, 'requests'), (snapshot) => {
+    // Service Requests & Posters Info
+    const requestsDiv = document.getElementById('requests');
+    onValue(ref(db), (snapshot) => {
+      const data = snapshot.val();
       requestsDiv.innerHTML = "<h3>📋 Service Requests</h3>";
-      const allRequests = snapshot.val() || {};
-      for (let userId in allRequests) {
-        const userRequests = allRequests[userId];
-        for (let requestId in userRequests) {
-          const r = userRequests[requestId];
-          let acceptedBy = r.acceptedBy || {};
-          let acceptedInfo = "";
 
-          for (let pid in acceptedBy) {
-            acceptedInfo += `<br>✅ Accepted By: ${pid}`;
-            const posterRef = ref(db, `posters/${pid}`);
-            onValue(posterRef, (snap) => {
-              const p = snap.val();
-              if (p) {
-                acceptedInfo += `<br>📞 <a href="https://wa.me/91${p.whatsapp}" target="_blank">${p.whatsapp}</a> (${p.name})`;
-              }
-            }, { onlyOnce: true });
+      for (let userId in data.requests) {
+        for (let reqId in data.requests[userId]) {
+          const req = data.requests[userId][reqId];
+          const acceptedList = req.acceptedBy || {};
+
+          let acceptedStr = "";
+          for (let posterId in acceptedList) {
+            const poster = data.posters?.[posterId] || {};
+            acceptedStr += `
+              <div class="card">
+                <b>✅ Accepted By:</b><br>
+                <b>Name:</b> ${poster.name || ''} <br>
+                <b>Shop:</b> ${poster.shop || ''} <br>
+                <b>Category:</b> ${poster.category || ''} <br>
+                <b>WhatsApp:</b> ${poster.whatsapp || ''} <br>
+                <b>Wallet:</b> ₹${poster.wallet || 0} <br>
+                <b>Address:</b> ${poster.address || 'N/A'}
+              </div>`;
           }
 
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <b>User ID:</b> ${userId}<br>
-            <b>Category:</b> ${r.category}<br>
-            <b>Description:</b> ${r.description}<br>
-            <b>Address:</b> ${r.address || "N/A"}<br>
-            <b>Status:</b> ${
-              Object.keys(acceptedBy).length
-                ? `<span class="led green"></span> Accepted`
-                : `<span class="led red"></span> Not Accepted`
-            }
-            ${acceptedInfo}
-          `;
-          requestsDiv.appendChild(card);
+          requestsDiv.innerHTML += `
+            <div class="card">
+              <b>🧾 User ID:</b> ${userId} <br>
+              <b>Category:</b> ${req.category} <br>
+              <b>Description:</b> ${req.description} <br>
+              <b>Location:</b> ${req.location || 'N/A'} <br>
+              ${acceptedStr || '❌ Not yet accepted'}
+            </div>`;
+        }
+      }
+
+      // Recharge requests
+      const rechargeDiv = document.getElementById("recharges");
+      rechargeDiv.innerHTML = "";
+      const recharges = data.recharges || {};
+      for (let posterId in recharges) {
+        for (let rechargeId in recharges[posterId]) {
+          const recharge = recharges[posterId][rechargeId];
+          const approved = recharge.approved;
+          const screenshot = recharge.screenshotUrl;
+          const ledClass = approved ? "green" : "red";
+
+          rechargeDiv.innerHTML += `
+            <div class="card">
+              <b>Poster ID:</b> ${posterId} <br>
+              <b>Recharge ID:</b> ${rechargeId} <br>
+              <b>Approved:</b> ${approved} 
+              <span class="led ${ledClass}"></span><br>
+              <img src="${screenshot}" alt="screenshot">
+              <button class="btn approve" onclick="approveRecharge('${posterId}','${rechargeId}')">✅ Approve</button>
+              <button class="btn delete" onclick="deleteRecharge('${posterId}','${rechargeId}')">🗑️ Delete</button>
+            </div>`;
         }
       }
     });
 
-    // Recharge ₹100 manually
-    window.recharge = (posterId) => {
-      const walletRef = ref(db, `posters/${posterId}`);
-      onValue(walletRef, (snap) => {
-        const p = snap.val();
-        if (p) {
-          const newWallet = (p.wallet || 0) + 100;
-          update(walletRef, { wallet: newWallet });
-        }
-      }, { onlyOnce: true });
-    };
+    // Approve and Delete functions
+    window.approveRecharge = function(posterId, rechargeId) {
+      update(ref(db, `recharges/${posterId}/${rechargeId}`), { approved: true });
+      alert("Recharge approved.");
+    }
 
-    // Delete poster
-    window.deletePoster = (posterId) => {
-      if (confirm("Delete this service provider?")) {
-        remove(ref(db, `posters/${posterId}`));
-      }
-    };
-
-    // Approve logic placeholder
-    window.approvePoster = (posterId) => {
-      alert("✅ Approved: " + posterId);
-    };
+    window.deleteRecharge = function(posterId, rechargeId) {
+      remove(ref(db, `recharges/${posterId}/${rechargeId}`));
+      alert("Recharge deleted.");
+    }
   </script>
 </body>
 </html>
