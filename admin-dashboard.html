@@ -4,64 +4,76 @@
   <title>🔐 ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 20px; margin: 0; text-align: center; }
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 10px;
+      background: #e3f2fd;
+    }
     .btn {
-      margin: 10px;
+      display: inline-block;
       padding: 15px 25px;
-      background: linear-gradient(145deg, #56ccf2, #2f80ed);
-      color: white;
+      margin: 10px 5px;
       border: none;
-      border-radius: 20px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #4fc3f7, #0288d1);
+      color: white;
+      font-weight: bold;
       font-size: 16px;
       cursor: pointer;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s ease-in-out;
     }
     .btn:hover {
       transform: scale(1.05);
+      box-shadow: 0 12px 20px rgba(0,0,0,0.3);
     }
-    .container { display: none; margin-top: 20px; }
+    .section {
+      display: none;
+      margin-top: 20px;
+    }
     .card {
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-      padding: 20px;
-      margin: 10px;
-      text-align: left;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin-bottom: 15px;
     }
     .led {
-      width: 15px;
-      height: 15px;
+      height: 12px;
+      width: 12px;
       border-radius: 50%;
       display: inline-block;
-      margin-left: 10px;
+      margin-right: 6px;
     }
-    .green { background-color: green; }
-    .red { background-color: red; }
-    .delete-btn {
-      background: red;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      float: right;
+    .led-red { background: red; }
+    .led-green { background: green; }
+    .whatsapp {
+      color: green;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    img {
+      max-width: 100px;
+      display: block;
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
-  <h2>🔐 ZaraFix Admin Dashboard</h2>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
   <button class="btn" onclick="showSection('posters')">🧰 Posters</button>
   <button class="btn" onclick="showSection('requests')">📋 Requests</button>
   <button class="btn" onclick="showSection('recharges')">💸 Recharges</button>
 
-  <div id="posters" class="container"></div>
-  <div id="requests" class="container"></div>
-  <div id="recharges" class="container"></div>
+  <div id="posters" class="section"></div>
+  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -71,90 +83,123 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     function showSection(id) {
-      document.querySelectorAll('.container').forEach(div => div.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
+      document.querySelectorAll(".section").forEach(sec => sec.style.display = "none");
+      document.getElementById(id).style.display = "block";
+      if (id === "posters") loadPosters();
+      else if (id === "requests") loadRequests();
+      else if (id === "recharges") loadRecharges();
     }
 
-    // Load Posters
-    db.ref("posters").on("value", snap => {
-      const postersDiv = document.getElementById("posters");
-      postersDiv.innerHTML = "";
-      snap.forEach(child => {
-        const data = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <strong>${data.name}</strong><br>
-          Category: ${data.category}<br>
-          Wallet: ₹${data.wallet || 0}
-          <button class="delete-btn" onclick="deletePoster('${child.key}')">Delete</button>
-        `;
-        postersDiv.appendChild(card);
-      });
-    });
+    async function loadPosters() {
+      const postersDiv = document.getElementById('posters');
+      postersDiv.innerHTML = '';
+      const snap = await get(ref(db, 'posters'));
+      if (snap.exists()) {
+        const posters = snap.val();
+        for (const uid in posters) {
+          const p = posters[uid];
+          const led = p.approved ? '<span class="led led-green"></span>' : '<span class="led led-red"></span>';
+          postersDiv.innerHTML += `
+            <div class="card">
+              ${led} <strong>${p.name}</strong><br>
+              🏪 ${p.shopName} | 📞 <a class="whatsapp" href="https://wa.me/${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
+              📍 ${p.address}<br>
+              🔧 ${p.category} → ${p.subcategory || 'N/A'}<br>
+              💰 Wallet: ₹${p.wallet || 0}
+              <br><br>
+              <button onclick="deletePoster('${uid}')">🗑️ Delete</button>
+            </div>`;
+        }
+      } else {
+        postersDiv.innerHTML = 'No posters found.';
+      }
+    }
 
-    // Load Requests
-    db.ref("requests").on("value", snap => {
-      const reqDiv = document.getElementById("requests");
-      reqDiv.innerHTML = "";
-      snap.forEach(user => {
-        const userId = user.key;
-        user.forEach(req => {
-          const data = req.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <strong>${data.name || 'No Name'}</strong><br>
-            Issue: ${data.issue || 'N/A'}<br>
-            Pincode: ${data.pincode || ''}<br>
-            <button class="delete-btn" onclick="deleteRequest('${userId}', '${req.key}')">Delete</button>
-          `;
-          reqDiv.appendChild(card);
-        });
-      });
-    });
+    async function loadRequests() {
+      const reqDiv = document.getElementById('requests');
+      reqDiv.innerHTML = '';
+      const snap = await get(ref(db, 'requests'));
+      if (snap.exists()) {
+        const all = snap.val();
+        for (const uid in all) {
+          const requests = all[uid];
+          for (const key in requests) {
+            const r = requests[key];
+            reqDiv.innerHTML += `
+              <div class="card">
+                👤 ${r.name || 'N/A'}<br>
+                🆘 ${r.issue || 'N/A'}<br>
+                📍 ${r.address || 'N/A'}<br>
+                📞 <a class="whatsapp" href="https://wa.me/${r.whatsapp}" target="_blank">${r.whatsapp}</a>
+                <br><br>
+                <button onclick="deleteRequest('${uid}', '${key}')">🗑️ Delete</button>
+              </div>`;
+          }
+        }
+      } else {
+        reqDiv.innerHTML = 'No requests found.';
+      }
+    }
 
-    // Load Recharge Requests
-    db.ref("rechargeRequests").on("value", snap => {
-      const recDiv = document.getElementById("recharges");
-      recDiv.innerHTML = "";
-      snap.forEach(child => {
-        const data = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        const ledClass = data.approved ? "green" : "red";
-        card.innerHTML = `
-          <strong>${data.name || 'No Name'}</strong><br>
-          UserID: ${child.key}<br>
-          <a href="${data.screenshot}" target="_blank">📷 View Screenshot</a><br>
-          <span class="led ${ledClass}"></span> ${data.approved ? "Approved" : "Pending"}<br>
-          ${!data.approved ? `<button class="btn" onclick="approveRecharge('${child.key}')">✅ Approve</button>` : ""}
-          <button class="delete-btn" onclick="deleteRecharge('${child.key}')">Delete</button>
-        `;
-        recDiv.appendChild(card);
-      });
-    });
+    async function loadRecharges() {
+      const recDiv = document.getElementById('recharges');
+      recDiv.innerHTML = '';
+      const snap = await get(ref(db, 'recharges'));
+      if (snap.exists()) {
+        const data = snap.val();
+        for (const uid in data) {
+          const r = data[uid];
+          const led = r.approved ? '<span class="led led-green"></span>' : '<span class="led led-red"></span>';
+          recDiv.innerHTML += `
+            <div class="card">
+              ${led} <strong>${r.name || 'N/A'}</strong><br>
+              📞 <a class="whatsapp" href="https://wa.me/${r.whatsapp}" target="_blank">${r.whatsapp}</a><br>
+              🖼️ <img src="${r.screenshot}" alt="screenshot"><br>
+              ${!r.approved ? `<button onclick="approveRecharge('${uid}')">✅ Approve ₹100</button>` : '✅ Approved'}
+              <br><br>
+              <button onclick="deleteRecharge('${uid}')">🗑️ Delete</button>
+            </div>`;
+        }
+      } else {
+        recDiv.innerHTML = 'No recharge requests.';
+      }
+    }
 
-    // Functions
+    async function approveRecharge(uid) {
+      const walletRef = ref(db, `posters/${uid}`);
+      const snap = await get(walletRef);
+      if (snap.exists()) {
+        const current = snap.val().wallet || 0;
+        await update(walletRef, { wallet: current + 100 });
+        await update(ref(db, `recharges/${uid}`), { approved: true });
+        loadRecharges();
+      }
+    }
+
     function deletePoster(uid) {
-      if (confirm("Delete this poster?")) db.ref("posters/" + uid).remove();
+      if (confirm("Delete this poster?")) {
+        remove(ref(db, 'posters/' + uid));
+        loadPosters();
+      }
     }
-    function deleteRequest(uid, reqId) {
-      if (confirm("Delete this request?")) db.ref("requests/" + uid + "/" + reqId).remove();
+
+    function deleteRequest(uid, key) {
+      if (confirm("Delete this request?")) {
+        remove(ref(db, `requests/${uid}/${key}`));
+        loadRequests();
+      }
     }
+
     function deleteRecharge(uid) {
-      if (confirm("Delete recharge?")) db.ref("rechargeRequests/" + uid).remove();
-    }
-    function approveRecharge(uid) {
-      db.ref("rechargeRequests/" + uid).update({ approved: true });
-      db.ref("posters/" + uid + "/wallet").once("value", snap => {
-        const current = snap.val() || 0;
-        db.ref("posters/" + uid + "/wallet").set(current + 100);
-      });
+      if (confirm("Delete this recharge?")) {
+        remove(ref(db, 'recharges/' + uid));
+        loadRecharges();
+      }
     }
   </script>
 </body>
