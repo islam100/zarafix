@@ -2,114 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard</title>
-  <style>
-    body { font-family: sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-    h1 { text-align: center; }
-    .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 10px; cursor: pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-    .user-btn { background: #007bff; color: white; }
-    .provider-btn { background: #28a745; color: white; }
-    .card { background: white; margin: 10px auto; padding: 15px; border-radius: 15px; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .approve { background: #4CAF50; color: white; }
-    .reject { background: #f0ad4e; color: white; }
-    .delete { background: #dc3545; color: white; }
-    .wallet { font-weight: bold; color: green; }
-  </style>
-</head>
-<body>
+  <script type="module">
+    // Firebase v9 imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      onValue
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  <h1>Admin Dashboard</h1>
-  <div style="text-align:center;">
-    <button class="btn user-btn" onclick="loadUsers()">👤 Load Users</button>
-    <button class="btn provider-btn" onclick="loadProviders()">🛠️ Load Providers</button>
-  </div>
-
-  <div id="dataContainer"></div>
-
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_ID",
+      appId: "YOUR_APP_ID"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    function loadUsers() {
-      const container = document.getElementById("dataContainer");
-      container.innerHTML = "<h2>Users</h2>";
-      db.ref("users").once("value", (snapshot) => {
-        if (!snapshot.exists()) {
-          container.innerHTML += "<p>No users found.</p>";
-          return;
-        }
-        snapshot.forEach(child => {
-          const data = child.val();
-          container.innerHTML += `
-            <div class="card">
-              <p><strong>${data.name}</strong></p>
-              <p>Email: ${data.email}</p>
-              <p>Phone: ${data.phone}</p>
-              <p>Address: ${data.address}</p>
-              <button class="btn delete" onclick="deleteUser('${child.key}')">❌ Delete</button>
-            </div>
-          `;
-        });
-      });
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
+    const providerList = document.getElementById("providerList");
+
+    // Load posterUsers
     function loadProviders() {
-      const container = document.getElementById("dataContainer");
-      container.innerHTML = "<h2>Providers</h2>";
-      db.ref("providers").once("value", (snapshot) => {
-        if (!snapshot.exists()) {
-          container.innerHTML += "<p>No providers found.</p>";
-          return;
+      const posterRef = ref(db, "posterUsers");
+      onValue(posterRef, (snapshot) => {
+        providerList.innerHTML = "";
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          Object.entries(data).forEach(([uid, provider]) => {
+            const div = document.createElement("div");
+            div.innerHTML = `
+              <h3>👤 ${provider.name}</h3>
+              <p>📱 WhatsApp: ${provider.whatsapp}</p>
+              <p>🏪 Shop: ${provider.shopname}</p>
+              <p>📍 Pincode: ${provider.pincode}</p>
+              <p>📦 Category: ${provider.category} / ${provider.subcategory}</p>
+              <p>✅ Approved: ${provider.approved ? "Yes" : "No"}</p>
+              <p>🕒 ${new Date(provider.timestamp).toLocaleString()}</p>
+              <hr/>
+            `;
+            providerList.appendChild(div);
+          });
+        } else {
+          providerList.innerHTML = "No providers found.";
         }
-        snapshot.forEach(child => {
-          const data = child.val();
-          container.innerHTML += `
-            <div class="card">
-              <p><strong>${data.name}</strong></p>
-              <p>Email: ${data.email}</p>
-              <p>Phone: ${data.phone}</p>
-              <p>Address: ${data.address}</p>
-              <p>Service: ${data.category} - ${data.subcategory}</p>
-              <p>Status: ${data.status}</p>
-              <p class="wallet">Wallet: ₹${data.wallet || 0}</p>
-              <button class="btn approve" onclick="updateStatus('${child.key}', 'Approved')">✅ Approve</button>
-              <button class="btn reject" onclick="updateStatus('${child.key}', 'Rejected')">🔄 Reject</button>
-              <button class="btn delete" onclick="deleteProvider('${child.key}')">❌ Delete</button>
-            </div>
-          `;
-        });
       });
     }
 
-    function deleteUser(uid) {
-      if (confirm("Delete this user?")) {
-        db.ref("users/" + uid).remove().then(() => alert("User deleted"));
-      }
-    }
-
-    function deleteProvider(uid) {
-      if (confirm("Delete this provider?")) {
-        db.ref("providers/" + uid).remove().then(() => alert("Provider deleted"));
-      }
-    }
-
-    function updateStatus(uid, status) {
-      db.ref("providers/" + uid).update({ status: status }).then(() => {
-        alert("Status updated to " + status);
-        loadProviders();
-      });
-    }
+    document.getElementById("loadProvidersBtn").addEventListener("click", loadProviders);
   </script>
+</head>
+<body style="font-family: Arial; padding: 20px;">
+  <h2>Admin Dashboard</h2>
+  <button id="loadProvidersBtn">🛠️ Load Providers</button>
+
+  <h3>Providers</h3>
+  <div id="providerList">Loading...</div>
 </body>
 </html>
