@@ -1,199 +1,176 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Admin Dashboard</title>
-  <script type="module" src="firebase-config.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f8ff;
-      padding: 20px;
+      font-family: sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 10px;
     }
-    h1, h2 {
+
+    h1 {
       text-align: center;
     }
+
+    .dashboard {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      background: linear-gradient(to right, #4CAF50, #45a049);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+
     .card {
       background: white;
       padding: 15px;
       margin: 10px auto;
-      border-radius: 10px;
-      box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
-      max-width: 600px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 500px;
+      position: relative;
     }
-    .section {
-      margin: 30px 0;
+
+    .led {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: green;
+      animation: blink 1s infinite;
+      position: absolute;
+      top: 10px;
+      right: 10px;
     }
-    .button {
-      padding: 10px 20px;
-      margin: 10px;
-      border: none;
-      background: #007bff;
-      color: white;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px #0056b3;
+
+    @keyframes blink {
+      0% {opacity: 1;}
+      50% {opacity: 0.2;}
+      100% {opacity: 1;}
     }
-    .button:active {
-      box-shadow: none;
-      transform: translateY(2px);
+
+    .info {
+      text-align: left;
+      margin-bottom: 10px;
     }
-    textarea {
-      width: 100%;
-      height: 60px;
-      border-radius: 10px;
-      padding: 10px;
+
+    .info strong {
+      display: inline-block;
+      width: 120px;
     }
-    #noticeList, #complaintList {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #fff8dc;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 10px;
+
+    .actions button {
+      background-color: #007bff;
+      margin: 5px;
+    }
+
+    .actions .delete {
+      background-color: #dc3545;
+    }
+
+    .actions .reject {
+      background-color: #ff9800;
+    }
+
+    .actions .approve {
+      background-color: #4CAF50;
     }
   </style>
 </head>
 <body>
-
-  <h1>🔐 Admin Dashboard</h1>
-
-  <!-- Logout Button -->
-  <button onclick="logout()" class="button">🔓 Logout</button>
-
-  <!-- Post Notice Section -->
-  <div class="section">
-    <h2>📢 Post Notice</h2>
-    <textarea id="noticeInput" placeholder="Type notice here..."></textarea>
-    <button onclick="postNotice()" class="button">📤 Post Notice</button>
-    <div id="noticeList"><strong>📜 Notices will appear here</strong></div>
+  <h1>👨‍💼 Admin Dashboard</h1>
+  <div class="dashboard">
+    <button onclick="loadProviders()">🛠️ Load Providers</button>
+    <button onclick="loadPosters()">📄 Load Service Requests</button>
   </div>
 
-  <!-- View Complaints -->
-  <div class="section">
-    <h2>😠 View Complaints</h2>
-    <div id="complaintList"><strong>📋 Complaints will appear here</strong></div>
-  </div>
+  <div id="userCards"></div>
 
-  <!-- Load Service Requests -->
-  <div class="section">
-    <h2>📥 Service Requests</h2>
-    <button onclick="loadPendingProviders()" class="button">📥 Load Service Requests</button>
-    <div id="pendingProvidersList"></div>
-  </div>
+  <script src="firebase-config.js"></script>
+  <script>
+    const userCards = document.getElementById('userCards');
 
-  <script type="module">
-    import {
-      getDatabase, ref as refDb, push, onValue, update, remove
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import {
-      getAuth, onAuthStateChanged, signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { database, auth } from "./firebase-config.js";
+    function renderUser(user, key, type) {
+      const card = document.createElement('div');
+      card.className = 'card';
 
-    const noticeInput = document.getElementById("noticeInput");
-    const noticeList = document.getElementById("noticeList");
-    const complaintList = document.getElementById("complaintList");
-    const pendingProvidersList = document.getElementById("pendingProvidersList");
-
-    // Post Notice
-    function postNotice() {
-      const text = noticeInput.value.trim();
-      if (text) {
-        const ref = refDb(database, "notices/");
-        push(ref, {
-          message: text,
-          time: new Date().toLocaleString()
-        });
-        noticeInput.value = "";
+      if (!user.approved) {
+        const led = document.createElement('div');
+        led.className = 'led';
+        card.appendChild(led);
       }
+
+      card.innerHTML += `
+        <div class="info"><strong>Shop Name:</strong> ${user.shopname || 'No Shop Name'}</div>
+        <div class="info"><strong>Name:</strong> ${user.name}</div>
+        <div class="info"><strong>WhatsApp:</strong> ${user.whatsapp}</div>
+        <div class="info"><strong>Address:</strong> ${user.address}</div>
+        <div class="info"><strong>Pincode:</strong> ${user.pincode || '-'}</div>
+        <div class="info"><strong>Category:</strong> ${user.category || '-'} / ${user.subcategory || '-'}</div>
+        <div class="info"><strong>Wallet:</strong> ₹${user.wallet || 0}</div>
+        <div class="actions">
+          ${type === 'provider' && !user.approved ? `<button class="approve" onclick="approveUser('${key}')">Approve</button>` : ''}
+          <button class="reject" onclick="rejectUser('${key}')">Reject</button>
+          <button class="delete" onclick="deleteUser('${key}')">Delete</button>
+        </div>
+      `;
+
+      userCards.appendChild(card);
     }
 
-    // Load Notices
-    onValue(refDb(database, "notices/"), (snapshot) => {
-      noticeList.innerHTML = "";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `<p><strong>🕒 ${data.time}</strong><br>${data.message}</p>`;
-        noticeList.appendChild(div);
-      });
-    });
-
-    // Load Complaints
-    onValue(refDb(database, "complaints/"), (snapshot) => {
-      complaintList.innerHTML = "";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `<p><strong>${data.name || "User"}</strong><br>${data.message}</p>`;
-        complaintList.appendChild(div);
-      });
-    });
-
-    // Load Service Requests
-    window.loadPendingProviders = function () {
-      pendingProvidersList.innerHTML = "<p>⏳ Loading...</p>";
-      const ref = refDb(database, "providers/");
-      onValue(ref, (snapshot) => {
-        pendingProvidersList.innerHTML = "";
-        let found = false;
-
-        snapshot.forEach((child) => {
-          const data = child.val();
-          if (!data.approved) {
-            found = true;
-            const item = document.createElement("div");
-            item.className = "card";
-            item.innerHTML = `
-              <p><strong>Shop Name:</strong> ${data.shopname || ""}</p>
-              <p><strong>Name:</strong> ${data.name || ""}</p>
-              <p><strong>WhatsApp:</strong> ${data.whatsapp || ""}</p>
-              <p><strong>Address:</strong> ${data.address || ""}, ${data.pincode || ""}</p>
-              <p><strong>Category:</strong> ${data.category || ""} / ${data.subcategory || ""}</p>
-              <button class="button" onclick="approveProvider('${child.key}')">✅ Approve</button>
-              <button class="button" onclick="deleteProvider('${child.key}')">🗑️ Delete</button>
-            `;
-            pendingProvidersList.appendChild(item);
+    function loadProviders() {
+      userCards.innerHTML = '';
+      firebase.database().ref('users').once('value', snap => {
+        snap.forEach(child => {
+          const user = child.val();
+          if (user.shopname) {
+            renderUser(user, child.key, 'provider');
           }
         });
-
-        if (!found) {
-          pendingProvidersList.innerHTML = "<p>🎉 No pending service requests.</p>";
-        }
       });
-    };
+    }
 
-    // Approve Provider
-    window.approveProvider = function (key) {
-      const ref = refDb(database, `providers/${key}`);
-      update(ref, { approved: true });
-      alert("✅ Approved");
-    };
-
-    // Delete Provider
-    window.deleteProvider = function (key) {
-      const ref = refDb(database, `providers/${key}`);
-      remove(ref);
-      alert("🗑️ Deleted");
-    };
-
-    // Logout
-    window.logout = function () {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
+    function loadPosters() {
+      userCards.innerHTML = '';
+      firebase.database().ref('users').once('value', snap => {
+        snap.forEach(child => {
+          const user = child.val();
+          if (!user.shopname) {
+            renderUser(user, child.key, 'poster');
+          }
+        });
       });
-    };
+    }
 
-    // Ensure only logged-in admin can view
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        alert("Please login as admin");
-        window.location.href = "index.html";
+    function approveUser(key) {
+      firebase.database().ref('users/' + key).update({ approved: true });
+      alert("User Approved");
+      loadProviders();
+    }
+
+    function rejectUser(key) {
+      firebase.database().ref('users/' + key).update({ approved: false });
+      alert("User Rejected");
+    }
+
+    function deleteUser(key) {
+      if (confirm("Are you sure to delete this user?")) {
+        firebase.database().ref('users/' + key).remove();
+        alert("User Deleted");
+        loadProviders();
       }
-    });
+    }
   </script>
 </body>
 </html>
