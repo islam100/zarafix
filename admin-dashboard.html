@@ -1,72 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>ZaraFix Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; margin: 0; background: #eef2f3; padding: 10px; }
-    h2 { text-align: center; }
-
-    .nav-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    .nav-buttons button {
-      padding: 10px 20px;
+    body { font-family: Arial; background: #f0f0f0; margin: 0; padding: 10px; text-align: center; }
+    .btn-group button {
+      padding: 12px 18px;
+      margin: 5px;
       border: none;
-      background: linear-gradient(to right, #00c6ff, #0072ff);
+      border-radius: 15px;
+      background: linear-gradient(to bottom, #4caf50, #2e7d32);
       color: white;
       font-weight: bold;
-      border-radius: 20px;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-      transition: transform 0.2s ease;
-    }
-    .nav-buttons button:hover {
-      transform: scale(1.05);
       cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      transition: 0.3s;
     }
-
-    .section {
-      display: none;
-    }
-
+    .btn-group button:hover { background: #1b5e20; }
+    .section { display: none; margin-top: 20px; }
     .card {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 15px;
+      border-radius: 15px;
+      padding: 20px;
       margin: 10px auto;
-      max-width: 500px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      max-width: 400px;
+      text-align: left;
     }
     .led {
-      width: 12px;
-      height: 12px;
+      height: 10px;
+      width: 10px;
       border-radius: 50%;
       display: inline-block;
-      margin-right: 5px;
     }
-    .led.green { background: green; }
-    .led.red { background: red; }
-    .btn {
-      padding: 6px 12px;
-      margin-top: 5px;
-      border: none;
-      border-radius: 10px;
-      background: #2196f3;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn.delete { background: #e91e63; }
+    .led.green { background-color: green; }
+    .led.red { background-color: red; }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Panel</h2>
 
-  <div class="nav-buttons">
+  <h2>🛠️ ZaraFix Admin Panel</h2>
+  <div class="btn-group">
     <button onclick="showSection('posters')">🧰 Posters</button>
     <button onclick="showSection('requests')">📋 Requests</button>
     <button onclick="showSection('recharges')">💸 Recharges</button>
@@ -76,10 +53,7 @@
   <div id="requests" class="section"></div>
   <div id="recharges" class="section"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -89,98 +63,105 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const postersDiv = document.getElementById("posters");
-    const requestsDiv = document.getElementById("requests");
-    const rechargesDiv = document.getElementById("recharges");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     function showSection(id) {
-      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.section').forEach(div => div.style.display = 'none');
       document.getElementById(id).style.display = 'block';
+      if (id === 'posters') loadPosters();
+      if (id === 'requests') loadRequests();
+      if (id === 'recharges') loadRecharges();
     }
 
-    // Load Posters
-    onValue(ref(db, 'posters'), snap => {
-      postersDiv.innerHTML = '';
-      snap.forEach(child => {
-        const data = child.val();
-        postersDiv.innerHTML += `
-          <div class="card">
-            <strong>${data.name}</strong><br>
-            📞 ${data.whatsapp}<br>
-            🏠 ${data.address}<br>
-            🏪 ${data.shop}<br>
-            📂 ${data.category} > ${data.subcategory || 'N/A'}<br>
-            💰 Wallet: ₹${data.wallet || 0}<br>
-            <button class="btn delete" onclick="deleteData('posters/${child.key}')">Delete</button>
-          </div>
-        `;
-      });
-    });
-
-    // Load Requests
-    onValue(ref(db, 'requests'), snap => {
-      requestsDiv.innerHTML = '';
-      snap.forEach(user => {
-        const userId = user.key;
-        const requests = user.val();
-        Object.keys(requests).forEach(reqKey => {
-          const data = requests[reqKey];
-          const accepted = data.acceptedBy ? Object.keys(data.acceptedBy).length : 0;
-          requestsDiv.innerHTML += `
+    function loadPosters() {
+      const container = document.getElementById("posters");
+      container.innerHTML = '';
+      db.ref('posters').once('value', snap => {
+        snap.forEach(child => {
+          const data = child.val();
+          const led = data.approved ? 'green' : 'red';
+          container.innerHTML += `
             <div class="card">
-              <strong>${data.name || 'No Name'}</strong><br>
-              📞 ${data.whatsapp || ''}<br>
-              🧾 ${data.category || ''} - ${data.description || ''}<br>
-              📍 ${data.address || ''}<br>
-              👥 Accepted By: ${accepted}<br>
-              <span class="led ${accepted > 0 ? 'green' : 'red'}"></span>
-              <button class="btn delete" onclick="deleteData('requests/${userId}/${reqKey}')">Delete</button>
-            </div>
-          `;
+              <span class="led ${led}"></span> <b>${data.name}</b><br>
+              Category: ${data.category}<br>
+              Subcategory: ${data.subcategory || ''}<br>
+              WhatsApp: ${data.whatsapp}<br>
+              Address: ${data.address}<br>
+              Wallet: ₹${data.wallet || 0}<br>
+              <button onclick="approvePoster('${child.key}')">✅ Approve</button>
+              <button onclick="deletePoster('${child.key}')">🗑️ Delete</button>
+            </div>`;
         });
       });
-    });
+    }
 
-    // Load Recharge Requests
-    onValue(ref(db, 'recharges'), snap => {
-      rechargesDiv.innerHTML = '';
-      snap.forEach(child => {
-        const data = child.val();
-        const uid = child.key;
-        const approved = data.approved === true;
-        rechargesDiv.innerHTML += `
-          <div class="card">
-            <strong>${data.name || 'User'}</strong><br>
-            UID: ${uid}<br>
-            <img src="${data.screenshot}" width="100%" /><br>
-            <span class="led ${approved ? 'green' : 'red'}"></span> ${approved ? 'Approved' : 'Pending'}<br>
-            ${!approved ? `<button class="btn" onclick="approveRecharge('${uid}')">Approve</button>` : ''}
-            <button class="btn delete" onclick="deleteData('recharges/${uid}')">Delete</button>
-          </div>
-        `;
+    function loadRequests() {
+      const container = document.getElementById("requests");
+      container.innerHTML = '';
+      db.ref('requests').once('value', snap => {
+        snap.forEach(user => {
+          Object.entries(user.val()).forEach(([reqId, req]) => {
+            container.innerHTML += `
+              <div class="card">
+                <b>${req.category}</b> - ${req.subcategory || ''}<br>
+                WhatsApp: ${req.whatsapp}<br>
+                Address: ${req.address}<br>
+                <button onclick="deleteRequest('${user.key}', '${reqId}')">🗑️ Delete</button>
+              </div>`;
+          });
+        });
       });
-    });
+    }
 
-    // Delete Function
-    window.deleteData = function (path) {
-      if (confirm("Are you sure to delete?")) {
-        remove(ref(db, path));
-      }
-    };
+    function loadRecharges() {
+      const container = document.getElementById("recharges");
+      container.innerHTML = '';
+      db.ref('recharges').once('value', snap => {
+        snap.forEach(child => {
+          const data = child.val();
+          const led = data.approved ? 'green' : 'red';
+          container.innerHTML += `
+            <div class="card">
+              <span class="led ${led}"></span> ${data.userId}<br>
+              Screenshot: <a href="${data.screenshot}" target="_blank">View</a><br>
+              <button onclick="approveRecharge('${child.key}', '${data.userId}')">✅ Approve</button>
+              <button onclick="deleteRecharge('${child.key}')">🗑️ Delete</button>
+            </div>`;
+        });
+      });
+    }
 
-    // Approve Recharge
-    window.approveRecharge = async function (uid) {
-      await update(ref(db, `recharges/${uid}`), { approved: true });
-      const posterRef = ref(db, `posters/${uid}`);
-      onValue(posterRef, snap => {
-        const currentWallet = snap.val().wallet || 0;
-        update(posterRef, { wallet: currentWallet + 100 });
-      }, { onlyOnce: true });
-    };
+    function approvePoster(uid) {
+      db.ref('posters/' + uid + '/approved').set(true);
+      alert("Poster Approved ✅");
+      loadPosters();
+    }
+
+    function approveRecharge(id, uid) {
+      db.ref('recharges/' + id + '/approved').set(true);
+      db.ref('posters/' + uid + '/wallet').transaction(w => (w || 0) + 100);
+      alert("Recharge Approved ✅ ₹100 added");
+      loadRecharges();
+    }
+
+    function deletePoster(uid) {
+      db.ref('posters/' + uid).remove();
+      loadPosters();
+    }
+
+    function deleteRequest(uid, reqId) {
+      db.ref(`requests/${uid}/${reqId}`).remove();
+      loadRequests();
+    }
+
+    function deleteRecharge(id) {
+      db.ref('recharges/' + id).remove();
+      loadRecharges();
+    }
+
+    // Show Posters on load
+    showSection('posters');
   </script>
 </body>
 </html>
