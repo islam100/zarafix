@@ -4,200 +4,180 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"/>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f1f1f1;
+      font-family: 'Roboto', sans-serif;
+      background: #f2f2f2;
       margin: 0;
-      padding: 1rem;
+      padding: 20px;
     }
-
     h2 {
-      margin-top: 2rem;
-      font-size: 1.4rem;
+      text-align: center;
     }
-
-    button {
-      padding: 0.5rem 1rem;
-      margin: 0.2rem;
+    .btn {
+      margin: 5px;
+      padding: 10px 20px;
       border: none;
-      background: #007BFF;
-      color: white;
       border-radius: 8px;
-      box-shadow: 0 4px #0056b3;
+      background: linear-gradient(to right, #4CAF50, #45A049);
+      color: white;
       cursor: pointer;
-      font-weight: bold;
+      box-shadow: 2px 2px 8px #888;
     }
-
-    button:active {
-      box-shadow: 0 2px #0056b3;
-      transform: translateY(2px);
+    .btn:hover {
+      transform: scale(1.02);
     }
-
     .card {
       background: white;
-      padding: 1rem;
-      margin: 1rem 0;
-      border-radius: 16px;
-      box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      box-shadow: 2px 2px 10px #ccc;
+      margin: 15px auto;
+      padding: 15px;
+      max-width: 500px;
+      position: relative;
     }
-
     .led {
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
-      display: inline-block;
-      margin-left: 8px;
-    }
-
-    .led.green {
-      background-color: green;
-    }
-
-    .led.red {
-      background-color: red;
+      position: absolute;
+      top: 15px;
+      right: 15px;
       animation: blink 1s infinite;
     }
-
+    .red { background: red; }
+    .green { background: green; }
     @keyframes blink {
-      50% { opacity: 0; }
+      50% { opacity: 0.3; }
     }
-
-    .btn-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
+    .actions button {
+      margin-right: 5px;
+      background: #2196F3;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 1px 1px 5px #999;
     }
-
-    @media screen and (max-width: 600px) {
-      .card { font-size: 0.9rem; }
-      button { padding: 0.4rem 0.7rem; font-size: 0.85rem; }
+    .actions button.reject {
+      background: #f44336;
+    }
+    .actions button.delete {
+      background: #9e9e9e;
     }
   </style>
 </head>
 <body>
-
-  <h1>👨‍💼 Admin Dashboard</h1>
-
-  <div class="btn-group">
-    <button onclick="loadPosterUsers()">📢 Load Poster Users</button>
-    <button onclick="loadProviders()">🛠️ Load Providers</button>
-    <button onclick="loadUsers()">👤 Load Users</button>
-    <button onclick="loadRechargeRequests()">💰 Load Recharge Requests</button>
+  <h2>👨‍💼 Admin Dashboard</h2>
+  <div style="text-align:center;">
+    <button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
+    <button class="btn" onclick="loadPosterUsers()">🧾 Load Poster Users</button>
   </div>
 
-  <div id="output"></div>
+  <div id="providersSection"><h3>Providers</h3></div>
+  <div id="posterUsersSection"><h3>Poster Users</h3></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, get, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      messagingSenderId: "your-messaging-id",
+      appId: "your-app-id"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const output = document.getElementById('output');
-
-    function createCard(title, data, type = 'default') {
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      let html = `<strong>👤 ${data.name || 'No Name'}</strong><br/>
-        📱 WhatsApp: ${data.phone || 'N/A'}<br/>
-        🎯 Pincode: ${data.pincode || 'N/A'}<br/>`;
-
-      if (type === 'poster') {
-        const approved = data.approved === true;
-        const ledClass = approved ? 'green' : 'red';
-        html += `
-          🔔 Approved: ${approved ? 'Yes' : 'No'}
-          <span class="led ${ledClass}"></span><br/>
-        `;
-        html += `<div class="btn-group">
-            ${!approved ? `<button onclick="approvePoster('${data.id}')">Approve</button>
-            <button onclick="rejectPoster('${data.id}')">Reject</button>` : ''}
-            <button onclick="deletePoster('${data.id}')">🗑️ Delete</button>
-          </div>`;
-      } else {
-        html += `🕒 ${new Date(data.timestamp || Date.now()).toLocaleString()}<br/>
-          <div class="btn-group">
-            <button onclick="deleteData('${type}', '${data.id}')">🗑️ Delete</button>
-          </div>`;
-      }
-
-      card.innerHTML = html;
-      return card;
-    }
-
-    async function loadPosterUsers() {
-      output.innerHTML = "<h2>Poster Users</h2>";
-      const snap = await get(ref(db, 'posterUsers'));
-      if (!snap.exists()) return output.innerHTML += "<p>No poster users found.</p>";
-
-      Object.entries(snap.val()).forEach(([id, user]) => {
-        user.id = id;
-        output.appendChild(createCard('Poster User', user, 'poster'));
+    function loadProviders() {
+      db.ref("providers").once("value", (snapshot) => {
+        const container = document.getElementById("providersSection");
+        container.innerHTML = "<h3>Providers</h3>";
+        if (!snapshot.exists()) return container.innerHTML += "<p>No providers found.</p>";
+        snapshot.forEach((child) => {
+          const data = child.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="led ${data.approved ? '' : 'red'}"></div>
+            <p>👤 <strong>${data.name}</strong></p>
+            <p>📱 WhatsApp: ${data.phone}</p>
+            <p>🏪 Shop: ${data.shop}</p>
+            <p>📍 Pincode: ${data.pincode}</p>
+            <p>📦 Category: ${data.category}</p>
+            <p>✅ Approved: ${data.approved ? "Yes" : "No"}</p>
+            <p>🕒 ${data.createdAt || ""}</p>
+            <div class="actions">
+              ${!data.approved ? `<button onclick="approveProvider('${child.key}')">Approve</button>` : ""}
+              <button class="delete" onclick="deleteProvider('${child.key}')">Delete</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
       });
     }
 
-    async function loadProviders() {
-      output.innerHTML = "<h2>Providers</h2>";
-      const snap = await get(ref(db, 'providers'));
-      if (!snap.exists()) return output.innerHTML += "<p>No providers found.</p>";
-
-      Object.entries(snap.val()).forEach(([id, user]) => {
-        user.id = id;
-        output.appendChild(createCard('Provider', user, 'providers'));
+    function loadPosterUsers() {
+      db.ref("posterUsers").once("value", (snapshot) => {
+        const container = document.getElementById("posterUsersSection");
+        container.innerHTML = "<h3>Poster Users</h3>";
+        if (!snapshot.exists()) return container.innerHTML += "<p>No poster users found.</p>";
+        snapshot.forEach((child) => {
+          const data = child.val();
+          const ledColor = !data.approved ? 'red' : (data.request && !data.accepted ? 'green' : '');
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="led ${ledColor}"></div>
+            <p>👤 <strong>${data.name}</strong></p>
+            <p>📱 WhatsApp: ${data.phone}</p>
+            <p>📍 Pincode: ${data.pincode}</p>
+            <p>✅ Approved: ${data.approved ? "Yes" : "No"}</p>
+            <p>🕒 ${data.createdAt || ""}</p>
+            <div class="actions">
+              ${!data.approved ? `<button onclick="approvePosterUser('${child.key}')">Approve</button>
+              <button class="reject" onclick="rejectPosterUser('${child.key}')">Reject</button>` : ""}
+              <button class="delete" onclick="deletePosterUser('${child.key}')">Delete</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
       });
     }
 
-    async function loadUsers() {
-      output.innerHTML = "<h2>Users</h2>";
-      const snap = await get(ref(db, 'users'));
-      if (!snap.exists()) return output.innerHTML += "<p>No users found.</p>";
-
-      Object.entries(snap.val()).forEach(([id, user]) => {
-        user.id = id;
-        output.appendChild(createCard('User', user, 'users'));
-      });
+    function approveProvider(key) {
+      db.ref("providers/" + key).update({ approved: true });
+      alert("Provider approved.");
+      loadProviders();
     }
 
-    async function loadRechargeRequests() {
-      output.innerHTML = "<h2>Recharge Requests</h2>";
-      const snap = await get(ref(db, 'rechargeRequests'));
-      if (!snap.exists()) return output.innerHTML += "<p>No recharge requests found.</p>";
-
-      Object.entries(snap.val()).forEach(([id, req]) => {
-        req.id = id;
-        output.appendChild(createCard('Recharge', req, 'rechargeRequests'));
-      });
+    function deleteProvider(key) {
+      db.ref("providers/" + key).remove();
+      alert("Provider deleted.");
+      loadProviders();
     }
 
-    function deleteData(path, id) {
-      if (confirm('Delete this entry?')) {
-        remove(ref(db, `${path}/${id}`));
-      }
+    function approvePosterUser(key) {
+      db.ref("posterUsers/" + key).update({ approved: true });
+      alert("Poster User approved.");
+      loadPosterUsers();
     }
 
-    function deletePoster(id) {
-      deleteData('posterUsers', id);
+    function rejectPosterUser(key) {
+      db.ref("posterUsers/" + key).update({ approved: false });
+      alert("Poster User rejected.");
+      loadPosterUsers();
     }
 
-    function approvePoster(id) {
-      update(ref(db, `posterUsers/${id}`), { approved: true });
-    }
-
-    function rejectPoster(id) {
-      update(ref(db, `posterUsers/${id}`), { approved: false });
+    function deletePosterUser(key) {
+      db.ref("posterUsers/" + key).remove();
+      alert("Poster User deleted.");
+      loadPosterUsers();
     }
   </script>
 </body>
