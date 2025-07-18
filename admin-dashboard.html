@@ -4,28 +4,55 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 10px; text-align: center; }
-    h2 { color: #333; }
-    .btn { margin: 10px; padding: 12px 20px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px #999; }
-    .btn:hover { background: #45a049; }
-    .card { background: white; margin: 10px auto; padding: 15px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); max-width: 400px; text-align: left; }
-    .hidden { display: none; }
+    body {
+      font-family: Arial;
+      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #1a237e;
+    }
+    .card {
+      background: white;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      border-radius: 20px;
+      margin: 20px auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 600px;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .section-title {
+      background: #3949ab;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #00c853;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Dashboard</h2>
-
-  <button class="btn" onclick="showSection('posters')">📋 Posters</button>
-  <button class="btn" onclick="showSection('requests')">📬 Requests</button>
-  <button class="btn" onclick="showSection('recharges')">💰 Recharge Requests</button>
-
-  <div id="posters" class="hidden"></div>
-  <div id="requests" class="hidden"></div>
-  <div id="recharges" class="hidden"></div>
+  <h1>🛠️ ZaraFix Admin Dashboard</h1>
+  <div id="posters"></div>
+  <div id="requests"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
@@ -40,86 +67,61 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    function showSection(section) {
-      document.getElementById("posters").classList.add("hidden");
-      document.getElementById("requests").classList.add("hidden");
-      document.getElementById("recharges").classList.add("hidden");
-      document.getElementById(section).classList.remove("hidden");
-    }
+    const postersDiv = document.getElementById("posters");
+    const requestsDiv = document.getElementById("requests");
 
-    // Posters
-    const postersRef = ref(db, 'posters');
-    onValue(postersRef, (snapshot) => {
-      const data = snapshot.val();
-      const postersDiv = document.getElementById('posters');
-      postersDiv.innerHTML = '';
-      if (data) {
-        Object.entries(data).forEach(([uid, details]) => {
-          postersDiv.innerHTML += `
-            <div class="card">
-              <h3>${details.name} (${details.category})</h3>
-              <p><strong>Shop:</strong> ${details.shopName}</p>
-              <p><strong>Address:</strong> ${details.address}</p>
-              <p><strong>WhatsApp:</strong> ${details.whatsapp}</p>
-              <p><strong>Wallet:</strong> ₹${details.wallet}</p>
-            </div>`;
+    // Load posters
+    onValue(ref(db, "posters"), (snapshot) => {
+      postersDiv.innerHTML = "<h2 class='section-title'>🧰 Service Providers</h2>";
+      const posters = snapshot.val();
+      if (posters) {
+        Object.entries(posters).forEach(([uid, data]) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <h3>${data.name}</h3>
+            <p><b>Shop:</b> ${data.shopName}</p>
+            <p><b>Category:</b> ${data.category}</p>
+            <p><b>Wallet:</b> ₹${data.wallet || 0}</p>
+            <p><b>WhatsApp:</b> ${data.whatsapp}</p>
+            <button onclick="rechargeWallet('${uid}', ${data.wallet || 0})">Recharge ₹100</button>
+          `;
+          postersDiv.appendChild(card);
         });
-      } else {
-        postersDiv.innerHTML = "<p>No posters found.</p>";
       }
     });
 
-    // Requests
-    const requestsRef = ref(db, 'requests');
-    onValue(requestsRef, (snapshot) => {
-      const data = snapshot.val();
-      const requestsDiv = document.getElementById('requests');
-      requestsDiv.innerHTML = '';
-      if (data) {
-        Object.entries(data).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([reqId, details]) => {
-            let acceptedBy = '';
-            if (details.acceptedBy) {
-              acceptedBy = Object.entries(details.acceptedBy).map(([pid, info]) => {
-                return `<p>✅ Accepted By: ${info.name} (${info.whatsapp})</p>`;
-              }).join('');
-            }
-            requestsDiv.innerHTML += `
-              <div class="card">
-                <h3>${details.service}</h3>
-                <p><strong>Address:</strong> ${details.address}</p>
-                <p><strong>Pincode:</strong> ${details.pincode}</p>
-                <p><strong>User WhatsApp:</strong> ${details.whatsapp}</p>
-                ${acceptedBy}
-              </div>`;
+    // Load requests
+    onValue(ref(db, "requests"), (snapshot) => {
+      requestsDiv.innerHTML = "<h2 class='section-title'>📋 Service Requests</h2>";
+      const users = snapshot.val();
+      if (users) {
+        Object.entries(users).forEach(([userId, reqs]) => {
+          Object.entries(reqs).forEach(([reqId, req]) => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <h3>📌 ${req.service}</h3>
+              <p><b>Address:</b> ${req.address}</p>
+              <p><b>Pincode:</b> ${req.pincode}</p>
+              <p><b>WhatsApp:</b> ${req.whatsapp}</p>
+              <p><b>Accepted By:</b> ${req.acceptedBy ? Object.values(req.acceptedBy).map(p => p.name).join(", ") : "❌ None"}</p>
+            `;
+            requestsDiv.appendChild(card);
           });
         });
-      } else {
-        requestsDiv.innerHTML = "<p>No requests found.</p>";
       }
     });
 
-    // Recharge Requests
-    const rechargeRef = ref(db, 'rechargeRequests');
-    onValue(rechargeRef, (snapshot) => {
-      const data = snapshot.val();
-      const rechargesDiv = document.getElementById('recharges');
-      rechargesDiv.innerHTML = '';
-      if (data) {
-        Object.entries(data).forEach(([uid, details]) => {
-          rechargesDiv.innerHTML += `
-            <div class="card">
-              <h3>Recharge by ${uid}</h3>
-              <p><strong>WhatsApp:</strong> ${details.whatsapp}</p>
-              <p><strong>Status:</strong> ${details.status}</p>
-              <img src="${details.screenshot}" alt="Payment Proof" width="100%">
-            </div>`;
-        });
-      } else {
-        rechargesDiv.innerHTML = "<p>No recharge requests.</p>";
+    // Recharge wallet manually
+    window.rechargeWallet = (uid, currentBalance) => {
+      const confirmRecharge = confirm(`Recharge ₹100 to UID: ${uid}?`);
+      if (confirmRecharge) {
+        const newBalance = (currentBalance || 0) + 100;
+        update(ref(db, `posters/${uid}`), { wallet: newBalance });
+        alert("✅ Recharged Successfully!");
       }
-    });
-
+    };
   </script>
 </body>
 </html>
