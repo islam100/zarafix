@@ -1,27 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 20px; }
-    h2 { text-align: center; }
-    .tabs button {
-      padding: 10px 15px;
-      margin: 5px;
+    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; padding: 10px; }
+    h2 { text-align: center; margin-top: 10px; }
+    .nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .nav button {
+      padding: 10px 20px;
       border: none;
-      border-radius: 8px;
-      background: #007bff;
+      background: linear-gradient(145deg, #6c63ff, #3f3dff);
       color: white;
       font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 2px 2px 5px #888;
     }
-    .section { display: none; margin-top: 20px; }
     .card {
       background: white;
       border-radius: 12px;
       padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 10px auto;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      max-width: 500px;
     }
     .led {
       width: 12px;
@@ -30,156 +32,146 @@
       display: inline-block;
       margin-right: 5px;
     }
-    .led-green { background: green; }
-    .led-red { background: red; }
-    button.action-btn {
-      margin-top: 10px;
-      background: #28a745;
-      color: white;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 6px;
-    }
-    button.delete-btn {
-      background: #dc3545;
-    }
+    .led.green { background: green; }
+    .led.red { background: red; }
+    .btn { padding: 6px 12px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-approve { background: #28a745; color: white; }
+    .btn-delete { background: #dc3545; color: white; }
   </style>
 </head>
 <body>
   <h2>ZaraFix Admin Dashboard</h2>
-
-  <div class="tabs" style="text-align:center">
-    <button onclick="showSection('recharge')">📋 Recharge Requests</button>
+  <div class="nav">
+    <button onclick="showSection('recharges')">📋 Recharge Requests</button>
     <button onclick="showSection('providers')">🧰 All Providers</button>
     <button onclick="showSection('requests')">📦 Service Requests</button>
   </div>
 
-  <div id="recharge" class="section"></div>
-  <div id="providers" class="section"></div>
-  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
+  <div id="providers" class="section" style="display:none;"></div>
+  <div id="requests" class="section" style="display:none;"></div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_MSG_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     function showSection(id) {
-      document.querySelectorAll(".section").forEach(div => div.style.display = "none");
-      document.getElementById(id).style.display = "block";
+      document.querySelectorAll('.section').forEach(div => div.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
 
-    function loadRechargeRequests() {
-      const container = document.getElementById('recharge');
-      container.innerHTML = '<h3>Recharge Requests</h3>';
-      db.ref('recharges').once('value', snapshot => {
-        snapshot.forEach(posterSnap => {
-          const posterId = posterSnap.key;
-          posterSnap.forEach(rechargeSnap => {
-            const recharge = rechargeSnap.val();
-            const approved = recharge.approved;
-            const led = `<span class="led ${approved ? 'led-green' : 'led-red'}"></span>`;
+    function loadRecharges() {
+      const container = document.getElementById('recharges');
+      container.innerHTML = '<h3>📋 Recharge Requests</h3>';
+      db.ref('recharges').once('value', snap => {
+        const data = snap.val();
+        if (!data) return container.innerHTML += '<p>No recharge requests found.</p>';
+        for (let posterId in data) {
+          for (let rechargeId in data[posterId]) {
+            const req = data[posterId][rechargeId];
+            const led = req.approved ? 'green' : 'red';
             container.innerHTML += `
               <div class="card">
-                ${led} <strong>${posterId}</strong><br>
-                <img src="${recharge.screenshotUrl}" width="100"><br>
-                Status: ${approved ? 'Approved' : 'Pending'}<br>
-                ${!approved ? `<button class="action-btn" onclick="approveRecharge('${posterId}', '${rechargeSnap.key}')">Approve</button>` : ''}
+                <span class="led ${led}"></span> <strong>${posterId}</strong><br>
+                <img src="${req.screenshotUrl}" width="100%"><br>
+                <button class="btn btn-approve" onclick="approveRecharge('${posterId}', '${rechargeId}')">Approve</button>
+                <button class="btn btn-delete" onclick="deleteRecharge('${posterId}', '${rechargeId}')">Delete</button>
               </div>
             `;
-          });
-        });
+          }
+        }
       });
     }
 
     function approveRecharge(posterId, rechargeId) {
-      db.ref(`recharges/${posterId}/${rechargeId}/approved`).set(true);
-      db.ref(`posters/${posterId}/wallet`).get().then(snap => {
-        const current = snap.val() || 0;
-        db.ref(`posters/${posterId}/wallet`).set(current + 100);
-        alert('Recharge Approved!');
-        loadRechargeRequests();
+      const ref = db.ref(`recharges/${posterId}/${rechargeId}`);
+      ref.update({ approved: true });
+      db.ref(`posters/${posterId}/wallet`).once('value', snap => {
+        let current = snap.val() || 0;
+        db.ref(`posters/${posterId}`).update({ wallet: current + 100 });
       });
+      alert("Recharge approved and ₹100 added.");
+      loadRecharges();
+    }
+
+    function deleteRecharge(posterId, rechargeId) {
+      db.ref(`recharges/${posterId}/${rechargeId}`).remove();
+      alert("Recharge deleted.");
+      loadRecharges();
     }
 
     function loadProviders() {
       const container = document.getElementById('providers');
-      container.innerHTML = '<h3>All Service Providers</h3>';
+      container.innerHTML = '<h3>🧰 All Service Providers</h3>';
       db.ref('posters').once('value', snap => {
-        snap.forEach(child => {
-          const p = child.val();
+        const data = snap.val();
+        if (!data) return container.innerHTML += '<p>No providers found.</p>';
+        for (let id in data) {
+          const p = data[id];
           container.innerHTML += `
             <div class="card">
-              <strong>${p.name}</strong><br>
-              Shop: ${p.shop}<br>
-              Category: ${p.category}<br>
-              WhatsApp: <a href="https://wa.me/91${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
-              Wallet: ₹${p.wallet}<br>
-              <button class="delete-btn action-btn" onclick="deleteProvider('${child.key}')">Delete</button>
-              <button class="action-btn" onclick="approveRechargeManually('${child.key}')">+ ₹100 Recharge</button>
+              <strong>Name:</strong> ${p.name}<br>
+              <strong>Shop:</strong> ${p.shop}<br>
+              <strong>Category:</strong> ${p.category}<br>
+              <strong>WhatsApp:</strong> ${p.whatsapp}<br>
+              <strong>Wallet:</strong> ₹${p.wallet}<br>
+              <button class="btn btn-approve" onclick="addRecharge('${id}')">+ ₹100 Recharge</button>
             </div>
           `;
-        });
+        }
       });
     }
 
-    function deleteProvider(uid) {
-      if (confirm("Delete this provider?")) {
-        db.ref(`posters/${uid}`).remove().then(() => {
-          alert('Deleted');
-          loadProviders();
-        });
-      }
-    }
-
-    function approveRechargeManually(posterId) {
-      db.ref(`posters/${posterId}/wallet`).get().then(snap => {
-        const current = snap.val() || 0;
-        db.ref(`posters/${posterId}/wallet`).set(current + 100).then(() => {
-          alert('Manually recharged ₹100');
-          loadProviders();
-        });
+    function addRecharge(posterId) {
+      db.ref(`posters/${posterId}/wallet`).once('value', snap => {
+        let current = snap.val() || 0;
+        db.ref(`posters/${posterId}`).update({ wallet: current + 100 });
+        alert("Wallet updated with ₹100.");
+        loadProviders();
       });
     }
 
-    function loadServiceRequests() {
+    function loadRequests() {
       const container = document.getElementById('requests');
-      container.innerHTML = '<h3>Service Requests</h3>';
-      db.ref('requests').once('value', snapshot => {
-        snapshot.forEach(userSnap => {
-          const userId = userSnap.key;
-          userSnap.forEach(reqSnap => {
-            const req = reqSnap.val();
-            const acceptedBy = req.acceptedBy ? Object.keys(req.acceptedBy).join(', ') : 'None';
+      container.innerHTML = '<h3>📦 Service Requests</h3>';
+      db.ref('requests').once('value', snap => {
+        const data = snap.val();
+        if (!data) return container.innerHTML += '<p>No requests found.</p>';
+        for (let userId in data) {
+          for (let requestId in data[userId]) {
+            const req = data[userId][requestId];
+            const accepted = req.acceptedBy ? Object.keys(req.acceptedBy).join(', ') : 'None';
             container.innerHTML += `
               <div class="card">
                 <strong>User ID:</strong> ${userId}<br>
                 <strong>Category:</strong> ${req.category}<br>
                 <strong>Description:</strong> ${req.description}<br>
-                <strong>Location:</strong> ${req.location || 'Not provided'}<br>
-                <strong>Accepted By:</strong> ${acceptedBy}
+                <strong>Accepted By:</strong> ${accepted}<br>
+                <strong>Location:</strong> ${req.location || 'N/A'}<br>
               </div>
             `;
-          });
-        });
+          }
+        }
       });
     }
 
-    // Load all on start
-    showSection('recharge');
-    loadRechargeRequests();
+    // Auto load all sections
+    loadRecharges();
     loadProviders();
-    loadServiceRequests();
+    loadRequests();
   </script>
 </body>
 </html>
