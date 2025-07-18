@@ -1,153 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 1rem;
-    }
-    h2 { text-align: center; }
-    button {
-      margin: 4px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      background: linear-gradient(to right, #4CAF50, #81C784);
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-      transition: transform 0.2s ease-in-out;
-    }
-    button:hover {
-      transform: scale(1.05);
-    }
-    .card {
-      background: white;
-      margin: 10px auto;
-      padding: 15px;
-      border-radius: 10px;
-      max-width: 400px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .led {
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 10px;
-      animation: blink 1s infinite;
-    }
-    .red { background: red; }
-    .green { background: green; }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    @media(max-width: 480px) {
-      .card {
-        width: 95%;
-      }
-    }
-  </style>
-</head>
-<body>
-
-<h2>👨‍💼 Admin Dashboard</h2>
-<div style="text-align: center;">
-  <button onclick="loadProviders()">🛠️ Load Providers</button>
-  <button onclick="loadPosterUsers()">🧾 Load Service Requests</button>
+<div class="p-4">
+  <h1 class="text-2xl font-bold mb-4">👨‍💼 Admin Dashboard</h1>
+  <div class="flex gap-2 mb-4">
+    <button id="loadProvidersBtn" class="bg-blue-500 text-white px-4 py-2 rounded-2xl shadow-lg active:scale-95">🛠️ Load Providers</button>
+    <button id="loadRequestsBtn" class="bg-green-500 text-white px-4 py-2 rounded-2xl shadow-lg active:scale-95">🧾 Load Service Requests</button>
+  </div>
+  
+  <div id="adminContent" class="grid gap-4"></div>
 </div>
 
-<div id="led-container" style="text-align:center; margin-top:10px;"></div>
-<div id="data-container"></div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-<script>
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "355030238130",
-    appId: "1:355030238130:web:5e18e6a729898e0b9795fd"
+    messagingSenderId: "67837243802",
+    appId: "1:67837243802:web:237aa662b4e5cf9ae29f49"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const container = document.getElementById("data-container");
-  const ledContainer = document.getElementById("led-container");
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-  function loadProviders() {
-    container.innerHTML = '';
-    ledContainer.innerHTML = '';
-    db.ref("providers").once("value", (snap) => {
-      let hasUnapproved = false;
-      snap.forEach(child => {
-        const data = child.val();
-        if (!data.approved) hasUnapproved = true;
-        renderCard(child.key, data, "providers");
-      });
-      if (hasUnapproved) ledContainer.innerHTML = '<span class="led red"></span> Unapproved Providers';
-    });
-  }
+  const adminContent = document.getElementById("adminContent");
+  const loadProvidersBtn = document.getElementById("loadProvidersBtn");
+  const loadRequestsBtn = document.getElementById("loadRequestsBtn");
 
-  function loadPosterUsers() {
-    container.innerHTML = '';
-    ledContainer.innerHTML = '';
-    db.ref("posterUsers").once("value", (snap) => {
-      let hasUnapproved = false;
-      snap.forEach(child => {
-        const data = child.val();
-        if (!data.approved) hasUnapproved = true;
-        renderCard(child.key, data, "posterUsers");
-      });
-      if (hasUnapproved) ledContainer.innerHTML = '<span class="led green"></span> Unapproved Service Requests';
-    });
-  }
-
-  function renderCard(id, data, path) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <h3>${data.shopname || "No Shop Name"}</h3>
-      <p><strong>Name:</strong> ${data.name}</p>
-      <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
-      <p><strong>Address:</strong> ${data.address}</p>
-      <p><strong>Category:</strong> ${data.category} / ${data.subcategory}</p>
-      <button onclick="approve('${path}', '${id}')">Approve</button>
-      <button onclick="reject('${path}', '${id}')">Reject</button>
-      <button onclick="remove('${path}', '${id}')">Delete</button>
+  function renderCard(key, data, type) {
+    return `
+      <div class="bg-white p-4 rounded-2xl shadow-xl border">
+        <h2 class="text-lg font-bold mb-2">${data.shopname || "No Shop Name"}</h2>
+        <p><strong>Name:</strong> ${data.name || "-"}</p>
+        <p><strong>WhatsApp:</strong> ${data.whatsapp || "-"}</p>
+        <p><strong>Address:</strong> ${data.address || "-"}</p>
+        <p><strong>Category:</strong> ${data.category || "-"} / ${data.subcategory || "-"}</p>
+        <div class="flex gap-2 mt-2">
+          ${data.approved === false ? `<button class="bg-green-500 text-white px-3 py-1 rounded" onclick="approve('${type}','${key}')">Approve</button>` : ""}
+          <button class="bg-yellow-500 text-white px-3 py-1 rounded" onclick="reject('${type}','${key}')">Reject</button>
+          <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="removeItem('${type}','${key}')">Delete</button>
+        </div>
+      </div>
     `;
-    container.appendChild(card);
   }
 
-  function approve(path, id) {
-    db.ref(`${path}/${id}`).update({ approved: true });
-    alert("Approved!");
-    location.reload();
-  }
+  window.approve = (path, key) => update(ref(db, `${path}/${key}`), { approved: true });
+  window.reject = (path, key) => update(ref(db, `${path}/${key}`), { approved: false });
+  window.removeItem = (path, key) => remove(ref(db, `${path}/${key}`));
 
-  function reject(path, id) {
-    db.ref(`${path}/${id}`).update({ approved: false });
-    alert("Rejected!");
-    location.reload();
-  }
+  loadProvidersBtn.onclick = () => {
+    adminContent.innerHTML = "<h2 class='font-bold text-lg'>🔄 Loading Providers...</h2>";
+    onValue(ref(db, "providers"), (snapshot) => {
+      adminContent.innerHTML = "<h2 class='text-xl font-bold mb-2'>Unapproved Providers</h2>";
+      snapshot.forEach((child) => {
+        const data = child.val();
+        if (data.approved === false) {
+          adminContent.innerHTML += renderCard(child.key, data, "providers");
+        }
+      });
+    });
+  };
 
-  function remove(path, id) {
-    db.ref(`${path}/${id}`).remove();
-    alert("Deleted!");
-    location.reload();
-  }
+  loadRequestsBtn.onclick = () => {
+    adminContent.innerHTML = "<h2 class='font-bold text-lg'>🔄 Loading Service Requests...</h2>";
+    onValue(ref(db, "serviceRequests"), (snapshot) => {
+      adminContent.innerHTML = "<h2 class='text-xl font-bold mb-2'>Unapproved Service Requests</h2>";
+      snapshot.forEach((child) => {
+        const data = child.val();
+        if (data.approved === false) {
+          adminContent.innerHTML += renderCard(child.key, data, "serviceRequests");
+        }
+      });
+    });
+  };
 </script>
-
-</body>
-</html>
