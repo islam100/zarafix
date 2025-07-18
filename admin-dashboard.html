@@ -4,74 +4,46 @@
   <title>🛠️ ZaraFix Admin - Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 10px;
-      background: linear-gradient(to bottom, #f0f4f8, #dce3ea);
+    body { font-family: Arial; margin: 0; background: #f2f2f2; padding: 10px; }
+    h2 { text-align: center; margin-top: 10px; }
+    .nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .nav button {
+      padding: 10px 20px; border: none; background: #1976d2; color: white;
+      border-radius: 8px; cursor: pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
-    h2 { text-align: center; }
+    .section { display: none; }
     .card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      margin: 15px auto;
-      padding: 15px;
-      max-width: 400px;
-      transition: transform 0.3s;
+      background: white; padding: 15px; border-radius: 10px;
+      margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .card:hover { transform: scale(1.02); }
-    .btn {
-      padding: 8px 16px;
-      margin: 5px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #28a745;
-      color: white;
+    button.action {
+      padding: 5px 10px; border: none; border-radius: 5px; margin: 5px;
+      background: #4caf50; color: white; cursor: pointer;
     }
-    .btn.delete { background: #dc3545; }
-    .btn.recharge { background: #007bff; }
-    .led {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-left: 10px;
+    button.delete {
+      background: #f44336;
     }
-    .led.green { background: green; }
-    .led.red { background: red; }
-    .section-title {
-      background: #007bff;
-      color: white;
-      padding: 8px;
-      border-radius: 6px;
-      text-align: center;
-      margin-top: 20px;
+    img.qr { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+    @media (max-width: 600px) {
+      .card { font-size: 14px; }
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <h2>🛠️ ZaraFix Admin - Posters</h2>
+  <div class="nav">
+    <button onclick="showSection('requests')">📦 Service Requests</button>
+    <button onclick="showSection('recharges')">📋 Recharge Requests</button>
+    <button onclick="showSection('providers')">🧰 All Providers</button>
+  </div>
 
-  <div class="section-title">📋 Recharge Requests</div>
-  <div id="rechargeRequests"></div>
+  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
+  <div id="providers" class="section"></div>
 
-  <div class="section-title">🧰 All Providers</div>
-  <div id="providers"></div>
-
-  <div class="section-title">📦 Service Requests</div>
-  <div id="requests"></div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      onValue,
-      update,
-      remove
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -82,105 +54,138 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const rechargeDiv = document.getElementById('rechargeRequests');
-    const providersDiv = document.getElementById('providers');
-    const requestsDiv = document.getElementById('requests');
-
-    function createCard(content) {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = content;
-      return div;
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
     }
 
-    // Recharge Requests
-    onValue(ref(db, "rechargeRequests"), (snapshot) => {
-      rechargeDiv.innerHTML = '';
-      snapshot.forEach(child => {
-        const data = child.val();
-        const id = child.key;
-        const html = `
-          <b>Name:</b> ${data.name || 'NA'}<br>
-          <b>WhatsApp:</b> ${data.whatsapp || 'NA'}<br>
-          <b>Recharge:</b> ₹100<br>
-          <b>Image:</b><br><img src="${data.screenshot}" style="max-width:100%;border-radius:8px;"><br>
-          <button class="btn" onclick="approveRecharge('${id}')">✅ Approve</button>
-          <button class="btn delete" onclick="deleteRecharge('${id}')">❌ Delete</button>
-        `;
-        rechargeDiv.appendChild(createCard(html));
-      });
-    });
-
-    // All Providers
-    onValue(ref(db, "posters"), (snapshot) => {
-      providersDiv.innerHTML = '';
-      snapshot.forEach(child => {
-        const data = child.val();
-        const id = child.key;
-        const html = `
-          <b>Name:</b> ${data.name}<br>
-          <b>Shop:</b> ${data.shopname}<br>
-          <b>Address:</b> ${data.address}, ${data.pincode}<br>
-          <b>Category:</b> ${data.category}<br>
-          <b>WhatsApp:</b> ${data.whatsapp}<br>
-          <b>Wallet:</b> ₹${data.wallet || 0}<br>
-          <button class="btn recharge" onclick="rechargeWallet('${id}', ${data.wallet || 0})">+ ₹100 Recharge</button>
-        `;
-        providersDiv.appendChild(createCard(html));
-      });
-    });
-
-    // Service Requests
-    onValue(ref(db, "requests"), (snapshot) => {
-      requestsDiv.innerHTML = '';
-      snapshot.forEach(userSnap => {
-        const userId = userSnap.key;
-        userSnap.forEach(reqSnap => {
-          const req = reqSnap.val();
-          const reqId = reqSnap.key;
-          const accepted = req.acceptedBy && req.acceptedBy.length > 0;
-          const html = `
-            <b>User ID:</b> ${userId}<br>
-            <b>Category:</b> ${req.category}<br>
-            <b>Description:</b> ${req.description}<br>
-            <b>Address:</b> ${req.address || ''}, ${req.pincode || ''}<br>
-            <b>Accepted By:</b> ${accepted ? req.acceptedBy : 'None'} 
-            <span class="led ${accepted ? 'green' : 'red'}"></span><br>
-            <button class="btn delete" onclick="deleteRequest('${userId}', '${reqId}')">🗑️ Delete</button>
-          `;
-          requestsDiv.appendChild(createCard(html));
+    function loadServiceRequests() {
+      const container = document.getElementById('requests');
+      container.innerHTML = '';
+      db.ref('requests').once('value', snap => {
+        const data = snap.val();
+        if (!data) {
+          container.innerHTML = '<p>No service requests.</p>';
+          return;
+        }
+        Object.entries(data).forEach(([userId, userRequests]) => {
+          Object.entries(userRequests).forEach(([reqId, req]) => {
+            const accepted = req.acceptedBy ? req.acceptedBy.split(',').filter(Boolean).length : 0;
+            const led = accepted === 0 ? '🟢' : '🔴';
+            const card = `
+              <div class="card">
+                <strong>${led} ${req.category}</strong><br>
+                <b>Description:</b> ${req.description}<br>
+                <b>Address:</b> ${req.address}, ${req.pincode}<br>
+                <b>Posted by:</b> ${userId}<br>
+                <b>Accepted By:</b> ${req.acceptedBy || 'None'}<br>
+                <button class="action delete" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+              </div>
+            `;
+            container.innerHTML += card;
+          });
         });
       });
-    });
+    }
 
-    // Global functions
-    window.approveRecharge = function(id) {
-      update(ref(db, "rechargeRequests/" + id), { approved: true });
-      update(ref(db, "posters/" + id), {
-        wallet: 100
+    function deleteRequest(userId, reqId) {
+      if (confirm('Delete this request?')) {
+        db.ref(`requests/${userId}/${reqId}`).remove();
+        loadServiceRequests();
+      }
+    }
+
+    function loadRechargeRequests() {
+      const container = document.getElementById('recharges');
+      container.innerHTML = '';
+      db.ref('rechargeRequests').once('value', snap => {
+        const data = snap.val();
+        if (!data) {
+          container.innerHTML = '<p>No recharge requests.</p>';
+          return;
+        }
+        Object.entries(data).forEach(([reqId, req]) => {
+          const card = `
+            <div class="card">
+              <b>User ID:</b> ${reqId}<br>
+              <b>WhatsApp:</b> ${req.whatsapp}<br>
+              <img src="${req.screenshot}" class="qr"><br>
+              <button class="action" onclick="approveRecharge('${reqId}')">Approve + ₹100</button>
+              <button class="action delete" onclick="deleteRecharge('${reqId}')">Delete</button>
+            </div>
+          `;
+          container.innerHTML += card;
+        });
       });
-      alert("Recharge Approved!");
-    };
+    }
 
-    window.deleteRecharge = function(id) {
-      remove(ref(db, "rechargeRequests/" + id));
-      alert("Recharge Deleted");
-    };
-
-    window.rechargeWallet = function(id, currentWallet) {
-      update(ref(db, "posters/" + id), {
-        wallet: currentWallet + 100
+    function approveRecharge(userId) {
+      const walletRef = db.ref(`posters/${userId}/wallet`);
+      walletRef.once('value', snap => {
+        const current = snap.val() || 0;
+        walletRef.set(current + 100);
+        db.ref(`rechargeRequests/${userId}`).remove();
+        loadRechargeRequests();
+        loadProviders();
       });
-      alert("Wallet updated");
-    };
+    }
 
-    window.deleteRequest = function(userId, reqId) {
-      remove(ref(db, "requests/" + userId + "/" + reqId));
-      alert("Request deleted");
-    };
+    function deleteRecharge(userId) {
+      db.ref(`rechargeRequests/${userId}`).remove();
+      loadRechargeRequests();
+    }
+
+    function loadProviders() {
+      const container = document.getElementById('providers');
+      container.innerHTML = '';
+      db.ref('posters').once('value', snap => {
+        const data = snap.val();
+        if (!data) {
+          container.innerHTML = '<p>No providers found.</p>';
+          return;
+        }
+        Object.entries(data).forEach(([uid, p]) => {
+          const card = `
+            <div class="card">
+              <b>Name:</b> ${p.name}<br>
+              <b>Shop:</b> ${p.shopname}<br>
+              <b>Category:</b> ${p.category}<br>
+              <b>WhatsApp:</b> ${p.whatsapp}<br>
+              <b>Address:</b> ${p.address}, ${p.pincode}<br>
+              <b>Wallet:</b> ₹${p.wallet || 0}<br>
+              <button class="action" onclick="manualRecharge('${uid}')">+ ₹100 Recharge</button>
+              <button class="action delete" onclick="deletePoster('${uid}')">Delete</button>
+            </div>
+          `;
+          container.innerHTML += card;
+        });
+      });
+    }
+
+    function manualRecharge(uid) {
+      const walletRef = db.ref(`posters/${uid}/wallet`);
+      walletRef.once('value', snap => {
+        const current = snap.val() || 0;
+        walletRef.set(current + 100);
+        loadProviders();
+      });
+    }
+
+    function deletePoster(uid) {
+      if (confirm('Delete this provider?')) {
+        db.ref(`posters/${uid}`).remove();
+        loadProviders();
+      }
+    }
+
+    // Initial Load
+    showSection('requests');
+    loadServiceRequests();
+    loadRechargeRequests();
+    loadProviders();
   </script>
 </body>
 </html>
