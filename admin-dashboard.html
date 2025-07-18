@@ -2,84 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-auth.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-    }
-    .btn {
-      margin: 5px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(to right, #4CAF50, #45A049);
-      color: white;
-      cursor: pointer;
-      box-shadow: 2px 2px 8px #888;
-    }
-    .btn:hover {
-      transform: scale(1.02);
-    }
     .card {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 2px 2px 10px #ccc;
-      margin: 15px auto;
-      padding: 15px;
-      max-width: 500px;
-      position: relative;
+      @apply bg-white rounded-xl shadow-md p-4 mb-4 transition-transform transform hover:scale-105;
     }
-    .led {
-      width: 15px;
-      height: 15px;
+    .led-red {
+      width: 10px;
+      height: 10px;
+      background-color: red;
       border-radius: 50%;
-      position: absolute;
-      top: 15px;
-      right: 15px;
       animation: blink 1s infinite;
     }
-    .red { background: red; }
-    .green { background: green; }
+    .led-green {
+      width: 10px;
+      height: 10px;
+      background-color: green;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
     @keyframes blink {
-      50% { opacity: 0.3; }
-    }
-    .actions button {
-      margin-right: 5px;
-      background: #2196F3;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-      box-shadow: 1px 1px 5px #999;
-    }
-    .actions button.reject {
-      background: #f44336;
-    }
-    .actions button.delete {
-      background: #9e9e9e;
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
   </style>
 </head>
-<body>
-  <h2>👨‍💼 Admin Dashboard</h2>
-  <div style="text-align:center;">
-    <button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
-    <button class="btn" onclick="loadPosterUsers()">🧾 Load Poster Users</button>
-  </div>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4 text-center">👨‍💼 Admin Dashboard</h1>
+    <div class="flex justify-center gap-4 mb-6">
+      <button onclick="loadProviders()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-full shadow-lg hover:bg-blue-700">🛠️ Load Providers</button>
+      <button onclick="loadPosterUsers()" class="bg-green-600 text-white font-bold px-4 py-2 rounded-full shadow-lg hover:bg-green-700">🧾 Load Poster Users</button>
+    </div>
 
-  <div id="providersSection"><h3>Providers</h3></div>
-  <div id="posterUsersSection"><h3>Poster Users</h3></div>
+    <div id="dataContainer"></div>
+  </div>
 
   <script>
     const firebaseConfig = {
@@ -88,96 +50,72 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "your-messaging-id",
-      appId: "your-app-id"
+      messagingSenderId: "",
+      appId: ""
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    function createCard(user, type, key) {
+      const ledClass = user.approved ? "led-green" : "led-red";
+      return `
+        <div class="card">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">${user.shopName || 'No Shop Name'}</h2>
+            <div class="${ledClass}"></div>
+          </div>
+          <p><strong>Name:</strong> ${user.name || 'N/A'}</p>
+          <p><strong>WhatsApp:</strong> ${user.whatsapp || 'N/A'}</p>
+          <p><strong>Address:</strong> ${user.address || 'N/A'}</p>
+          <p><strong>Category:</strong> ${user.category || 'N/A'} / ${user.subcategory || 'N/A'}</p>
+          <div class="mt-2 flex gap-2">
+            ${user.approved ? '' : `<button onclick="approveUser('${type}', '${key}')" class="bg-green-500 text-white px-3 py-1 rounded shadow">Approve</button>`}
+            <button onclick="rejectUser('${type}', '${key}')" class="bg-yellow-500 text-white px-3 py-1 rounded shadow">Reject</button>
+            <button onclick="deleteUser('${type}', '${key}')" class="bg-red-600 text-white px-3 py-1 rounded shadow">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
     function loadProviders() {
-      db.ref("providers").once("value", (snapshot) => {
-        const container = document.getElementById("providersSection");
-        container.innerHTML = "<h3>Providers</h3>";
-        if (!snapshot.exists()) return container.innerHTML += "<p>No providers found.</p>";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="led ${data.approved ? '' : 'red'}"></div>
-            <p>👤 <strong>${data.name}</strong></p>
-            <p>📱 WhatsApp: ${data.phone}</p>
-            <p>🏪 Shop: ${data.shop}</p>
-            <p>📍 Pincode: ${data.pincode}</p>
-            <p>📦 Category: ${data.category}</p>
-            <p>✅ Approved: ${data.approved ? "Yes" : "No"}</p>
-            <p>🕒 ${data.createdAt || ""}</p>
-            <div class="actions">
-              ${!data.approved ? `<button onclick="approveProvider('${child.key}')">Approve</button>` : ""}
-              <button class="delete" onclick="deleteProvider('${child.key}')">Delete</button>
-            </div>
-          `;
-          container.appendChild(card);
+      db.ref('serviceRequests').once('value', snapshot => {
+        const container = document.getElementById('dataContainer');
+        container.innerHTML = '';
+        snapshot.forEach(child => {
+          container.innerHTML += createCard(child.val(), 'serviceRequests', child.key);
         });
       });
     }
 
     function loadPosterUsers() {
-      db.ref("posterUsers").once("value", (snapshot) => {
-        const container = document.getElementById("posterUsersSection");
-        container.innerHTML = "<h3>Poster Users</h3>";
-        if (!snapshot.exists()) return container.innerHTML += "<p>No poster users found.</p>";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          const ledColor = !data.approved ? 'red' : (data.request && !data.accepted ? 'green' : '');
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="led ${ledColor}"></div>
-            <p>👤 <strong>${data.name}</strong></p>
-            <p>📱 WhatsApp: ${data.phone}</p>
-            <p>📍 Pincode: ${data.pincode}</p>
-            <p>✅ Approved: ${data.approved ? "Yes" : "No"}</p>
-            <p>🕒 ${data.createdAt || ""}</p>
-            <div class="actions">
-              ${!data.approved ? `<button onclick="approvePosterUser('${child.key}')">Approve</button>
-              <button class="reject" onclick="rejectPosterUser('${child.key}')">Reject</button>` : ""}
-              <button class="delete" onclick="deletePosterUser('${child.key}')">Delete</button>
-            </div>
-          `;
-          container.appendChild(card);
+      db.ref('posterUsers').once('value', snapshot => {
+        const container = document.getElementById('dataContainer');
+        container.innerHTML = '';
+        snapshot.forEach(child => {
+          container.innerHTML += createCard(child.val(), 'posterUsers', child.key);
         });
       });
     }
 
-    function approveProvider(key) {
-      db.ref("providers/" + key).update({ approved: true });
-      alert("Provider approved.");
-      loadProviders();
+    function approveUser(type, key) {
+      db.ref(`${type}/${key}`).update({ approved: true });
+      alert('Approved successfully');
+      if (type === 'serviceRequests') loadProviders();
+      else loadPosterUsers();
     }
 
-    function deleteProvider(key) {
-      db.ref("providers/" + key).remove();
-      alert("Provider deleted.");
-      loadProviders();
+    function rejectUser(type, key) {
+      db.ref(`${type}/${key}`).update({ approved: false });
+      alert('Rejected');
+      if (type === 'serviceRequests') loadProviders();
+      else loadPosterUsers();
     }
 
-    function approvePosterUser(key) {
-      db.ref("posterUsers/" + key).update({ approved: true });
-      alert("Poster User approved.");
-      loadPosterUsers();
-    }
-
-    function rejectPosterUser(key) {
-      db.ref("posterUsers/" + key).update({ approved: false });
-      alert("Poster User rejected.");
-      loadPosterUsers();
-    }
-
-    function deletePosterUser(key) {
-      db.ref("posterUsers/" + key).remove();
-      alert("Poster User deleted.");
-      loadPosterUsers();
+    function deleteUser(type, key) {
+      db.ref(`${type}/${key}`).remove();
+      alert('Deleted successfully');
+      if (type === 'serviceRequests') loadProviders();
+      else loadPosterUsers();
     }
   </script>
 </body>
