@@ -1,160 +1,173 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>💸 Recharge Requests - Admin Only</title>
+  <title>🧾 ZaraFix - Admin Recharge Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body {
-      font-family: Arial;
-      background: #f5f5f5;
-      padding: 10px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #f0f8ff, #ffffff);
+      margin: 0; padding: 20px;
     }
+    h2 { text-align: center; color: #222; }
+    #loginBtn { display: block; margin: auto; padding: 10px 20px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; }
     .card {
-      background: white;
-      margin-bottom: 15px;
-      border-radius: 12px;
-      padding: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      background: white; margin: 10px auto; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 12px; width: 95%; max-width: 600px; transition: transform 0.2s;
     }
-    .card h4 {
-      margin: 0 0 5px;
+    .card:hover { transform: scale(1.02); }
+    .actions button {
+      margin: 5px; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;
     }
-    .status {
-      font-weight: bold;
-      padding: 4px 10px;
-      border-radius: 6px;
-      display: inline-block;
+    .approve { background: #4CAF50; color: white; }
+    .delete { background: #f44336; color: white; }
+    .recharge { background: #2196F3; color: white; }
+    .status { font-weight: bold; }
+    .search-bar, .pagination {
+      text-align: center; margin: 15px 0;
     }
-    .approved { background: #c8e6c9; color: #2e7d32; }
-    .pending { background: #fff9c4; color: #f9a825; }
-    .btn {
-      padding: 6px 10px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn-approve { background: #4caf50; color: white; }
-    .btn-reject { background: #f44336; color: white; }
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    #pagination {
-      margin-top: 15px;
-      text-align: center;
-    }
-    #pagination button {
-      margin: 0 5px;
-      padding: 5px 10px;
-      font-weight: bold;
+    .pagination button {
+      margin: 0 5px; padding: 6px 10px; border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <h2>🔐 Admin Recharge Requests</h2>
-    <button onclick="logout()">Logout</button>
+  <h2>Admin Recharge Panel 🔋</h2>
+  <button id="loginBtn">Login with Google</button>
+  <div class="search-bar">
+    🔍 <input type="text" id="searchBox" placeholder="Search by name or date..." style="padding: 6px; width: 80%; max-width: 300px;">
   </div>
-  <div id="requests"></div>
-  <div id="pagination"></div>
+  <div id="rechargeList"></div>
+  <div class="pagination">
+    <button id="prevBtn">⬅️ Previous</button>
+    <span id="pageInfo"></span>
+    <button id="nextBtn">Next ➡️</button>
+  </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
+    const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // ✅ Replace with real admin UID
 
-  const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // ✅ your admin UID
+    const loginBtn = document.getElementById("loginBtn");
+    const rechargeList = document.getElementById("rechargeList");
+    const searchBox = document.getElementById("searchBox");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const pageInfo = document.getElementById("pageInfo");
 
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user || user.uid !== adminUID) {
-      alert("Admin only access");
-      window.location.href = "index.html";
-      return;
-    }
-    loadRequests();
-  });
+    let rechargeData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
-  function logout() {
-    firebase.auth().signOut().then(() => {
-      window.location.href = "index.html";
+    loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
     });
-  }
 
-  let allRequests = [];
-  let currentPage = 1;
-  const perPage = 10;
+    auth.onAuthStateChanged(user => {
+      if (user && user.uid === adminUID) {
+        loginBtn.style.display = "none";
+        loadRechargeData();
+      } else if (user) {
+        alert("Access Denied: Not an Admin");
+        firebase.auth().signOut();
+      }
+    });
 
-  function loadRequests() {
-    firebase.database().ref("rechargeRequests").on("value", snapshot => {
-      allRequests = [];
-      snapshot.forEach(child => {
-        let data = child.val();
-        data.id = child.key;
-        allRequests.push(data);
+    function loadRechargeData() {
+      db.ref("rechargeRequests").on("value", snapshot => {
+        rechargeData = [];
+        snapshot.forEach(child => {
+          rechargeData.push({ key: child.key, ...child.val() });
+        });
+        applySearchAndRender();
       });
-      allRequests.sort((a,b) => b.timestamp - a.timestamp); // latest first
-      showPage(1);
-    });
-  }
-
-  function showPage(page) {
-    currentPage = page;
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const visible = allRequests.slice(start, end);
-
-    document.getElementById("requests").innerHTML = visible.map(r => `
-      <div class="card">
-        <h4>📍 User ID: ${r.userId}</h4>
-        <p>🗓️ Date: ${new Date(r.timestamp).toLocaleString()}</p>
-        <p>📞 WhatsApp: <a href="https://wa.me/${r.whatsapp}" target="_blank">${r.whatsapp}</a></p>
-        <p>🧾 Screenshot: <a href="${r.screenshot}" target="_blank">View</a></p>
-        <p>Status: <span class="status ${r.status === 'approved' ? 'approved' : 'pending'}">${r.status}</span></p>
-        ${r.status !== 'approved' ? `
-          <button class="btn btn-approve" onclick="approve('${r.id}')">✅ Approve</button>
-          <button class="btn btn-reject" onclick="reject('${r.id}')">❌ Reject</button>` : ''}
-      </div>
-    `).join("");
-
-    renderPagination();
-  }
-
-  function approve(id) {
-    firebase.database().ref("rechargeRequests/" + id).update({
-      status: "approved"
-    });
-    Swal.fire("Approved", "Recharge approved.", "success");
-  }
-
-  function reject(id) {
-    firebase.database().ref("rechargeRequests/" + id).remove();
-    Swal.fire("Rejected", "Recharge request deleted.", "info");
-  }
-
-  function renderPagination() {
-    let totalPages = Math.ceil(allRequests.length / perPage);
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-      html += `<button onclick="showPage(${i})" ${i === currentPage ? 'style="background:#2196f3;color:white;"' : ''}>${i}</button>`;
     }
-    document.getElementById("pagination").innerHTML = html;
-  }
-</script>
+
+    function applySearchAndRender() {
+      const searchTerm = searchBox.value.toLowerCase();
+      const filtered = rechargeData.filter(item =>
+        item.name?.toLowerCase().includes(searchTerm) ||
+        item.date?.toLowerCase().includes(searchTerm)
+      );
+      renderPage(filtered);
+    }
+
+    function renderPage(data) {
+      const start = (currentPage - 1) * itemsPerPage;
+      const pagedData = data.slice(start, start + itemsPerPage);
+      rechargeList.innerHTML = "";
+
+      if (pagedData.length === 0) {
+        rechargeList.innerHTML = "<p style='text-align:center;'>No recharge requests.</p>";
+        return;
+      }
+
+      pagedData.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <p><b>Name:</b> ${item.name || "N/A"}</p>
+          <p><b>WhatsApp:</b> <a href="https://wa.me/${item.whatsapp}" target="_blank">${item.whatsapp}</a></p>
+          <p><b>Date:</b> ${item.date || "N/A"}</p>
+          <p><b>Status:</b> <span class="status" style="color:${item.status ? "green" : "red"}">${item.status ? "Approved" : "Pending"}</span></p>
+          <p><img src="${item.image}" alt="screenshot" width="100%"></p>
+          <div class="actions">
+            <button class="approve" onclick="approveRecharge('${item.key}')">✔️ Approve</button>
+            <button class="delete" onclick="deleteRecharge('${item.key}')">🗑️ Delete</button>
+            <button class="recharge" onclick="alert('Manual recharge ₹100 to user ID: ${item.userId}')">💰 Recharge</button>
+          </div>
+        `;
+        rechargeList.appendChild(div);
+      });
+
+      const totalPages = Math.ceil(data.length / itemsPerPage);
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+    }
+
+    searchBox.addEventListener("input", () => {
+      currentPage = 1;
+      applySearchAndRender();
+    });
+
+    prevBtn.onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        applySearchAndRender();
+      }
+    };
+
+    nextBtn.onclick = () => {
+      currentPage++;
+      applySearchAndRender();
+    };
+
+    function approveRecharge(key) {
+      db.ref("rechargeRequests/" + key).update({ status: true });
+    }
+
+    function deleteRecharge(key) {
+      if (confirm("Are you sure you want to delete this recharge request?")) {
+        db.ref("rechargeRequests/" + key).remove();
+      }
+    }
+  </script>
 </body>
 </html>
