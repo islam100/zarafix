@@ -1,38 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>👨‍💼 Admin Dashboard</title>
+  <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
-    h2 { margin-top: 30px; }
-    .btn { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; }
-    .provider, .user { background: #fff; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .led { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-left: 5px; }
-    .led.green { background-color: green; }
-    .led.red { background-color: red; }
-    .section { margin-top: 40px; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h2 { background: #222; color: white; padding: 10px; }
+    .section { margin-bottom: 40px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
   </style>
 </head>
 <body>
 
-  <h1>👨‍💼 Admin Dashboard</h1>
-  <button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
-  <button class="btn" onclick="loadUsers()">👤 Load Users</button>
+  <h1>Admin Dashboard</h1>
 
-  <div class="section">
-    <h2>Providers</h2>
-    <div id="providerList">Click 'Load Providers'</div>
+  <div class="section" id="posterUsersSection">
+    <h2>Poster Users</h2>
+    <table id="posterUsersTable">
+      <thead>
+        <tr>
+          <th>Name</th><th>Shop</th><th>Whatsapp</th><th>Pincode</th><th>Category</th><th>Approved</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <div class="section">
-    <h2>Users</h2>
-    <div id="userList">Click 'Load Users'</div>
+  <div class="section" id="serviceRequestsSection">
+    <h2>Service Requests</h2>
+    <table id="serviceRequestsTable">
+      <thead>
+        <tr><th>Name</th><th>Address</th><th>Whatsapp</th><th>Category</th><th>Subcategory</th><th>Description</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <div class="section" id="rechargeRequestsSection">
+    <h2>Recharge Requests</h2>
+    <table id="rechargeRequestsTable">
+      <thead>
+        <tr><th>Name</th><th>Whatsapp</th><th>Amount</th><th>Status</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="walletsSection">
+    <h2>Wallet Balances</h2>
+    <table id="walletsTable">
+      <thead>
+        <tr><th>User ID</th><th>Balance</th><th>Transactions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="loginLogsSection">
+    <h2>Login Logs</h2>
+    <table id="loginLogsTable">
+      <thead>
+        <tr><th>User ID</th><th>Name</th><th>Whatsapp</th><th>Last Login</th><th>Method</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
     const firebaseConfig = {
@@ -41,83 +76,101 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "67732322470",
-      appId: "1:67732322470:web:55cf67a4fc9bc1e1b3f4fc"
+      messagingSenderId: "1055330634384",
+      appId: "1:1055330634384:web:4e0a33ddc81f5cc6c55fc4"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function loadProviders() {
-      const list = document.getElementById("providerList");
-      list.innerHTML = "Loading...";
-      db.ref("posterUsers").once("value", snapshot => {
-        if (!snapshot.exists()) return list.innerHTML = "No providers found.";
-        list.innerHTML = "";
-        snapshot.forEach(child => {
-          const data = child.val();
-          const approved = data.approved ? "Yes" : "No";
-          const ledColor = data.approved ? "green" : "red";
-          const div = document.createElement("div");
-          div.className = "provider";
-          div.innerHTML = `
-            👤 ${data.fullname || "No Name"}<br>
-            📱 WhatsApp: ${data.whatsapp || "N/A"}<br>
-            🏪 Shop: ${data.shopName || "N/A"}<br>
-            📍 Pincode: ${data.pincode || "N/A"}<br>
-            📦 Category: ${data.category || "N/A"}<br>
-            ✅ Approved: ${approved} <span class="led ${ledColor}"></span><br>
-            🕒 ${data.timestamp || "N/A"}<br><br>
-            <button class="btn" onclick="approveProvider('${child.key}')">✅ Approve</button>
-            <button class="btn" onclick="deleteProvider('${child.key}')">🗑️ Delete</button>
-          `;
-          list.appendChild(div);
-        });
+    function loadPosterUsers() {
+      db.ref('posterUsers').once('value', snap => {
+        const data = snap.val();
+        const table = document.querySelector('#posterUsersTable tbody');
+        table.innerHTML = '';
+        for (let uid in data) {
+          const u = data[uid];
+          table.innerHTML += `<tr>
+            <td>${u.name}</td>
+            <td>${u.shopname}</td>
+            <td>${u.whatsapp}</td>
+            <td>${u.pincode}</td>
+            <td>${u.category} - ${u.subcategory}</td>
+            <td>${u.approved}</td>
+          </tr>`;
+        }
       });
     }
 
-    function approveProvider(key) {
-      firebase.database().ref("posterUsers/" + key).update({ approved: true });
-      alert("Provider approved");
-      loadProviders();
-    }
-
-    function deleteProvider(key) {
-      if (confirm("Delete this provider?")) {
-        firebase.database().ref("posterUsers/" + key).remove();
-        alert("Deleted");
-        loadProviders();
-      }
-    }
-
-    function loadUsers() {
-      const list = document.getElementById("userList");
-      list.innerHTML = "Loading...";
-      db.ref("loginLogs").once("value", snapshot => {
-        if (!snapshot.exists()) return list.innerHTML = "No users found.";
-        list.innerHTML = "";
-        snapshot.forEach(child => {
-          const data = child.val();
-          const div = document.createElement("div");
-          div.className = "user";
-          div.innerHTML = `
-            👤 ${data.fullname || "No Name"}<br>
-            📱 WhatsApp: ${data.whatsapp || "N/A"}<br>
-            🎯 Pincode: ${data.pincode || "N/A"}<br>
-            🕒 ${data.timestamp || "N/A"}<br><br>
-            <button class="btn" onclick="deleteUser('${child.key}')">🗑️ Delete</button>
-          `;
-          list.appendChild(div);
-        });
+    function loadServiceRequests() {
+      db.ref('serviceRequests').once('value', snap => {
+        const data = snap.val();
+        const table = document.querySelector('#serviceRequestsTable tbody');
+        table.innerHTML = '';
+        for (let rid in data) {
+          const r = data[rid];
+          table.innerHTML += `<tr>
+            <td>${r.name}</td><td>${r.address}</td><td>${r.whatsapp}</td>
+            <td>${r.category}</td><td>${r.subcategory}</td><td>${r.description}</td>
+          </tr>`;
+        }
       });
     }
 
-    function deleteUser(key) {
-      if (confirm("Delete this user?")) {
-        firebase.database().ref("loginLogs/" + key).remove();
-        alert("Deleted");
-        loadUsers();
-      }
+    function loadRechargeRequests() {
+      db.ref('rechargeRequests').once('value', snap => {
+        const data = snap.val();
+        const table = document.querySelector('#rechargeRequestsTable tbody');
+        table.innerHTML = '';
+        for (let recid in data) {
+          const r = data[recid];
+          table.innerHTML += `<tr>
+            <td>${r.name}</td><td>${r.whatsapp}</td><td>${r.amount}</td><td>${r.status}</td>
+          </tr>`;
+        }
+      });
     }
+
+    function loadWallets() {
+      db.ref('wallets').once('value', snap => {
+        const data = snap.val();
+        const table = document.querySelector('#walletsTable tbody');
+        table.innerHTML = '';
+        for (let uid in data) {
+          const w = data[uid];
+          let txnList = '';
+          for (let tid in w.transactions) {
+            const t = w.transactions[tid];
+            txnList += `${t.type}: ₹${t.amount} (${t.status})<br>`;
+          }
+          table.innerHTML += `<tr>
+            <td>${uid}</td><td>₹${w.balance}</td><td>${txnList || '-'}</td>
+          </tr>`;
+        }
+      });
+    }
+
+    function loadLoginLogs() {
+      db.ref('loginLogs').once('value', snap => {
+        const data = snap.val();
+        const table = document.querySelector('#loginLogsTable tbody');
+        table.innerHTML = '';
+        for (let uid in data) {
+          const log = data[uid];
+          table.innerHTML += `<tr>
+            <td>${uid}</td><td>${log.name}</td><td>${log.whatsapp}</td>
+            <td>${log.lastLogin}</td><td>${log.method}</td>
+          </tr>`;
+        }
+      });
+    }
+
+    // Load All
+    loadPosterUsers();
+    loadServiceRequests();
+    loadRechargeRequests();
+    loadWallets();
+    loadLoginLogs();
   </script>
 </body>
 </html>
