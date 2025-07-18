@@ -1,78 +1,156 @@
-<div class="p-4">
-  <h1 class="text-2xl font-bold mb-4">👨‍💼 Admin Dashboard</h1>
-  <div class="flex gap-2 mb-4">
-    <button id="loadProvidersBtn" class="bg-blue-500 text-white px-4 py-2 rounded-2xl shadow-lg active:scale-95">🛠️ Load Providers</button>
-    <button id="loadRequestsBtn" class="bg-green-500 text-white px-4 py-2 rounded-2xl shadow-lg active:scale-95">🧾 Load Service Requests</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    .topbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin: 0 0 5px;
+      color: #333;
+    }
+    .card p {
+      margin: 4px 0;
+      color: #555;
+    }
+    .actions button {
+      margin-right: 10px;
+      background: #28a745;
+    }
+    .actions button.reject {
+      background: #dc3545;
+    }
+    .actions button.delete {
+      background: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button onclick="loadProviders()">🛠️ Load Providers</button>
+    <button onclick="loadRequests()">🧾 Load Service Requests</button>
   </div>
-  
-  <div id="adminContent" class="grid gap-4"></div>
-</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <div id="dataContainer"></div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "67837243802",
-    appId: "1:67837243802:web:237aa662b4e5cf9ae29f49"
-  };
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "384489978324",
+      appId: "1:384489978324:web:287ccbe98d9b63a9ec1dc1"
+    };
 
-  const adminContent = document.getElementById("adminContent");
-  const loadProvidersBtn = document.getElementById("loadProvidersBtn");
-  const loadRequestsBtn = document.getElementById("loadRequestsBtn");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const container = document.getElementById("dataContainer");
 
-  function renderCard(key, data, type) {
-    return `
-      <div class="bg-white p-4 rounded-2xl shadow-xl border">
-        <h2 class="text-lg font-bold mb-2">${data.shopname || "No Shop Name"}</h2>
-        <p><strong>Name:</strong> ${data.name || "-"}</p>
-        <p><strong>WhatsApp:</strong> ${data.whatsapp || "-"}</p>
-        <p><strong>Address:</strong> ${data.address || "-"}</p>
-        <p><strong>Category:</strong> ${data.category || "-"} / ${data.subcategory || "-"}</p>
-        <div class="flex gap-2 mt-2">
-          ${data.approved === false ? `<button class="bg-green-500 text-white px-3 py-1 rounded" onclick="approve('${type}','${key}')">Approve</button>` : ""}
-          <button class="bg-yellow-500 text-white px-3 py-1 rounded" onclick="reject('${type}','${key}')">Reject</button>
-          <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="removeItem('${type}','${key}')">Delete</button>
+    function createCard(user, type) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      if (type === "providers") {
+        card.innerHTML = `
+          <h3>👨‍💼 Provider</h3>
+          <p><strong>Shop Name:</strong> ${user.shopname || "-"}</p>
+        `;
+      } else {
+        card.innerHTML = `<h3>📥 Service Request</h3>`;
+      }
+
+      card.innerHTML += `
+        <p><strong>Name:</strong> ${user.name || "-"} </p>
+        <p><strong>WhatsApp:</strong> ${user.whatsapp || "-"}</p>
+        <p><strong>Address:</strong> ${user.address || "-"}</p>
+        <p><strong>Category:</strong> ${user.category || "-"} / ${user.subcategory || "-"}</p>
+        <p><strong>Pincode:</strong> ${user.pincode || "-"}</p>
+        <p><strong>Status:</strong> ${user.status || "unapproved"}</p>
+        <div class="actions">
+          <button onclick="updateStatus('${type}', '${user.id}', 'approved')">Approve</button>
+          <button class="reject" onclick="updateStatus('${type}', '${user.id}', 'rejected')">Reject</button>
+          <button class="delete" onclick="deleteUser('${type}', '${user.id}')">Delete</button>
         </div>
-      </div>
-    `;
-  }
+      `;
+      container.appendChild(card);
+    }
 
-  window.approve = (path, key) => update(ref(db, `${path}/${key}`), { approved: true });
-  window.reject = (path, key) => update(ref(db, `${path}/${key}`), { approved: false });
-  window.removeItem = (path, key) => remove(ref(db, `${path}/${key}`));
-
-  loadProvidersBtn.onclick = () => {
-    adminContent.innerHTML = "<h2 class='font-bold text-lg'>🔄 Loading Providers...</h2>";
-    onValue(ref(db, "providers"), (snapshot) => {
-      adminContent.innerHTML = "<h2 class='text-xl font-bold mb-2'>Unapproved Providers</h2>";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        if (data.approved === false) {
-          adminContent.innerHTML += renderCard(child.key, data, "providers");
-        }
+    window.loadProviders = () => {
+      container.innerHTML = "";
+      const refUsers = ref(db, "providers/");
+      onValue(refUsers, (snapshot) => {
+        container.innerHTML = "";
+        snapshot.forEach((child) => {
+          const data = child.val();
+          data.id = child.key;
+          createCard(data, "providers");
+        });
       });
-    });
-  };
+    };
 
-  loadRequestsBtn.onclick = () => {
-    adminContent.innerHTML = "<h2 class='font-bold text-lg'>🔄 Loading Service Requests...</h2>";
-    onValue(ref(db, "serviceRequests"), (snapshot) => {
-      adminContent.innerHTML = "<h2 class='text-xl font-bold mb-2'>Unapproved Service Requests</h2>";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        if (data.approved === false) {
-          adminContent.innerHTML += renderCard(child.key, data, "serviceRequests");
-        }
+    window.loadRequests = () => {
+      container.innerHTML = "";
+      const refUsers = ref(db, "posterUsers/");
+      onValue(refUsers, (snapshot) => {
+        container.innerHTML = "";
+        snapshot.forEach((child) => {
+          const data = child.val();
+          data.id = child.key;
+          createCard(data, "posterUsers");
+        });
       });
-    });
-  };
-</script>
+    };
+
+    window.updateStatus = (type, id, newStatus) => {
+      const userRef = ref(db, `${type}/${id}`);
+      update(userRef, { status: newStatus });
+      alert("Status updated to " + newStatus);
+    };
+
+    window.deleteUser = (type, id) => {
+      const userRef = ref(db, `${type}/${id}`);
+      if (confirm("Are you sure you want to delete this entry?")) {
+        remove(userRef);
+        alert("User deleted");
+      }
+    };
+  </script>
+</body>
+</html>
