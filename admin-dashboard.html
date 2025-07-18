@@ -1,177 +1,151 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Admin Dashboard</title>
+  <title>🛠️ ZaraFix Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; padding: 10px; }
-    h2 { text-align: center; margin-top: 10px; }
-    .nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .nav button {
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 10px;
+    }
+    .tab {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .tab button {
       padding: 10px 20px;
-      border: none;
-      background: linear-gradient(145deg, #6c63ff, #3f3dff);
-      color: white;
       font-weight: bold;
-      border-radius: 10px;
+      border: none;
+      background: #1976d2;
+      color: white;
+      border-radius: 5px;
       cursor: pointer;
-      box-shadow: 2px 2px 5px #888;
+    }
+    .tab button.active {
+      background: #0d47a1;
     }
     .card {
       background: white;
-      border-radius: 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       padding: 15px;
-      margin: 10px auto;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      max-width: 500px;
+      margin-bottom: 15px;
     }
-    .led {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 5px;
+    .card img {
+      max-width: 100%;
+      border-radius: 10px;
     }
-    .led.green { background: green; }
-    .led.red { background: red; }
-    .btn { padding: 6px 12px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
-    .btn-approve { background: #28a745; color: white; }
-    .btn-delete { background: #dc3545; color: white; }
+    .approve-btn {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .wallet {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h2>ZaraFix Admin Dashboard</h2>
-  <div class="nav">
-    <button onclick="showSection('recharges')">📋 Recharge Requests</button>
-    <button onclick="showSection('providers')">🧰 All Providers</button>
-    <button onclick="showSection('requests')">📦 Service Requests</button>
-  </div>
 
-  <div id="recharges" class="section"></div>
-  <div id="providers" class="section" style="display:none;"></div>
-  <div id="requests" class="section" style="display:none;"></div>
+<div class="tab">
+  <button onclick="showTab('recharges')" class="active">📋 Recharge Requests</button>
+  <button onclick="showTab('providers')">🧰 All Providers</button>
+</div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<div id="recharges"></div>
+<div id="providers" style="display:none;"></div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getDatabase, ref, onValue, update
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    function showSection(id) {
-      document.querySelectorAll('.section').forEach(div => div.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
 
-    function loadRecharges() {
-      const container = document.getElementById('recharges');
-      container.innerHTML = '<h3>📋 Recharge Requests</h3>';
-      db.ref('recharges').once('value', snap => {
-        const data = snap.val();
-        if (!data) return container.innerHTML += '<p>No recharge requests found.</p>';
-        for (let posterId in data) {
-          for (let rechargeId in data[posterId]) {
-            const req = data[posterId][rechargeId];
-            const led = req.approved ? 'green' : 'red';
-            container.innerHTML += `
-              <div class="card">
-                <span class="led ${led}"></span> <strong>${posterId}</strong><br>
-                <img src="${req.screenshotUrl}" width="100%"><br>
-                <button class="btn btn-approve" onclick="approveRecharge('${posterId}', '${rechargeId}')">Approve</button>
-                <button class="btn btn-delete" onclick="deleteRecharge('${posterId}', '${rechargeId}')">Delete</button>
-              </div>
-            `;
-          }
-        }
-      });
-    }
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-    function approveRecharge(posterId, rechargeId) {
-      const ref = db.ref(`recharges/${posterId}/${rechargeId}`);
-      ref.update({ approved: true });
-      db.ref(`posters/${posterId}/wallet`).once('value', snap => {
-        let current = snap.val() || 0;
-        db.ref(`posters/${posterId}`).update({ wallet: current + 100 });
-      });
-      alert("Recharge approved and ₹100 added.");
-      loadRecharges();
-    }
+  const rechargeDiv = document.getElementById("recharges");
+  const providerDiv = document.getElementById("providers");
 
-    function deleteRecharge(posterId, rechargeId) {
-      db.ref(`recharges/${posterId}/${rechargeId}`).remove();
-      alert("Recharge deleted.");
-      loadRecharges();
-    }
+  function showTab(tabName) {
+    document.querySelectorAll('.tab button').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab button[onclick*="${tabName}"]`).classList.add('active');
+    rechargeDiv.style.display = tabName === 'recharges' ? 'block' : 'none';
+    providerDiv.style.display = tabName === 'providers' ? 'block' : 'none';
+  }
 
-    function loadProviders() {
-      const container = document.getElementById('providers');
-      container.innerHTML = '<h3>🧰 All Service Providers</h3>';
-      db.ref('posters').once('value', snap => {
-        const data = snap.val();
-        if (!data) return container.innerHTML += '<p>No providers found.</p>';
-        for (let id in data) {
-          const p = data[id];
-          container.innerHTML += `
-            <div class="card">
-              <strong>Name:</strong> ${p.name}<br>
-              <strong>Shop:</strong> ${p.shop}<br>
-              <strong>Category:</strong> ${p.category}<br>
-              <strong>WhatsApp:</strong> ${p.whatsapp}<br>
-              <strong>Wallet:</strong> ₹${p.wallet}<br>
-              <button class="btn btn-approve" onclick="addRecharge('${id}')">+ ₹100 Recharge</button>
-            </div>
+  // Load recharge requests
+  onValue(ref(db, 'recharges'), (snapshot) => {
+    rechargeDiv.innerHTML = '';
+    const data = snapshot.val();
+    if (data) {
+      Object.entries(data).forEach(([posterId, recharges]) => {
+        Object.entries(recharges).forEach(([rechargeId, recharge]) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h4>Poster ID: ${posterId}</h4>
+            <img src="${recharge.screenshotUrl}" alt="Payment Screenshot" />
+            <p>Approved: ${recharge.approved}</p>
+            ${recharge.approved ? '' : `<button class="approve-btn">✅ Approve ₹100</button>`}
           `;
-        }
-      });
-    }
-
-    function addRecharge(posterId) {
-      db.ref(`posters/${posterId}/wallet`).once('value', snap => {
-        let current = snap.val() || 0;
-        db.ref(`posters/${posterId}`).update({ wallet: current + 100 });
-        alert("Wallet updated with ₹100.");
-        loadProviders();
-      });
-    }
-
-    function loadRequests() {
-      const container = document.getElementById('requests');
-      container.innerHTML = '<h3>📦 Service Requests</h3>';
-      db.ref('requests').once('value', snap => {
-        const data = snap.val();
-        if (!data) return container.innerHTML += '<p>No requests found.</p>';
-        for (let userId in data) {
-          for (let requestId in data[userId]) {
-            const req = data[userId][requestId];
-            const accepted = req.acceptedBy ? Object.keys(req.acceptedBy).join(', ') : 'None';
-            container.innerHTML += `
-              <div class="card">
-                <strong>User ID:</strong> ${userId}<br>
-                <strong>Category:</strong> ${req.category}<br>
-                <strong>Description:</strong> ${req.description}<br>
-                <strong>Accepted By:</strong> ${accepted}<br>
-                <strong>Location:</strong> ${req.location || 'N/A'}<br>
-              </div>
-            `;
+          if (!recharge.approved) {
+            card.querySelector('.approve-btn').onclick = () => {
+              update(ref(db, `recharges/${posterId}/${rechargeId}`), { approved: true });
+              update(ref(db, `posters/${posterId}`), {
+                wallet: (data.wallet || 0) + 100
+              });
+              alert('Recharge approved and ₹100 added to wallet!');
+            };
           }
-        }
+          rechargeDiv.appendChild(card);
+        });
       });
+    } else {
+      rechargeDiv.innerHTML = '<p>No recharge requests found.</p>';
     }
+  });
 
-    // Auto load all sections
-    loadRecharges();
-    loadProviders();
-    loadRequests();
-  </script>
+  // Load all providers (posters)
+  onValue(ref(db, 'posters'), (snapshot) => {
+    providerDiv.innerHTML = '';
+    const data = snapshot.val();
+    if (data) {
+      Object.entries(data).forEach(([posterId, poster]) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h4>Name: ${poster.name}</h4>
+          <p>Shop: ${poster.shop || poster.shopname}</p>
+          <p>Category: ${poster.category}</p>
+          <p>WhatsApp: ${poster.whatsapp}</p>
+          <p class="wallet">Wallet: ₹${poster.wallet || 0}</p>
+        `;
+        providerDiv.appendChild(card);
+      });
+    } else {
+      providerDiv.innerHTML = '<p>No providers found.</p>';
+    }
+  });
+</script>
+
 </body>
 </html>
