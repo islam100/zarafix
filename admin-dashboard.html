@@ -6,53 +6,60 @@
   <style>
     body {
       font-family: Arial;
-      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #1a237e;
-    }
-    .card {
-      background: white;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      border-radius: 20px;
-      margin: 20px auto;
-      padding: 20px;
-      width: 90%;
-      max-width: 600px;
-      transition: transform 0.3s ease;
-    }
-    .card:hover {
-      transform: scale(1.02);
-    }
-    .section-title {
-      background: #3949ab;
-      color: white;
+      background: #f2f2f2;
       padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 10px;
     }
+
+    h2 {
+      text-align: center;
+    }
+
+    .card {
+      background: #fff;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+      max-width: 500px;
+      position: relative;
+    }
+
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+
+    .approved { background: green; }
+    .pending { background: red; }
+
     button {
-      background: #00c853;
-      color: white;
-      padding: 10px 20px;
+      padding: 8px 12px;
+      margin: 5px;
       border: none;
-      border-radius: 10px;
-      font-weight: bold;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
       cursor: pointer;
+    }
+
+    button.delete {
+      background: crimson;
     }
   </style>
 </head>
 <body>
-  <h1>🛠️ ZaraFix Admin Dashboard</h1>
-  <div id="posters"></div>
-  <div id="requests"></div>
+  <h2>👨‍🔧 Admin Dashboard</h2>
+  <div id="content"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase, ref, onValue, update, remove
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
@@ -67,60 +74,81 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const postersDiv = document.getElementById("posters");
-    const requestsDiv = document.getElementById("requests");
+    const content = document.getElementById("content");
 
-    // Load posters
-    onValue(ref(db, "posters"), (snapshot) => {
-      postersDiv.innerHTML = "<h2 class='section-title'>🧰 Service Providers</h2>";
+    // Load Recharge Requests
+    const rechargeRef = ref(db, "rechargeRequests");
+    onValue(rechargeRef, (snapshot) => {
+      content.innerHTML = "";
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(data).forEach((uid) => {
+          const req = data[uid];
+          const card = document.createElement("div");
+          card.className = "card";
+
+          const ledClass = req.status === "approved" ? "approved" : "pending";
+          card.innerHTML = `
+            <div class="led ${ledClass}"></div>
+            <h3>Recharge Request</h3>
+            <p><strong>UID:</strong> ${uid}</p>
+            <p><strong>WhatsApp:</strong> ${req.whatsapp}</p>
+            <img src="${req.screenshot}" width="100%" />
+            <p><strong>Status:</strong> ${req.status}</p>
+            <button onclick="approveRecharge('${uid}')">✅ Approve</button>
+            <button class="delete" onclick="deleteRecharge('${uid}')">🗑️ Delete</button>
+          `;
+          content.appendChild(card);
+        });
+      }
+    });
+
+    // Approve Recharge
+    window.approveRecharge = function(uid) {
+      const rechargeStatusRef = ref(db, `rechargeRequests/${uid}`);
+      update(rechargeStatusRef, { status: "approved" });
+
+      const walletRef = ref(db, `posters/${uid}/wallet`);
+      onValue(walletRef, (snap) => {
+        const current = snap.val() || 0;
+        update(ref(db, `posters/${uid}`), {
+          wallet: current + 100
+        });
+      }, { onlyOnce: true });
+    };
+
+    // Delete Recharge Request
+    window.deleteRecharge = function(uid) {
+      remove(ref(db, `rechargeRequests/${uid}`));
+    };
+
+    // Load Poster Approvals
+    const postersRef = ref(db, "posters");
+    onValue(postersRef, (snapshot) => {
       const posters = snapshot.val();
       if (posters) {
-        Object.entries(posters).forEach(([uid, data]) => {
+        Object.keys(posters).forEach((uid) => {
+          const p = posters[uid];
           const card = document.createElement("div");
           card.className = "card";
           card.innerHTML = `
-            <h3>${data.name}</h3>
-            <p><b>Shop:</b> ${data.shopName}</p>
-            <p><b>Category:</b> ${data.category}</p>
-            <p><b>Wallet:</b> ₹${data.wallet || 0}</p>
-            <p><b>WhatsApp:</b> ${data.whatsapp}</p>
-            <button onclick="rechargeWallet('${uid}', ${data.wallet || 0})">Recharge ₹100</button>
+            <div class="led approved"></div>
+            <h3>Service Provider</h3>
+            <p><strong>Name:</strong> ${p.name}</p>
+            <p><strong>Shop:</strong> ${p.shopName}</p>
+            <p><strong>WhatsApp:</strong> ${p.whatsapp}</p>
+            <p><strong>Category:</strong> ${p.category}</p>
+            <p><strong>Wallet:</strong> ₹${p.wallet || 0}</p>
+            <button class="delete" onclick="deletePoster('${uid}')">🗑️ Delete Poster</button>
           `;
-          postersDiv.appendChild(card);
+          content.appendChild(card);
         });
       }
     });
 
-    // Load requests
-    onValue(ref(db, "requests"), (snapshot) => {
-      requestsDiv.innerHTML = "<h2 class='section-title'>📋 Service Requests</h2>";
-      const users = snapshot.val();
-      if (users) {
-        Object.entries(users).forEach(([userId, reqs]) => {
-          Object.entries(reqs).forEach(([reqId, req]) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <h3>📌 ${req.service}</h3>
-              <p><b>Address:</b> ${req.address}</p>
-              <p><b>Pincode:</b> ${req.pincode}</p>
-              <p><b>WhatsApp:</b> ${req.whatsapp}</p>
-              <p><b>Accepted By:</b> ${req.acceptedBy ? Object.values(req.acceptedBy).map(p => p.name).join(", ") : "❌ None"}</p>
-            `;
-            requestsDiv.appendChild(card);
-          });
-        });
-      }
-    });
-
-    // Recharge wallet manually
-    window.rechargeWallet = (uid, currentBalance) => {
-      const confirmRecharge = confirm(`Recharge ₹100 to UID: ${uid}?`);
-      if (confirmRecharge) {
-        const newBalance = (currentBalance || 0) + 100;
-        update(ref(db, `posters/${uid}`), { wallet: newBalance });
-        alert("✅ Recharged Successfully!");
-      }
+    // Delete poster
+    window.deletePoster = function(uid) {
+      remove(ref(db, `posters/${uid}`));
     };
   </script>
 </body>
