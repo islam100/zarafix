@@ -3,191 +3,107 @@
 <head>
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 10px;
-      background-color: #f4f4f4;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    .btn-group {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    button {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(to right, #4facfe, #00f2fe);
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    }
-    .card {
-      background-color: white;
-      margin: 10px auto;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      max-width: 400px;
-    }
-    .tag {
-      font-size: 14px;
-      font-weight: bold;
-      padding: 5px 10px;
-      border-radius: 20px;
-      display: inline-block;
-      margin-bottom: 10px;
-    }
-    .user-tag {
-      background-color: #ffeb3b;
-      color: #333;
-    }
-    .provider-tag {
-      background-color: #2196f3;
-      color: white;
-    }
-    .led {
-      font-size: 18px;
-      margin-left: 5px;
-    }
-    .actions {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .actions button {
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
+    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    .btn { padding: 6px 12px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+    .approve { background: #28a745; color: white; }
+    .reject { background: #dc3545; color: white; }
+    .delete { background: #6c757d; color: white; }
+    .led { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .green { background-color: green; }
+    .red { background-color: red; }
+    .card { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
 
-<h2>🛠️ Admin Dashboard</h2>
+<h1>Admin Dashboard</h1>
+<button class="btn" onclick="loadUsers()">👤 Load Users</button>
+<button class="btn" onclick="loadProviders()">🛠️ Load Providers</button>
 
-<div class="btn-group">
-  <button onclick="loadUsers()">👤 Load Users</button>
-  <button onclick="loadProviders()">🏪 Load Providers</button>
-</div>
-
-<div id="dashboard"></div>
+<div id="userList"></div>
+<div id="providerList"></div>
 
 <script>
-  const users = [
-    {
-      type: "User",
-      name: "Ali Khan",
-      whatsapp: "9876543210",
-      time: "16/07/2025, 11:30:00"
-    },
-    {
-      type: "User",
-      name: "Rehana Shaikh",
-      whatsapp: "9876501234",
-      time: "16/07/2025, 12:15:00"
-    }
-  ];
-
-  const providers = [
-    {
-      type: "Provider",
-      name: "Ali Khan",
-      whatsapp: "9876543210",
-      shop: "Ali Cloth Store",
-      pincode: "400001",
-      category: "Clothing / Men",
-      approved: false,
-      time: "16/07/2025, 11:30:00"
-    },
-    {
-      type: "Provider",
-      name: "Rohit Sharma",
-      whatsapp: "9123456780",
-      shop: "Rohit Electronics",
-      pincode: "110001",
-      category: "Electronics / TV",
-      approved: true,
-      time: "16/07/2025, 11:45:00"
-    }
-  ];
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "1081192536486",
+    appId: "1:1081192536486:web:bcbb8d0c157e5b7d83c451"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
   function loadUsers() {
-    const dash = document.getElementById("dashboard");
-    dash.innerHTML = "";
-    if (users.length === 0) {
-      dash.innerHTML = "<p>No users found.</p>";
-      return;
-    }
-
-    users.forEach(user => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <div class="tag user-tag">👤 User</div>
-        <b>👤 ${user.name}</b><br>
-        📱 WhatsApp: ${user.whatsapp}<br>
-        🕒 ${user.time}
-        <div class="actions">
-          <button onclick="deleteEntry('${user.name}', 'User')">🗑️ Delete</button>
-        </div>
-      `;
-      dash.appendChild(card);
+    document.getElementById('userList').innerHTML = "<h2>Users</h2>";
+    db.ref("posterUsers").once("value", snap => {
+      if (!snap.exists()) {
+        document.getElementById('userList').innerHTML += "No users found.";
+        return;
+      }
+      snap.forEach(child => {
+        const u = child.val();
+        document.getElementById('userList').innerHTML += `
+          <div class="card">
+            <strong>👤 ${u.name}</strong><br>
+            📱 WhatsApp: ${u.whatsapp}<br>
+            🗑️ <button class="btn delete" onclick="deleteUser('${child.key}')">Delete</button>
+          </div>`;
+      });
     });
   }
 
   function loadProviders() {
-    const dash = document.getElementById("dashboard");
-    dash.innerHTML = "";
-    if (providers.length === 0) {
-      dash.innerHTML = "<p>No providers found.</p>";
-      return;
-    }
-
-    providers.forEach((provider, index) => {
-      const card = document.createElement("div");
-      card.className = "card";
-      const led = provider.approved ? '🟢' : '🔴';
-      const btnText = provider.approved ? '❌ Disapprove' : '✅ Approve';
-      card.innerHTML = `
-        <div class="tag provider-tag">🏪 Provider ${led}</div>
-        <b>👤 ${provider.name}</b><br>
-        📱 WhatsApp: ${provider.whatsapp}<br>
-        🏪 Shop: ${provider.shop}<br>
-        📍 Pincode: ${provider.pincode}<br>
-        📦 Category: ${provider.category}<br>
-        ✅ Approved: ${provider.approved ? 'Yes' : 'No'}<br>
-        🕒 ${provider.time}
-        <div class="actions">
-          <button onclick="toggleApprove(${index})">${btnText}</button>
-          <button onclick="deleteEntry('${provider.name}', 'Provider')">🗑️ Delete</button>
-        </div>
-      `;
-      dash.appendChild(card);
+    document.getElementById('providerList').innerHTML = "<h2>Providers</h2>";
+    db.ref("serviceRequests").once("value", snap => {
+      if (!snap.exists()) {
+        document.getElementById('providerList').innerHTML += "No providers found.";
+        return;
+      }
+      snap.forEach(child => {
+        const p = child.val();
+        const approved = p.approved === true;
+        const led = approved ? "green" : "red";
+        const label = approved ? "Yes" : "No";
+        const timestamp = new Date(p.timestamp || Date.now()).toLocaleString();
+        document.getElementById('providerList').innerHTML += `
+          <div class="card">
+            <span class="led ${led}"></span> <strong>${p.name}</strong><br>
+            📱 WhatsApp: ${p.whatsapp}<br>
+            🏪 Shop: ${p.shopName}<br>
+            📍 Pincode: ${p.pincode}<br>
+            📦 Category: ${p.category}<br>
+            ✅ Approved: ${label}<br>
+            🕒 ${timestamp}<br>
+            <button class="btn approve" onclick="approveProvider('${child.key}', true)">Approve</button>
+            <button class="btn reject" onclick="approveProvider('${child.key}', false)">Reject</button>
+            <button class="btn delete" onclick="deleteProvider('${child.key}')">Delete</button>
+          </div>`;
+      });
     });
   }
 
-  function toggleApprove(index) {
-    providers[index].approved = !providers[index].approved;
+  function approveProvider(id, val) {
+    db.ref("serviceRequests/" + id).update({ approved: val });
     loadProviders();
   }
 
-  function deleteEntry(name, type) {
-    if (type === "User") {
-      const index = users.findIndex(u => u.name === name);
-      if (index > -1) users.splice(index, 1);
+  function deleteUser(id) {
+    if (confirm("Delete this user?")) {
+      db.ref("posterUsers/" + id).remove();
       loadUsers();
-    } else {
-      const index = providers.findIndex(p => p.name === name);
-      if (index > -1) providers.splice(index, 1);
+    }
+  }
+
+  function deleteProvider(id) {
+    if (confirm("Delete this provider?")) {
+      db.ref("serviceRequests/" + id).remove();
       loadProviders();
     }
   }
