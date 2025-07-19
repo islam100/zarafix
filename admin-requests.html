@@ -1,71 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 ZaraFix - Admin Service Requests</title>
+  <title>🛠️ Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: sans-serif;
-      background: #eef2f3;
-      margin: 0;
-      padding: 10px;
-    }
+    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
+    h2 { text-align: center; }
     .card {
       background: white;
-      margin: 10px auto;
       padding: 15px;
-      max-width: 600px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-      border-radius: 20px;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: scale(1.01);
-    }
-    .approved { color: green; font-weight: bold; }
-    .not-approved { color: orange; font-weight: bold; }
-    button {
-      margin: 5px;
-      padding: 10px 14px;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-    }
-    .delete-btn { background: red; color: white; }
-    .approve-btn { background: #4caf50; color: white; }
-    .next-btn { background: #1976d2; color: white; }
-    .search-input {
-      width: 90%;
-      padding: 10px;
-      margin: 10px auto;
-      display: block;
-      font-size: 16px;
-    }
-    .login-btn {
-      display: block;
-      margin: 30px auto;
-      padding: 12px 20px;
-      font-size: 18px;
-      background: #4285f4;
-      color: white;
-      border-radius: 25px;
-      border: none;
-      cursor: pointer;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
   <h2>🛠️ Admin - All Service Requests</h2>
-  <input id="search" class="search-input" placeholder="🔍 Search by name, address, phone..." />
-  <div id="cards"></div>
-  <button id="next" class="next-btn">Next 10 ▶</button>
-  <button id="loginBtn" class="login-btn" style="display:none;">Login with Google</button>
+  <div id="requestList"></div>
 
-  <!-- Firebase Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -79,111 +35,31 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // Replace with your Admin UID
+    const requestList = document.getElementById('requestList');
 
-    const cardsDiv = document.getElementById("cards");
-    const loginBtn = document.getElementById("loginBtn");
-    const nextBtn = document.getElementById("next");
-    const searchInput = document.getElementById("search");
-
-    let allRequests = [];
-    let currentIndex = 0;
-
-    auth.onAuthStateChanged(user => {
-      if (user && user.uid === adminUID) {
-        loginBtn.style.display = "none";
-        loadRequests();
-      } else if (!user) {
-        loginBtn.style.display = "block";
-        cardsDiv.innerHTML = "<p style='text-align:center;'>Please login as Admin to view service requests.</p>";
-      } else {
-        cardsDiv.innerHTML = "<p style='color:red;text-align:center;'>Access denied. Admin only.</p>";
+    db.ref('serviceRequests').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        requestList.innerHTML = "<p>No service requests found.</p>";
+        return;
       }
-    });
 
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    };
-
-    function loadRequests() {
-      db.ref("requests").once("value", snap => {
-        const data = snap.val();
-        allRequests = [];
-
-        for (let userId in data) {
-          for (let key in data[userId]) {
-            const req = data[userId][key];
-            allRequests.push({ ...req, key, userId });
-          }
-        }
-
-        // Sort by date (descending)
-        allRequests.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-        renderCards();
-      });
-    }
-
-    function renderCards() {
-      const filtered = allRequests.filter(r => {
-        const q = searchInput.value.toLowerCase();
-        return (
-          r.name?.toLowerCase().includes(q) ||
-          r.address?.toLowerCase().includes(q) ||
-          r.whatsapp?.toLowerCase().includes(q) ||
-          r.category?.toLowerCase().includes(q) ||
-          r.subcategory?.toLowerCase().includes(q)
-        );
-      });
-
-      const chunk = filtered.slice(currentIndex, currentIndex + 10);
-      cardsDiv.innerHTML = "";
-
-      chunk.forEach(r => {
-        const div = document.createElement("div");
-        div.className = "card";
+      snapshot.forEach(child => {
+        const data = child.val();
+        const div = document.createElement('div');
+        div.className = 'card';
         div.innerHTML = `
-          <b>📛 Name:</b> ${r.name || ""}<br>
-          <b>📍 Address:</b> ${r.address || ""}<br>
-          <b>📞 WhatsApp:</b> ${r.whatsapp || ""}<br>
-          <b>🔧 Category:</b> ${r.category || ""}<br>
-          <b>📂 Subcategory:</b> ${r.subcategory || ""}<br>
-          <b>📅 Date:</b> ${r.date || "N/A"}<br>
-          <b>Status:</b> <span class="${r.approved ? 'approved' : 'not-approved'}">${r.approved ? "Approved" : "Pending"}</span><br>
-          <button class="approve-btn" onclick="approveRequest('${r.userId}','${r.key}')">Approve</button>
-          <button class="delete-btn" onclick="deleteRequest('${r.userId}','${r.key}')">Delete</button>
+          <b>नाम:</b> ${data.name}<br>
+          <b>फोन:</b> ${data.phone}<br>
+          <b>पता:</b> ${data.address}<br>
+          <b>विवरण:</b> ${data.description}<br>
+          <b>श्रेणी:</b> ${data.category} (${data.subcategory})<br>
+          <b>टाइम:</b> ${new Date(data.timestamp).toLocaleString()}
         `;
-        cardsDiv.appendChild(div);
+        requestList.appendChild(div);
       });
-    }
-
-    function approveRequest(userId, key) {
-      db.ref(`requests/${userId}/${key}`).update({ approved: true });
-      alert("✅ Approved");
-      loadRequests();
-    }
-
-    function deleteRequest(userId, key) {
-      if (confirm("Are you sure you want to delete this request?")) {
-        db.ref(`requests/${userId}/${key}`).remove();
-        alert("🗑️ Deleted");
-        loadRequests();
-      }
-    }
-
-    searchInput.addEventListener("input", () => {
-      currentIndex = 0;
-      renderCards();
     });
-
-    nextBtn.onclick = () => {
-      currentIndex += 10;
-      renderCards();
-    };
   </script>
 </body>
 </html>
