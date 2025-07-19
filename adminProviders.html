@@ -4,110 +4,128 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 20px; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; padding: 10px; }
     h2 { text-align: center; }
-    input { padding: 8px; width: 90%; margin: 10px auto; display: block; }
-    .poster-card {
+    .card {
       background: #fff;
+      margin: 10px auto;
       padding: 15px;
-      margin: 15px auto;
       border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       max-width: 500px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    .poster-card button {
+    button {
       margin: 5px;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border: none;
-      border-radius: 6px;
-      color: white;
+      border-radius: 5px;
       cursor: pointer;
     }
-    .approve-btn { background-color: green; }
-    .delete-btn { background-color: red; }
-    .status { font-weight: bold; }
+    .approve { background-color: green; color: white; }
+    .delete { background-color: red; color: white; }
+    .wallet-log, .recharge-log, .job-log { font-size: 14px; margin-top: 5px; background: #eef; padding: 5px; border-radius: 5px; }
   </style>
 </head>
 <body>
   <h2>🛠️ ZaraFix Admin Dashboard</h2>
-  <input type="text" id="searchBox" placeholder="Search by name, shop, category...">
   <div id="posterList"></div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, set, remove, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyD_RUU2PZtzauGfD7Z9SSRYHfJzlmK9FZg",
+      authDomain: "zarafix.firebaseapp.com",
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "356980956940",
+      appId: "1:356980956940:web:b21b93b789b1517e74e364"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const posterRef = ref(db, 'posterUsers');
 
-    const posterList = document.getElementById("posterList");
-    const searchBox = document.getElementById("searchBox");
+    get(posterRef).then(async (snapshot) => {
+      if (snapshot.exists()) {
+        const posters = snapshot.val();
+        const posterList = document.getElementById("posterList");
+        posterList.innerHTML = '';
 
-    function renderPosterCard(uid, data) {
-      const card = document.createElement("div");
-      card.className = "poster-card";
-      card.innerHTML = `
-        <div><b>Name:</b> ${data.name}</div>
-        <div><b>Shop:</b> ${data.shopname}</div>
-        <div><b>Category:</b> ${data.category} / ${data.subcategory}</div>
-        <div><b>WhatsApp:</b> ${data.whatsapp}</div>
-        <div><b>Approved:</b> <span class="status">${data.approved ? "✅ Yes" : "❌ No"}</span></div>
-        <button class="approve-btn">Approve</button>
-        <button class="delete-btn">Delete</button>
-      `;
+        for (const uid in posters) {
+          const p = posters[uid];
+          const card = document.createElement("div");
+          card.className = "card";
 
-      // Approve button
-      card.querySelector(".approve-btn").onclick = () => {
-        db.ref("posterUsers/" + uid).update({ approved: true });
-        alert("Approved!");
-      };
+          card.innerHTML = `
+            <b>${p.name}</b> (${p.shopname})<br>
+            ${p.category} - ${p.subcategory}<br>
+            📞 ${p.whatsapp}<br>
+            📍 ${p.address} (${p.pincode})<br>
+            ✅ Approved: <b>${p.approved}</b><br>
+            <button class="approve" onclick="updateApproval('${uid}', true)">Approve</button>
+            <button class="delete" onclick="updateApproval('${uid}', false)">Delete</button>
+            <div id="logs-${uid}"></div>
+          `;
+          posterList.appendChild(card);
 
-      // Delete button
-      card.querySelector(".delete-btn").onclick = () => {
-        if (confirm("Delete this poster?")) {
-          db.ref("posterUsers/" + uid).remove();
-          alert("Deleted!");
-        }
-      };
+          // Load recharge and deduction log
+          const logsContainer = card.querySelector(`#logs-${uid}`);
 
-      return card;
-    }
-
-    function loadPosters() {
-      db.ref("posterUsers").on("value", (snap) => {
-        const data = snap.val();
-        posterList.innerHTML = ""; // Clear before render
-        if (!data) {
-          posterList.innerHTML = "<p>No posters found.</p>";
-          return;
-        }
-        const query = searchBox.value.toLowerCase();
-        Object.entries(data).forEach(([uid, poster]) => {
-          const searchText = `${poster.name} ${poster.shopname} ${poster.category}`.toLowerCase();
-          if (searchText.includes(query)) {
-            const card = renderPosterCard(uid, poster);
-            posterList.appendChild(card);
+          // Recharge History
+          const rechargesSnap = await get(ref(db, `recharges/${uid}`));
+          if (rechargesSnap.exists()) {
+            logsContainer.innerHTML += `<div class='recharge-log'><b>Recharge History:</b><br>`;
+            const recharges = rechargesSnap.val();
+            for (const r in recharges) {
+              const d = recharges[r];
+              logsContainer.innerHTML += `📅 ${d.timestamp} ₹${d.amount} (${d.approved ? '✅' : '⏳'})<br>`;
+            }
+            logsContainer.innerHTML += `</div>`;
           }
-        });
-        if (!posterList.hasChildNodes()) {
-          posterList.innerHTML = "<p>No results match your search.</p>";
-        }
-      });
-    }
 
-    searchBox.addEventListener("input", loadPosters);
-    loadPosters(); // initial load
+          // ₹3 Daily Deduction
+          const walletLogSnap = await get(ref(db, `walletLogs/${uid}`));
+          if (walletLogSnap.exists()) {
+            logsContainer.innerHTML += `<div class='wallet-log'><b>₹3 Deduction Logs:</b><br>`;
+            const logs = walletLogSnap.val();
+            for (const l in logs) {
+              const log = logs[l];
+              if (log.amount == 3) {
+                logsContainer.innerHTML += `📅 ${log.date} - ₹3<br>`;
+              }
+            }
+            logsContainer.innerHTML += `</div>`;
+          }
+
+          // Job Accepted Log
+          const requestsSnap = await get(ref(db, `requests`));
+          let acceptedJobs = '';
+          if (requestsSnap.exists()) {
+            const allUsers = requestsSnap.val();
+            for (const userId in allUsers) {
+              const reqs = allUsers[userId];
+              for (const reqId in reqs) {
+                const req = reqs[reqId];
+                if (req.acceptedBy && req.acceptedBy[uid]) {
+                  acceptedJobs += `JobID: ${reqId} by User: ${userId}<br>`;
+                }
+              }
+            }
+          }
+          if (acceptedJobs) {
+            logsContainer.innerHTML += `<div class='job-log'><b>Accepted Jobs:</b><br>${acceptedJobs}</div>`;
+          }
+        }
+      }
+    });
+
+    window.updateApproval = function(uid, status) {
+      update(ref(db, `posterUsers/${uid}`), { approved: status });
+      alert('Updated! Please refresh.');
+    }
   </script>
 </body>
 </html>
