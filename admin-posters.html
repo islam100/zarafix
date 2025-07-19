@@ -1,57 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin - Posters</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      padding: 20px;
-    }
+    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
     .card {
-      background: white;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 12px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-      transition: 0.3s ease;
+      background: white; padding: 15px; margin: 10px 0;
+      border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .card:hover {
-      transform: scale(1.01);
+    button {
+      padding: 6px 12px; margin: 5px;
+      border: none; border-radius: 6px; cursor: pointer;
     }
-    .recharge-btn {
-      margin-top: 12px;
-      background: linear-gradient(to right, #43cea2, #185a9d);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-      transition: transform 0.2s ease;
-    }
-    .recharge-btn:hover {
-      transform: translateY(-2px);
-    }
-    .wallet-status {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #333;
-    }
+    .approve { background: green; color: white; }
+    .delete { background: red; color: white; }
   </style>
 </head>
 <body>
-  <h2>🛠️ All Posters (Service Providers)</h2>
-  <div id="posters"></div>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <div id="posterList">Loading...</div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -61,77 +34,46 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    function rechargeWallet(uid, statusId) {
-      const walletRef = db.ref("posters/" + uid + "/wallet");
-      walletRef.once("value").then(snap => {
-        const current = snap.val() || 0;
-        const updated = current + 100;
-        walletRef.set(updated).then(() => {
-          document.getElementById(statusId).innerText = `✅ Wallet: ₹${updated}`;
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const posterRef = ref(db, 'posterUsers');
+
+    const posterList = document.getElementById('posterList');
+
+    onValue(posterRef, (snapshot) => {
+      posterList.innerHTML = '';
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        Object.entries(data).forEach(([id, poster]) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <b>${poster.name}</b> (${poster.shopname})<br>
+            📍 ${poster.address}, ${poster.pincode}<br>
+            📱 ${poster.whatsapp}<br>
+            🛠️ ${poster.category} - ${poster.subcategory}<br>
+            ✅ Approved: ${poster.approved}<br>
+            <button class="approve">Approve</button>
+            <button class="delete">Delete</button>
+          `;
+
+          card.querySelector('.approve').onclick = () => {
+            update(ref(db, `posterUsers/${id}`), { approved: true });
+          };
+
+          card.querySelector('.delete').onclick = () => {
+            if (confirm("Delete this poster?")) {
+              remove(ref(db, `posterUsers/${id}`));
+            }
+          };
+
+          posterList.appendChild(card);
         });
-      });
-    }
-
-    db.ref("posters").once("value", snapshot => {
-      const postersDiv = document.getElementById("posters");
-
-      if (!snapshot.exists()) {
-        postersDiv.innerHTML = "<p>No posters found.</p>";
-        return;
+      } else {
+        posterList.innerHTML = 'No posters found.';
       }
-
-      snapshot.forEach(child => {
-        const data = child.val();
-        const uid = child.key;
-        const statusId = "wallet-" + uid;
-
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <b>${data.name || "No Name"}</b> (${data.category || "N/A"})<br>
-          📞 ${data.whatsapp || "Not Provided"}<br>
-          🏠 ${data.address || "No Address"}<br>
-          <div class="wallet-status" id="${statusId}">💼 Loading...</div>
-          <button class="recharge-btn" onclick="rechargeWallet('${uid}', '${statusId}')">💰 Recharge ₹100</button>
-        `;
-        postersDiv.appendChild(card);
-
-        // load wallet
-        db.ref("posters/" + uid + "/wallet").once("value").then(wSnap => {
-          const wallet = wSnap.val() || 0;
-          document.getElementById(statusId).innerText = `💼 Wallet: ₹${wallet}`;
-        });
-      });
     });
   </script>
-
-<body>
-  <button onclick="window.location.href='welcome.html'" style="
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 9999;
-    padding: 10px 16px;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: bold;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    cursor: pointer;
-  ">
-    🏠 Home
-  </button>
-
-
-
-
-
-
-  
 </body>
 </html>
