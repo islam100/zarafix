@@ -4,119 +4,110 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: linear-gradient(to bottom right, #f0f8ff, #e6ffe6);
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    input {
-      padding: 8px;
-      width: 100%;
-      max-width: 300px;
-      margin-bottom: 10px;
-    }
+    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 20px; }
+    h2 { text-align: center; }
+    input { padding: 8px; width: 90%; margin: 10px auto; display: block; }
     .poster-card {
-      background: white;
-      border-radius: 20px;
+      background: #fff;
       padding: 15px;
       margin: 15px auto;
+      border-radius: 10px;
       max-width: 500px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-      transform: scale(1);
-      transition: 0.2s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    .poster-card:hover {
-      transform: scale(1.02);
-    }
-    .btn {
+    .poster-card button {
       margin: 5px;
       padding: 8px 12px;
       border: none;
-      border-radius: 10px;
+      border-radius: 6px;
       color: white;
       cursor: pointer;
-      font-weight: bold;
     }
-    .approve-btn {
-      background-color: green;
-    }
-    .delete-btn {
-      background-color: red;
-    }
+    .approve-btn { background-color: green; }
+    .delete-btn { background-color: red; }
+    .status { font-weight: bold; }
   </style>
 </head>
 <body>
   <h2>🛠️ ZaraFix Admin Dashboard</h2>
-  <input type="text" id="searchInput" placeholder="Search by name, shop, category..." oninput="loadPosters()">
+  <input type="text" id="searchBox" placeholder="Search by name, shop, category...">
   <div id="posterList"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getDatabase, ref, get, update, remove
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
+  <script>
     const firebaseConfig = {
-      databaseURL: "https://zarafix-default-rtdb.firebaseio.com/"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    async function loadPosters() {
-      const posterRef = ref(db, 'posterUsers');
-      const snapshot = await get(posterRef);
-      const listDiv = document.getElementById('posterList');
-      const search = document.getElementById('searchInput').value.toLowerCase();
+    const posterList = document.getElementById("posterList");
+    const searchBox = document.getElementById("searchBox");
 
-      listDiv.innerHTML = '';
+    function renderPosterCard(uid, data) {
+      const card = document.createElement("div");
+      card.className = "poster-card";
+      card.innerHTML = `
+        <div><b>Name:</b> ${data.name}</div>
+        <div><b>Shop:</b> ${data.shopname}</div>
+        <div><b>Category:</b> ${data.category} / ${data.subcategory}</div>
+        <div><b>WhatsApp:</b> ${data.whatsapp}</div>
+        <div><b>Approved:</b> <span class="status">${data.approved ? "✅ Yes" : "❌ No"}</span></div>
+        <button class="approve-btn">Approve</button>
+        <button class="delete-btn">Delete</button>
+      `;
 
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        Object.entries(data).forEach(([posterId, info]) => {
-          const text = (info.name + info.shopname + info.category + info.whatsapp).toLowerCase();
-          if (text.includes(search)) {
-            const card = document.createElement('div');
-            card.className = 'poster-card';
-            card.innerHTML = `
-              <b>🧑‍🔧 ${info.name}</b><br>
-              📍 Shop: ${info.shopname}<br>
-              📞 WhatsApp: ${info.whatsapp}<br>
-              🏷️ Category: ${info.category} (${info.subcategory || ''})<br>
-              📬 Pincode: ${info.pincode}<br>
-              ✅ Approved: <b>${info.approved}</b><br><br>
-              <button class="btn approve-btn" onclick="approvePoster('${posterId}')">✅ Approve</button>
-              <button class="btn delete-btn" onclick="deletePoster('${posterId}')">🗑️ Delete</button>
-            `;
-            listDiv.appendChild(card);
+      // Approve button
+      card.querySelector(".approve-btn").onclick = () => {
+        db.ref("posterUsers/" + uid).update({ approved: true });
+        alert("Approved!");
+      };
+
+      // Delete button
+      card.querySelector(".delete-btn").onclick = () => {
+        if (confirm("Delete this poster?")) {
+          db.ref("posterUsers/" + uid).remove();
+          alert("Deleted!");
+        }
+      };
+
+      return card;
+    }
+
+    function loadPosters() {
+      db.ref("posterUsers").on("value", (snap) => {
+        const data = snap.val();
+        posterList.innerHTML = ""; // Clear before render
+        if (!data) {
+          posterList.innerHTML = "<p>No posters found.</p>";
+          return;
+        }
+        const query = searchBox.value.toLowerCase();
+        Object.entries(data).forEach(([uid, poster]) => {
+          const searchText = `${poster.name} ${poster.shopname} ${poster.category}`.toLowerCase();
+          if (searchText.includes(query)) {
+            const card = renderPosterCard(uid, poster);
+            posterList.appendChild(card);
           }
         });
-      } else {
-        listDiv.innerHTML = '<p>No posters found.</p>';
-      }
+        if (!posterList.hasChildNodes()) {
+          posterList.innerHTML = "<p>No results match your search.</p>";
+        }
+      });
     }
 
-    window.approvePoster = async function (id) {
-      await update(ref(db, 'posterUsers/' + id), { approved: true });
-      alert('Approved');
-      loadPosters();
-    }
-
-    window.deletePoster = async function (id) {
-      const confirmDelete = confirm('Delete this poster?');
-      if (confirmDelete) {
-        await remove(ref(db, 'posterUsers/' + id));
-        alert('Deleted');
-        loadPosters();
-      }
-    }
-
-    loadPosters();
+    searchBox.addEventListener("input", loadPosters);
+    loadPosters(); // initial load
   </script>
 </body>
 </html>
