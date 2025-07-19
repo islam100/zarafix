@@ -1,184 +1,187 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Poster Dashboard</title>
+  <title>🛠️ ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #f0f0f0; padding: 10px; margin: 0; }
-    .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      padding: 15px;
-      margin: 10px 0;
-      transition: transform 0.2s;
-    }
-    .card:hover { transform: scale(1.02); }
-    button {
-      background: #28a745; color: white; border: none;
-      padding: 10px 15px; border-radius: 10px;
-      margin-top: 10px; cursor: pointer;
-    }
-    button:hover { background: #218838; }
+    body { font-family: Arial; background: #f0f0f0; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
     .hidden { display: none; }
-    #wallet { font-weight: bold; margin-bottom: 10px; }
+    button { padding: 10px 20px; border: none; background: #2196F3; color: white; border-radius: 8px; margin: 10px 0; }
+    input, select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #ccc; }
+    .card { background: #fafafa; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 0 5px #ccc; }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div id="loginSection">
+      <h2>🔐 Please Login</h2>
+      <button onclick="loginWithGoogle()">Login with Google</button>
+    </div>
 
-<h3>🛠️ ZaraFix - Poster Dashboard</h3>
-<div id="wallet">💰 Wallet: ₹Loading...</div>
+    <div id="formSection" class="hidden">
+      <h2>📋 Poster Registration</h2>
+      <input id="name" placeholder="Full Name">
+      <input id="address" placeholder="Address">
+      <input id="pincode" placeholder="Pin Code">
+      <input id="whatsapp" placeholder="WhatsApp Number">
+      <input id="shopname" placeholder="Shop/Office Name">
+      <select id="category">
+        <option value="">Select Category</option>
+        <option>Electrician</option>
+        <option>Plumber</option>
+        <option>Cook</option>
+        <option>Clothing</option>
+      </select>
+      <select id="subcategory">
+        <option value="">Select Subcategory</option>
+        <option>Men</option>
+        <option>Women</option>
+        <option>Repair</option>
+        <option>Installation</option>
+      </select>
+      <button onclick="submitForm()">Submit</button>
+    </div>
 
-<div id="registerSection" class="card hidden">
-  <h3>Register as Service Provider</h3>
-  <input id="name" placeholder="Full Name"><br><br>
-  <input id="address" placeholder="Address"><br><br>
-  <input id="whatsapp" placeholder="WhatsApp Number"><br><br>
-  <input id="shop" placeholder="Shop/Office Name"><br><br>
-  <select id="category">
-    <option value="">Select Category</option>
-    <option value="Cook">Cook</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="AC Repair">AC Repair</option>
-    <option value="Carpenter">Carpenter</option>
-  </select><br><br>
-  <input id="subcategory" placeholder="Subcategory (optional)"><br><br>
-  <button onclick="submitRegistration()">Submit Registration</button>
-</div>
+    <div id="waitSection" class="hidden">
+      <h3>⏳ Please wait for approval...</h3>
+    </div>
 
-<div id="waitApproval" class="card hidden">⏳ Wait for admin approval...</div>
+    <div id="dashboardSection" class="hidden">
+      <h3>🎉 Welcome to Your Poster Dashboard</h3>
+      <div id="wallet">💰 Wallet: ₹Loading...</div>
+      <div id="jobList"></div>
+    </div>
+  </div>
 
-<div id="dashboard" class="hidden">
-  <h3>🎉 Welcome to Your Poster Dashboard</h3>
-  <div id="requestsList"></div>
-</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    let currentUser = null;
+    let userData = null;
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  let currentUser, userId, userData;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      userId = user.uid;
-      checkRegistration();
-    } else {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
-  });
-
-  function checkRegistration() {
-    db.ref('posters/' + userId).once('value', snap => {
-      if (snap.exists()) {
-        userData = snap.val();
-        if (userData.approved) {
-          document.getElementById('dashboard').classList.remove('hidden');
-          document.getElementById('registerSection').classList.add('hidden');
-          document.getElementById('waitApproval').classList.add('hidden');
-          showWallet();
-          loadRequests();
-        } else {
-          document.getElementById('waitApproval').classList.remove('hidden');
-          document.getElementById('registerSection').classList.add('hidden');
-        }
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        checkPosterRegistration();
       } else {
-        document.getElementById('registerSection').classList.remove('hidden');
+        document.getElementById('loginSection').classList.remove('hidden');
       }
     });
-  }
 
-  function submitRegistration() {
-    const name = document.getElementById('name').value;
-    const address = document.getElementById('address').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const shop = document.getElementById('shop').value;
-    const category = document.getElementById('category').value;
-    const subcategory = document.getElementById('subcategory').value;
-    const date = new Date().toLocaleDateString();
-
-    if (!name || !address || !whatsapp || !shop || !category) {
-      alert("Please fill all required fields.");
-      return;
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider);
     }
 
-    db.ref('posters/' + userId).set({
-      name, address, whatsapp, shop, category, subcategory,
-      date, wallet: 100, approved: false
-    });
+    function checkPosterRegistration() {
+      const ref = firebase.database().ref('posterUsers/' + currentUser.uid);
+      ref.once('value', snap => {
+        const data = snap.val();
+        if (data) {
+          userData = data;
+          if (data.approved) {
+            showDashboard();
+          } else {
+            document.getElementById('waitSection').classList.remove('hidden');
+          }
+        } else {
+          document.getElementById('formSection').classList.remove('hidden');
+        }
+      });
+    }
 
-    alert("Submitted. Wait for admin approval.");
-    document.getElementById('registerSection').classList.add('hidden');
-    document.getElementById('waitApproval').classList.remove('hidden');
-  }
+    function submitForm() {
+      const name = document.getElementById('name').value;
+      const address = document.getElementById('address').value;
+      const pincode = document.getElementById('pincode').value;
+      const whatsapp = document.getElementById('whatsapp').value;
+      const shopname = document.getElementById('shopname').value;
+      const category = document.getElementById('category').value;
+      const subcategory = document.getElementById('subcategory').value;
+      const date = new Date().toLocaleDateString('en-GB');
 
-  function showWallet() {
-    db.ref('posters/' + userId + '/wallet').on('value', snap => {
-      document.getElementById('wallet').innerText = `💰 Wallet: ₹${snap.val()}`;
-    });
-  }
+      const data = {
+        name, address, pincode, whatsapp, shopname,
+        category, subcategory, date,
+        approved: false,
+        wallet: 100
+      };
+      firebase.database().ref('posterUsers/' + currentUser.uid).set(data).then(() => {
+        document.getElementById('formSection').classList.add('hidden');
+        document.getElementById('waitSection').classList.remove('hidden');
+      });
+    }
 
-  function loadRequests() {
-    db.ref('requests').on('value', snap => {
-      const requestsList = document.getElementById('requestsList');
-      requestsList.innerHTML = '';
-      snap.forEach(userSnap => {
-        userSnap.forEach(reqSnap => {
-          const req = reqSnap.val();
-          const reqKey = reqSnap.key;
-          if (req.category === userData.category) {
-            const accepted = req.acceptedBy?.[userId];
-            const showWhatsapp = accepted === true;
+    function showDashboard() {
+      document.getElementById('dashboardSection').classList.remove('hidden');
+      loadWallet();
+      loadJobs();
+    }
 
+    function loadWallet() {
+      const ref = firebase.database().ref('posterUsers/' + currentUser.uid + '/wallet');
+      ref.on('value', snap => {
+        const amount = snap.val() || 0;
+        document.getElementById('wallet').innerText = '💰 Wallet: ₹' + amount;
+      });
+    }
+
+    function loadJobs() {
+      firebase.database().ref('requests').once('value', snap => {
+        const jobList = document.getElementById('jobList');
+        jobList.innerHTML = '';
+        snap.forEach(childSnap => {
+          const job = childSnap.val();
+          const key = childSnap.key;
+          if (job.category === userData.category) {
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-              🛠️ Repair Request (${req.category})<br><br>
-              👤 Name: ${req.name}<br>
-              📍 Address: ${req.address}<br>
-              📝 Issue: ${req.issue}<br>
-              📅 Requested On: ${req.date}<br><br>
-              ${showWhatsapp ? `<a href="https://wa.me/${req.whatsapp}" target="_blank">
-                <button>📱 WhatsApp</button></a>` :
-                `<button onclick="acceptJob('${userSnap.key}', '${reqKey}')">✅ Accept Job</button>`}
+              <b>🛠️ Repair Request (${job.category})</b><br>
+              👤 Name: ${job.name}<br>
+              📍 Address: ${job.address}<br>
+              📝 Issue: ${job.issue}<br>
+              📅 Requested On: ${job.date}<br>
+              <button onclick="acceptJob('${key}')">✅ Accept Job</button>
             `;
-            requestsList.appendChild(card);
+            jobList.appendChild(card);
           }
         });
       });
-    });
-  }
+    }
 
-  function acceptJob(ownerId, reqKey) {
-    const walletRef = db.ref('posters/' + userId + '/wallet');
-    walletRef.once('value', snap => {
-      let balance = snap.val() || 0;
-      if (balance >= 20) {
-        walletRef.set(balance - 20);
-        db.ref(`requests/${ownerId}/${reqKey}/acceptedBy/${userId}`).set(true);
-        alert("Job Accepted! WhatsApp will now be visible.");
-      } else {
-        alert("Insufficient wallet balance. Please recharge.");
-      }
-    });
-  }
-</script>
+    function acceptJob(jobId) {
+      const posterRef = firebase.database().ref('posterUsers/' + currentUser.uid + '/wallet');
+      posterRef.once('value').then(snap => {
+        let wallet = snap.val() || 0;
+        if (wallet >= 20) {
+          wallet -= 20;
+          posterRef.set(wallet);
+          firebase.database().ref('requests/' + jobId + '/acceptedBy/' + currentUser.uid).set({
+            name: userData.name,
+            whatsapp: userData.whatsapp,
+            shop: userData.shopname,
+            timestamp: new Date().toISOString()
+          });
+          alert("✅ Job Accepted!");
+        } else {
+          alert("❌ Not enough balance in wallet.");
+        }
+      });
+    }
+  </script>
 </body>
 </html>
