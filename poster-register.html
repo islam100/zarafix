@@ -1,87 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Service Provider</title>
+  <title>ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body style="font-family: Arial; padding: 10px; background: #f9f9f9;">
-  <h2>🧰 ZaraFix - Service Provider Dashboard</h2>
-  <div id="loginArea">
-    <button onclick="googleLogin()">🔐 Login with Google</button>
-  </div>
+<body style="font-family:sans-serif; background:#f0f0f0; padding:10px;">
 
-  <div id="registrationForm" style="display:none; margin-top:20px;">
-    <h3>📋 Registration</h3>
-    <input id="name" placeholder="Full Name"><br><br>
-    <input id="address" placeholder="Address"><br><br>
-    <input id="whatsapp" placeholder="WhatsApp Number"><br><br>
-    <input id="shop" placeholder="Shop/Office Name"><br><br>
-    <select id="category">
-      <option value="">Select Category</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Plumber">Plumber</option>
-      <option value="AC Repair">AC Repair</option>
-    </select><br><br>
-    <button onclick="submitRegistration()">✅ Submit</button>
-  </div>
+<h2>🛠️ ZaraFix - Poster Dashboard</h2>
+<div id="wallet">💰 Wallet: ₹Loading...</div>
+<div id="registrationForm" style="display:none;">
+  <h3>Register as Service Provider</h3>
+  <input id="name" placeholder="Name"><br>
+  <input id="address" placeholder="Address"><br>
+  <input id="whatsapp" placeholder="WhatsApp Number"><br>
+  <input id="shop" placeholder="Shop/Office Name"><br>
+  <select id="category">
+    <option value="">Select Category</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="AC Repair">AC Repair</option>
+    <option value="Carpenter">Carpenter</option>
+  </select><br><br>
+  <button onclick="submitRegistration()">Submit</button>
+</div>
 
-  <div id="waitApproval" style="display:none;">
-    <h3>⏳ Please wait for admin approval...</h3>
-  </div>
+<div id="waitApproval" style="display:none;">⏳ Please wait for admin approval...</div>
+<div id="jobsContainer" style="display:none;"></div>
 
-  <div id="dashboard" style="display:none;">
-    <h3>💼 Job Dashboard</h3>
-    <p id="walletDisplay">💰 Wallet: ₹Loading...</p>
-    <div id="jobsContainer"></div>
-  </div>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
-  };
+  apiKey: "   AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E     ",
+  authDomain: "   zara-fix.firebaseapp.com           ",
+  databaseURL: "   https://zara-fix-default-rtdb.firebaseio.com     ",
+  projectId: "  zara-fix  ",
+  storageBucket: "    zara-fix.appspot.com  ", // ✅ सही यह है
+  messagingSenderId: "   476473209200  ",
+  appId: "   1:476473209200:web:9f6efe6c32fd4248949fb5  "
+};
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  let user, posterUid, posterName, posterCategory;
+  let user, posterUid;
 
   auth.onAuthStateChanged(u => {
     if (u) {
       user = u;
       posterUid = user.uid;
-      checkPosterStatus();
-      document.getElementById('loginArea').style.display = 'none';
+      checkPoster();
+    } else {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
     }
   });
 
-  function googleLogin() {
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-  }
-
-  function checkPosterStatus() {
-    const refPath = 'posterUsers/' + posterUid;
+  function checkPoster() {
+    const refPath = `posterUsers/${posterUid}`;
     db.ref(refPath).once('value').then(snapshot => {
-      const data = snapshot.val();
-      if (!data) {
-        document.getElementById('registrationForm').style.display = 'block';
-      } else if (!data.approved) {
-        document.getElementById('waitApproval').style.display = 'block';
+      if (snapshot.exists()) {
+        const poster = snapshot.val();
+        if (!poster.approved) {
+          document.getElementById('waitApproval').style.display = 'block';
+        } else {
+          loadWallet();
+          showJobs(poster);
+        }
       } else {
-        posterName = data.name;
-        posterCategory = data.category;
-        document.getElementById('dashboard').style.display = 'block';
-        loadWallet();
-        loadJobs();
+        document.getElementById('registrationForm').style.display = 'block';
       }
     });
   }
@@ -90,76 +80,81 @@
     const name = document.getElementById('name').value;
     const address = document.getElementById('address').value;
     const whatsapp = document.getElementById('whatsapp').value;
-    const shop = document.getElementById('shop').value;
     const category = document.getElementById('category').value;
+    const shop = document.getElementById('shop').value;
 
-    const data = {
-      name, address, whatsapp, shop, category,
+    if (!name || !address || !whatsapp || !category || !shop) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    const newData = {
+      name, address, whatsapp, category, shop,
       approved: false,
-      date: new Date().toISOString(),
-      wallet: 100
+      wallet: 100,
+      timestamp: Date.now()
     };
-
-    db.ref('posterUsers/' + posterUid).set(data).then(() => {
-      alert('Submitted for approval.');
+    db.ref('posterUsers/' + posterUid).set(newData).then(() => {
       document.getElementById('registrationForm').style.display = 'none';
       document.getElementById('waitApproval').style.display = 'block';
     });
   }
 
   function loadWallet() {
-    db.ref('posterUsers/' + posterUid + '/wallet').on('value', snap => {
-      const balance = snap.val() ?? 0;
-      document.getElementById('walletDisplay').innerText = `💰 Wallet: ₹${balance}`;
+    const walletRef = db.ref('posterUsers/' + posterUid + '/wallet');
+    walletRef.on('value', snap => {
+      const bal = snap.val();
+      document.getElementById('wallet').innerText = `💰 Wallet: ₹${bal ?? 0}`;
     });
   }
 
-  function loadJobs() {
-    db.ref('serviceRequests').on('value', snap => {
-      const jobs = snap.val();
+  function showJobs(poster) {
+    document.getElementById('jobsContainer').style.display = 'block';
+    const jobsRef = db.ref('serviceRequests');
+    jobsRef.on('value', snapshot => {
+      const data = snapshot.val();
       const container = document.getElementById('jobsContainer');
       container.innerHTML = '';
 
-      for (let jobId in jobs) {
-        const job = jobs[jobId];
-        if (job.uid === posterUid) continue;
-        if (job.category !== posterCategory) continue;
-
+      for (let jobId in data) {
+        const job = data[jobId];
+        if (job.uid === posterUid || job.category !== poster.category) continue;
         const accepted = job.acceptedBy && job.acceptedBy[posterUid];
 
         const card = document.createElement('div');
-        card.style = 'padding:10px; margin:10px; border:1px solid #ccc; border-radius:10px; background:#fff;';
+        card.style = 'border:1px solid #ccc; margin:10px; padding:10px; background:#fff; border-radius:10px;';
         card.innerHTML = `
-          <h4>🔧 ${job.subcategory}</h4>
-          <p><b>Name:</b> ${job.name}</p>
-          <p><b>Address:</b> ${job.address}</p>
-          <p><b>Description:</b> ${job.description}</p>
-          <p><b>Date:</b> ${new Date(job.timestamp).toLocaleString()}</p>
-          ${accepted ? `<p>✅ Accepted | <a href="https://wa.me/91${job.phone}" target="_blank">📞 Chat</a></p>`
-            : `<button onclick="acceptJob('${jobId}', '${job.phone}')">✅ Accept Job (₹20)</button>`}
+          <h3>${job.subcategory || 'Repair Job'}</h3>
+          <p><strong>Name:</strong> ${job.name}</p>
+          <p><strong>Address:</strong> ${job.address}</p>
+          <p><strong>Issue:</strong> ${job.description}</p>
+          <p><strong>Requested:</strong> ${new Date(job.timestamp).toLocaleString()}</p>
+          ${accepted ? `<p><a href="https://wa.me/91${job.phone}" target="_blank">📞 Chat on WhatsApp</a></p>`
+                    : `<button onclick="acceptJob('${jobId}', '${job.phone}', '${poster.name}')">✅ Accept Job</button>`}
         `;
         container.appendChild(card);
       }
     });
   }
 
-  function acceptJob(jobId, phone) {
+  function acceptJob(jobId, phone, name) {
     const walletRef = db.ref('posterUsers/' + posterUid + '/wallet');
     walletRef.once('value').then(snap => {
-      const wallet = snap.val();
-      if (wallet < 20) {
-        alert("❌ Not enough wallet balance.");
+      const bal = snap.val();
+      if (bal < 20) {
+        alert("Insufficient wallet balance. Please recharge.");
         return;
       }
 
-      db.ref('serviceRequests/' + jobId + '/acceptedBy/' + posterUid).set({
-        name: posterName,
-        uid: posterUid,
-        timestamp: new Date().toISOString()
-      });
+      const updates = {};
+      updates[`serviceRequests/${jobId}/acceptedBy/${posterUid}`] = {
+        name, uid: posterUid, timestamp: Date.now()
+      };
+      updates[`posterUsers/${posterUid}/wallet`] = bal - 20;
 
-      walletRef.set(wallet - 20);
-      alert("✅ Job Accepted. ₹20 deducted.");
+      db.ref().update(updates).then(() => {
+        alert("Job accepted. ₹20 deducted.");
+      });
     });
   }
 </script>
