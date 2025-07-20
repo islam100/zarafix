@@ -1,141 +1,137 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ Service Request</title>
+  <title>Service Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 20px;
-      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      font-family: Arial;
+      background: #f9f9f9;
+      padding: 20px;
+      margin: 0;
     }
-    .container {
-      max-width: 500px;
-      margin: auto;
+    .card {
       background: #fff;
       padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      max-width: 500px;
+      margin: auto;
     }
-    h2 {
-      text-align: center;
-      color: #00796b;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    input, textarea, select {
+    input, textarea, select, button {
       width: 100%;
+      margin: 10px 0;
       padding: 10px;
-      margin-top: 5px;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
+      font-size: 16px;
     }
     button {
-      background: linear-gradient(to right, #00796b, #26a69a);
+      background: linear-gradient(to right, #00b09b, #96c93d);
       color: white;
-      padding: 12px;
-      width: 100%;
+      font-weight: bold;
+      cursor: pointer;
       border: none;
-      border-radius: 10px;
-      margin-top: 20px;
-      font-size: 16px;
       box-shadow: 0 5px 10px rgba(0,0,0,0.2);
-      transition: transform 0.2s ease;
-    }
-    button:hover {
-      transform: scale(1.05);
     }
     #loginBtn {
-      display: none;
-      background: #ff5722;
+      background: linear-gradient(to right, #f12711, #f5af19);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>📝 Service Request Form</h2>
-    <button id="loginBtn" onclick="window.location.href='index.html'">Login</button>
 
-    <form id="serviceForm">
-      <label>Category</label>
-      <select id="category" required>
-        <option value="">Select Category</option>
-        <option>Electrician</option>
-        <option>Plumber</option>
-        <option>AC Repair</option>
-        <option>Carpenter</option>
-        <option>Painter</option>
-        <option>Other</option>
-      </select>
+<div class="card">
+  <h2>🛠️ Service Request Form</h2>
 
-      <label>Problem Description</label>
-      <textarea id="description" required></textarea>
-
-      <label>WhatsApp Number</label>
-      <input type="tel" id="whatsapp" required placeholder="Enter WhatsApp Number">
-
-      <label>Address</label>
-      <input type="text" id="address" required>
-
-      <label>Pincode</label>
-      <input type="text" id="pincode" required maxlength="6">
-
-      <button type="submit">Submit Request</button>
-    </form>
+  <div id="loginSection">
+    <button id="loginBtn">Login with Google</button>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <div id="formSection" style="display:none;">
+    <input id="name" placeholder="Your Name" required />
+    <input id="category" placeholder="Service Category (e.g., Electrician)" required />
+    <textarea id="description" placeholder="Problem Description" required></textarea>
+    <input id="whatsapp" placeholder="WhatsApp Number" required />
+    <input id="address" placeholder="Your Address" required />
+    <button onclick="submitRequest()">Submit Request</button>
+  </div>
+</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyD5WwEFdXXXXXX",
+    authDomain: "zarafix.firebaseapp.com",
+    databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
+    projectId: "zarafix",
+    storageBucket: "zarafix.appspot.com",
+    messagingSenderId: "XXXXXX",
+    appId: "1:XXXXXX:web:XXXXXX"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const loginBtn = document.getElementById('loginBtn');
+  const loginSection = document.getElementById('loginSection');
+  const formSection = document.getElementById('formSection');
+
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  };
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginSection.style.display = "none";
+      formSection.style.display = "block";
+    }
+  });
+
+  function submitRequest() {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please login first.");
+      return;
+    }
+
+    const name = document.getElementById('name').value;
+    const category = document.getElementById('category').value;
+    const description = document.getElementById('description').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const address = document.getElementById('address').value;
+    const location = "AutoLocationPending";
+
+    const requestId = Date.now();
+
+    const data = {
+      name,
+      category,
+      description,
+      whatsapp,
+      address,
+      location,
+      timestamp: new Date().toISOString(),
+      acceptedBy: {}
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-
-    let userId = null;
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        userId = user.uid;
-        document.getElementById('loginBtn').style.display = 'none';
-      } else {
-        document.getElementById('loginBtn').style.display = 'block';
-        document.getElementById('serviceForm').style.display = 'none';
-      }
-    });
-
-    document.getElementById('serviceForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const data = {
-        category: document.getElementById('category').value,
-        description: document.getElementById('description').value,
-        whatsapp: document.getElementById('whatsapp').value,
-        address: document.getElementById('address').value,
-        pincode: document.getElementById('pincode').value,
-        timestamp: new Date().toISOString(),
-        acceptedBy: {}
-      };
-      db.ref('requests/' + userId).push(data).then(() => {
-        alert('Request submitted!');
-        document.getElementById('serviceForm').reset();
+    db.ref("requests/" + user.uid + "/" + requestId).set(data)
+      .then(() => {
+        alert("✅ Request submitted!");
+        document.getElementById("formSection").reset();
+      })
+      .catch(err => {
+        alert("❌ Error: " + err.message);
       });
-    });
-  </script>
+  }
+</script>
+
 </body>
 </html>
