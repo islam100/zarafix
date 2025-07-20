@@ -1,65 +1,152 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ Admin - All Service Requests</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
-    h2 { text-align: center; }
+    body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 10px; }
+    .notice-bar {
+      background: #ffeb3b;
+      padding: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .scrolling-text {
+      background: #4caf50;
+      color: white;
+      padding: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      animation: scroll 10s linear infinite;
+    }
+    @keyframes scroll {
+      0% { transform: translateX(100%) }
+      100% { transform: translateX(-100%) }
+    }
     .card {
       background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       padding: 15px;
       margin: 10px 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    h2 { margin-top: 30px; }
   </style>
 </head>
 <body>
-  <h2>🛠️ Admin - All Service Requests</h2>
-  <div id="requestList"></div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <div class="notice-bar" id="noticeBar">Loading notice...</div>
+  <div class="scrolling-text" id="scrollingText">Loading scrolling text...</div>
 
-  <script>
+  <h2>🧾 All Service Requests</h2>
+  <div id="requestsContainer"></div>
+
+  <h2>👨‍🔧 All Posters</h2>
+  <div id="postersContainer"></div>
+
+  <h2>💳 Recharge Requests</h2>
+  <div id="rechargesContainer"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase, ref, get, child
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth();
 
-    const requestList = document.getElementById('requestList');
+    const adminUIDs = [
+      "HWImQ3hvGudWwULmJI4KAT7EW172",
+      "wjbEIAEF5jWgJKb2LlfWoIv4EqO2",
+      "Li0VeawcpySIVD79XahnYPxIHw33"
+    ];
 
-    db.ref('serviceRequests').once('value', snapshot => {
-      if (!snapshot.exists()) {
-        requestList.innerHTML = "<p>No service requests found.</p>";
-        return;
+    onAuthStateChanged(auth, user => {
+      if (user && adminUIDs.includes(user.uid)) {
+        loadDashboard();
+      } else {
+        alert("Access Denied. Admins only.");
+        window.location.href = "index.html";
+      }
+    });
+
+    async function loadDashboard() {
+      const dbRef = ref(db);
+      const snapshot = await get(dbRef);
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.val();
+
+      // Show notices
+      document.getElementById("noticeBar").innerText = data.notices?.noticeText || "No Notice";
+      document.getElementById("scrollingText").innerText = data.notices?.scrollingText || "";
+
+      // Show all service requests
+      const requestsDiv = document.getElementById("requestsContainer");
+      for (const userId in data.requests) {
+        for (const requestId in data.requests[userId]) {
+          const req = data.requests[userId][requestId];
+          const acceptedByText = req.acceptedBy
+            ? Object.keys(req.acceptedBy).map(pid => {
+                const p = data.posters?.[pid];
+                return p ? `✅ Accepted by: ${p.name} (${p.whatsapp})` : `Accepted by: ${pid}`;
+              }).join(", ")
+            : "❌ Not yet accepted";
+
+          const card = `
+            <div class="card">
+              <b>Category:</b> ${req.category}<br>
+              <b>Description:</b> ${req.description}<br>
+              <b>Location:</b> ${req.location}<br>
+              ${acceptedByText}
+            </div>`;
+          requestsDiv.innerHTML += card;
+        }
       }
 
-      snapshot.forEach(child => {
-        const data = child.val();
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `
-          <b>नाम:</b> ${data.name}<br>
-          <b>फोन:</b> ${data.phone}<br>
-          <b>पता:</b> ${data.address}<br>
-          <b>विवरण:</b> ${data.description}<br>
-          <b>श्रेणी:</b> ${data.category} (${data.subcategory})<br>
-          <b>टाइम:</b> ${new Date(data.timestamp).toLocaleString()}
-        `;
-        requestList.appendChild(div);
-      });
-    });
+      // Show all posters
+      const postersDiv = document.getElementById("postersContainer");
+      for (const pid in data.posters) {
+        const p = data.posters[pid];
+        const card = `
+          <div class="card">
+            <b>Name:</b> ${p.name}<br>
+            <b>Shop:</b> ${p.shop}<br>
+            <b>Category:</b> ${p.category}<br>
+            <b>WhatsApp:</b> ${p.whatsapp}<br>
+            <b>Wallet:</b> ₹${p.wallet}
+          </div>`;
+        postersDiv.innerHTML += card;
+      }
+
+      // Show recharge requests
+      const rechargesDiv = document.getElementById("rechargesContainer");
+      for (const pid in data.recharges) {
+        for (const rid in data.recharges[pid]) {
+          const r = data.recharges[pid][rid];
+          const card = `
+            <div class="card">
+              <b>Poster ID:</b> ${pid}<br>
+              <b>Approved:</b> ${r.approved ? "✅ Yes" : "❌ No"}<br>
+              <img src="${r.screenshotUrl}" width="100">
+            </div>`;
+          rechargesDiv.innerHTML += card;
+        }
+      }
+    }
   </script>
 </body>
 </html>
