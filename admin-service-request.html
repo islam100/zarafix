@@ -1,151 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>🛠️ ZaraFix Admin - Requests Only</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 10px; }
-    .notice-bar {
-      background: #ffeb3b;
-      padding: 10px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .scrolling-text {
-      background: #4caf50;
-      color: white;
-      padding: 5px;
-      white-space: nowrap;
-      overflow: hidden;
-      animation: scroll 10s linear infinite;
-    }
-    @keyframes scroll {
-      0% { transform: translateX(100%) }
-      100% { transform: translateX(-100%) }
-    }
+    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 10px; }
     .card {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       padding: 15px;
       margin: 10px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
     }
-    h2 { margin-top: 30px; }
+    .card:hover {
+      transform: scale(1.03);
+    }
+    h2 { text-align: center; }
   </style>
 </head>
 <body>
+  <h2>📋 All Service Requests (Admin Only)</h2>
+  <div id="requests"></div>
 
-  <div class="notice-bar" id="noticeBar">Loading notice...</div>
-  <div class="scrolling-text" id="scrollingText">Loading scrolling text...</div>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-  <h2>🧾 All Service Requests</h2>
-  <div id="requestsContainer"></div>
-
-  <h2>👨‍🔧 All Posters</h2>
-  <div id="postersContainer"></div>
-
-  <h2>💳 Recharge Requests</h2>
-  <div id="rechargesContainer"></div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getDatabase, ref, get, child
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DB_URL",
+      databaseURL: "YOUR_DATABASE_URL",
       projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
       appId: "YOUR_APP_ID"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-    const adminUIDs = [
-      "HWImQ3hvGudWwULmJI4KAT7EW172",
-      "wjbEIAEF5jWgJKb2LlfWoIv4EqO2",
-      "Li0VeawcpySIVD79XahnYPxIHw33"
-    ];
+    const adminUids = {
+      "HWImQ3hvGudWwULmJI4KAT7EW172": true,
+      "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true,
+      "Li0VeawcpySIVD79XahnYPxIHw33": true
+    };
 
-    onAuthStateChanged(auth, user => {
-      if (user && adminUIDs.includes(user.uid)) {
-        loadDashboard();
+    auth.onAuthStateChanged(user => {
+      if (user && adminUids[user.uid]) {
+        loadRequests();
       } else {
-        alert("Access Denied. Admins only.");
-        window.location.href = "index.html";
+        document.body.innerHTML = "<h2>Access Denied. Admins only.</h2>";
       }
     });
 
-    async function loadDashboard() {
-      const dbRef = ref(db);
-      const snapshot = await get(dbRef);
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.val();
-
-      // Show notices
-      document.getElementById("noticeBar").innerText = data.notices?.noticeText || "No Notice";
-      document.getElementById("scrollingText").innerText = data.notices?.scrollingText || "";
-
-      // Show all service requests
-      const requestsDiv = document.getElementById("requestsContainer");
-      for (const userId in data.requests) {
-        for (const requestId in data.requests[userId]) {
-          const req = data.requests[userId][requestId];
-          const acceptedByText = req.acceptedBy
-            ? Object.keys(req.acceptedBy).map(pid => {
-                const p = data.posters?.[pid];
-                return p ? `✅ Accepted by: ${p.name} (${p.whatsapp})` : `Accepted by: ${pid}`;
-              }).join(", ")
-            : "❌ Not yet accepted";
-
-          const card = `
-            <div class="card">
-              <b>Category:</b> ${req.category}<br>
-              <b>Description:</b> ${req.description}<br>
-              <b>Location:</b> ${req.location}<br>
-              ${acceptedByText}
-            </div>`;
-          requestsDiv.innerHTML += card;
+    function loadRequests() {
+      db.ref("requests").once("value", snapshot => {
+        const data = snapshot.val();
+        const container = document.getElementById("requests");
+        if (!data) {
+          container.innerHTML = "<p>No requests found.</p>";
+          return;
         }
-      }
 
-      // Show all posters
-      const postersDiv = document.getElementById("postersContainer");
-      for (const pid in data.posters) {
-        const p = data.posters[pid];
-        const card = `
-          <div class="card">
-            <b>Name:</b> ${p.name}<br>
-            <b>Shop:</b> ${p.shop}<br>
-            <b>Category:</b> ${p.category}<br>
-            <b>WhatsApp:</b> ${p.whatsapp}<br>
-            <b>Wallet:</b> ₹${p.wallet}
-          </div>`;
-        postersDiv.innerHTML += card;
-      }
-
-      // Show recharge requests
-      const rechargesDiv = document.getElementById("rechargesContainer");
-      for (const pid in data.recharges) {
-        for (const rid in data.recharges[pid]) {
-          const r = data.recharges[pid][rid];
-          const card = `
-            <div class="card">
-              <b>Poster ID:</b> ${pid}<br>
-              <b>Approved:</b> ${r.approved ? "✅ Yes" : "❌ No"}<br>
-              <img src="${r.screenshotUrl}" width="100">
-            </div>`;
-          rechargesDiv.innerHTML += card;
-        }
-      }
+        Object.entries(data).forEach(([userId, userRequests]) => {
+          Object.entries(userRequests).forEach(([reqId, reqData]) => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <b>Category:</b> ${reqData.category || "N/A"}<br>
+              <b>Description:</b> ${reqData.description || "N/A"}<br>
+              <b>Location:</b> ${reqData.location || "N/A"}<br>
+              <b>Accepted By:</b> ${reqData.acceptedBy ? Object.keys(reqData.acceptedBy).join(", ") : "None"}
+            `;
+            container.appendChild(card);
+          });
+        });
+      });
     }
   </script>
 </body>
