@@ -1,92 +1,164 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Service Request</title>
+  <title>Service Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #e3f2fd, #ffffff);
+      font-family: sans-serif;
       margin: 0;
+      padding: 10px;
+      background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
+    }
+
+    .button-3d {
+      display: inline-block;
+      padding: 14px 28px;
+      margin: 10px 5px;
+      background: linear-gradient(145deg, #4caf50, #66bb6a);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 4px 4px 12px #aaa;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .button-3d:hover {
+      transform: translateY(-3px);
+    }
+
+    .form-container, .dashboard-container {
+      display: none;
+      margin-top: 20px;
       padding: 20px;
-    }
-
-    .form-container {
-      max-width: 500px;
-      margin: auto;
+      border-radius: 16px;
       background: #fff;
-      border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-      padding: 30px 20px;
-    }
-
-    h2 {
-      text-align: center;
-      color: #1976d2;
-      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
     }
 
     input, select, textarea {
       width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 12px;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 16px;
-      box-sizing: border-box;
     }
 
-    textarea {
-      resize: vertical;
+    h2 {
+      text-align: center;
+      color: #333;
     }
 
-    .btn-3d {
-      background: linear-gradient(145deg, #42a5f5, #1e88e5);
-      color: #fff;
-      border: none;
-      padding: 15px;
-      width: 100%;
-      font-size: 18px;
-      font-weight: bold;
-      border-radius: 15px;
-      box-shadow: 0 5px #1565c0;
-      transition: all 0.2s ease-in-out;
-      cursor: pointer;
-    }
-
-    .btn-3d:active {
-      box-shadow: 0 2px #1565c0;
-      transform: translateY(3px);
-    }
-
-    @media screen and (max-width: 600px) {
-      .form-container {
-        margin: 10px;
-        padding: 20px;
+    @media (max-width: 600px) {
+      .button-3d {
+        width: 90%;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="form-container">
-    <h2>📝 Post Service Request</h2>
-    <form id="serviceForm">
+  <center>
+    <button class="button-3d" onclick="toggleForm()">📝 Service Request</button>
+    <button class="button-3d" onclick="toggleDashboard()">📋 Dashboard</button>
+  </center>
+
+  <div class="form-container" id="formContainer">
+    <h2>Post a Repair Request</h2>
+    <form id="requestForm">
       <input type="text" id="name" placeholder="Your Name" required>
-      <input type="text" id="address" placeholder="Your Address" required>
-      <input type="text" id="pincode" placeholder="Pincode" required>
-      <input type="tel" id="whatsapp" placeholder="WhatsApp Number" required>
       <select id="category" required>
-        <option value="">Select Service Category</option>
+        <option value="">Select Service</option>
         <option value="Electrician">Electrician</option>
         <option value="Plumber">Plumber</option>
-        <option value="AC Repair">AC Repair</option>
         <option value="Carpenter">Carpenter</option>
+        <option value="AC Repair">AC Repair</option>
       </select>
-      <textarea id="description" placeholder="Describe your issue..." rows="4" required></textarea>
-      <button class="btn-3d" type="submit">🚀 Submit Request</button>
+      <textarea id="description" placeholder="Describe the issue" required></textarea>
+      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+      <input type="text" id="address" placeholder="Full Address" required>
+      <input type="text" id="location" readonly>
+      <button class="button-3d" type="submit">Submit Request</button>
     </form>
   </div>
 
+  <div class="dashboard-container" id="dashboardContainer">
+    <h2>📋 Your Dashboard</h2>
+    <div id="dashboardContent">Loading...</div>
+  </div>
+
+  <!-- Firebase & Script -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com/",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function toggleForm() {
+      document.getElementById("formContainer").style.display = "block";
+      document.getElementById("dashboardContainer").style.display = "none";
+    }
+
+    function toggleDashboard() {
+      document.getElementById("formContainer").style.display = "none";
+      document.getElementById("dashboardContainer").style.display = "block";
+      loadDashboard();
+    }
+
+    // Auto Location
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const coords = pos.coords.latitude + "," + pos.coords.longitude;
+      document.getElementById("location").value = coords;
+    });
+
+    // Submit Request
+    document.getElementById("requestForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const data = {
+        name: name.value,
+        category: category.value,
+        description: description.value,
+        whatsapp: whatsapp.value,
+        address: address.value,
+        location: location.value,
+        timestamp: new Date().toLocaleString()
+      };
+      const userId = "demoUser_" + Date.now();
+      firebase.database().ref("requests/" + userId).set(data).then(() => {
+        alert("Submitted successfully!");
+        requestForm.reset();
+      });
+    });
+
+    // Dashboard View
+    function loadDashboard() {
+      const content = document.getElementById("dashboardContent");
+      content.innerHTML = "Loading...";
+      firebase.database().ref("requests").once("value", (snap) => {
+        const data = snap.val();
+        if (!data) return content.innerHTML = "No requests found.";
+        content.innerHTML = "";
+        Object.keys(data).forEach((uid) => {
+          const req = data[uid];
+          const card = `
+            <div style="margin:10px; padding:10px; background:#f1f1f1; border-radius:12px;">
+              <b>${req.category}</b><br>
+              ${req.description}<br>
+              📍 ${req.address}<br>
+              📱 <a href="https://wa.me/91${req.whatsapp}" target="_blank">WhatsApp</a><br>
+              🕒 ${req.timestamp}
+            </div>
+          `;
+          content.innerHTML += card;
+        });
+      });
+    }
+  </script>
 </body>
 </html>
