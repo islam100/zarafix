@@ -1,131 +1,142 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Accepted Posters - ZaraFix</title>
+  <title>📋 Accepted by Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial;
-      background: #f9f9f9;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e3f2fd, #ffffff);
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       text-align: center;
     }
-    h2 { color: #333; }
+    h2 {
+      color: #0d47a1;
+      margin-bottom: 10px;
+    }
     .card {
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 20px;
-      margin: 10px auto;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      padding: 15px;
+      margin: 15px auto;
+      width: 90%;
       max-width: 400px;
       text-align: left;
-      transition: transform 0.3s ease;
+      transform: scale(1);
+      transition: transform 0.2s;
     }
-    .card:hover { transform: scale(1.03); }
-    button {
-      background: #ff5252;
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .whatsapp {
+      background: #25d366;
       color: white;
       border: none;
-      padding: 10px 16px;
+      padding: 8px 12px;
       border-radius: 10px;
-      cursor: pointer;
+      text-decoration: none;
+      font-weight: bold;
+      display: inline-block;
       margin-top: 10px;
     }
-    button:hover { background: #e53935; }
-    #loginDiv {
-      margin-top: 50px;
+    .led {
+      background: #ff1744;
+      color: white;
+      font-weight: bold;
+      padding: 5px 15px;
+      margin-bottom: 15px;
+      display: inline-block;
+      border-radius: 15px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
   </style>
 </head>
 <body>
+  <div class="led">✅ Posters Who Accepted Your Requests</div>
+  <h2>Your Request Acceptors</h2>
+  <div id="posterList">Loading...</div>
 
-<h2>✅ Posters Who Accepted Your Requests</h2>
-<div id="content"></div>
-<div id="loginDiv" style="display:none;">
-  <button onclick="googleLogin()">Login with Google</button>
-</div>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  let currentUserId = null;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUserId = user.uid;
-      loadAcceptedPosters();
-    } else {
-      document.getElementById('loginDiv').style.display = 'block';
-    }
-  });
-
-  function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  }
-
-  function loadAcceptedPosters() {
-    db.ref("requests/" + currentUserId).once("value", snap => {
-      const requests = snap.val();
-      if (!requests) {
-        document.getElementById("content").innerHTML = "<p>No requests found.</p>";
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "index.html"; // redirect if not logged in
         return;
       }
 
-      let html = "";
+      const userId = user.uid;
+      const posterListDiv = document.getElementById("posterList");
+      posterListDiv.innerHTML = "Checking your accepted requests...";
 
-      Object.entries(requests).forEach(([reqId, reqData]) => {
-        if (reqData.acceptedBy) {
-          Object.keys(reqData.acceptedBy).forEach(posterId => {
-            db.ref("posters/" + posterId).once("value", posterSnap => {
-              const poster = posterSnap.val();
-              if (poster) {
-                html += `
-                  <div class="card">
-                    <strong>Name:</strong> ${poster.name}<br>
-                    <strong>Shop:</strong> ${poster.shop}<br>
-                    <strong>Category:</strong> ${poster.category}<br>
-                    <strong>WhatsApp:</strong> <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp}</a><br>
-                    <button onclick="rejectPoster('${currentUserId}', '${reqId}', '${posterId}')">❌ Reject</button>
-                  </div>
-                `;
-                document.getElementById("content").innerHTML = html;
-              }
-            });
-          });
+      db.ref(`requests/${userId}`).once("value", snapshot => {
+        const requests = snapshot.val();
+        if (!requests) {
+          posterListDiv.innerHTML = "😕 You have not posted any service requests.";
+          return;
         }
+
+        const acceptedPosterIds = new Set();
+        for (let reqId in requests) {
+          const req = requests[reqId];
+          if (req.acceptedBy) {
+            for (let posterId in req.acceptedBy) {
+              acceptedPosterIds.add(posterId);
+            }
+          }
+        }
+
+        if (acceptedPosterIds.size === 0) {
+          posterListDiv.innerHTML = "🚫 No poster has accepted your requests yet.";
+          return;
+        }
+
+        // Fetch poster details
+        db.ref("posters").once("value", postersSnap => {
+          const posters = postersSnap.val();
+          posterListDiv.innerHTML = "";
+
+          acceptedPosterIds.forEach(pid => {
+            const p = posters[pid];
+            if (p) {
+              const card = document.createElement("div");
+              card.className = "card";
+              card.innerHTML = `
+                <strong>Name:</strong> ${p.name} <br>
+                <strong>Shop:</strong> ${p.shop} <br>
+                <strong>Category:</strong> ${p.category} <br>
+                <strong>Wallet:</strong> ₹${p.wallet} <br>
+                <a class="whatsapp" href="https://wa.me/91${p.whatsapp}" target="_blank">📞 WhatsApp</a>
+              `;
+              posterListDiv.appendChild(card);
+            }
+          });
+        });
       });
     });
-  }
-
-  function rejectPoster(userId, requestId, posterId) {
-    if (confirm("Are you sure you want to reject this poster?")) {
-      const ref = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
-      ref.remove().then(() => {
-        alert("Rejected successfully!");
-        loadAcceptedPosters(); // Refresh the list
-      });
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
