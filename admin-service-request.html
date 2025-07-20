@@ -1,101 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin - All Service Requests</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
-    h2 { text-align: center; }
+    body { font-family: Arial; background: #f2f2f2; padding: 20px; }
     .card {
       background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
-      transition: 0.3s;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    .key {
-      font-weight: bold;
-      color: #333;
-    }
-    .value {
-      margin-bottom: 8px;
-    }
+    .hidden { display: none; }
+    h2 { text-align: center; }
   </style>
 </head>
 <body>
+  <h2>📋 All Service Requests (Admin Only)</h2>
+  <div id="content"></div>
+  <div id="access-denied" class="hidden">❌ Access Denied. Admins only.</div>
 
-<h2>📋 All Service Requests (Admin Only)</h2>
-<div id="requestsContainer"></div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
-<!-- Firebase App -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
-  };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase();
-  const auth = getAuth();
+    const adminUIDs = {
+      "HWImQ3hvGudWwULmJI4KAT7EW172": true,
+      "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true,
+      "Li0VeawcpySIVD79XahnYPxIHw33": true
+    };
 
-  const admins = {
-    "HWImQ3hvGudWwULmJI4KAT7EW172": true,
-    "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true,
-    "Li0VeawcpySIVD79XahnYPxIHw33": true
-  };
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user && admins[user.uid]) {
-      const requestsRef = ref(db, 'requests');
-      const snapshot = await get(requestsRef);
-      const data = snapshot.val();
-      const container = document.getElementById("requestsContainer");
-
-      if (!data) {
-        container.innerHTML = "<p>No requests found.</p>";
-        return;
+    auth.onAuthStateChanged(user => {
+      if (user && adminUIDs[user.uid]) {
+        document.getElementById("access-denied").style.display = "none";
+        loadRequests();
+      } else {
+        document.getElementById("access-denied").classList.remove("hidden");
       }
+    });
 
-      Object.entries(data).forEach(([userId, userRequests]) => {
-        Object.entries(userRequests).forEach(([requestId, req]) => {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div><span class="key">User ID:</span> <span class="value">${userId}</span></div>
-            <div><span class="key">Request ID:</span> <span class="value">${requestId}</span></div>
-            <div><span class="key">Name:</span> <span class="value">${req.name || 'N/A'}</span></div>
-            <div><span class="key">Date:</span> <span class="value">${req.date || 'N/A'}</span></div>
-            <div><span class="key">Category:</span> <span class="value">${req.category}</span></div>
-            <div><span class="key">Description:</span> <span class="value">${req.description}</span></div>
-            <div><span class="key">Location:</span> <span class="value">${req.location || 'N/A'}</span></div>
-            <div><span class="key">Accepted By:</span> 
-              <span class="value">${
-                req.acceptedBy ? Object.keys(req.acceptedBy).join(', ') : 'No one yet'
-              }</span>
-            </div>
-          `;
-          container.appendChild(card);
-        });
+    function loadRequests() {
+      db.ref("requests").once("value", snapshot => {
+        const data = snapshot.val();
+        const container = document.getElementById("content");
+        container.innerHTML = "";
+        if (!data) {
+          container.innerHTML = "<p>No service requests yet.</p>";
+          return;
+        }
+
+        for (let userId in data) {
+          for (let requestId in data[userId]) {
+            const request = data[userId][requestId];
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <b>User ID:</b> ${userId}<br>
+              <b>Category:</b> ${request.category || "N/A"}<br>
+              <b>Description:</b> ${request.description || "N/A"}<br>
+              <b>Location:</b> ${request.location || "N/A"}<br>
+              <b>Date:</b> ${request.date || "Not Provided"}<br>
+              <b>Name:</b> ${request.name || "Unknown"}<br>
+              <b>Accepted By:</b> ${request.acceptedBy ? Object.keys(request.acceptedBy).join(", ") : "None"}
+            `;
+            container.appendChild(card);
+          }
+        }
       });
-
-    } else {
-      document.body.innerHTML = "<h3>Access Denied. Admins only.</h3>";
     }
-  });
-</script>
+  </script>
 </body>
 </html>
