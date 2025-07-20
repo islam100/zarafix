@@ -1,111 +1,120 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>✅ Posters Who Accepted Your Requests</title>
+  <title>📋 ZaraFix - My Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; padding: 10px; background: #f0f8ff; }
+    body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 20px; }
     h2 { text-align: center; }
+    .btn3d {
+      display: inline-block;
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: linear-gradient(45deg, #6a11cb, #2575fc);
+      color: white;
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 6px #333;
+      cursor: pointer;
+    }
+    .btn3d:active {
+      box-shadow: 0 2px #666;
+      transform: translateY(4px);
+    }
     .card {
       background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin: 20px auto;
       padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
-      transition: 0.3s;
+      max-width: 600px;
     }
-    .card:hover { transform: scale(1.02); }
-    .whatsapp-button {
-      background: #25d366;
+    .acceptor {
+      background: #e3f2fd;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .whatsapp-btn {
+      display: inline-block;
+      background-color: #25D366;
       color: white;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 20px;
+      padding: 8px 12px;
+      border-radius: 8px;
       text-decoration: none;
       font-weight: bold;
-    }
-    .login-msg {
-      text-align: center;
-      font-size: 18px;
-      color: red;
+      margin-top: 5px;
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
+  <h2>✅ Your Request Acceptors</h2>
+  <div id="requestsContainer"></div>
 
-<h2>Your Request Acceptors</h2>
-<div id="output"></div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCgN-5aB69Ru9X6U6cJvKhkXomf2HO2c9E",
+      authDomain: "zarafix-2025.firebaseapp.com",
+      databaseURL: "https://zarafix-2025-default-rtdb.firebaseio.com",
+      projectId: "zarafix-2025",
+      storageBucket: "zarafix-2025.appspot.com",
+      messagingSenderId: "379124569527",
+      appId: "1:379124569527:web:3f56a5ccf2eaaa7f57a3e5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  auth.onAuthStateChanged(user => {
-    const output = document.getElementById("output");
-    if (!user) {
-      output.innerHTML = '<div class="login-msg">⚠️ Please login to view accepted posters.</div>';
-      return;
-    }
-
-    const userId = user.uid;
-    db.ref("requests/" + userId).once("value", snapshot => {
-      const data = snapshot.val();
-      if (!data) {
-        output.innerHTML = '<div class="login-msg">🚫 You have not posted any service requests yet.</div>';
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert("Please login first.");
+        window.location.href = "index.html";
         return;
       }
-
-      const posterIds = new Set();
-      Object.values(data).forEach(req => {
-        if (req.acceptedBy) {
-          Object.keys(req.acceptedBy).forEach(posterId => posterIds.add(posterId));
+      const userId = user.uid;
+      const ref = db.ref("requests/" + userId);
+      ref.once("value", snapshot => {
+        const container = document.getElementById("requestsContainer");
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>📭 You have not submitted any request yet.</p>";
+          return;
         }
-      });
 
-      if (posterIds.size === 0) {
-        output.innerHTML = '<div class="login-msg">🚫 No poster has accepted your requests yet.</div>';
-        return;
-      }
+        snapshot.forEach(child => {
+          const data = child.val();
+          const requestId = child.key;
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>📌 ${data.category || "Category not set"}</h3>
+            <p><strong>Issue:</strong> ${data.issue || "N/A"}</p>
+            <p><strong>Address:</strong> ${data.address || "N/A"}</p>
+            <p><strong>Pin Code:</strong> ${data.pincode || "N/A"}</p>
+            <p><strong>Status:</strong> ${data.acceptedBy ? "Accepted by poster(s)" : "🚫 No one accepted yet"}</p>
+          `;
 
-      // Fetch poster details
-      let html = "";
-      posterIds.forEach(posterId => {
-        db.ref("posters/" + posterId).once("value", posterSnap => {
-          const poster = posterSnap.val();
-          if (poster) {
-            html += `
-              <div class="card">
-                <b>Name:</b> ${poster.name}<br>
-                <b>Shop:</b> ${poster.shop}<br>
-                <b>Category:</b> ${poster.category}<br>
-                <b>Wallet:</b> ₹${poster.wallet}<br>
-                <b>WhatsApp:</b> <a class="whatsapp-button" href="https://wa.me/91${poster.whatsapp}" target="_blank">Chat</a>
-              </div>
-            `;
-            output.innerHTML = html;
+          if (data.acceptedBy) {
+            Object.values(data.acceptedBy).forEach(poster => {
+              const aDiv = document.createElement("div");
+              aDiv.className = "acceptor";
+              aDiv.innerHTML = `
+                <p>👨‍🔧 <strong>Name:</strong> ${poster.name}</p>
+                <p>🏪 <strong>Shop:</strong> ${poster.shop}</p>
+                <p>📞 <strong>WhatsApp:</strong> <a class="whatsapp-btn" href="https://wa.me/${poster.whatsapp}" target="_blank">Chat</a></p>
+                <p>📍 <strong>Location:</strong> <a href="${poster.map}" target="_blank">View Map</a></p>
+              `;
+              div.appendChild(aDiv);
+            });
           }
+
+          container.appendChild(div);
         });
       });
     });
-  });
-</script>
-
+  </script>
 </body>
 </html>
