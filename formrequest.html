@@ -1,140 +1,118 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Service Request</title>
+  <title>🛠️ ZaraFix - Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f0f8ff; padding: 20px; margin: 0; }
-    .container {
+    body { font-family: Arial; background: #f5f5f5; text-align: center; padding: 20px; }
+    .form-box {
+      background: #fff;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
       max-width: 400px;
       margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 20px;
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
     }
-    h2 { text-align: center; }
-    input, textarea, select {
-      width: 100%;
-      margin-bottom: 12px;
+    input, textarea {
+      width: 90%;
       padding: 10px;
-      border-radius: 8px;
+      margin: 10px auto;
+      border-radius: 10px;
       border: 1px solid #ccc;
     }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(to right, #00c6ff, #0072ff);
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
+    .btn3d {
+      padding: 12px 20px;
+      background: #008CBA;
       border: none;
+      color: white;
       border-radius: 10px;
-      box-shadow: 3px 3px 10px #aaa;
+      box-shadow: 0 5px #666;
+      transition: all 0.2s;
+      cursor: pointer;
     }
-    #logoutBtn { background: red; margin-top: 10px; }
-    #loginBtn {
-      background: #4CAF50;
-      margin-bottom: 20px;
-      display: none;
+    .btn3d:active {
+      box-shadow: 0 2px #666;
+      transform: translateY(4px);
     }
+    #loginBtn { background: green; }
+    #loginSection, #formSection { display: none; }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>🛠️ ZaraFix Service Request</h2>
+  <h2>🛠️ Submit Service Request</h2>
 
-  <button id="loginBtn">Login with Google</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
+  <div id="loginSection">
+    <p>Please login to continue.</p>
+    <button id="loginBtn" class="btn3d">Login with Google</button>
+  </div>
 
-  <form id="serviceForm" style="display:none;">
-    <input type="text" id="name" placeholder="Your Name" required />
-    <input type="text" id="category" placeholder="Service Category" required />
-    <textarea id="description" placeholder="Describe the issue" required></textarea>
-    <input type="text" id="location" placeholder="Your Address or Location" required />
-    <button type="submit">📩 Submit Request</button>
-  </form>
-</div>
+  <div id="formSection" class="form-box">
+    <input type="text" id="name" placeholder="Your Name" required><br>
+    <input type="text" id="category" placeholder="Category (e.g., Electrician)" required><br>
+    <textarea id="description" placeholder="Describe your issue" required></textarea><br>
+    <button onclick="submitRequest()" class="btn3d">Submit Request</button>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyA************",
-    authDomain: "your-app.firebaseapp.com",
-    databaseURL: "https://your-app-default-rtdb.firebaseio.com",
-    projectId: "your-app",
-    storageBucket: "your-app.appspot.com",
-    messagingSenderId: "****",
-    appId: "1:***:web:***"
-  };
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const form = document.getElementById('serviceForm');
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'block';
-      form.style.display = 'block';
-    } else {
-      loginBtn.style.display = 'block';
-      logoutBtn.style.display = 'none';
-      form.style.display = 'none';
-    }
-  });
-
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  form.onsubmit = function (e) {
-    e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) {
-      alert('Please login first.');
-      return;
-    }
-
-    const name = document.getElementById('name').value.trim();
-    const category = document.getElementById('category').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const location = document.getElementById('location').value.trim();
-
-    if (!name || !category || !description || !location) {
-      alert('Please fill all fields.');
-      return;
-    }
-
-    const data = {
-      name,
-      category,
-      description,
-      location,
-      acceptedBy: {},
-      timestamp: Date.now()
+    // 🔐 Login with Google
+    document.getElementById("loginBtn").onclick = function() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
     };
 
-    const requestRef = db.ref("requests/" + user.uid);
-    requestRef.push(data).then(() => {
-      alert("✅ Request Submitted!");
-      form.reset();
+    // ✅ Check Login Status
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("formSection").style.display = "block";
+      } else {
+        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("formSection").style.display = "none";
+      }
     });
-  };
-</script>
+
+    // 📤 Submit Request to Firebase
+    function submitRequest() {
+      const user = auth.currentUser;
+      if (!user) return alert("Please login first");
+
+      const name = document.getElementById("name").value;
+      const category = document.getElementById("category").value;
+      const description = document.getElementById("description").value;
+
+      if (!name || !category || !description) return alert("Please fill all fields.");
+
+      const requestId = Date.now();
+      const userId = user.uid;
+
+      db.ref("requests/" + userId + "/" + requestId).set({
+        name, category, description,
+        timestamp: new Date().toISOString()
+      }).then(() => {
+        alert("Request submitted!");
+        document.getElementById("name").value = "";
+        document.getElementById("category").value = "";
+        document.getElementById("description").value = "";
+      }).catch(err => alert("Error: " + err.message));
+    }
+  </script>
 
 </body>
 </html>
