@@ -1,242 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - User Panel</title>
+  <title>📝 Post Service Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: sans-serif;
-      background: linear-gradient(to right, #e3ffe7, #d9e7ff);
-      margin: 0;
+      font-family: Arial;
+      background: #e0f7fa;
       padding: 20px;
-      text-align: center;
     }
-
-    h2 {
-      color: #333;
-    }
-
-    .btn3d {
-      background: #4CAF50;
-      border: none;
-      color: white;
-      padding: 12px 20px;
-      margin: 10px;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 5px #2e7d32;
-      border-radius: 12px;
-      transition: all 0.1s ease-in-out;
-    }
-
-    .btn3d:active {
-      box-shadow: 0 2px #2e7d32;
-      transform: translateY(3px);
-    }
-
-    .card {
-      background: #fff;
-      margin: 15px auto;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      text-align: left;
+    .form-container {
       max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-
-    input, textarea {
+    input, textarea, select {
+      width: 100%;
       padding: 10px;
-      margin: 8px 0;
-      width: 90%;
-      border-radius: 8px;
+      margin: 10px 0;
+      border-radius: 10px;
       border: 1px solid #ccc;
     }
-
-    #formSection, #dashboardSection {
-      display: none;
-    }
-
-    .whatsapp-link {
-      background: #25D366;
+    button {
+      background: #009688;
       color: white;
-      padding: 8px 14px;
-      text-decoration: none;
-      border-radius: 10px;
-      display: inline-block;
-    }
-
-    .delete-btn {
-      background: red;
-      color: white;
+      padding: 12px;
       border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #00796b;
+      transform: scale(1.05);
     }
   </style>
 </head>
 <body>
+  <div class="form-container">
+    <h2>📝 Service Request</h2>
+    <form id="serviceForm">
+      <input type="text" id="name" placeholder="आपका नाम" required />
+      <input type="tel" id="phone" placeholder="फोन नंबर" required />
+      <input type="text" id="address" placeholder="पता" required />
+      <textarea id="description" placeholder="समस्या का विवरण" required></textarea>
+      <select id="category" required>
+        <option value="">श्रेणी चुनें</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+        <option value="AC Repair">AC Repair</option>
+      </select>
+      <select id="subcategory">
+        <option value="">उप-श्रेणी (यदि हो)</option>
+        <option value="Home">Home</option>
+        <option value="Shop">Shop</option>
+      </select>
+      <button type="submit">🔧 सबमिट करें</button>
+    </form>
+    <p id="msg" style="text-align:center;color:green;"></p>
+  </div>
 
-<h2>ZaraFix - User Panel</h2>
-<button class="btn3d" onclick="showForm()">📝 Form</button>
-<button class="btn3d" onclick="showDashboard()">📋 Dashboard</button>
-<button class="btn3d" onclick="logout()">🚪 Logout</button>
-
-<div id="formSection">
-  <h3>Post a Repair Request</h3>
-  <input type="text" id="name" placeholder="Your Name"><br>
-  <input type="text" id="address" placeholder="Address"><br>
-  <input type="text" id="pincode" placeholder="Pincode"><br>
-  <textarea id="issue" placeholder="Describe the issue..."></textarea><br>
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number"><br>
-  <button class="btn3d" onclick="submitRequest()">Submit</button>
-</div>
-
-<div id="dashboardSection">
-  <h3>Your Service Requests</h3>
-  <div id="requestList"></div>
-</div>
-
-<!-- Firebase & Scripts -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  let currentUser;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      showForm(); // default
-    } else {
-      alert("Please login first.");
-      window.location.href = "index.html";
-    }
-  });
-
-  function logout() {
-    auth.signOut().then(() => {
-      window.location.href = "index.html";
-    });
-  }
-
-  function showForm() {
-    document.getElementById('formSection').style.display = 'block';
-    document.getElementById('dashboardSection').style.display = 'none';
-  }
-
-  function showDashboard() {
-    document.getElementById('formSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'block';
-    loadDashboard();
-  }
-
-  function submitRequest() {
-    const name = document.getElementById("name").value;
-    const address = document.getElementById("address").value;
-    const pincode = document.getElementById("pincode").value;
-    const issue = document.getElementById("issue").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-
-    if (!name || !address || !pincode || !issue || !whatsapp) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const requestId = Date.now();
-    const data = {
-      name,
-      address,
-      pincode,
-      issue,
-      whatsapp,
-      lat: "",
-      long: "",
-      timestamp: new Date().toISOString(),
-      acceptedBy: {}
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    navigator.geolocation.getCurrentPosition(position => {
-      data.lat = position.coords.latitude;
-      data.long = position.coords.longitude;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-      db.ref("requests/" + currentUser.uid + "/" + requestId).set(data).then(() => {
-        alert("Request submitted successfully!");
-        document.getElementById("name").value = "";
-        document.getElementById("address").value = "";
-        document.getElementById("pincode").value = "";
-        document.getElementById("issue").value = "";
-        document.getElementById("whatsapp").value = "";
-      });
-    });
-  }
+    document.getElementById('serviceForm').addEventListener('submit', function(e) {
+      e.preventDefault();
 
-  function loadDashboard() {
-    const container = document.getElementById("requestList");
-    container.innerHTML = "";
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const address = document.getElementById('address').value;
+      const description = document.getElementById('description').value;
+      const category = document.getElementById('category').value;
+      const subcategory = document.getElementById('subcategory').value;
 
-    db.ref("requests/" + currentUser.uid).once("value", snapshot => {
-      if (!snapshot.exists()) {
-        container.innerHTML = "No requests found.";
-        return;
-      }
+      const requestData = {
+        name,
+        phone,
+        address,
+        description,
+        category,
+        subcategory,
+        timestamp: Date.now()
+      };
 
-      snapshot.forEach(child => {
-        const req = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-
-        card.innerHTML = `
-          <b>Issue:</b> ${req.issue}<br>
-          <b>Address:</b> ${req.address}, ${req.pincode}<br>
-          <b>Posted On:</b> ${new Date(req.timestamp).toLocaleString()}<br><br>
-          <b>Accepted By:</b><br>
-        `;
-
-        const acceptList = req.acceptedBy || {};
-        if (Object.keys(acceptList).length === 0) {
-          card.innerHTML += "No one accepted yet.";
+      db.ref('serviceRequests').push(requestData, err => {
+        if (err) {
+          alert("❌ Error: " + err.message);
         } else {
-          for (const key in acceptList) {
-            const poster = acceptList[key];
-            card.innerHTML += `
-              🔧 ${poster.name} <br>
-              📞 <a class="whatsapp-link" href="https://wa.me/${poster.whatsapp}" target="_blank">Chat on WhatsApp</a><br>
-              🗺️ <a href="https://maps.google.com/?q=${poster.lat},${poster.long}" target="_blank">Live Location</a><br><br>
-            `;
-          }
+          document.getElementById('msg').innerText = "✅ सबमिट हो गया!";
+          document.getElementById('serviceForm').reset();
         }
-
-        const delBtn = document.createElement("button");
-        delBtn.innerText = "Delete Request";
-        delBtn.className = "delete-btn";
-        delBtn.onclick = () => {
-          if (confirm("Delete this request?")) {
-            db.ref("requests/" + currentUser.uid + "/" + child.key).remove();
-            loadDashboard();
-          }
-        };
-
-        card.appendChild(delBtn);
-        container.appendChild(card);
       });
     });
-  }
-</script>
+  </script>
 </body>
 </html>
