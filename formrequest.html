@@ -1,136 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📝 ZaraFix - Service Request</title>
+  <title>🛠️ ZaraFix - Service Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f8ff; }
-    .button3d {
-      background: linear-gradient(to right, #00c6ff, #0072ff);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 5px #999;
-      padding: 12px 24px;
-      font-size: 18px;
-      margin: 10px;
-      cursor: pointer;
-    }
-    .button3d:active {
-      box-shadow: 0 2px #666;
-      transform: translateY(3px);
-    }
-    #formContainer {
-      display: none;
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
+    body { font-family: sans-serif; background: #f0f8ff; margin: 0; padding: 10px; text-align: center; }
+    .card {
+      background: white; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      padding: 20px; max-width: 500px; margin: auto; margin-top: 40px;
     }
     input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: 1px solid #ccc;
     }
-    #loginBtn {
-      display: none;
+    button {
+      background: linear-gradient(to right, #4CAF50, #2E8B57);
+      color: white; padding: 12px; border: none; border-radius: 12px;
+      font-size: 16px; box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+      cursor: pointer;
+      transition: transform 0.2s;
     }
+    button:hover { transform: scale(1.05); }
+    #login-btn { margin-top: 50px; }
   </style>
 </head>
 <body>
 
-<h2>🛠️ ZaraFix - Submit Service Request</h2>
+  <div id="login-section">
+    <button id="login-btn">🔐 Login with Google</button>
+  </div>
 
-<button id="loginBtn" class="button3d">Login with Google</button>
+  <div id="form-section" style="display:none;">
+    <div class="card">
+      <h2>🛠️ Service Request Form</h2>
+      <form id="requestForm">
+        <input type="text" id="name" placeholder="Your Name" required />
+        <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+        <input type="text" id="address" placeholder="Full Address" required />
+        <input type="text" id="pincode" placeholder="Pin Code" required />
+        <select id="category" required>
+          <option value="">-- Select Service --</option>
+          <option value="Plumber">Plumber</option>
+          <option value="Electrician">Electrician</option>
+          <option value="Carpenter">Carpenter</option>
+          <option value="AC Repair">AC Repair</option>
+          <option value="Washing Machine">Washing Machine</option>
+        </select>
+        <textarea id="issue" placeholder="Describe the problem" required></textarea>
+        <button type="submit">📤 Submit Request</button>
+      </form>
+    </div>
+  </div>
 
-<div id="formContainer">
-  <input type="text" id="name" placeholder="Your Name" required />
-  <input type="text" id="category" placeholder="Service Category (e.g. Electrician)" required />
-  <textarea id="description" placeholder="Describe your issue" required></textarea>
-  <input type="text" id="address" placeholder="Your Address or Landmark" required />
-  <button class="button3d" onclick="submitRequest()">Submit Request</button>
-</div>
+  <!-- Firebase + Auth + DB -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBg0Xz6dn_qbWgl9iZhJrviwnf6-eRIhR8",
-    authDomain: "zarafix.firebaseapp.com",
-    projectId: "zarafix",
-    storageBucket: "zarafix.appspot.com",
-    messagingSenderId: "488278155134",
-    appId: "1:488278155134:web:0dd9adf9a0a13906dc661a",
-    databaseURL: "https://zarafix-default-rtdb.firebaseio.com/"
-  };
-  firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const auth = firebase.auth();
-  const db = firebase.database();
+    const loginBtn = document.getElementById("login-btn");
+    const loginSec = document.getElementById("login-section");
+    const formSec = document.getElementById("form-section");
 
-  const loginBtn = document.getElementById('loginBtn');
-  const formContainer = document.getElementById('formContainer');
-
-  // Check login
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      loginBtn.style.display = 'none';
-      formContainer.style.display = 'block';
-    } else {
-      loginBtn.style.display = 'block';
-      formContainer.style.display = 'none';
-    }
-  });
-
-  // Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  function submitRequest() {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please login first.");
-      return;
-    }
-
-    const name = document.getElementById("name").value;
-    const category = document.getElementById("category").value;
-    const description = document.getElementById("description").value;
-    const address = document.getElementById("address").value;
-
-    if (!name || !category || !description || !address) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const userId = user.uid;
-    const requestId = Date.now().toString();
-
-    db.ref("requests/" + userId + "/" + requestId).set({
-      name,
-      category,
-      description,
-      address,
-      acceptedBy: {}
-    }).then(() => {
-      alert("Request submitted successfully!");
-      document.getElementById("name").value = "";
-      document.getElementById("category").value = "";
-      document.getElementById("description").value = "";
-      document.getElementById("address").value = "";
-    }).catch(error => {
-      console.error("Error:", error);
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginSec.style.display = "none";
+        formSec.style.display = "block";
+      } else {
+        loginSec.style.display = "block";
+        formSec.style.display = "none";
+      }
     });
-  }
-</script>
+
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    document.getElementById("requestForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return alert("Please login first");
+
+      const requestData = {
+        name: document.getElementById("name").value,
+        whatsapp: document.getElementById("whatsapp").value,
+        address: document.getElementById("address").value,
+        pincode: document.getElementById("pincode").value,
+        category: document.getElementById("category").value,
+        issue: document.getElementById("issue").value,
+        timestamp: new Date().toLocaleString(),
+        location: "", // will update later
+        acceptedBy: {}
+      };
+
+      // Auto get location
+      navigator.geolocation.getCurrentPosition(pos => {
+        requestData.location = `${pos.coords.latitude},${pos.coords.longitude}`;
+
+        db.ref("requests/" + user.uid).push(requestData)
+          .then(() => {
+            alert("✅ Request submitted!");
+            document.getElementById("requestForm").reset();
+          })
+          .catch(err => {
+            alert("❌ Error: " + err.message);
+          });
+      }, () => {
+        alert("⚠️ Location access denied. Please enable it.");
+      });
+    });
+  </script>
 
 </body>
 </html>
