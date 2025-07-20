@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Accepted Posters - ZaraFix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 { color: #333; }
+    .card {
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin: 10px auto;
+      max-width: 400px;
+      text-align: left;
+      transition: transform 0.3s ease;
+    }
+    .card:hover { transform: scale(1.03); }
+    button {
+      background: #ff5252;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #e53935; }
+    #loginDiv {
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>✅ Posters Who Accepted Your Requests</h2>
+<div id="content"></div>
+<div id="loginDiv" style="display:none;">
+  <button onclick="googleLogin()">Login with Google</button>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let currentUserId = null;
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUserId = user.uid;
+      loadAcceptedPosters();
+    } else {
+      document.getElementById('loginDiv').style.display = 'block';
+    }
+  });
+
+  function googleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  }
+
+  function loadAcceptedPosters() {
+    db.ref("requests/" + currentUserId).once("value", snap => {
+      const requests = snap.val();
+      if (!requests) {
+        document.getElementById("content").innerHTML = "<p>No requests found.</p>";
+        return;
+      }
+
+      let html = "";
+
+      Object.entries(requests).forEach(([reqId, reqData]) => {
+        if (reqData.acceptedBy) {
+          Object.keys(reqData.acceptedBy).forEach(posterId => {
+            db.ref("posters/" + posterId).once("value", posterSnap => {
+              const poster = posterSnap.val();
+              if (poster) {
+                html += `
+                  <div class="card">
+                    <strong>Name:</strong> ${poster.name}<br>
+                    <strong>Shop:</strong> ${poster.shop}<br>
+                    <strong>Category:</strong> ${poster.category}<br>
+                    <strong>WhatsApp:</strong> <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp}</a><br>
+                    <button onclick="rejectPoster('${currentUserId}', '${reqId}', '${posterId}')">❌ Reject</button>
+                  </div>
+                `;
+                document.getElementById("content").innerHTML = html;
+              }
+            });
+          });
+        }
+      });
+    });
+  }
+
+  function rejectPoster(userId, requestId, posterId) {
+    if (confirm("Are you sure you want to reject this poster?")) {
+      const ref = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
+      ref.remove().then(() => {
+        alert("Rejected successfully!");
+        loadAcceptedPosters(); // Refresh the list
+      });
+    }
+  }
+</script>
+
+</body>
+</html>
