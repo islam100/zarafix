@@ -1,134 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Service Request</title>
+  <title>📋 ZaraFix - Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f9f9f9;
-      padding: 20px;
-      margin: 0;
-    }
+    body { font-family: sans-serif; background: #f0f8ff; padding: 20px; margin: 0; }
     .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 20px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-      max-width: 500px;
-      margin: auto;
+      background: white; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      padding: 20px; max-width: 500px; margin: auto;
     }
-    input, textarea, select, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+    input, textarea, select {
+      width: 100%; padding: 10px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 8px;
     }
-    button {
-      background: linear-gradient(to right, #00b09b, #96c93d);
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    .btn {
+      background: linear-gradient(to right, #00bcd4, #2196f3);
+      color: white; border: none; padding: 12px 20px;
+      border-radius: 30px; font-size: 16px; cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: 0.3s;
     }
-    #loginBtn {
-      background: linear-gradient(to right, #f12711, #f5af19);
-    }
+    .btn:hover { transform: scale(1.05); }
+    #logoutBtn { background: crimson; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>🛠️ Service Request Form</h2>
-
-  <div id="loginSection">
-    <button id="loginBtn">Login with Google</button>
-  </div>
-
-  <div id="formSection" style="display:none;">
-    <input id="name" placeholder="Your Name" required />
-    <input id="category" placeholder="Service Category (e.g., Electrician)" required />
-    <textarea id="description" placeholder="Problem Description" required></textarea>
-    <input id="whatsapp" placeholder="WhatsApp Number" required />
-    <input id="address" placeholder="Your Address" required />
-    <button onclick="submitRequest()">Submit Request</button>
-  </div>
+<div id="loginSection" style="text-align: center;">
+  <h2>🔐 Please Login to Continue</h2>
+  <button class="btn" onclick="googleLogin()">Login with Google</button>
 </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<div id="mainForm" class="card" style="display:none;">
+  <h2>📋 Service Request</h2>
+
+  <input type="text" id="name" placeholder="Your Name" required>
+  <input type="text" id="address" placeholder="Address" required>
+  <input type="text" id="pincode" placeholder="Pin Code" required>
+  <textarea id="problem" placeholder="Describe the problem" required></textarea>
+
+  <input type="hidden" id="latitude">
+  <input type="hidden" id="longitude">
+
+  <button class="btn" onclick="submitForm()">Submit</button>
+  <button class="btn" id="logoutBtn" onclick="logout()">Logout</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-  // Initialize Firebase
+  // 🔧 Firebase Config
   const firebaseConfig = {
-    apiKey: "AIzaSyD5WwEFdXXXXXX",
+    apiKey: "AIzaSyD0eJ...", // 🔁 Replace with your own config
     authDomain: "zarafix.firebaseapp.com",
     databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
     projectId: "zarafix",
     storageBucket: "zarafix.appspot.com",
-    messagingSenderId: "XXXXXX",
-    appId: "1:XXXXXX:web:XXXXXX"
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abc123"
   };
   firebase.initializeApp(firebaseConfig);
 
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const loginBtn = document.getElementById('loginBtn');
-  const loginSection = document.getElementById('loginSection');
-  const formSection = document.getElementById('formSection');
-
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  auth.onAuthStateChanged(user => {
+  // 🔓 Login check
+  firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
-      loginSection.style.display = "none";
-      formSection.style.display = "block";
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("mainForm").style.display = "block";
+      getLocation();
+    } else {
+      document.getElementById("loginSection").style.display = "block";
+      document.getElementById("mainForm").style.display = "none";
     }
   });
 
-  function submitRequest() {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Please login first.");
-      return;
-    }
+  function googleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider);
+  }
 
-    const name = document.getElementById('name').value;
-    const category = document.getElementById('category').value;
-    const description = document.getElementById('description').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const address = document.getElementById('address').value;
-    const location = "AutoLocationPending";
+  function logout() {
+    firebase.auth().signOut();
+  }
 
-    const requestId = Date.now();
+  function getLocation() {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      document.getElementById("latitude").value = pos.coords.latitude;
+      document.getElementById("longitude").value = pos.coords.longitude;
+    });
+  }
 
-    const data = {
-      name,
-      category,
-      description,
-      whatsapp,
-      address,
-      location,
-      timestamp: new Date().toISOString(),
-      acceptedBy: {}
+  function submitForm() {
+    const user = firebase.auth().currentUser;
+    if (!user) return alert("Please login first!");
+
+    const name = document.getElementById("name").value;
+    const address = document.getElementById("address").value;
+    const pincode = document.getElementById("pincode").value;
+    const problem = document.getElementById("problem").value;
+    const lat = document.getElementById("latitude").value;
+    const lng = document.getElementById("longitude").value;
+
+    const requestData = {
+      name, address, pincode, problem,
+      latitude: lat,
+      longitude: lng,
+      timestamp: Date.now()
     };
 
-    db.ref("requests/" + user.uid + "/" + requestId).set(data)
+    db.ref("requests/" + user.uid).push(requestData)
       .then(() => {
-        alert("✅ Request submitted!");
-        document.getElementById("formSection").reset();
+        alert("Request submitted successfully!");
+        document.getElementById("name").value = "";
+        document.getElementById("address").value = "";
+        document.getElementById("pincode").value = "";
+        document.getElementById("problem").value = "";
       })
       .catch(err => {
-        alert("❌ Error: " + err.message);
+        console.error(err);
+        alert("Error saving request.");
       });
   }
 </script>
