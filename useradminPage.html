@@ -1,142 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 Accepted by Posters</title>
+  <title>✅ Posters Who Accepted Your Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #e3f2fd, #ffffff);
-      margin: 0;
-      padding: 10px;
-      text-align: center;
-    }
-    h2 {
-      color: #0d47a1;
-      margin-bottom: 10px;
-    }
+    body { font-family: Arial; padding: 10px; background: #f0f8ff; }
+    h2 { text-align: center; }
     .card {
-      background: #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       padding: 15px;
-      margin: 15px auto;
-      width: 90%;
-      max-width: 400px;
-      text-align: left;
-      transform: scale(1);
-      transition: transform 0.2s;
+      margin: 10px auto;
+      max-width: 500px;
+      transition: 0.3s;
     }
-    .card:hover {
-      transform: scale(1.02);
-    }
-    .whatsapp {
+    .card:hover { transform: scale(1.02); }
+    .whatsapp-button {
       background: #25d366;
       color: white;
+      padding: 8px 15px;
       border: none;
-      padding: 8px 12px;
-      border-radius: 10px;
+      border-radius: 20px;
       text-decoration: none;
       font-weight: bold;
-      display: inline-block;
-      margin-top: 10px;
     }
-    .led {
-      background: #ff1744;
-      color: white;
-      font-weight: bold;
-      padding: 5px 15px;
-      margin-bottom: 15px;
-      display: inline-block;
-      border-radius: 15px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    .login-msg {
+      text-align: center;
+      font-size: 18px;
+      color: red;
     }
   </style>
 </head>
 <body>
-  <div class="led">✅ Posters Who Accepted Your Requests</div>
-  <h2>Your Request Acceptors</h2>
-  <div id="posterList">Loading...</div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<h2>Your Request Acceptors</h2>
+<div id="output"></div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
 
-    auth.onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = "index.html"; // redirect if not logged in
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  auth.onAuthStateChanged(user => {
+    const output = document.getElementById("output");
+    if (!user) {
+      output.innerHTML = '<div class="login-msg">⚠️ Please login to view accepted posters.</div>';
+      return;
+    }
+
+    const userId = user.uid;
+    db.ref("requests/" + userId).once("value", snapshot => {
+      const data = snapshot.val();
+      if (!data) {
+        output.innerHTML = '<div class="login-msg">🚫 You have not posted any service requests yet.</div>';
         return;
       }
 
-      const userId = user.uid;
-      const posterListDiv = document.getElementById("posterList");
-      posterListDiv.innerHTML = "Checking your accepted requests...";
-
-      db.ref(`requests/${userId}`).once("value", snapshot => {
-        const requests = snapshot.val();
-        if (!requests) {
-          posterListDiv.innerHTML = "😕 You have not posted any service requests.";
-          return;
+      const posterIds = new Set();
+      Object.values(data).forEach(req => {
+        if (req.acceptedBy) {
+          Object.keys(req.acceptedBy).forEach(posterId => posterIds.add(posterId));
         }
+      });
 
-        const acceptedPosterIds = new Set();
-        for (let reqId in requests) {
-          const req = requests[reqId];
-          if (req.acceptedBy) {
-            for (let posterId in req.acceptedBy) {
-              acceptedPosterIds.add(posterId);
-            }
+      if (posterIds.size === 0) {
+        output.innerHTML = '<div class="login-msg">🚫 No poster has accepted your requests yet.</div>';
+        return;
+      }
+
+      // Fetch poster details
+      let html = "";
+      posterIds.forEach(posterId => {
+        db.ref("posters/" + posterId).once("value", posterSnap => {
+          const poster = posterSnap.val();
+          if (poster) {
+            html += `
+              <div class="card">
+                <b>Name:</b> ${poster.name}<br>
+                <b>Shop:</b> ${poster.shop}<br>
+                <b>Category:</b> ${poster.category}<br>
+                <b>Wallet:</b> ₹${poster.wallet}<br>
+                <b>WhatsApp:</b> <a class="whatsapp-button" href="https://wa.me/91${poster.whatsapp}" target="_blank">Chat</a>
+              </div>
+            `;
+            output.innerHTML = html;
           }
-        }
-
-        if (acceptedPosterIds.size === 0) {
-          posterListDiv.innerHTML = "🚫 No poster has accepted your requests yet.";
-          return;
-        }
-
-        // Fetch poster details
-        db.ref("posters").once("value", postersSnap => {
-          const posters = postersSnap.val();
-          posterListDiv.innerHTML = "";
-
-          acceptedPosterIds.forEach(pid => {
-            const p = posters[pid];
-            if (p) {
-              const card = document.createElement("div");
-              card.className = "card";
-              card.innerHTML = `
-                <strong>Name:</strong> ${p.name} <br>
-                <strong>Shop:</strong> ${p.shop} <br>
-                <strong>Category:</strong> ${p.category} <br>
-                <strong>Wallet:</strong> ₹${p.wallet} <br>
-                <a class="whatsapp" href="https://wa.me/91${p.whatsapp}" target="_blank">📞 WhatsApp</a>
-              `;
-              posterListDiv.appendChild(card);
-            }
-          });
         });
       });
     });
-  </script>
+  });
+</script>
+
 </body>
 </html>
