@@ -1,90 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>🛠️ ZaraFix Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #f0f8ff, #ffffff);
-      margin: 0;
-      padding: 20px;
+    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
+    h2 { text-align: center; }
+    .card {
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 500px;
+      transition: 0.3s;
     }
-    h2 {
-      text-align: center;
+    .card:hover {
+      transform: scale(1.03);
+    }
+    .key {
+      font-weight: bold;
       color: #333;
     }
-    .card {
-      background: white;
-      padding: 15px;
-      margin: 15px auto;
-      border-radius: 15px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-      max-width: 600px;
-    }
-    .card h3 {
-      margin: 0 0 10px;
-      color: #007bff;
-    }
-    .card p {
-      margin: 5px 0;
-      color: #444;
+    .value {
+      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
-  <h2>📋 All Service Requests (Admin Only)</h2>
-  <div id="requestsContainer"></div>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<h2>📋 All Service Requests (Admin Only)</h2>
+<div id="requestsContainer"></div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
+<!-- Firebase App -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  };
 
-    const requestsRef = ref(db, "requests");
-    const container = document.getElementById("requestsContainer");
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase();
+  const auth = getAuth();
 
-    onValue(requestsRef, (snapshot) => {
+  const admins = {
+    "HWImQ3hvGudWwULmJI4KAT7EW172": true,
+    "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true,
+    "Li0VeawcpySIVD79XahnYPxIHw33": true
+  };
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user && admins[user.uid]) {
+      const requestsRef = ref(db, 'requests');
+      const snapshot = await get(requestsRef);
       const data = snapshot.val();
-      container.innerHTML = "";
+      const container = document.getElementById("requestsContainer");
 
-      if (data) {
-        Object.entries(data).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([requestId, request]) => {
-            const card = document.createElement("div");
-            card.className = "card";
-
-            const acceptedList = request.acceptedBy
-              ? Object.keys(request.acceptedBy).join(", ")
-              : "No one accepted yet";
-
-            card.innerHTML = `
-              <h3>📌 Category: ${request.category || "N/A"}</h3>
-              <p><strong>Description:</strong> ${request.description || "N/A"}</p>
-              <p><strong>Address:</strong> ${request.address || "N/A"}</p>
-              <p><strong>Pin Code:</strong> ${request.pincode || "N/A"}</p>
-              <p><strong>Accepted By:</strong> ${acceptedList}</p>
-            `;
-            container.appendChild(card);
-          });
-        });
-      } else {
+      if (!data) {
         container.innerHTML = "<p>No requests found.</p>";
+        return;
       }
-    });
-  </script>
+
+      Object.entries(data).forEach(([userId, userRequests]) => {
+        Object.entries(userRequests).forEach(([requestId, req]) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div><span class="key">User ID:</span> <span class="value">${userId}</span></div>
+            <div><span class="key">Request ID:</span> <span class="value">${requestId}</span></div>
+            <div><span class="key">Name:</span> <span class="value">${req.name || 'N/A'}</span></div>
+            <div><span class="key">Date:</span> <span class="value">${req.date || 'N/A'}</span></div>
+            <div><span class="key">Category:</span> <span class="value">${req.category}</span></div>
+            <div><span class="key">Description:</span> <span class="value">${req.description}</span></div>
+            <div><span class="key">Location:</span> <span class="value">${req.location || 'N/A'}</span></div>
+            <div><span class="key">Accepted By:</span> 
+              <span class="value">${
+                req.acceptedBy ? Object.keys(req.acceptedBy).join(', ') : 'No one yet'
+              }</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+
+    } else {
+      document.body.innerHTML = "<h3>Access Denied. Admins only.</h3>";
+    }
+  });
+</script>
 </body>
 </html>
