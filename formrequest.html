@@ -11,7 +11,7 @@
       padding: 20px;
     }
 
-    .form-container {
+    form {
       max-width: 500px;
       margin: auto;
       background: #fff;
@@ -53,13 +53,13 @@
 
     @media(max-width: 500px){
       body { padding: 10px; }
-      .form-container { padding: 15px; }
+      form { padding: 15px; }
     }
   </style>
 </head>
 <body>
 
-<div class="form-container">
+<form onsubmit="submitRequest(event)">
   <h2>🛠️ Service Request</h2>
   <input type="text" id="name" placeholder="Your Name" required>
   <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
@@ -75,15 +75,15 @@
   <textarea id="description" placeholder="Problem Description" rows="4" required></textarea>
   <input type="hidden" id="datetime">
   <input type="hidden" id="latlng">
-  <button class="btn-3d" onclick="submitRequest()">Submit Request</button>
-</div>
+  <button class="btn-3d" type="submit">Submit Request</button>
+</form>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
-  // ✅ Firebase Config
+  // 🔧 Replace with your real Firebase config
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -96,7 +96,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ✅ Auto location + datetime
+  // ✅ Set current date & geolocation
   window.onload = () => {
     const now = new Date();
     document.getElementById('datetime').value = now.toLocaleString();
@@ -108,13 +108,14 @@
     }
   };
 
-  // ✅ Submit function
-  function submitRequest() {
-    const name = document.getElementById('name').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const address = document.getElementById('address').value;
+  function submitRequest(event) {
+    event.preventDefault(); // ✅ prevent page reload
+
+    const name = document.getElementById('name').value.trim();
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const address = document.getElementById('address').value.trim();
     const category = document.getElementById('category').value;
-    const description = document.getElementById('description').value;
+    const description = document.getElementById('description').value.trim();
     const datetime = document.getElementById('datetime').value;
     const latlng = document.getElementById('latlng').value;
 
@@ -137,14 +138,15 @@
       acceptedBy: {}
     }).then(() => {
       alert("✅ Request submitted!");
-      document.querySelector(".form-container").reset();
+      event.target.reset(); // ✅ reset form safely
     });
   }
 
-  // ✅ Firebase login check
+  // ✅ Don't redirect even if not logged in
   firebase.auth().onAuthStateChanged(user => {
     if (!user) {
-      window.location.href = "index.html"; // redirect if not logged in
+      console.warn("User not logged in.");
+      // ❌ Don't redirect
     }
   });
 </script>
