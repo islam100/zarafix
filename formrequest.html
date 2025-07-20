@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Service Request Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      margin: 0;
+      padding: 20px;
+    }
+
+    .form-container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .btn-3d {
+      background: linear-gradient(145deg, #4CAF50, #43A047);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 0 #2e7d32;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .btn-3d:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2e7d32;
+    }
+
+    @media(max-width: 500px){
+      body { padding: 10px; }
+      .form-container { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="form-container">
+  <h2>🛠️ Service Request</h2>
+  <input type="text" id="name" placeholder="Your Name" required>
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+  <input type="text" id="address" placeholder="Your Address" required>
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option>Electrician</option>
+    <option>Plumber</option>
+    <option>AC Repair</option>
+    <option>Fridge Repair</option>
+    <option>Washing Machine</option>
+  </select>
+  <textarea id="description" placeholder="Problem Description" rows="4" required></textarea>
+  <input type="hidden" id="datetime">
+  <input type="hidden" id="latlng">
+  <button class="btn-3d" onclick="submitRequest()">Submit Request</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  // ✅ Firebase Config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ✅ Auto location + datetime
+  window.onload = () => {
+    const now = new Date();
+    document.getElementById('datetime').value = now.toLocaleString();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
+        document.getElementById('latlng').value = coords;
+      });
+    }
+  };
+
+  // ✅ Submit function
+  function submitRequest() {
+    const name = document.getElementById('name').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const address = document.getElementById('address').value;
+    const category = document.getElementById('category').value;
+    const description = document.getElementById('description').value;
+    const datetime = document.getElementById('datetime').value;
+    const latlng = document.getElementById('latlng').value;
+
+    if (!name || !whatsapp || !address || !category || !description) {
+      alert("Please fill all fields.");
+      return;
+    }
+
+    const user = firebase.auth().currentUser;
+    if (!user) {
+      alert("Please login first.");
+      return;
+    }
+
+    const userId = user.uid;
+    const newRef = db.ref("requests/" + userId).push();
+    newRef.set({
+      name, whatsapp, address, category, description,
+      datetime, location: latlng,
+      acceptedBy: {}
+    }).then(() => {
+      alert("✅ Request submitted!");
+      document.querySelector(".form-container").reset();
+    });
+  }
+
+  // ✅ Firebase login check
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "index.html"; // redirect if not logged in
+    }
+  });
+</script>
+</body>
+</html>
