@@ -3,161 +3,152 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ZaraFix - Accepted Requests</title>
+  <title>Accepted Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
       padding: 10px;
-      background: #f0f0f0;
+      background: #f2f2f2;
     }
     h2 {
       text-align: center;
     }
-    .request-card {
+    .card {
       background: white;
-      border-radius: 15px;
+      margin: 10px auto;
       padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 500px;
+      transition: 0.3s ease-in-out;
     }
-    .poster-card {
+    .card:hover {
+      transform: scale(1.01);
+    }
+    .card strong {
+      color: #333;
+    }
+    .buttons {
       margin-top: 10px;
-      padding: 10px;
-      background: #e6f7ff;
-      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
-    button {
-      padding: 10px 15px;
+    .btn {
+      flex: 1;
       margin: 5px;
+      padding: 10px;
       border: none;
       border-radius: 12px;
+      background: linear-gradient(145deg, #6dd5ed, #2193b0);
+      color: white;
       font-weight: bold;
       cursor: pointer;
-      transition: transform 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: 0.2s;
     }
-    button:hover {
-      transform: scale(1.05);
+    .btn:hover {
+      opacity: 0.85;
     }
-    .whatsapp-btn {
-      background: #25D366;
-      color: white;
+    .whatsapp {
+      background: linear-gradient(145deg, #25D366, #128C7E);
     }
-    .delete-btn {
-      background: #ff4d4f;
-      color: white;
+    .reject {
+      background: linear-gradient(145deg, #f85032, #e73827);
     }
-    .reject-btn {
-      background: #ff9900;
-      color: white;
+    .delete {
+      background: linear-gradient(145deg, #757f9a, #d7dde8);
+      color: black;
     }
   </style>
 </head>
 <body>
-  <h2>✅ Your Accepted Requests</h2>
-  <div id="requestsContainer"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<h2>✅ Your Accepted Requests</h2>
+<div id="requestList"></div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_DOMAIN",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_ID",
-      appId: "YOUR_APP_ID"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DB_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const container = document.getElementById("requestsContainer");
+  const currentPosterId = "posterId1"; // 👈 यहां आप अपना Poster ID दें
 
-    const currentPosterId = "posterId1"; // 🔁 Replace with Logged-in posterId
+  function loadAcceptedRequests() {
+    const requestList = document.getElementById("requestList");
+    requestList.innerHTML = "";
 
-    function loadAcceptedRequests() {
-      db.ref("requests").once("value", (snapshot) => {
-        container.innerHTML = "";
+    db.ref("requests").once("value", (snapshot) => {
+      const requests = snapshot.val();
 
-        snapshot.forEach((userSnap) => {
-          const userId = userSnap.key;
-          const userRequests = userSnap.val();
+      for (const userId in requests) {
+        for (const reqId in requests[userId]) {
+          const req = requests[userId][reqId];
 
-          for (const reqId in userRequests) {
-            const request = userRequests[reqId];
-            if (request.acceptedBy && request.acceptedBy[currentPosterId]) {
-              const reqDiv = document.createElement("div");
-              reqDiv.className = "request-card";
+          if (req.acceptedBy && req.acceptedBy[currentPosterId]) {
+            // Get Poster Info
+            db.ref("posters/" + currentPosterId).once("value", (snap) => {
+              const poster = snap.val();
 
-              reqDiv.innerHTML = `
-                <h4>🛠 Category: ${request.category}</h4>
-                <p><strong>Description:</strong> ${request.description}</p>
-                <p><strong>Location:</strong> ${request.location}</p>
-                <div id="poster-${reqId}" class="poster-card">Loading poster details...</div>
-                <div>
-                  <button class="whatsapp-btn" onclick="openWhatsApp('${currentPosterId}')">WhatsApp</button>
-                  <button class="reject-btn" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
-                  <button class="delete-btn" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+              const card = document.createElement("div");
+              card.className = "card";
+
+              card.innerHTML = `
+                <p><strong>🔧 Category:</strong> ${req.category}</p>
+                <p><strong>📍 Location:</strong> ${req.location}</p>
+                <p><strong>📝 Description:</strong> ${req.description}</p>
+                <hr>
+                <p><strong>👨 Poster Name:</strong> ${poster.name}</p>
+                <p><strong>🏪 Shop:</strong> ${poster.shop}</p>
+                <p><strong>📞 WhatsApp:</strong> ${poster.whatsapp}</p>
+                <p><strong>🛠️ Skill:</strong> ${poster.category}</p>
+                <div class="buttons">
+                  <button class="btn whatsapp" onclick="openWhatsapp('${poster.whatsapp}')">WhatsApp</button>
+                  <button class="btn reject" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
+                  <button class="btn delete" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
                 </div>
               `;
-              container.appendChild(reqDiv);
-              loadPosterDetail(currentPosterId, reqId);
-            }
+              requestList.appendChild(card);
+            });
           }
-        });
-
-        if (container.innerHTML.trim() === "") {
-          container.innerHTML = "<p>😔 No accepted requests found.</p>";
         }
-      });
-    }
+      }
+    });
+  }
 
-    function loadPosterDetail(posterId, reqId) {
-      db.ref("posters/" + posterId).once("value", (snap) => {
-        const data = snap.val();
-        if (data) {
-          document.getElementById("poster-" + reqId).innerHTML = `
-            <p><strong>Name:</strong> ${data.name}</p>
-            <p><strong>Shop:</strong> ${data.shop}</p>
-            <p><strong>Category:</strong> ${data.category}</p>
-            <p><strong>Wallet:</strong> ₹${data.wallet}</p>
-            <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
-          `;
-        } else {
-          document.getElementById("poster-" + reqId).innerHTML = "❌ Poster detail not found.";
-        }
-      });
-    }
+  function openWhatsapp(number) {
+    window.open(`https://wa.me/91${number}`, "_blank");
+  }
 
-    function openWhatsApp(posterId) {
-      db.ref("posters/" + posterId).once("value", (snap) => {
-        const data = snap.val();
-        if (data && data.whatsapp) {
-          window.open(`https://wa.me/91${data.whatsapp}`, "_blank");
-        } else {
-          alert("WhatsApp number not found!");
-        }
-      });
-    }
+  function rejectRequest(userId, requestId) {
+    const reqRef = db.ref(`requests/${userId}/${requestId}/acceptedBy/${currentPosterId}`);
+    reqRef.remove().then(() => {
+      alert("❌ Rejected");
+      loadAcceptedRequests();
+    });
+  }
 
-    function rejectRequest(userId, reqId) {
-      const path = `requests/${userId}/${reqId}/acceptedBy/${currentPosterId}`;
-      firebase.database().ref(path).remove().then(() => {
-        alert("Request Rejected");
-        loadAcceptedRequests();
-      });
-    }
+  function deleteRequest(userId, requestId) {
+    const reqRef = db.ref(`requests/${userId}/${requestId}`);
+    reqRef.remove().then(() => {
+      alert("🗑️ Request Deleted");
+      loadAcceptedRequests();
+    });
+  }
 
-    function deleteRequest(userId, reqId) {
-      const path = `requests/${userId}/${reqId}`;
-      firebase.database().ref(path).remove().then(() => {
-        alert("Request Deleted");
-        loadAcceptedRequests();
-      });
-    }
+  loadAcceptedRequests();
+</script>
 
-    loadAcceptedRequests();
-  </script>
 </body>
 </html>
