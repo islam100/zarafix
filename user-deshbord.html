@@ -3,150 +3,156 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Accepted Requests</title>
+  <title>ZaraFix - Accepted Requests</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
-      margin: 0;
       padding: 10px;
+      background: #f0f0f0;
     }
-
     h2 {
       text-align: center;
-      color: #333;
     }
-
     .request-card {
       background: white;
-      border-radius: 16px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      border-radius: 15px;
       padding: 15px;
-      margin: 15px auto;
-      max-width: 500px;
-      transition: transform 0.2s;
+      margin: 10px 0;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
-
-    .request-card:hover {
-      transform: scale(1.01);
-    }
-
-    .poster-info {
-      background: #eef7ff;
-      padding: 10px;
-      border-radius: 12px;
+    .poster-card {
       margin-top: 10px;
+      padding: 10px;
+      background: #e6f7ff;
+      border-radius: 10px;
     }
-
-    .btn {
-      padding: 10px 20px;
-      margin: 5px 5px 0 0;
+    button {
+      padding: 10px 15px;
+      margin: 5px;
       border: none;
       border-radius: 12px;
       font-weight: bold;
-      box-shadow: 0 6px 0 #888;
-      transition: all 0.2s;
       cursor: pointer;
+      transition: transform 0.2s ease;
     }
-
-    .btn:active {
-      box-shadow: 0 2px 0 #888;
-      transform: translateY(4px);
+    button:hover {
+      transform: scale(1.05);
     }
-
-    .whatsapp { background: #25D366; color: white; }
-    .delete   { background: #ff4444; color: white; }
-    .reject   { background: #ffaa00; color: white; }
-
-    @media (max-width: 600px) {
-      .request-card { margin: 10px; }
-      .btn { width: 100%; margin-bottom: 10px; }
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+    }
+    .delete-btn {
+      background: #ff4d4f;
+      color: white;
+    }
+    .reject-btn {
+      background: #ff9900;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <h2>Your Accepted Requests</h2>
+  <h2>✅ Your Accepted Requests</h2>
   <div id="requestsContainer"></div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:example"
+      messagingSenderId: "YOUR_ID",
+      appId: "YOUR_APP_ID"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const container = document.getElementById("requestsContainer");
 
-    const requestsContainer = document.getElementById("requestsContainer");
+    const currentPosterId = "posterId1"; // 🔁 Replace with Logged-in posterId
 
-    async function loadAcceptedRequests() {
-      const requestsSnap = await db.ref("requests").once("value");
-      const postersSnap = await db.ref("posters").once("value");
-      const requestsData = requestsSnap.val();
-      const postersData = postersSnap.val();
+    function loadAcceptedRequests() {
+      db.ref("requests").once("value", (snapshot) => {
+        container.innerHTML = "";
 
-      requestsContainer.innerHTML = "";
+        snapshot.forEach((userSnap) => {
+          const userId = userSnap.key;
+          const userRequests = userSnap.val();
 
-      if (!requestsData) {
-        requestsContainer.innerHTML = "<p>No accepted requests found.</p>";
-        return;
-      }
+          for (const reqId in userRequests) {
+            const request = userRequests[reqId];
+            if (request.acceptedBy && request.acceptedBy[currentPosterId]) {
+              const reqDiv = document.createElement("div");
+              reqDiv.className = "request-card";
 
-      Object.entries(requestsData).forEach(([userId, userRequests]) => {
-        Object.entries(userRequests).forEach(([requestId, request]) => {
-          if (request.acceptedBy) {
-            Object.keys(request.acceptedBy).forEach(posterId => {
-              const poster = postersData?.[posterId];
-              const card = document.createElement("div");
-              card.className = "request-card";
-              card.innerHTML = `
-                <strong>Category:</strong> ${request.category}<br>
-                <strong>Description:</strong> ${request.description}<br>
-                <strong>Location:</strong> ${request.location || "-"}<br>
-                <div class="poster-info">
-                  <strong>Accepted By:</strong><br>
-                  Name: ${poster?.name || "Unknown"}<br>
-                  Shop: ${poster?.shop || "-"}<br>
-                  WhatsApp: ${poster?.whatsapp || "-"}<br>
-                  Wallet: ₹${poster?.wallet || "0"}
-                </div>
-                <div style="margin-top:10px">
-                  <button class="btn whatsapp" onclick="openWhatsApp('${poster?.whatsapp}')">WhatsApp</button>
-                  <button class="btn reject" onclick="rejectRequest('${userId}', '${requestId}', '${posterId}')">Reject</button>
-                  <button class="btn delete" onclick="deleteRequest('${userId}', '${requestId}')">Delete</button>
+              reqDiv.innerHTML = `
+                <h4>🛠 Category: ${request.category}</h4>
+                <p><strong>Description:</strong> ${request.description}</p>
+                <p><strong>Location:</strong> ${request.location}</p>
+                <div id="poster-${reqId}" class="poster-card">Loading poster details...</div>
+                <div>
+                  <button class="whatsapp-btn" onclick="openWhatsApp('${currentPosterId}')">WhatsApp</button>
+                  <button class="reject-btn" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
+                  <button class="delete-btn" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
                 </div>
               `;
-              requestsContainer.appendChild(card);
-            });
+              container.appendChild(reqDiv);
+              loadPosterDetail(currentPosterId, reqId);
+            }
           }
         });
+
+        if (container.innerHTML.trim() === "") {
+          container.innerHTML = "<p>😔 No accepted requests found.</p>";
+        }
       });
     }
 
-    function openWhatsApp(number) {
-      window.open(`https://wa.me/${number}`, '_blank');
+    function loadPosterDetail(posterId, reqId) {
+      db.ref("posters/" + posterId).once("value", (snap) => {
+        const data = snap.val();
+        if (data) {
+          document.getElementById("poster-" + reqId).innerHTML = `
+            <p><strong>Name:</strong> ${data.name}</p>
+            <p><strong>Shop:</strong> ${data.shop}</p>
+            <p><strong>Category:</strong> ${data.category}</p>
+            <p><strong>Wallet:</strong> ₹${data.wallet}</p>
+            <p><strong>WhatsApp:</strong> ${data.whatsapp}</p>
+          `;
+        } else {
+          document.getElementById("poster-" + reqId).innerHTML = "❌ Poster detail not found.";
+        }
+      });
     }
 
-    function rejectRequest(userId, requestId, posterId) {
-      const ref = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
-      ref.remove().then(() => {
-        alert("Rejected!");
+    function openWhatsApp(posterId) {
+      db.ref("posters/" + posterId).once("value", (snap) => {
+        const data = snap.val();
+        if (data && data.whatsapp) {
+          window.open(`https://wa.me/91${data.whatsapp}`, "_blank");
+        } else {
+          alert("WhatsApp number not found!");
+        }
+      });
+    }
+
+    function rejectRequest(userId, reqId) {
+      const path = `requests/${userId}/${reqId}/acceptedBy/${currentPosterId}`;
+      firebase.database().ref(path).remove().then(() => {
+        alert("Request Rejected");
         loadAcceptedRequests();
       });
     }
 
-    function deleteRequest(userId, requestId) {
-      db.ref(`requests/${userId}/${requestId}`).remove().then(() => {
-        alert("Request Deleted!");
+    function deleteRequest(userId, reqId) {
+      const path = `requests/${userId}/${reqId}`;
+      firebase.database().ref(path).remove().then(() => {
+        alert("Request Deleted");
         loadAcceptedRequests();
       });
     }
