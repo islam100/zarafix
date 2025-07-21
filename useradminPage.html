@@ -1,156 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 ZaraFix - Your Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial;
-      background: #f0f0f0;
-      padding: 20px;
-      margin: 0;
-      text-align: center;
-    }
-
-    .notice-bar {
-      background: #000;
-      color: #fff;
-      padding: 10px;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-
-    .scrolling-text {
-      display: inline-block;
-      animation: scroll 20s linear infinite;
-    }
-
-    @keyframes scroll {
-      0% { transform: translateX(100%); }
-      100% { transform: translateX(-100%); }
-    }
-
-    .card {
-      background: #fff;
-      padding: 15px;
-      border-radius: 20px;
-      margin: 15px auto;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      max-width: 500px;
-      text-align: left;
-    }
-
-    .card h3 {
-      color: #2c3e50;
-    }
-
-    .button3d {
-      background: linear-gradient(to bottom right, #00c6ff, #0072ff);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 30px;
-      font-size: 16px;
-      margin: 10px;
-      box-shadow: 0 5px 0 #0059b3;
-      cursor: pointer;
-    }
-
-    .button3d:active {
-      box-shadow: none;
-      transform: translateY(5px);
-    }
-  </style>
-</head>
-<body>
-
-  <div class="notice-bar">
-    <span class="scrolling-text" id="scrollingText">Loading notice...</span>
-  </div>
-
-  <h2>✅ Your Requests and Acceptors</h2>
-  <div id="requestsContainer"></div>
-
-  <button class="button3d" onclick="logout()">🚪 Logout</button>
-
-  <!-- Firebase SDK -->
+  <title>Service Request Form</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <h2>🛠️ Service Request Form</h2>
+
+  <!-- Login Button -->
+  <button id="loginBtn">Login with Google</button>
+
+  <!-- Request Form -->
+  <form id="requestForm" style="display:none;">
+    <input type="text" id="name" placeholder="Name" required><br><br>
+    <input type="text" id="phone" placeholder="Phone Number" required><br><br>
+    <textarea id="message" placeholder="Describe your service need..." required></textarea><br><br>
+    <button type="submit">Submit Request</button>
+  </form>
 
   <script>
-    // ✅ Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+      messagingSenderId: "142673894657",
+      appId: "1:142673894657:web:ff4194f227a87e9a3464fc"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // ✅ Redirect if not logged in
+    const loginBtn = document.getElementById('loginBtn');
+    const requestForm = document.getElementById('requestForm');
+
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(() => {
+          loginBtn.style.display = 'none';
+          requestForm.style.display = 'block';
+        });
+    });
+
     auth.onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        loadNotices();
-        loadMyRequests(user.uid);
+      if (user) {
+        loginBtn.style.display = 'none';
+        requestForm.style.display = 'block';
       }
     });
 
-    function loadNotices() {
-      db.ref("notices/scrollingText").once("value", snap => {
-        document.getElementById("scrollingText").innerText = snap.val() || "🎉 Welcome to ZaraFix!";
+    requestForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const message = document.getElementById('message').value;
+
+      const requestId = "REQ" + Date.now();
+
+      db.ref("requests/" + user.uid + "/" + requestId).set({
+        name,
+        phone,
+        message,
+        timestamp: new Date().toISOString()
+      }).then(() => {
+        alert("✅ Request Submitted!");
+        requestForm.reset();
       });
-    }
-
-    function loadMyRequests(uid) {
-      const container = document.getElementById("requestsContainer");
-      db.ref("requests/" + uid).once("value", snap => {
-        const data = snap.val();
-        if (!data) {
-          container.innerHTML = "<div class='card'>😔 You have not submitted any service requests yet.</div>";
-          return;
-        }
-        Object.entries(data).forEach(([requestId, request]) => {
-          let card = `<div class="card">
-            <h3>🛠️ Category: ${request.category}</h3>
-            <p><strong>Description:</strong> ${request.description}</p>
-            <p><strong>Location:</strong> ${request.location}</p>`;
-
-          if (request.acceptedBy) {
-            card += `<h4>✅ Accepted By:</h4>`;
-            Object.keys(request.acceptedBy).forEach(posterId => {
-              db.ref("posters/" + posterId).once("value", posterSnap => {
-                const poster = posterSnap.val();
-                if (poster) {
-                  card += `
-                    <div style="background:#e8f4ff;padding:10px;border-radius:10px;margin-top:10px;">
-                      👤 <strong>${poster.name}</strong><br>
-                      🏪 ${poster.shop}<br>
-                      📱 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a>
-                    </div>`;
-                }
-              });
-            });
-          } else {
-            card += `<p>🚫 No one has accepted this request yet.</p>`;
-          }
-
-          card += `</div>`;
-          container.innerHTML += card;
-        });
-      });
-    }
-
-    function logout() {
-      auth.signOut().then(() => window.location.href = "index.html");
-    }
+    });
   </script>
 </body>
 </html>
