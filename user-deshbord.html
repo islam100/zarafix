@@ -1,9 +1,37 @@
-<!-- 👇 User Dashboard - Accepted Request Info -->
-<div id="userAcceptedRequests" style="padding: 10px; font-family: sans-serif;"></div>
+<div id="userRequests"></div>
+
+<style>
+  .card {
+    background: #f0f0f0;
+    padding: 16px;
+    margin: 10px 0;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+  .button-3d {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  .button-3d:active {
+    transform: translateY(2px);
+  }
+  .whatsapp-btn {
+    background-color: green;
+  }
+  .reject-btn {
+    background-color: red;
+  }
+</style>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
@@ -12,72 +40,65 @@
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "628241118289",
-    appId: "1:628241118289:web:fa8f16e4c6e477365462e3"
+    messagingSenderId: "504932296067",
+    appId: "1:504932296067:web:4f594a90b33f6cb89764ec"
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-
-  const userAcceptedRequestsDiv = document.getElementById("userAcceptedRequests");
+  const db = getDatabase();
+  const auth = getAuth();
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       const userId = user.uid;
-      const userReqRef = ref(db, `requests/${userId}`);
-      const userReqSnap = await get(userReqRef);
+      const requestsRef = ref(db, `requests/${userId}`);
+      const postersRef = ref(db, 'posters');
+      const snapshot = await get(requestsRef);
 
-      userAcceptedRequestsDiv.innerHTML = `<h3>Your Accepted Requests:</h3>`;
+      const userRequestsDiv = document.getElementById('userRequests');
+      userRequestsDiv.innerHTML = '<h2>Your Accepted Requests:</h2>';
 
-      if (userReqSnap.exists()) {
-        const requests = userReqSnap.val();
+      if (snapshot.exists()) {
+        const requests = snapshot.val();
+        for (let reqId in requests) {
+          const req = requests[reqId];
 
-        for (const requestId in requests) {
-          const request = requests[requestId];
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <strong>Category:</strong> ${req.category} <br>
+            <strong>Description:</strong> ${req.description || 'N/A'} <br>
+            <strong>Location:</strong> ${req.location || 'N/A'} <br><br>
+          `;
 
-          if (request.acceptedBy) {
-            for (const posterId in request.acceptedBy) {
-              // get poster details
-              const posterSnap = await get(ref(db, `posters/${posterId}`));
-              const poster = posterSnap.exists() ? posterSnap.val() : null;
-
-              if (poster) {
-                const posterInfo = `
-                  <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px; border-radius:10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    <strong>${poster.name} (${poster.category})</strong><br>
-                    Shop: ${poster.shop}<br>
-                    Wallet: ₹${poster.wallet}<br>
-                    
-                    <button style="background-color:#25D366;color:white;border:none;border-radius:5px;padding:6px 12px;margin:5px;font-weight:bold;box-shadow: 2px 2px 5px #999;"
-                      onclick="window.open('https://wa.me/91${poster.whatsapp}', '_blank')">
-                      📱 WhatsApp
-                    </button>
-
-                    <button style="background-color:#ff4d4d;color:white;border:none;border-radius:5px;padding:6px 12px;margin:5px;font-weight:bold;box-shadow: 2px 2px 5px #999;"
-                      onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">
-                      ❌ Reject
-                    </button>
-                  </div>
+          // अगर किसी ने accept किया हो
+          if (req.acceptedBy) {
+            for (let posterId in req.acceptedBy) {
+              const posterSnap = await get(child(postersRef, posterId));
+              if (posterSnap.exists()) {
+                const poster = posterSnap.val();
+                const acceptedInfo = document.createElement('div');
+                acceptedInfo.innerHTML = `
+                  <hr>
+                  <strong>Accepted by:</strong> ${poster.name} (${poster.category})<br>
+                  <strong>Shop:</strong> ${poster.shop}<br>
+                  <strong>Wallet:</strong> ₹${poster.wallet}<br>
+                  <strong>WhatsApp:</strong> ${poster.whatsapp}<br><br>
+                  <a class="button-3d whatsapp-btn" href="https://wa.me/${poster.whatsapp}" target="_blank">📱 WhatsApp</a>
+                  <button class="button-3d reject-btn" onclick="alert('Reject logic here')">❌ Reject</button>
                 `;
-                userAcceptedRequestsDiv.innerHTML += posterInfo;
+                card.appendChild(acceptedInfo);
               }
             }
           }
+
+          userRequestsDiv.appendChild(card);
         }
       } else {
-        userAcceptedRequestsDiv.innerHTML += `<p>No accepted requests yet.</p>`;
+        userRequestsDiv.innerHTML += "<p>No requests found.</p>";
       }
     } else {
-      userAcceptedRequestsDiv.innerHTML = `<p>Please login first.</p>`;
+      document.getElementById('userRequests').innerHTML = "Please login first.";
     }
   });
-
-  // Reject Button Logic
-  window.rejectPoster = async function(userId, requestId, posterId) {
-    const acceptedRef = ref(db, `requests/${userId}/${requestId}/acceptedBy/${posterId}`);
-    await update(acceptedRef, null);  // remove the poster from accepted list
-    alert("Rejected successfully!");
-    location.reload();
-  };
 </script>
