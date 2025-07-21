@@ -1,66 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Accepted Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background-color: #f2f2f2;
-    }
-
-    .card {
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      font-family: Arial;
       padding: 20px;
-      margin: 15px 0;
     }
-
-    .card h3 {
-      margin-top: 0;
-      color: #333;
+    .card {
+      border: 2px solid #ccc;
+      border-radius: 16px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 2px 2px 8px #aaa;
     }
-
-    .btn {
-      display: inline-block;
-      padding: 10px 16px;
-      margin: 6px 5px 0 0;
+    button {
+      margin-right: 10px;
+      padding: 10px 15px;
       border: none;
-      border-radius: 12px;
-      background: linear-gradient(to right, #4facfe, #00f2fe);
-      color: white;
-      font-weight: bold;
+      border-radius: 10px;
+      box-shadow: 2px 2px 5px #666;
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: 0.3s;
     }
-
-    .btn:hover {
-      transform: scale(1.05);
-    }
-
-    @media(max-width: 600px) {
-      .card {
-        font-size: 15px;
-        padding: 15px;
-      }
-      .btn {
-        padding: 8px 12px;
-      }
-    }
+    .whatsapp { background-color: #25D366; color: white; }
+    .delete { background-color: #f44336; color: white; }
+    .reject { background-color: #ff9800; color: white; }
   </style>
 </head>
 <body>
-
   <h2>✅ Your Accepted Requests</h2>
-  <div id="acceptedRequests"></div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <div id="requestsContainer">Loading...</div>
 
   <script>
     const firebaseConfig = {
@@ -69,76 +41,69 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "796124985522",
-      appId: "1:796124985522:web:f8f0d2538f4c0e0b29b9c6"
+      messagingSenderId: "473628251696",
+      appId: "1:473628251696:web:857cb4bb3c43ac9300305d"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const container = document.getElementById("requestsContainer");
 
-    const currentUserId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // 🔑 Replace with actual userId (from login)
-    const acceptedRequestsDiv = document.getElementById("acceptedRequests");
+    const currentAdminEmail = "zarafix3@gmail.com"; // ← इसको बदलो अपने ईमेल से
 
-    db.ref("requests").once("value", async (snapshot) => {
-      const requests = snapshot.val();
-      acceptedRequestsDiv.innerHTML = '';
-
-      for (const userId in requests) {
-        const userRequests = requests[userId];
-        for (const reqId in userRequests) {
-          const req = userRequests[reqId];
-          if (req.acceptedBy && req.acceptedBy.uid === currentUserId) {
-            const posterId = req.posterId || userId;
-
-            const posterSnap = await db.ref("posterUsers/" + posterId).once("value");
-            const poster = posterSnap.val();
-
+    db.ref("requests").once("value", snapshot => {
+      container.innerHTML = "";
+      snapshot.forEach(userSnap => {
+        userSnap.forEach(reqSnap => {
+          const req = reqSnap.val();
+          if (req.acceptedBy === currentAdminEmail) {
             const card = document.createElement("div");
             card.className = "card";
+
+            const name = req.name || "N/A";
+            const address = req.address || "N/A";
+            const pincode = req.pincode || "N/A";
+            const category = req.category || "N/A";
+            const issue = req.issue || "N/A";
+            const location = req.location || "N/A";
+            const acceptedBy = req.acceptedBy || "N/A";
+
+            const phone = req.phone || "911234567890"; // ← WhatsApp नंबर (default अगर missing है)
+
             card.innerHTML = `
-              🧑‍🔧 <b>Name:</b> ${req.name || "N/A"}<br>
-              📌 <b>Category:</b> ${req.category || "N/A"}<br>
-              📍 <b>Address:</b> ${req.address || "N/A"}<br>
-              📍 <b>Pincode:</b> ${req.pincode || "N/A"}<br>
-              📅 <b>Issue:</b> ${req.issue || "N/A"}<br>
-              📍 <b>Location:</b> ${req.location || "N/A"}<br>
-              ✅ <b>Accepted By:</b> ${req.acceptedBy.email || "N/A"}<br><br>
-              🔄 <b>Loading Poster Info...</b><br><br>
-
-              <button class="btn" onclick="openWhatsApp('${poster?.phone || ''}')">WhatsApp</button>
-              <button class="btn" onclick="deleteRequest('${userId}','${reqId}')">Delete</button>
-              <button class="btn" onclick="rejectRequest('${userId}','${reqId}')">Reject</button>
+              🧑‍🔧 <strong>Name:</strong> ${name}<br>
+              📌 <strong>Category:</strong> ${category}<br>
+              📍 <strong>Address:</strong> ${address}<br>
+              📍 <strong>Pincode:</strong> ${pincode}<br>
+              📅 <strong>Issue:</strong> ${issue}<br>
+              📍 <strong>Location:</strong> ${location}<br>
+              ✅ <strong>Accepted By:</strong> ${acceptedBy}<br><br>
+              <button class="whatsapp" onclick="window.open('https://wa.me/${phone}', '_blank')">WhatsApp</button>
+              <button class="delete" onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">Delete</button>
+              <button class="reject" onclick="rejectRequest('${userSnap.key}', '${reqSnap.key}')">Reject</button>
             `;
-
-            acceptedRequestsDiv.appendChild(card);
+            container.appendChild(card);
           }
-        }
+        });
+      });
+
+      if (container.innerHTML === "") {
+        container.innerHTML = "❌ कोई Accepted Request नहीं मिला।";
       }
     });
 
-    function openWhatsApp(phone) {
-      if (!phone) {
-        alert("Phone number not found.");
-        return;
-      }
-      const link = `https://wa.me/${phone}`;
-      window.open(link, "_blank");
-    }
-
     function deleteRequest(userId, reqId) {
-      if (confirm("Delete this request?")) {
+      if (confirm("क्या आप वाकई डिलीट करना चाहते हैं?")) {
         firebase.database().ref(`requests/${userId}/${reqId}`).remove();
-        alert("Deleted");
+        alert("Request Deleted");
         location.reload();
       }
     }
 
     function rejectRequest(userId, reqId) {
-      if (confirm("Reject this request?")) {
-        firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy`).remove();
-        alert("Rejected");
-        location.reload();
-      }
+      firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy`).remove();
+      alert("Request Rejected");
+      location.reload();
     }
   </script>
 </body>
