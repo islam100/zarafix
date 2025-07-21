@@ -1,49 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Request Status</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
     .card {
-      background: #fff;
-      border-radius: 20px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      border: 1px solid #ccc;
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       padding: 20px;
       margin-bottom: 20px;
-      transition: 0.3s;
     }
-    .card:hover { transform: scale(1.01); }
-    .card img {
-      width: 80px; height: 80px; border-radius: 50%;
-    }
-    .whatsapp-button, .reject-button {
-      padding: 10px 20px;
+    .btn {
+      padding: 10px 16px;
       border: none;
-      border-radius: 12px;
-      margin: 10px 5px 0 0;
-      font-weight: bold;
-      color: #fff;
+      color: white;
+      border-radius: 10px;
+      margin-top: 10px;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
+      box-shadow: 2px 4px 6px rgba(0,0,0,0.2);
     }
-    .whatsapp-button {
-      background: #25D366;
-    }
-    .reject-button {
-      background: #ff4d4d;
-    }
-    .whatsapp-button:hover, .reject-button:hover {
-      transform: scale(1.05);
+    .btn-accept { background-color: green; }
+    .btn-reject { background-color: red; }
+    .btn-whatsapp {
+      background-color: #25D366;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-<h2>आपकी Request की स्थिति</h2>
-<div id="statusContainer">लोड हो रहा है...</div>
+<h2>🛠 Admin Dashboard</h2>
+<div id="dashboard"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -52,57 +47,63 @@
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    messagingSenderId: "621509306423",
+    appId: "1:621509306423:web:82e2c3a10b747cb2265f08"
   };
+
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // 🔻 अपना USER ID यहाँ डालें या dynamically URL से लें
-  const userId = "USER123"; // 👈 बदलें अगर ज़रूरी हो
+  const dashboard = document.getElementById('dashboard');
 
-  db.ref(`requests/${userId}`).once('value', snapshot => {
-    const reqData = snapshot.val();
-    const container = document.getElementById('statusContainer');
-    container.innerHTML = "";
+  function renderRequest(userId, requestId, data, posterData) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <strong>📝 Category:</strong> ${data.category} <br>
+      <strong>📍 Description:</strong> ${data.description} <br>
+      <strong>📌 Location:</strong> ${data.location || 'N/A'} <br><br>
+      ${posterData ? `
+        <strong>👨‍🔧 Accepted By:</strong><br>
+        🔹 <strong>Name:</strong> ${posterData.name} <br>
+        🔹 <strong>Category:</strong> ${posterData.category}<br>
+        🔹 <strong>Shop:</strong> ${posterData.shop}<br>
+        🔹 <a class="btn btn-whatsapp" href="https://wa.me/${posterData.whatsapp}" target="_blank">Chat on WhatsApp</a><br>
+      ` : ''}
+      <button class="btn btn-reject" onclick="rejectRequest('${userId}', '${requestId}')">Reject ❌</button>
+    `;
+    dashboard.prepend(div); // नए request सबसे ऊपर
+  }
 
-    if (!reqData) {
-      container.innerHTML = "कोई रिक्वेस्ट नहीं मिली।";
-      return;
+  function rejectRequest(userId, requestId) {
+    if (confirm("Are you sure to reject this request?")) {
+      db.ref(`requests/${userId}/${requestId}/acceptedBy`).remove();
+      alert("❌ Request rejected.");
+      location.reload();
     }
+  }
 
-    Object.entries(reqData).forEach(([reqId, data]) => {
-      const acceptedBy = data.acceptedBy || null;
+  async function loadDashboard() {
+    const postersSnap = await db.ref('posters').once('value');
+    const posters = postersSnap.val() || {};
 
-      if (acceptedBy) {
-        // यदि किसी ने accept किया है
-        db.ref(`users/${acceptedBy}`).once('value', snap => {
-          const acceptor = snap.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <h3>आपका काम स्वीकार किया गया है</h3>
-            <img src="${acceptor.photoURL || 'https://via.placeholder.com/80'}" />
-            <p><strong>नाम:</strong> ${acceptor.name || 'N/A'}</p>
-            <p><strong>मोबाइल:</strong> ${acceptor.phone || 'N/A'}</p>
-            <a class="whatsapp-button" href="https://wa.me/${acceptor.phone}" target="_blank">WhatsApp</a>
-            <button class="reject-button" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
-          `;
-          container.appendChild(card);
-        });
-      } else {
-        container.innerHTML = "आपकी रिक्वेस्ट अभी तक किसी ने स्वीकार नहीं की है।";
+    db.ref('requests').on('value', snapshot => {
+      dashboard.innerHTML = '';
+      const requests = snapshot.val();
+      if (!requests) return;
+
+      for (const userId in requests) {
+        for (const requestId in requests[userId]) {
+          const req = requests[userId][requestId];
+          let posterId = req.acceptedBy ? Object.keys(req.acceptedBy)[0] : null;
+          let posterData = posterId ? posters[posterId] : null;
+          renderRequest(userId, requestId, req, posterData);
+        }
       }
     });
-  });
-
-  function rejectRequest(userId, reqId) {
-    firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy`).remove().then(() => {
-      alert("Request Reject कर दी गई है");
-      location.reload();
-    });
   }
-</script>
 
+  loadDashboard();
+</script>
 </body>
 </html>
