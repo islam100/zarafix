@@ -3,52 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Requests</title>
+  <title>Accepted Requests</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
+      padding: 10px;
+      background-color: #f2f2f2;
     }
-    .request-card {
+
+    .card {
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
       padding: 20px;
-      margin-bottom: 20px;
+      margin: 15px 0;
     }
-    h2 {
-      text-align: center;
+
+    .card h3 {
+      margin-top: 0;
+      color: #333;
     }
+
     .btn {
       display: inline-block;
-      margin: 5px;
-      padding: 10px 15px;
-      background: linear-gradient(to right, #4CAF50, #2E7D32);
-      color: white;
+      padding: 10px 16px;
+      margin: 6px 5px 0 0;
       border: none;
       border-radius: 12px;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      color: white;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: 0.2s;
+      transition: 0.3s;
     }
+
     .btn:hover {
       transform: scale(1.05);
     }
-    .card-info {
-      line-height: 1.6;
+
+    @media(max-width: 600px) {
+      .card {
+        font-size: 15px;
+        padding: 15px;
+      }
+      .btn {
+        padding: 8px 12px;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>📋 Your Accepted Requests</h2>
-  <div id="requests-container"></div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <h2>✅ Your Accepted Requests</h2>
+  <div id="acceptedRequests"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -57,106 +69,76 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "311471513491",
-      appId: "1:311471513491:web:1c69397360ac1688cbd8f1"
+      messagingSenderId: "796124985522",
+      appId: "1:796124985522:web:f8f0d2538f4c0e0b29b9c6"
     };
 
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        const userId = user.uid;
-        const container = document.getElementById("requests-container");
+    const currentUserId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // 🔑 Replace with actual userId (from login)
+    const acceptedRequestsDiv = document.getElementById("acceptedRequests");
 
-        firebase.database().ref("requests/" + userId).once("value", snapshot => {
-          if (!snapshot.exists()) {
-            container.innerHTML = "<p>No Requests Found</p>";
-            return;
-          }
+    db.ref("requests").once("value", async (snapshot) => {
+      const requests = snapshot.val();
+      acceptedRequestsDiv.innerHTML = '';
 
-          snapshot.forEach(child => {
-            const req = child.val();
-            const reqId = child.key;
-            const acceptedBy = req.acceptedBy || "Pending";
+      for (const userId in requests) {
+        const userRequests = requests[userId];
+        for (const reqId in userRequests) {
+          const req = userRequests[reqId];
+          if (req.acceptedBy && req.acceptedBy.uid === currentUserId) {
+            const posterId = req.posterId || userId;
 
-            // Card
+            const posterSnap = await db.ref("posterUsers/" + posterId).once("value");
+            const poster = posterSnap.val();
+
             const card = document.createElement("div");
-            card.className = "request-card";
+            card.className = "card";
             card.innerHTML = `
-              <div class="card-info">
-                <strong>🧑‍🔧 Name:</strong> ${req.name}<br>
-                <strong>📌 Category:</strong> ${req.category}<br>
-                <strong>📍 Address:</strong> ${req.address}<br>
-                <strong>📍 Pincode:</strong> ${req.pincode}<br>
-                <strong>📅 Issue:</strong> ${req.issue}<br>
-                <strong>📍 Location:</strong> ${req.location}<br>
-                <strong>✅ Accepted By:</strong> ${acceptedBy}<br>
-              </div>
-              <div id="poster-${reqId}">🔄 Loading Poster Info...</div>
-              <br>
-              <button class="btn" onclick="openWhatsApp('${acceptedBy}')">WhatsApp</button>
-              <button class="btn" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
-              <button class="btn" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
+              🧑‍🔧 <b>Name:</b> ${req.name || "N/A"}<br>
+              📌 <b>Category:</b> ${req.category || "N/A"}<br>
+              📍 <b>Address:</b> ${req.address || "N/A"}<br>
+              📍 <b>Pincode:</b> ${req.pincode || "N/A"}<br>
+              📅 <b>Issue:</b> ${req.issue || "N/A"}<br>
+              📍 <b>Location:</b> ${req.location || "N/A"}<br>
+              ✅ <b>Accepted By:</b> ${req.acceptedBy.email || "N/A"}<br><br>
+              🔄 <b>Loading Poster Info...</b><br><br>
+
+              <button class="btn" onclick="openWhatsApp('${poster?.phone || ''}')">WhatsApp</button>
+              <button class="btn" onclick="deleteRequest('${userId}','${reqId}')">Delete</button>
+              <button class="btn" onclick="rejectRequest('${userId}','${reqId}')">Reject</button>
             `;
 
-            container.appendChild(card);
-
-            // Poster Info
-            if (acceptedBy !== "Pending") {
-              firebase.database().ref("posterUsers/" + acceptedBy).once("value", posterSnap => {
-                if (posterSnap.exists()) {
-                  const poster = posterSnap.val();
-                  document.getElementById(`poster-${reqId}`).innerHTML = `
-                    <hr>
-                    <strong>📇 Poster Detail:</strong><br>
-                    Name: ${poster.name || "N/A"}<br>
-                    Phone: ${poster.phone || "N/A"}<br>
-                    Address: ${poster.address || "N/A"}
-                  `;
-                } else {
-                  document.getElementById(`poster-${reqId}`).innerHTML = "🚫 Poster Info Not Found";
-                }
-              });
-            } else {
-              document.getElementById(`poster-${reqId}`).innerHTML = "❌ Not Accepted Yet";
-            }
-          });
-        });
-      } else {
-        alert("Please login first.");
+            acceptedRequestsDiv.appendChild(card);
+          }
+        }
       }
     });
 
-    function openWhatsApp(uid) {
-      firebase.database().ref("posterUsers/" + uid).once("value", snap => {
-        if (snap.exists()) {
-          const phone = snap.val().phone;
-          if (phone) {
-            window.open(`https://wa.me/91${phone}`);
-          } else {
-            alert("Phone number not found.");
-          }
-        } else {
-          alert("Poster info not found.");
-        }
-      });
+    function openWhatsApp(phone) {
+      if (!phone) {
+        alert("Phone number not found.");
+        return;
+      }
+      const link = `https://wa.me/${phone}`;
+      window.open(link, "_blank");
     }
 
-    function deleteRequest(uid, reqId) {
+    function deleteRequest(userId, reqId) {
       if (confirm("Delete this request?")) {
-        firebase.database().ref("requests/" + uid + "/" + reqId).remove();
-        alert("Request deleted.");
+        firebase.database().ref(`requests/${userId}/${reqId}`).remove();
+        alert("Deleted");
         location.reload();
       }
     }
 
-    function rejectRequest(uid, reqId) {
-      firebase.database().ref("requests/" + uid + "/" + reqId).update({
-        acceptedBy: null
-      }).then(() => {
-        alert("Request marked as rejected.");
+    function rejectRequest(userId, reqId) {
+      if (confirm("Reject this request?")) {
+        firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy`).remove();
+        alert("Rejected");
         location.reload();
-      });
+      }
     }
   </script>
 </body>
