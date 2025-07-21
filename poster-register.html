@@ -1,254 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Poster Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Address Form</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial;
-      background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
-      margin: 0;
-      padding: 10px;
-    }
-    .card, .btn {
-      border-radius: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       padding: 20px;
-      margin: 15px auto;
-      max-width: 400px;
-      background: white;
-      transition: transform 0.3s;
     }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    .btn {
-      text-align: center;
-      background: #00bcd4;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn:hover {
-      background: #0097a7;
-    }
-    input, select {
+    input, textarea {
       width: 100%;
       padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+      margin-bottom: 10px;
     }
-    #logoutBtn {
-      background: #f44336;
+    button {
+      padding: 10px 20px;
+      font-weight: bold;
+      background-color: green;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-<div id="registrationForm" class="card" style="display:none;">
-  <h3>Poster Registration</h3>
-  <input type="text" id="name" placeholder="Your Name">
-  <input type="text" id="address" placeholder="Address">
-  <input type="text" id="pincode" placeholder="Pincode">
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number">
-  <input type="text" id="shopname" placeholder="Shop/Office Name">
+  <h2>📋 पता और नाम दर्ज करें</h2>
 
-  <!-- ✅ Only one correct category select -->
-  <select id="category" required>
-    <option value="">-- Select Service --</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Carpenter">Carpenter</option>
-    <option value="AC Repair">AC Repair</option>
-    <option value="Washing Machine Repair">Washing Machine Repair</option>
-    <option value="Refrigerator Repair">Refrigerator Repair</option>
-    <option value="TV Repair">TV Repair</option>
-    <option value="Computer Repair">Computer Repair</option>
-    <option value="Mobile Repair">Mobile Repair</option>
-    <option value="Painter">Painter</option>
-    <option value="Mechanic">Mechanic</option>
-    <option value="Water Purifier Service">Water Purifier Service</option>
-    <option value="Gas Stove Repair">Gas Stove Repair</option>
-    <option value="CCTV Installation">CCTV Installation</option>
-    <option value="Interior Designer">Interior Designer</option>
-    <option value="Home Cleaning">Home Cleaning</option>
-    <option value="Pest Control">Pest Control</option>
-    <option value="Laundry Service">Laundry Service</option>
-    <option value="Beautician">Beautician</option>
-    <option value="Makeup Artist">Makeup Artist</option>
-    <option value="Fitness Trainer">Fitness Trainer</option>
-    <option value="Yoga Instructor">Yoga Instructor</option>
-    <option value="Driving Instructor">Driving Instructor</option>
-    <option value="Cook / Chef">Cook / Chef</option>
-    <option value="Maid / House Help">Maid / House Help</option>
-    <option value="Baby Sitter / Nanny">Baby Sitter / Nanny</option>
-    <option value="Gardener / Mali">Gardener / Mali</option>
-    <option value="Event Planner">Event Planner</option>
-    <option value="Photographer">Photographer</option>
-    <option value="DJ / Music System">DJ / Music System</option>
-    <option value="Tent & Decoration">Tent & Decoration</option>
-    <option value="Catering Service">Catering Service</option>
-    <option value="Tuition / Home Tutor">Tuition / Home Tutor</option>
-    <option value="Driving Service">Driving Service</option>
-    <option value="Courier Service">Courier Service</option>
-    <option value="Laundry / Dry Clean">Laundry / Dry Clean</option>
-  </select>
+  <form id="addressForm">
+    <label>नाम:</label>
+    <input type="text" id="name" placeholder="अपना नाम दर्ज करें" required>
 
-  <div class="btn" onclick="submitRegistration()">Submit</div>
-</div>
+    <label>पूरा पता:</label>
+    <textarea id="address" placeholder="अपना पता यहाँ लिखें" rows="4" required></textarea>
 
-<div id="waitMsg" class="card" style="display:none;">
-  <h3>Please wait for approval...</h3>
-</div>
+    <button type="submit">सबमिट करें</button>
+  </form>
 
-<div id="dashboard" class="card" style="display:none;">
-  <h3>🎉 Welcome to Your Poster Dashboard</h3>
-  <p><strong>Wallet:</strong> ₹<span id="wallet">Loading...</span></p>
-  <div id="jobList"></div>
-</div>
+  <p id="statusMsg"></p>
 
-<div id="logoutBtn" class="btn" onclick="logout()" style="display:none;">Logout</div>
-
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  let currentUserId = "";
-
-  window.onload = () => {
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUserId = user.uid;
-        document.getElementById("logoutBtn").style.display = "block";
-        checkPosterStatus();
-      } else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
-      }
-    });
-  };
-
-  function logout() {
-    auth.signOut().then(() => location.reload());
-  }
-
-  function checkPosterStatus() {
-    db.ref("posterUsers/" + currentUserId).once("value", snap => {
-      if (snap.exists()) {
-        const data = snap.val();
-        if (data.approved) {
-          showDashboard(data.wallet || 0);
-        } else {
-          document.getElementById("waitMsg").style.display = "block";
-        }
-      } else {
-        document.getElementById("registrationForm").style.display = "block";
-      }
-    });
-  }
-
-  function submitRegistration() {
-    const name = document.getElementById("name").value;
-    const address = document.getElementById("address").value;
-    const pincode = document.getElementById("pincode").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-    const shopname = document.getElementById("shopname").value;
-    const category = document.getElementById("category").value;
-
-    if (!name || !address || !pincode || !whatsapp || !shopname || !category) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const today = new Date();
-    const date = today.toLocaleDateString('en-GB');
-
-    const data = {
-      name,
-      address,
-      pincode,
-      whatsapp,
-      shop: shopname,
-      category,
-      date,
-      wallet: 100,        // default ₹100
-      approved: false     // default not approved
+  <script>
+    // Firebase config (अपना सही config यहाँ डालें)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "314555969045",
+      appId: "1:314555969045:web:fa828d15dd03cd6cb3686f"
     };
 
-    db.ref("posterUsers/" + currentUserId).set(data).then(() => {
-      document.getElementById("registrationForm").style.display = "none";
-      document.getElementById("waitMsg").style.display = "block";
-    });
-  }
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  function showDashboard(wallet) {
-    document.getElementById("dashboard").style.display = "block";
-    document.getElementById("wallet").innerText = wallet;
-    loadJobs();
-  }
+    // Form submit handler
+    document.getElementById("addressForm").addEventListener("submit", function(e) {
+      e.preventDefault();
 
-  function loadJobs() {
-    db.ref("requests").once("value", snap => {
-      const jobList = document.getElementById("jobList");
-      jobList.innerHTML = "";
-      snap.forEach(userSnap => {
-        userSnap.forEach(jobSnap => {
-          const job = jobSnap.val();
-          const keyPath = `requests/${userSnap.key}/${jobSnap.key}`;
+      const name = document.getElementById("name").value.trim();
+      const address = document.getElementById("address").value.trim();
 
-          db.ref("posterUsers/" + currentUserId).once("value", pSnap => {
-            const poster = pSnap.val();
-            if (poster && poster.category === job.category) {
-              const alreadyAccepted = job.acceptedBy && job.acceptedBy[currentUserId];
-              if (!alreadyAccepted) {
-                const card = document.createElement("div");
-                card.className = "card";
-                card.innerHTML = `
-                  <h4>${job.issue}</h4>
-                  <p><strong>Address:</strong> ${job.address}</p>
-                  <p><strong>Pincode:</strong> ${job.pincode}</p>
-                  <div class="btn" onclick="acceptJob('${keyPath}')">Accept Job - ₹20</div>
-                `;
-                jobList.appendChild(card);
-              }
-            }
-          });
-        });
-      });
-    });
-  }
-
-  function acceptJob(path) {
-    db.ref("posterUsers/" + currentUserId).once("value", snap => {
-      let wallet = snap.val().wallet || 0;
-      if (wallet < 20) {
-        alert("Not enough balance.");
+      if (!name || !address) {
+        alert("कृपया नाम और पता दोनों भरें।");
         return;
       }
-      db.ref(path + "/acceptedBy/" + currentUserId).set(true).then(() => {
-        db.ref("posterUsers/" + currentUserId + "/wallet").set(wallet - 20);
-        alert("Job Accepted!");
-        location.reload();
+
+      const timestamp = Date.now();
+      db.ref("userAddresses/" + timestamp).set({
+        name: name,
+        address: address,
+        time: new Date().toLocaleString()
+      }, (error) => {
+        if (error) {
+          document.getElementById("statusMsg").innerText = "❌ सबमिट करने में समस्या आई।";
+        } else {
+          document.getElementById("statusMsg").innerText = "✅ सफलतापूर्वक सबमिट हो गया!";
+          document.getElementById("addressForm").reset();
+        }
       });
     });
-  }
-</script>
+  </script>
 
 </body>
 </html>
