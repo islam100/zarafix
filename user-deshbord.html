@@ -1,61 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Requests</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f1f1f1;
-      margin: 0;
       padding: 10px;
+      background: #f5f5f5;
     }
-
-    h2 {
-      text-align: center;
-      margin-top: 20px;
-    }
-
     .card {
       background: white;
-      border-radius: 12px;
       padding: 15px;
-      margin: 15px auto;
-      max-width: 500px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-
-    .card h3 {
-      margin: 0 0 10px;
+    h2 {
+      text-align: center;
+      color: #333;
     }
-
-    .btn3d {
-      background: linear-gradient(to bottom right, #4CAF50, #45a049);
+    .btn-3d {
+      background: #4CAF50;
       color: white;
       border: none;
-      border-radius: 12px;
-      padding: 10px 20px;
-      margin: 5px 5px 0 0;
-      box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      transition: 0.2s;
+      padding: 8px 15px;
+      border-radius: 10px;
+      margin: 5px;
+      box-shadow: 0 5px #3e8e41;
+      transition: all 0.2s ease-in-out;
     }
-
-    .btn3d:hover {
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 600px) {
-      .card {
-        margin: 10px;
-        padding: 12px;
-      }
-
-      .btn3d {
-        width: 100%;
-        margin: 5px 0;
-      }
+    .btn-3d:active {
+      box-shadow: 0 2px #3e8e41;
+      transform: translateY(3px);
     }
   </style>
 </head>
@@ -64,20 +40,20 @@
   <h2>Your Accepted Requests</h2>
   <div id="requestList"></div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abc123"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -85,66 +61,51 @@
 
     firebase.auth().onAuthStateChanged(user => {
       if (user) {
-        const userId = user.uid;
-        const requestsRef = db.ref("requests/" + userId);
+        const uid = user.uid;
+        const requestRef = db.ref("requests/" + uid);
+        const posterRef = db.ref("posters");
 
-        requestsRef.once("value", snap => {
+        requestRef.once("value", snapshot => {
+          const data = snapshot.val();
           const requestList = document.getElementById("requestList");
           requestList.innerHTML = "";
 
-          if (!snap.exists()) {
-            requestList.innerHTML = "<p style='text-align:center;'>No requests found.</p>";
-            return;
-          }
+          if (data) {
+            Object.entries(data).forEach(([reqId, reqData]) => {
+              const card = document.createElement("div");
+              card.className = "card";
 
-          snap.forEach(req => {
-            const data = req.val();
-            let html = `
-              <div class="card">
-                <h3>Category: ${data.category}</h3>
-                <p><strong>Description:</strong> ${data.description}</p>
-                <p><strong>Location:</strong> ${data.location}</p>
-            `;
+              card.innerHTML += `<h3>${reqData.category}</h3>`;
+              card.innerHTML += `<p><strong>Description:</strong> ${reqData.description}</p>`;
+              card.innerHTML += `<p><strong>Location:</strong> ${reqData.location}</p>`;
 
-            if (data.acceptedBy) {
-              const posterIds = Object.keys(data.acceptedBy);
-
-              posterIds.forEach(posterId => {
-                db.ref("posters/" + posterId).once("value", posterSnap => {
-                  if (posterSnap.exists()) {
-                    const poster = posterSnap.val();
-                    html += `
-                      <hr/>
-                      <p><strong>Accepted By:</strong> ${poster.name} (${poster.category})</p>
-                      <p><strong>Shop:</strong> ${poster.shop}</p>
-                      <p><strong>Wallet:</strong> ₹${poster.wallet}</p>
-                      <p><strong>WhatsApp:</strong> ${poster.whatsapp}</p>
-                      <a href="https://wa.me/${poster.whatsapp}" class="btn3d">📱 WhatsApp</a>
-                      <button class="btn3d" onclick="rejectRequest('${userId}', '${req.key}', '${posterId}')">❌ Reject</button>
-                    `;
-                    html += `</div>`;
-                    requestList.innerHTML += html;
+              // Check if accepted
+              if (reqData.acceptedBy) {
+                const posterId = Object.keys(reqData.acceptedBy)[0];
+                posterRef.child(posterId).once("value", snap => {
+                  const poster = snap.val();
+                  if (poster) {
+                    card.innerHTML += `<hr><h4>Accepted By:</h4>`;
+                    card.innerHTML += `<p><strong>Name:</strong> ${poster.name} (${poster.category})</p>`;
+                    card.innerHTML += `<p><strong>Shop:</strong> ${poster.shop}</p>`;
+                    card.innerHTML += `<p><strong>Wallet:</strong> ₹${poster.wallet}</p>`;
+                    card.innerHTML += `<button class="btn-3d" onclick="window.open('https://wa.me/${poster.whatsapp}')">📱 WhatsApp</button>`;
                   }
                 });
-              });
-            } else {
-              html += `<p><em>No one has accepted this request yet.</em></p></div>`;
-              requestList.innerHTML += html;
-            }
-          });
+              }
+
+              requestList.appendChild(card);
+            });
+          } else {
+            requestList.innerHTML = "<p>No requests found.</p>";
+          }
         });
+
+      } else {
+        alert("Please login to view your requests.");
       }
     });
-
-    function rejectRequest(userId, requestId, posterId) {
-      if (confirm("Are you sure you want to reject this poster?")) {
-        const acceptedPath = `requests/${userId}/${requestId}/acceptedBy/${posterId}`;
-        firebase.database().ref(acceptedPath).remove().then(() => {
-          alert("Rejected successfully");
-          location.reload();
-        });
-      }
-    }
   </script>
+
 </body>
 </html>
