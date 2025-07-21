@@ -1,111 +1,97 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Your Requests</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #f5f5f5;
-    }
-    .card {
-      background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    .btn-3d {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 10px;
-      margin: 5px;
-      box-shadow: 0 5px #3e8e41;
-      transition: all 0.2s ease-in-out;
-    }
-    .btn-3d:active {
-      box-shadow: 0 2px #3e8e41;
-      transform: translateY(3px);
-    }
-  </style>
-</head>
-<body>
+<div id="acceptedRequests" class="p-3">
+  <h3>Your Accepted Requests:</h3>
+  <div id="requestCards"></div>
+</div>
 
-  <h2>Your Accepted Requests</h2>
-  <div id="requestList"></div>
+<style>
+  .card {
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+  }
+  .btn-3d {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(to bottom right, #4CAF50, #2E7D32);
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px #1b5e20;
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-3d:active {
+    box-shadow: none;
+    transform: translateY(4px);
+  }
+</style>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abc123"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdefghij"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth();
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        const uid = user.uid;
-        const requestRef = db.ref("requests/" + uid);
-        const posterRef = db.ref("posters");
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      const userId = user.uid;
+      const requestsRef = ref(db, `requests/${userId}`);
+      const postersRef = ref(db, `posters`);
 
-        requestRef.once("value", snapshot => {
-          const data = snapshot.val();
-          const requestList = document.getElementById("requestList");
-          requestList.innerHTML = "";
+      onValue(requestsRef, (snapshot) => {
+        const requests = snapshot.val();
+        const cardContainer = document.getElementById("requestCards");
+        cardContainer.innerHTML = "";
 
-          if (data) {
-            Object.entries(data).forEach(([reqId, reqData]) => {
-              const card = document.createElement("div");
-              card.className = "card";
+        if (!requests) {
+          cardContainer.innerHTML = "<p>No requests found.</p>";
+          return;
+        }
 
-              card.innerHTML += `<h3>${reqData.category}</h3>`;
-              card.innerHTML += `<p><strong>Description:</strong> ${reqData.description}</p>`;
-              card.innerHTML += `<p><strong>Location:</strong> ${reqData.location}</p>`;
+        onValue(postersRef, (posterSnap) => {
+          const posters = posterSnap.val();
 
-              // Check if accepted
-              if (reqData.acceptedBy) {
-                const posterId = Object.keys(reqData.acceptedBy)[0];
-                posterRef.child(posterId).once("value", snap => {
-                  const poster = snap.val();
-                  if (poster) {
-                    card.innerHTML += `<hr><h4>Accepted By:</h4>`;
-                    card.innerHTML += `<p><strong>Name:</strong> ${poster.name} (${poster.category})</p>`;
-                    card.innerHTML += `<p><strong>Shop:</strong> ${poster.shop}</p>`;
-                    card.innerHTML += `<p><strong>Wallet:</strong> ₹${poster.wallet}</p>`;
-                    card.innerHTML += `<button class="btn-3d" onclick="window.open('https://wa.me/${poster.whatsapp}')">📱 WhatsApp</button>`;
-                  }
-                });
+          Object.entries(requests).forEach(([reqId, reqData]) => {
+            let posterInfo = "";
+            if (reqData.acceptedBy) {
+              const acceptedId = Object.keys(reqData.acceptedBy)[0];
+              const poster = posters?.[acceptedId];
+
+              if (poster) {
+                posterInfo = `
+                  <p><strong>Accepted by:</strong> ${poster.name} (${poster.category})</p>
+                  <p><strong>Shop:</strong> ${poster.shop}</p>
+                  <p><strong>Wallet:</strong> ₹${poster.wallet}</p>
+                  <a class="btn-3d" href="https://wa.me/${poster.whatsapp}" target="_blank">📱 WhatsApp</a>
+                `;
               }
+            }
 
-              requestList.appendChild(card);
-            });
-          } else {
-            requestList.innerHTML = "<p>No requests found.</p>";
-          }
+            const card = `
+              <div class="card">
+                <h4>Category: ${reqData.category}</h4>
+                <p><strong>Description:</strong> ${reqData.description}</p>
+                ${posterInfo}
+              </div>
+            `;
+            cardContainer.innerHTML += card;
+          });
         });
-
-      } else {
-        alert("Please login to view your requests.");
-      }
-    });
-  </script>
-
-</body>
-</html>
+      });
+    }
+  });
+</script>
