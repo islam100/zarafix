@@ -1,94 +1,83 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Accepted Work Details</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .card {
-      border: 2px solid #ccc;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 3px 3px 8px rgba(0,0,0,0.2);
-    }
-    .btn-3d {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(to right, #4CAF50, #2E7D32);
-      color: white;
-      font-weight: bold;
-      box-shadow: 2px 2px 5px #999;
-      cursor: pointer;
-      margin-right: 10px;
-    }
-    .btn-reject {
-      background: linear-gradient(to right, #f44336, #b71c1c);
-    }
-  </style>
-</head>
-<body>
+<!-- 👇 User Dashboard - Accepted Request Info -->
+<div id="userAcceptedRequests" style="padding: 10px; font-family: sans-serif;"></div>
 
-<h2>Accepted Poster Details</h2>
-<div id="acceptedPosters"></div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-<script>
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    messagingSenderId: "628241118289",
+    appId: "1:628241118289:web:fa8f16e4c6e477365462e3"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
 
-  const userId = "userId1"; // Replace with dynamic ID if needed
-  const requestId = "requestId1";
+  const userAcceptedRequestsDiv = document.getElementById("userAcceptedRequests");
 
-  const acceptedDiv = document.getElementById("acceptedPosters");
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const userId = user.uid;
+      const userReqRef = ref(db, `requests/${userId}`);
+      const userReqSnap = await get(userReqRef);
 
-  db.ref(`requests/${userId}/${requestId}/acceptedBy`).once("value", acceptedSnap => {
-    const acceptedPosters = acceptedSnap.val();
-    if (acceptedPosters) {
-      Object.keys(acceptedPosters).forEach(posterId => {
-        db.ref(`posters/${posterId}`).once("value", posterSnap => {
-          const poster = posterSnap.val();
-          if (poster) {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <h3>${poster.name} (${poster.category})</h3>
-              <p><strong>Shop:</strong> ${poster.shop}</p>
-              <p><strong>Wallet:</strong> ₹${poster.wallet}</p>
-              <p><strong>WhatsApp:</strong> ${poster.whatsapp}</p>
-              <a class="btn-3d" target="_blank" href="https://wa.me/91${poster.whatsapp}">📱 WhatsApp</a>
-              <button class="btn-3d btn-reject" onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">❌ Reject</button>
-            `;
-            acceptedDiv.appendChild(card);
+      userAcceptedRequestsDiv.innerHTML = `<h3>Your Accepted Requests:</h3>`;
+
+      if (userReqSnap.exists()) {
+        const requests = userReqSnap.val();
+
+        for (const requestId in requests) {
+          const request = requests[requestId];
+
+          if (request.acceptedBy) {
+            for (const posterId in request.acceptedBy) {
+              // get poster details
+              const posterSnap = await get(ref(db, `posters/${posterId}`));
+              const poster = posterSnap.exists() ? posterSnap.val() : null;
+
+              if (poster) {
+                const posterInfo = `
+                  <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px; border-radius:10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    <strong>${poster.name} (${poster.category})</strong><br>
+                    Shop: ${poster.shop}<br>
+                    Wallet: ₹${poster.wallet}<br>
+                    
+                    <button style="background-color:#25D366;color:white;border:none;border-radius:5px;padding:6px 12px;margin:5px;font-weight:bold;box-shadow: 2px 2px 5px #999;"
+                      onclick="window.open('https://wa.me/91${poster.whatsapp}', '_blank')">
+                      📱 WhatsApp
+                    </button>
+
+                    <button style="background-color:#ff4d4d;color:white;border:none;border-radius:5px;padding:6px 12px;margin:5px;font-weight:bold;box-shadow: 2px 2px 5px #999;"
+                      onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">
+                      ❌ Reject
+                    </button>
+                  </div>
+                `;
+                userAcceptedRequestsDiv.innerHTML += posterInfo;
+              }
+            }
           }
-        });
-      });
+        }
+      } else {
+        userAcceptedRequestsDiv.innerHTML += `<p>No accepted requests yet.</p>`;
+      }
     } else {
-      acceptedDiv.innerHTML = "<p>No posters have accepted this request yet.</p>";
+      userAcceptedRequestsDiv.innerHTML = `<p>Please login first.</p>`;
     }
   });
 
-  function rejectPoster(userId, requestId, posterId) {
-    if (confirm("Are you sure you want to reject this poster?")) {
-      firebase.database().ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).remove()
-        .then(() => {
-          alert("Poster rejected successfully.");
-          location.reload();
-        });
-    }
-  }
+  // Reject Button Logic
+  window.rejectPoster = async function(userId, requestId, posterId) {
+    const acceptedRef = ref(db, `requests/${userId}/${requestId}/acceptedBy/${posterId}`);
+    await update(acceptedRef, null);  // remove the poster from accepted list
+    alert("Rejected successfully!");
+    location.reload();
+  };
 </script>
-
-</body>
-</html>
