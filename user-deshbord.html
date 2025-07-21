@@ -1,154 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Accepted Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <title>Request List</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 10px;
-      background: #f2f2f2;
-    }
-    h2 {
-      text-align: center;
-    }
     .card {
-      background: white;
-      margin: 10px auto;
+      background: #f4f4f4;
       padding: 15px;
-      border-radius: 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 500px;
-      transition: 0.3s ease-in-out;
+      margin: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .card:hover {
-      transform: scale(1.01);
-    }
-    .card strong {
-      color: #333;
-    }
-    .buttons {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-    .btn {
-      flex: 1;
-      margin: 5px;
-      padding: 10px;
+
+    button {
+      padding: 8px 12px;
+      margin-right: 10px;
       border: none;
-      border-radius: 12px;
-      background: linear-gradient(145deg, #6dd5ed, #2193b0);
-      color: white;
-      font-weight: bold;
+      border-radius: 8px;
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: 0.2s;
+      font-weight: bold;
+      box-shadow: 2px 2px 6px #888;
     }
-    .btn:hover {
-      opacity: 0.85;
-    }
-    .whatsapp {
-      background: linear-gradient(145deg, #25D366, #128C7E);
-    }
-    .reject {
-      background: linear-gradient(145deg, #f85032, #e73827);
-    }
-    .delete {
-      background: linear-gradient(145deg, #757f9a, #d7dde8);
-      color: black;
-    }
+
+    .whatsapp { background: #25D366; color: white; }
+    .delete { background: #f44336; color: white; }
+    .reject { background: #ff9800; color: white; }
   </style>
 </head>
 <body>
+  <h2>All Requests</h2>
+  <div id="requestList"></div>
 
-<h2>✅ Your Accepted Requests</h2>
-<div id="requestList"></div>
+  <!-- Firebase App SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DB_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "873153653637",
+      appId: "1:873153653637:web:6a76cd00ad2337d0d7e44d"
+    };
 
-  const currentPosterId = "posterId1"; // 👈 यहां आप अपना Poster ID दें
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  function loadAcceptedRequests() {
-    const requestList = document.getElementById("requestList");
-    requestList.innerHTML = "";
+    const requestList = document.getElementById('requestList');
 
-    db.ref("requests").once("value", (snapshot) => {
-      const requests = snapshot.val();
+    // Read all requests from Firebase
+    db.ref('requests').once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        requestList.innerHTML = "<p>No requests found.</p>";
+        return;
+      }
 
-      for (const userId in requests) {
-        for (const reqId in requests[userId]) {
-          const req = requests[userId][reqId];
-
-          if (req.acceptedBy && req.acceptedBy[currentPosterId]) {
-            // Get Poster Info
-            db.ref("posters/" + currentPosterId).once("value", (snap) => {
-              const poster = snap.val();
-
-              const card = document.createElement("div");
-              card.className = "card";
-
-              card.innerHTML = `
-                <p><strong>🔧 Category:</strong> ${req.category}</p>
-                <p><strong>📍 Location:</strong> ${req.location}</p>
-                <p><strong>📝 Description:</strong> ${req.description}</p>
-                <hr>
-                <p><strong>👨 Poster Name:</strong> ${poster.name}</p>
-                <p><strong>🏪 Shop:</strong> ${poster.shop}</p>
-                <p><strong>📞 WhatsApp:</strong> ${poster.whatsapp}</p>
-                <p><strong>🛠️ Skill:</strong> ${poster.category}</p>
-                <div class="buttons">
-                  <button class="btn whatsapp" onclick="openWhatsapp('${poster.whatsapp}')">WhatsApp</button>
-                  <button class="btn reject" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
-                  <button class="btn delete" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
-                </div>
-              `;
-              requestList.appendChild(card);
-            });
+      for (const userId in data) {
+        const userRequests = data[userId];
+        for (const posterUid in userRequests) {
+          const requests = userRequests[posterUid];
+          for (const requestId in requests) {
+            const req = requests[requestId];
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <h3>${req.name || "No Name"}</h3>
+              <p><strong>Address:</strong> ${req.address}</p>
+              <p><strong>Category:</strong> ${req.category}</p>
+              <p><strong>Pincode:</strong> ${req.pincode}</p>
+              <p><strong>Issue:</strong> ${req.issue}</p>
+              <p><strong>Location:</strong> ${req.location}</p>
+              <p><strong>Accepted By:</strong> ${req.acceptedBy || "Not accepted yet"}</p>
+              <button class="whatsapp">WhatsApp</button>
+              <button class="delete">Delete</button>
+              <button class="reject">Reject</button>
+            `;
+            requestList.appendChild(card);
           }
         }
       }
     });
-  }
-
-  function openWhatsapp(number) {
-    window.open(`https://wa.me/91${number}`, "_blank");
-  }
-
-  function rejectRequest(userId, requestId) {
-    const reqRef = db.ref(`requests/${userId}/${requestId}/acceptedBy/${currentPosterId}`);
-    reqRef.remove().then(() => {
-      alert("❌ Rejected");
-      loadAcceptedRequests();
-    });
-  }
-
-  function deleteRequest(userId, requestId) {
-    const reqRef = db.ref(`requests/${userId}/${requestId}`);
-    reqRef.remove().then(() => {
-      alert("🗑️ Request Deleted");
-      loadAcceptedRequests();
-    });
-  }
-
-  loadAcceptedRequests();
-</script>
-
+  </script>
 </body>
 </html>
