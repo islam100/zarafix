@@ -1,139 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>User Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Accepted Requests</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
       margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
+      padding: 10px;
     }
     .card {
-      background: #fff;
-      padding: 16px;
-      margin: 15px 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      background: white;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+      max-width: 400px;
     }
     .card h3 {
-      margin-top: 0;
+      margin: 5px 0;
     }
     .btn {
       display: inline-block;
-      margin: 5px 10px 0 0;
-      padding: 10px 15px;
-      font-weight: bold;
-      color: #fff;
+      padding: 10px 16px;
+      margin: 10px 5px 0 0;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
+      background: linear-gradient(to right, #4CAF50, #2e7d32);
+      color: white;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
+      text-decoration: none;
     }
-    .btn:active {
-      transform: translateY(2px);
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     }
-    .whatsapp {
-      background-color: #25d366;
+    .btn-danger {
+      background: linear-gradient(to right, #e53935, #b71c1c);
     }
-    .reject {
-      background-color: #e74c3c;
-    }
-
-    @media (max-width: 600px) {
-      .card {
-        padding: 12px;
-      }
+    h2 {
+      text-align: center;
+      color: #333;
     }
   </style>
 </head>
 <body>
   <h2>Your Accepted Requests</h2>
-  <div id="requestContainer"></div>
+  <div id="requestList"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-database-compat.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MSG_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "1019343986858",
+      appId: "1:1019343986858:web:088f0fd403c8a889d173f3"
     };
-    firebase.initializeApp(firebaseConfig);
 
-    const db = firebase.database();
-    firebase.auth().onAuthStateChanged(user => {
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth();
+
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         const userId = user.uid;
-        db.ref("requests/" + userId).once("value", snapshot => {
-          const container = document.getElementById("requestContainer");
-          container.innerHTML = "";
+        const requestsRef = ref(db, `requests/${userId}`);
+        const postersRef = ref(db, `posters`);
 
-          if (!snapshot.exists()) {
-            container.innerHTML = "<p>No requests found.</p>";
+        onValue(requestsRef, (snapshot) => {
+          const requestList = document.getElementById("requestList");
+          requestList.innerHTML = "";
+
+          const requestsData = snapshot.val();
+          if (!requestsData) {
+            requestList.innerHTML = "<p>No requests found.</p>";
             return;
           }
 
-          snapshot.forEach(reqSnap => {
-            const reqData = reqSnap.val();
-            const card = document.createElement("div");
-            card.className = "card";
+          onValue(postersRef, (postersSnapshot) => {
+            const posters = postersSnapshot.val();
 
-            let html = `<h3>Category: ${reqData.category}</h3>
-                        <p>${reqData.description}</p>
-                        <p><strong>Location:</strong> ${reqData.location}</p>`;
+            Object.entries(requestsData).forEach(([requestId, request]) => {
+              const card = document.createElement("div");
+              card.className = "card";
 
-            if (reqData.acceptedBy) {
-              const posterId = Object.keys(reqData.acceptedBy)[0];
-              db.ref("posters/" + posterId).once("value", posterSnap => {
-                const poster = posterSnap.val();
-                html += `
-                  <hr>
-                  <p><strong>Accepted By:</strong> ${poster.name} (${poster.category})</p>
-                  <p><strong>Shop:</strong> ${poster.shop}</p>
-                  <p><strong>Wallet:</strong> ₹${poster.wallet}</p>
-                  <p><strong>WhatsApp:</strong> ${poster.whatsapp}</p>
-                  <a class="btn whatsapp" target="_blank" href="https://wa.me/${poster.whatsapp}">📱 WhatsApp</a>
-                  <button class="btn reject" onclick="rejectRequest('${userId}','${reqSnap.key}','${posterId}')">❌ Reject</button>
-                `;
-                card.innerHTML = html;
-                container.appendChild(card);
-              });
-            } else {
-              card.innerHTML = html + "<p><em>Not yet accepted by any poster.</em></p>";
-              container.appendChild(card);
-            }
+              let acceptedPostersHTML = "";
+
+              if (request.acceptedBy) {
+                Object.keys(request.acceptedBy).forEach((posterId) => {
+                  const poster = posters?.[posterId];
+                  if (poster) {
+                    acceptedPostersHTML += `
+                      <h4>✅ Accepted By: ${poster.name} (${poster.category})</h4>
+                      <p>Shop: ${poster.shop}</p>
+                      <p>Wallet: ₹${poster.wallet}</p>
+                      <p>WhatsApp: ${poster.whatsapp}</p>
+                      <a class="btn" href="https://wa.me/${poster.whatsapp}" target="_blank">📱 WhatsApp</a>
+                      <button class="btn btn-danger">❌ Reject</button>
+                      <hr>
+                    `;
+                  }
+                });
+              } else {
+                acceptedPostersHTML = "<p>No one accepted this yet.</p>";
+              }
+
+              card.innerHTML = `
+                <h3>📌 Category: ${request.category}</h3>
+                <p>📍 Location: ${request.location || "Not given"}</p>
+                <p>📝 Description: ${request.description}</p>
+                ${acceptedPostersHTML}
+              `;
+
+              requestList.appendChild(card);
+            });
           });
         });
       } else {
-        alert("Please login to view your requests.");
-        // window.location.href = "login.html"; // Optional redirect
+        document.getElementById("requestList").innerHTML = "<p>Please login first.</p>";
       }
     });
-
-    function rejectRequest(userId, requestId, posterId) {
-      if (confirm("Are you sure you want to reject this request?")) {
-        const acceptedPath = `requests/${userId}/${requestId}/acceptedBy/${posterId}`;
-        firebase.database().ref(acceptedPath).remove()
-          .then(() => {
-            alert("Request rejected.");
-            location.reload();
-          })
-          .catch(err => alert("Error rejecting request: " + err.message));
-      }
-    }
   </script>
 </body>
 </html>
