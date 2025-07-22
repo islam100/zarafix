@@ -1,191 +1,156 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Request System</title>
+  <title>Service Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
+      font-family: Arial, sans-serif;
+      background: #f1f1f1;
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #e0eafc, #cfdef3);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
+      padding: 0;
     }
-
     .container {
-      background: #fff;
+      max-width: 500px;
+      margin: 20px auto;
+      background: white;
       padding: 20px;
-      border-radius: 20px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      max-width: 450px;
-      width: 100%;
-      margin-bottom: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-
-    input, select, textarea {
+    input, textarea, select, button {
       width: 100%;
       padding: 12px;
-      margin: 8px 0;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
-
-    button {
-      width: 100%;
-      background: linear-gradient(to right, #007bff, #0056b3);
-      color: white;
+      margin-top: 10px;
       border: none;
-      padding: 14px;
-      border-radius: 14px;
+      border-radius: 10px;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
       font-size: 16px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    button {
+      background: linear-gradient(to right, #4CAF50, #45a049);
+      color: white;
+      font-weight: bold;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: 0.3s;
     }
-
     button:hover {
-      transform: translateY(-2px);
+      transform: scale(1.02);
     }
-
-    #adminDashboard {
-      width: 100%;
-      max-width: 600px;
-    }
-
+    .hidden { display: none; }
     .request-card {
-      background: #fefefe;
+      background: #fff;
+      border-left: 6px solid #4CAF50;
       padding: 15px;
+      margin: 10px;
       border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      margin: 10px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-
-    .request-card span {
-      display: block;
+    .status {
       font-weight: bold;
     }
   </style>
-</head>
-<body>
-  <div class="container" id="formContainer">
-    <h2>Service Request Form</h2>
-    <input type="text" id="name" placeholder="Name" required>
-    <input type="tel" id="phone" placeholder="Phone Number" required>
-    <input type="text" id="location" placeholder="Location" required>
-    <select id="category" required>
-      <option value="">-- Select Category --</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Plumber">Plumber</option>
-      <option value="Carpenter">Carpenter</option>
-      <option value="Painter">Painter</option>
-      <option value="AC Repair">AC Repair</option>
-      <option value="Water Tank Cleaning">Water Tank Cleaning</option>
-      <option value="Other">Other</option>
-    </select>
-    <textarea id="description" placeholder="Describe the issue" required></textarea>
-    <button onclick="submitRequest()">Submit Request</button>
-  </div>
-
-  <div id="adminDashboard" style="display:none;">
-    <h2>Admin Panel</h2>
-    <div id="requestList"></div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "712769974415",
-      appId: "1:712769974415:web:3452cfed282b4ab94361e4"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
     };
-
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
 
-    const admins = {
-      "zarafix3@gmail.com": true,
-      "nilofarkhan84@gmail.com": true
-    };
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        if (admins[user.email]) {
-          document.getElementById("formContainer").style.display = "none";
-          document.getElementById("adminDashboard").style.display = "block";
-          loadRequests();
-        }
-      } else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
-      }
+    let user = null;
+    firebase.auth().onAuthStateChanged(u => {
+      user = u;
+      document.getElementById("loginBtn").style.display = user ? "none" : "block";
+      document.getElementById("formContainer").style.display = user ? "block" : "none";
+      if(user) loadRequests();
     });
 
-    function submitRequest() {
-      const name = document.getElementById("name").value;
-      const phone = document.getElementById("phone").value;
-      const location = document.getElementById("location").value;
-      const category = document.getElementById("category").value;
-      const description = document.getElementById("description").value;
+    function login() {
+      firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    }
 
-      if (!name || !phone || !location || !category || !description) {
-        alert("Please fill all fields!");
-        return;
+    function submitForm() {
+      const name = document.getElementById("name").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const category = document.getElementById("category").value;
+      const problem = document.getElementById("problem").value;
+      const status = "Pending";
+      const timestamp = Date.now();
+
+      if (!name || !whatsapp || !category || !problem) {
+        alert("Please fill all fields"); return;
       }
 
-      const reqId = Date.now();
-      db.ref("requests/" + reqId).set({
-        name, phone, location, category, description,
-        status: "Pending",
-        time: reqId
+      firebase.database().ref("requests/" + timestamp).set({
+        name, whatsapp, category, problem, status, timestamp
       }).then(() => {
-        alert("Request submitted successfully!");
-        document.getElementById("name").value = "";
-        document.getElementById("phone").value = "";
-        document.getElementById("location").value = "";
-        document.getElementById("category").value = "";
-        document.getElementById("description").value = "";
+        alert("Request Submitted. Please wait for provider to accept.");
+        document.getElementById("requestForm").reset();
       });
     }
 
     function loadRequests() {
-      db.ref("requests").orderByChild("time").once("value", snapshot => {
-        const container = document.getElementById("requestList");
-        container.innerHTML = "";
-        const data = [];
-        snapshot.forEach(child => data.push({ id: child.key, ...child.val() }));
-        data.reverse(); // Latest first
+      const adminEmail = "admin@example.com";
+      if(user.email !== adminEmail) return;
 
-        data.forEach(req => {
-          const div = document.createElement("div");
-          div.className = "request-card";
-          div.innerHTML = `
-            <span>🧍 Name:</span> ${req.name}<br>
-            <span>📞 Phone:</span> ${req.phone}<br>
-            <span>📍 Location:</span> ${req.location}<br>
-            <span>🛠️ Category:</span> ${req.category}<br>
-            <span>📝 Description:</span> ${req.description}<br>
-            <span>⏳ Status:</span> ${req.status}
+      firebase.database().ref("requests").on("value", snapshot => {
+        const data = snapshot.val();
+        const container = document.getElementById("adminRequests");
+        container.innerHTML = "";
+        const sortedKeys = Object.keys(data || {}).sort((a,b) => b - a);
+        sortedKeys.forEach(key => {
+          const r = data[key];
+          const card = document.createElement("div");
+          card.className = "request-card";
+          card.innerHTML = `
+            <div><strong>Name:</strong> ${r.name}</div>
+            <div><strong>WhatsApp:</strong> ${r.whatsapp}</div>
+            <div><strong>Category:</strong> ${r.category}</div>
+            <div><strong>Problem:</strong> ${r.problem}</div>
+            <div><strong>Status:</strong> <span class="status">${r.status}</span></div>
+            <button onclick="updateStatus('${key}', 'Accepted')">Accept</button>
+            <button onclick="updateStatus('${key}', 'Rejected')">Reject</button>
           `;
-          container.appendChild(div);
+          container.appendChild(card);
         });
       });
     }
+
+    function updateStatus(key, newStatus) {
+      firebase.database().ref("requests/" + key + "/status").set(newStatus);
+    }
   </script>
+</head>
+<body>
+  <div class="container">
+    <h2>Service Request</h2>
+    <button id="loginBtn" onclick="login()">Login with Google</button>
+    <div id="formContainer" class="hidden">
+      <form id="requestForm">
+        <input id="name" placeholder="Your Name" />
+        <input id="whatsapp" placeholder="WhatsApp Number" />
+        <select id="category">
+          <option value="">Select Category</option>
+          <option>Electrician</option>
+          <option>Plumber</option>
+          <option>Carpenter</option>
+          <option>AC Mechanic</option>
+          <option>Painter</option>
+        </select>
+        <textarea id="problem" placeholder="Describe your problem..."></textarea>
+        <button type="button" onclick="submitForm()">Submit Request</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container" id="adminRequests"></div>
 </body>
 </html>
