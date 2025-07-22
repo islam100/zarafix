@@ -1,108 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🎯 ZaraFix - Your Requests</title>
+  <title>ZaraFix - User Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; }
-    h2 { text-align: center; color: #333; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+    h2 { text-align: center; }
     .card {
-      background: #fff; padding: 15px; margin: 15px 0; border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      margin: 20px auto;
+      max-width: 500px;
+      padding: 20px;
       transition: transform 0.3s;
     }
     .card:hover { transform: scale(1.02); }
-    .poster-info { margin-top: 10px; background: #e3f2fd; padding: 10px; border-radius: 8px; }
-    button { padding: 8px 12px; background: green; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    .btn-danger { background: red; }
+    .whatsapp-btn {
+      display: inline-block;
+      background: #25D366;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 5px;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+    .notice {
+      color: red;
+      text-align: center;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <h2>🎯 Posters Who Accepted Your Request</h2>
-  <div id="dashboard">Loading...</div>
+  <div id="dashboard"></div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E ",
-      authDomain: "zara-fix.firebaseapp.com  ",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com ",
-      projectId: "zara-fix ",
-      storageBucket: "zara-fix.appspot.com ",
-      messagingSenderId: "476473209200 ",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5 "
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
+
     firebase.initializeApp(firebaseConfig);
-
-    const db = firebase.database();
     const auth = firebase.auth();
-    const dashboard = document.getElementById('dashboard');
+    const db = firebase.database();
 
-    auth.onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged(user => {
+      const dashboard = document.getElementById("dashboard");
+
       if (!user) {
-        dashboard.innerHTML = "<p>Please login first.</p>";
+        dashboard.innerHTML = "<div class='notice'>Please login first.</div>";
         return;
       }
 
       const userId = user.uid;
-      const requestsRef = db.ref("requests/" + userId);
-      const postersRef = db.ref("posters");
+      const userRequestsRef = db.ref("requests/" + userId);
 
-      try {
-        const snapshot = await requestsRef.once("value");
+      userRequestsRef.once("value", snapshot => {
         if (!snapshot.exists()) {
-          dashboard.innerHTML = "<p>You have not submitted any requests.</p>";
+          dashboard.innerHTML = "<div class='notice'>You haven't submitted any request yet.</div>";
           return;
         }
 
-        const data = snapshot.val();
-        let content = "";
-        let anyAccepted = false;
+        let found = false;
 
-        for (let key in data) {
-          const request = data[key];
-          content += `<div class="card">
-            <strong>Issue:</strong> ${request.issue || 'N/A'}<br>
-            <strong>Address:</strong> ${request.address || 'N/A'}<br>
-            <strong>Pincode:</strong> ${request.pincode || 'N/A'}<br>`;
+        snapshot.forEach(reqSnap => {
+          const reqData = reqSnap.val();
+          const acceptedBy = reqData.acceptedBy || {};
 
-          if (request.acceptedBy) {
-            const posterIDs = Object.keys(request.acceptedBy);
-            anyAccepted = true;
-            content += `<h4>Accepted By:</h4>`;
-            for (let posterId of posterIDs) {
-              const posterSnap = await postersRef.child(posterId).once("value");
-              if (posterSnap.exists()) {
-                const poster = posterSnap.val();
-                content += `<div class="poster-info">
-                  <strong>Name:</strong> ${poster.name}<br>
-                  <a href="https://wa.me/${poster.whatsapp}" target="_blank">
-                    <button>📱 WhatsApp</button>
-                  </a>
-                  ${poster.lat && poster.lng ? `
-                  <a href="https://www.google.com/maps?q=${poster.lat},${poster.lng}" target="_blank">
-                    <button>📍 Map</button>
-                  </a>` : ''}
-                </div>`;
-              }
-            }
-          } else {
-            content += `<p style="color:red;">❌ No posters have accepted your request yet.</p>`;
+          if (Object.keys(acceptedBy).length === 0) return;
+
+          found = true;
+
+          Object.keys(acceptedBy).forEach(posterId => {
+            db.ref("posters/" + posterId).once("value", posterSnap => {
+              if (!posterSnap.exists()) return;
+              const poster = posterSnap.val();
+
+              const card = document.createElement("div");
+              card.className = "card";
+              card.innerHTML = `
+                <h3>🧰 ${poster.name} (${poster.category})</h3>
+                <p><strong>Shop:</strong> ${poster.shop}</p>
+                <p><strong>Phone:</strong> ${poster.whatsapp}</p>
+                <a class="whatsapp-btn" href="https://wa.me/91${poster.whatsapp}" target="_blank">📞 WhatsApp</a>
+              `;
+              dashboard.appendChild(card);
+            });
+          });
+        });
+
+        setTimeout(() => {
+          if (!found) {
+            dashboard.innerHTML = "<div class='notice'>❌ No posters have accepted your request yet.</div>";
           }
-
-          content += `</div>`;
-        }
-
-        dashboard.innerHTML = content || "<p>No requests found.</p>";
-
-      } catch (error) {
-        console.error("Error loading dashboard:", error);
-        dashboard.innerHTML = "<p>Error loading dashboard.</p>";
-      }
+        }, 2000);
+      });
     });
   </script>
 </body>
