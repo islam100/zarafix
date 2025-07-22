@@ -1,41 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Request Form</title>
+  <title>ZaraFix - Service Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
-    form { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; max-width: 500px; margin: auto; }
-    input, select, textarea, button { display: block; width: 100%; padding: 10px; margin: 10px 0; }
-    #status { text-align: center; margin-top: 10px; font-weight: bold; }
-    #loginBtn { background: #4285F4; color: white; font-weight: bold; border: none; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #f4f4f4, #e0e0e0);
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .form-box {
+      background: #fff;
+      padding: 20px;
+      margin: auto;
+      border-radius: 15px;
+      max-width: 400px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: linear-gradient(to right, #4CAF50, #45a049);
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
 
-<h2 style="text-align:center;">🛠 ZaraFix - Submit Request</h2>
+<h1>ZaraFix Service Request</h1>
 
-<button id="loginBtn">🔐 Login with Google</button>
+<div class="form-box" id="formBox">
+  <input type="text" id="name" placeholder="Your Name">
+  <input type="text" id="room" placeholder="Room Number">
+  <input type="text" id="phone" placeholder="Phone Number">
+  <textarea id="request" placeholder="Enter your service request"></textarea>
+  <button onclick="submitRequest()">Submit Request</button>
+</div>
 
-<form id="requestForm" style="display:none;">
-  <input type="text" id="name" placeholder="Your Name" required>
-  <input type="text" id="address" placeholder="Your Address" required>
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option value="AC Repair">AC Repair</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Other">Other</option>
-  </select>
-  <textarea id="problem" placeholder="Describe your problem..." required></textarea>
-  <button type="submit">📤 Submit Request</button>
-</form>
+<br>
+<button onclick="signInWithGoogle()">🔐 Login with Google</button>
 
-<div id="status"></div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -47,58 +73,60 @@
     messagingSenderId: "476473209200",
     appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
   };
-
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const database = firebase.database();
 
-  const loginBtn = document.getElementById('loginBtn');
-  const requestForm = document.getElementById('requestForm');
-  const statusMessage = document.getElementById('status');
+  let currentUser = null;
 
-  let currentUID = null;
-
-  loginBtn.addEventListener('click', () => {
+  function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then((result) => {
-        currentUID = result.user.uid;
-        requestForm.style.display = 'block';
-        loginBtn.style.display = 'none';
-        statusMessage.textContent = "✅ Logged in as " + result.user.displayName;
-      })
-      .catch((error) => {
-        statusMessage.textContent = "❌ Login failed: " + error.message;
-      });
-  });
+    firebase.auth().signInWithPopup(provider).then(result => {
+      currentUser = result.user;
+      alert("Login successful: " + currentUser.email);
+    }).catch(error => {
+      alert("Login error: " + error.message);
+    });
+  }
 
-  requestForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!currentUID) {
-      statusMessage.textContent = "User not logged in.";
+  function submitRequest() {
+    if (!currentUser) {
+      alert("Please login first.");
       return;
     }
 
-    const name = document.getElementById('name').value;
-    const address = document.getElementById('address').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const category = document.getElementById('category').value;
-    const problem = document.getElementById('problem').value;
+    const name = document.getElementById('name').value.trim();
+    const room = document.getElementById('room').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const request = document.getElementById('request').value.trim();
 
-    const requestData = {
-      name, address, whatsapp, category, description: problem,
-      timestamp: new Date().toISOString()
+    if (!name || !room || !phone || !request) {
+      alert("Please fill all fields.");
+      return;
+    }
+
+    const userId = currentUser.uid;
+    const timestamp = Date.now();
+    const requestId = 'REQ' + timestamp;
+
+    const data = {
+      name,
+      room,
+      phone,
+      request,
+      timestamp: new Date().toLocaleString()
     };
 
-    database.ref(`requests/${currentUID}`).push(requestData)
+    firebase.database().ref("requests/" + userId + "/" + requestId).set(data)
       .then(() => {
-        statusMessage.textContent = "✅ Request submitted successfully!";
-        requestForm.reset();
+        alert("Request submitted successfully.");
+        document.getElementById('name').value = "";
+        document.getElementById('room').value = "";
+        document.getElementById('phone').value = "";
+        document.getElementById('request').value = "";
       })
-      .catch((error) => {
-        statusMessage.textContent = "❌ Error: " + error.message;
+      .catch(error => {
+        alert("Error saving request: " + error.message);
       });
-  });
+  }
 </script>
 
 </body>
