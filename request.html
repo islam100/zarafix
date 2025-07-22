@@ -1,95 +1,191 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Service Request Form</title>
+  <title>ZaraFix Request System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      max-width: 450px;
+      width: 100%;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      background: linear-gradient(to right, #007bff, #0056b3);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 16px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    #adminDashboard {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .request-card {
+      background: #fefefe;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      margin: 10px 0;
+    }
+
+    .request-card span {
+      display: block;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="formContainer">
+    <h2>Service Request Form</h2>
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="tel" id="phone" placeholder="Phone Number" required>
+    <input type="text" id="location" placeholder="Location" required>
+    <select id="category" required>
+      <option value="">-- Select Category --</option>
+      <option value="Electrician">Electrician</option>
+      <option value="Plumber">Plumber</option>
+      <option value="Carpenter">Carpenter</option>
+      <option value="Painter">Painter</option>
+      <option value="AC Repair">AC Repair</option>
+      <option value="Water Tank Cleaning">Water Tank Cleaning</option>
+      <option value="Other">Other</option>
+    </select>
+    <textarea id="description" placeholder="Describe the issue" required></textarea>
+    <button onclick="submitRequest()">Submit Request</button>
+  </div>
+
+  <div id="adminDashboard" style="display:none;">
+    <h2>Admin Panel</h2>
+    <div id="requestList"></div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-</head>
-<body style="font-family:sans-serif; padding:20px">
 
-<h2>🛠️ ZaraFix - Service Request</h2>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "712769974415",
+      appId: "1:712769974415:web:3452cfed282b4ab94361e4"
+    };
 
-<!-- Login Button -->
-<div id="loginDiv">
-  <button onclick="login()">🔐 Login with Google</button>
-</div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-<!-- Service Request Form -->
-<div id="formDiv" style="display:none;">
-  <p>Welcome, <span id="userName"></span> 👋</p>
-  <form id="requestForm">
-    <input type="text" id="name" placeholder="Your Name" required><br><br>
-    <input type="text" id="address" placeholder="Your Address" required><br><br>
-    <input type="text" id="category" placeholder="Service Category" required><br><br>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required><br><br>
-    <textarea id="problem" placeholder="Describe your Problem" required></textarea><br><br>
-    <button type="submit">📨 Submit Request</button>
-  </form>
-  <p id="statusMsg"></p>
-</div>
+    const admins = {
+      "zarafix3@gmail.com": true,
+      "nilofarkhan84@gmail.com": true
+    };
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  // Login function
-  function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  }
-
-  // Check Auth State
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      document.getElementById("loginDiv").style.display = "none";
-      document.getElementById("formDiv").style.display = "block";
-      document.getElementById("userName").innerText = user.displayName;
-    } else {
-      document.getElementById("loginDiv").style.display = "block";
-      document.getElementById("formDiv").style.display = "none";
-    }
-  });
-
-  // Submit form
-  document.getElementById("requestForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const uid = user.uid;
-    const name = document.getElementById("name").value;
-    const address = document.getElementById("address").value;
-    const category = document.getElementById("category").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-    const problem = document.getElementById("problem").value;
-
-    const requestRef = db.ref("requests/" + uid);
-    requestRef.set({
-      name, address, category, whatsapp, problem,
-      status: "pending",
-      timestamp: Date.now()
-    }).then(() => {
-      document.getElementById("statusMsg").innerText = "⏳ Please wait for accept...";
-      document.getElementById("requestForm").reset();
-    }).catch(err => {
-      alert("Error: " + err.message);
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        if (admins[user.email]) {
+          document.getElementById("formContainer").style.display = "none";
+          document.getElementById("adminDashboard").style.display = "block";
+          loadRequests();
+        }
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider);
+      }
     });
-  });
-</script>
 
+    function submitRequest() {
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      const location = document.getElementById("location").value;
+      const category = document.getElementById("category").value;
+      const description = document.getElementById("description").value;
+
+      if (!name || !phone || !location || !category || !description) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      const reqId = Date.now();
+      db.ref("requests/" + reqId).set({
+        name, phone, location, category, description,
+        status: "Pending",
+        time: reqId
+      }).then(() => {
+        alert("Request submitted successfully!");
+        document.getElementById("name").value = "";
+        document.getElementById("phone").value = "";
+        document.getElementById("location").value = "";
+        document.getElementById("category").value = "";
+        document.getElementById("description").value = "";
+      });
+    }
+
+    function loadRequests() {
+      db.ref("requests").orderByChild("time").once("value", snapshot => {
+        const container = document.getElementById("requestList");
+        container.innerHTML = "";
+        const data = [];
+        snapshot.forEach(child => data.push({ id: child.key, ...child.val() }));
+        data.reverse(); // Latest first
+
+        data.forEach(req => {
+          const div = document.createElement("div");
+          div.className = "request-card";
+          div.innerHTML = `
+            <span>🧍 Name:</span> ${req.name}<br>
+            <span>📞 Phone:</span> ${req.phone}<br>
+            <span>📍 Location:</span> ${req.location}<br>
+            <span>🛠️ Category:</span> ${req.category}<br>
+            <span>📝 Description:</span> ${req.description}<br>
+            <span>⏳ Status:</span> ${req.status}
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
