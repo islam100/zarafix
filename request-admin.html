@@ -1,65 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Accepted Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8">
+  <title>Service Requests</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .card {
+      background: #fff;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border-radius: 16px;
+      margin: 20px auto;
+      max-width: 500px;
+      padding: 20px;
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: scale(1.02);
+    }
+
+    .card p {
+      margin: 8px 0;
+      color: #444;
+    }
+
+    .btn {
+      margin: 5px;
+      padding: 10px 20px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .whatsapp { background: #25D366; color: white; }
+    .reject { background: #f44336; color: white; }
+    .delete { background: #9E9E9E; color: white; }
+
+  </style>
 </head>
 <body>
+
   <h2>🎯 Submitted Service Requests</h2>
-  <div id="requestList">Loading...</div>
+  <div id="requestContainer"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      apiKey: "YOUR_API_KEY",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const currentPosterId = "posterId1"; // 🔁 इसे लॉगिन UID से बदलना होगा
+    const container = document.getElementById("requestContainer");
 
-    function loadAcceptedRequests() {
-      db.ref("requests").once("value", (snapshot) => {
-        const data = snapshot.val();
-        const container = document.getElementById("requestList");
-        container.innerHTML = "";
+    db.ref("requests").once("value", async (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        container.innerHTML = "<p>❌ कोई Request नहीं मिला।</p>";
+        return;
+      }
 
-        let found = false;
+      for (const userId in data) {
+        const userRequests = data[userId];
+        for (const reqId in userRequests) {
+          const req = userRequests[reqId];
+          const card = document.createElement("div");
+          card.className = "card";
 
-        for (let userId in data) {
-          for (let requestId in data[userId]) {
-            const request = data[userId][requestId];
-            if (request.acceptedBy && request.acceptedBy[currentPosterId]) {
-              found = true;
-              const div = document.createElement("div");
-              div.style.border = "1px solid #ccc";
-              div.style.margin = "10px";
-              div.style.padding = "10px";
-              div.innerHTML = `
-                <strong>Category:</strong> ${request.category}<br>
-                <strong>Description:</strong> ${request.description}<br>
-                <strong>Location:</strong> ${request.location}
+          let accepterInfo = "⏳ Loading...";
+          if (req.acceptedBy) {
+            // Get full poster data
+            const acceptedUserId = req.acceptedBy;
+            const posterSnap = await db.ref(`posterUsers/${acceptedUserId}`).once("value");
+            const poster = posterSnap.val();
+            if (poster) {
+              accepterInfo = `
+                ✅ <strong>Accepted By:</strong> ${poster.name}<br>
+                📞 <a class="btn whatsapp" target="_blank" href="https://wa.me/${poster.phone}">WhatsApp</a>
               `;
-              container.appendChild(div);
+            } else {
+              accepterInfo = "❌ Accepted user data not found.";
             }
+          } else {
+            accepterInfo = "❌ Not Accepted Yet.";
           }
-        }
 
-        if (!found) {
-          container.innerHTML = "❌ कोई Accepted Request नहीं मिला।";
-        }
-      });
-    }
+          card.innerHTML = `
+            <p>🧑‍🔧 <strong>Name:</strong> ${req.name || "N/A"}</p>
+            <p>📌 <strong>Category:</strong> ${req.category || "N/A"}</p>
+            <p>📍 <strong>Address:</strong> ${req.address || "N/A"}</p>
+            <p>📍 <strong>Pincode:</strong> ${req.pincode || "N/A"}</p>
+            <p>📅 <strong>Issue:</strong> ${req.issue || "N/A"}</p>
+            <p>📍 <strong>Location:</strong> ${req.location || "N/A"}</p>
+            <div>${accepterInfo}</div>
+            <br>
+            <button class="btn reject">Reject</button>
+            <button class="btn delete">Delete</button>
+          `;
 
-    window.onload = loadAcceptedRequests;
+          container.appendChild(card);
+        }
+      }
+    });
   </script>
 </body>
 </html>
