@@ -1,122 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Service Request Poster</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <title>Submitted Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial; background: #f5f5f5; padding: 20px; }
-    .card {
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      margin: 15px auto;
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
       padding: 20px;
-      max-width: 500px;
     }
-    .title { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
-    .info { margin: 5px 0; }
-    .btns { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
-    button {
-      padding: 10px 15px;
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+    }
+    .btn {
+      padding: 10px 16px;
+      margin-right: 10px;
       border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      color: white;
+      border-radius: 8px;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      color: white;
+      font-weight: bold;
+      transition: 0.3s;
     }
-    .whatsapp { background: #25D366; }
-    .reject { background: #f44336; }
-    .delete { background: #9c27b0; }
+    .btn-reject {
+      background: #e74c3c;
+    }
+    .btn-delete {
+      background: #2c3e50;
+    }
+    .btn-whatsapp {
+      background: #25D366;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
 
-  <h2>🎯 Submitted Service Requests</h2>
-  <div id="requests"></div>
+<h2>🎯 Submitted Service Requests</h2>
+<div id="requestList">⏳ Loading...</div>
 
-  <script>
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MSG_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    function renderCard(reqId, data) {
-      const accepted = data.acceptedBy ? data.acceptedBy : "❌ Not yet accepted";
-      const acceptedUser = data.acceptedUser || {};
-      const whatsAppBtn = acceptedUser.phone
-        ? `<a href="https://wa.me/${acceptedUser.phone}" target="_blank">
-             <button class="whatsapp">WhatsApp ${acceptedUser.name || ""}</button>
-           </a>`
-        : '';
+  const requestList = document.getElementById('requestList');
 
-      return `
-        <div class="card">
-          <div class="title">🧑‍🔧 Name: ${data.name || "Unknown"}</div>
-          <div class="info">📌 Category: ${data.category || "N/A"}</div>
-          <div class="info">📍 Address: ${data.address || "N/A"}</div>
-          <div class="info">📅 Issue: ${data.issue || "N/A"}</div>
-          <div class="info">📍 Location: ${data.location || "N/A"}</div>
-          <div class="info">✅ Accepted By: ${acceptedUser.name || "❌ Not Accepted"}</div>
-          <div class="btns">
-            ${whatsAppBtn}
-            <button class="reject" onclick="rejectRequest('${reqId}')">Reject</button>
-            <button class="delete" onclick="deleteRequest('${reqId}')">Delete</button>
-          </div>
-        </div>
-      `;
-    }
+  function loadRequests() {
+    requestList.innerHTML = "⏳ Loading...";
+    db.ref('requests').once('value', snap => {
+      const data = snap.val();
+      requestList.innerHTML = "";
 
-    function loadRequests() {
-      firebase.database().ref("requests").once("value", snap => {
-        const container = document.getElementById("requests");
-        container.innerHTML = "";
-        const data = snap.val();
-        if (!data) {
-          container.innerHTML = "<p>❌ कोई Request नहीं मिला।</p>";
-          return;
-        }
+      if (!data) {
+        requestList.innerHTML = "❌ कोई Request नहीं मिला।";
+        return;
+      }
 
-        Object.entries(data).forEach(([reqId, req]) => {
-          // Load user who accepted
-          if (req.acceptedBy) {
-            firebase.database().ref("users/" + req.acceptedBy).once("value", snap => {
-              const user = snap.val();
-              req.acceptedUser = user || {};
-              container.innerHTML += renderCard(reqId, req);
-            });
-          } else {
-            container.innerHTML += renderCard(reqId, req);
+      Object.entries(data).forEach(([userId, userRequests]) => {
+        Object.entries(userRequests).forEach(([reqId, reqData]) => {
+          const {
+            name = "N/A",
+            address = "N/A",
+            category = "N/A",
+            issue = "N/A",
+            acceptedBy = null
+          } = reqData;
+
+          let acceptedInfoHTML = "<b>✅ Accepted By:</b> Not yet accepted";
+          if (acceptedBy) {
+            const [acceptedName, acceptedPhone] = acceptedBy.split('|');
+            acceptedInfoHTML = `
+              <b>✅ Accepted By:</b> ${acceptedName} <br/>
+              <button class="btn btn-whatsapp" onclick="openWhatsapp('${acceptedPhone}')">WhatsApp</button>
+            `;
           }
+
+          const card = document.createElement('div');
+          card.className = "card";
+          card.innerHTML = `
+            <h3>🧑‍🔧 Name: ${name}</h3>
+            <p>📌 Category: ${category}</p>
+            <p>📍 Address: ${address}</p>
+            <p>📅 Issue: ${issue}</p>
+            ${acceptedInfoHTML}
+            <br><br>
+            <button class="btn btn-reject" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
+            <button class="btn btn-delete" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+          `;
+          requestList.appendChild(card);
         });
       });
-    }
+    });
+  }
 
-    function rejectRequest(reqId) {
-      firebase.database().ref("requests/" + reqId + "/acceptedBy").remove();
-      alert("❌ Request Rejected");
-      loadRequests();
-    }
+  function openWhatsapp(phone) {
+    window.open(`https://wa.me/${phone}`, "_blank");
+  }
 
-    function deleteRequest(reqId) {
-      firebase.database().ref("requests/" + reqId).remove();
-      alert("🗑️ Request Deleted");
-      loadRequests();
-    }
+  function rejectRequest(userId, reqId) {
+    db.ref(`requests/${userId}/${reqId}/acceptedBy`).remove().then(loadRequests);
+  }
 
-    window.onload = loadRequests;
-  </script>
+  function deleteRequest(userId, reqId) {
+    db.ref(`requests/${userId}/${reqId}`).remove().then(loadRequests);
+  }
 
+  loadRequests();
+</script>
 </body>
 </html>
