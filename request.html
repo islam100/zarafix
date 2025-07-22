@@ -1,104 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Service Request Tracker</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <title>My Service Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <h2>🔐 Google Login</h2>
-  <button onclick="googleLogin()">Login with Google</button>
-  <div id="userInfo" style="margin-top:20px;"></div>
+  <button onclick="login()">Login with Google</button>
+  <p id="userInfo"></p>
 
-  <h2>📋 My Service Requests</h2>
+  <h3>📋 My Service Requests</h3>
   <div id="myRequests"></div>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "401425088870",
-      appId: "1:401425088870:web:7518f21c8e7df379491f69"
+      messagingSenderId: "410690883299",
+      appId: "1:410690883299:web:646fda87933b7d4acff761"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let currentUID = "";
-
-    function googleLogin() {
+    function login() {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider).then(result => {
         const user = result.user;
-        currentUID = user.uid;
-        document.getElementById("userInfo").innerHTML = `✅ Logged in as: ${user.displayName} (${user.email})`;
-        loadMyRequests();
-      }).catch(error => {
-        console.error("Login Failed", error);
+        document.getElementById("userInfo").innerText = `✅ Logged in as: ${user.displayName} (${user.email})`;
+        loadRequests(user.uid);
       });
     }
 
-    function loadMyRequests() {
-      const myRequestsDiv = document.getElementById("myRequests");
-      myRequestsDiv.innerHTML = "<p>Loading...</p>";
+    function loadRequests(uid) {
+      db.ref('requests/' + uid).once('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById("myRequests");
+        container.innerHTML = "";
 
-      db.ref("requests").once("value", snap => {
-        myRequestsDiv.innerHTML = "";
-        const allRequests = snap.val();
-        for (let userId in allRequests) {
-          for (let reqId in allRequests[userId]) {
-            const req = allRequests[userId][reqId];
+        if (!data) {
+          container.innerHTML = "<p>No requests found.</p>";
+          return;
+        }
 
-            // Show only requests created by current user
-            if (userId === currentUID) {
-              const acceptedBy = req.acceptedBy;
-              let acceptedInfo = `<p><b>Accepted By:</b> Not accepted yet</p>`;
-              let whatsappBtn = "";
+        Object.entries(data).forEach(([reqID, req]) => {
+          const div = document.createElement("div");
+          div.style.border = "1px solid #999";
+          div.style.padding = "10px";
+          div.style.margin = "10px";
 
-              if (acceptedBy) {
-                const acceptedUID = Object.keys(acceptedBy)[0];
-                // Now get user info from "users"
-                db.ref("users/" + acceptedUID).once("value", userSnap => {
-                  const acceptor = userSnap.val();
-                  acceptedInfo = `
-                    <p><b>Accepted By:</b></p>
-                    <ul>
-                      <li><b>Name:</b> ${acceptor.name || '-'}</li>
-                      <li><b>Phone:</b> ${acceptor.phone || '-'}</li>
-                      <li><b>Address:</b> ${acceptor.address || '-'}</li>
-                    </ul>
-                  `;
-                  if (acceptor.phone) {
-                    whatsappBtn = `<a href="https://wa.me/${acceptor.phone}" target="_blank">
-                      📞 Chat on WhatsApp
-                    </a>`;
-                  }
+          let acceptInfo = "Not accepted yet";
+          let phone = "-";
+          let address = "-";
+          let whatsappBtn = "";
 
-                  myRequestsDiv.innerHTML += `
-                    <hr>
-                    <p><b>Service:</b> ${req.category}</p>
-                    <p><b>Issue:</b> ${req.description}</p>
-                    ${acceptedInfo}
-                    ${whatsappBtn}
-                  `;
-                });
-              } else {
-                myRequestsDiv.innerHTML += `
-                  <hr>
-                  <p><b>Service:</b> ${req.category}</p>
-                  <p><b>Issue:</b> ${req.description}</p>
-                  ${acceptedInfo}
-                `;
-              }
+          if (req.acceptedBy) {
+            const acceptedKeys = Object.keys(req.acceptedBy).filter(key => key !== 'name' && key !== 'phone' && key !== 'address');
+            if (acceptedKeys.length > 0) {
+              acceptInfo = req.acceptedBy.name || "N/A";
+              phone = req.acceptedBy.phone || "N/A";
+              address = req.acceptedBy.address || "N/A";
+
+              whatsappBtn = `<a href="https://wa.me/${phone}" target="_blank">
+                <button>📱 WhatsApp</button>
+              </a>`;
             }
           }
-        }
+
+          div.innerHTML = `
+            <strong>📌 Category:</strong> ${req.category}<br>
+            <strong>📝 Issue:</strong> ${req.description}<br>
+            <strong>📅 Date:</strong> ${req.datetime}<br>
+            <strong>📍 Location:</strong> ${req.location}<br><br>
+            <strong>✅ Accepted By:</strong><br>
+            • Name: ${acceptInfo}<br>
+            • Phone: ${phone}<br>
+            • Address: ${address}<br><br>
+            ${whatsappBtn}
+          `;
+          container.appendChild(div);
+        });
       });
     }
   </script>
