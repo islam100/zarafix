@@ -1,41 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Request Accept Status</title>
+  <title>ZaraFix - Accepted Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
     .card {
       background: #fff;
+      border-radius: 10px;
       padding: 15px;
-      margin: 10px auto;
-      border-radius: 8px;
+      margin-bottom: 20px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
     }
-    .card h3 { margin-top: 0; }
     .btn {
       padding: 10px 15px;
-      margin: 5px;
       border: none;
       border-radius: 5px;
+      margin: 5px;
       cursor: pointer;
+      font-size: 14px;
     }
-    .btn-whatsapp { background: #25D366; color: white; }
-    .btn-reject { background: #dc3545; color: white; }
+    .btn-whatsapp {
+      background-color: #25D366;
+      color: white;
+    }
+    .btn-reject {
+      background-color: #dc3545;
+      color: white;
+    }
   </style>
 </head>
 <body>
 
-<h2>Accepted Posters for Request</h2>
+<h2>📋 Accepted Posters</h2>
 <div id="container">Loading...</div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // ✅ Firebase Config
+  // Firebase config - आपका असली डाटा
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
@@ -49,60 +56,65 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ✅ Set these dynamically or from URL
-  const userId = "userId2";         // 🔁 Set from URL or auth
-  const requestId = "requestId2";   // 🔁 Set from URL or context
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get("user");
+  const requestId = urlParams.get("req");
 
   const container = document.getElementById("container");
 
-  async function loadAcceptedPosters() {
-    const requestSnap = await db.ref(`requests/${userId}/${requestId}`).once("value");
-    const requestData = requestSnap.val();
-
-    if (!requestData || !requestData.acceptedBy) {
-      container.innerHTML = "<p>No accepted posters yet.</p>";
-      return;
-    }
-
-    const acceptedBy = requestData.acceptedBy;
-    let content = "";
-
-    for (const posterId in acceptedBy) {
-      const posterSnap = await db.ref(`posters/${posterId}`).once("value");
-      const poster = posterSnap.val();
-
-      if (!poster) continue;
-
-      content += `
-        <div class="card">
-          <h3>👨‍🔧 ${poster.name}</h3>
-          <p><strong>Category:</strong> ${poster.category}</p>
-          <p><strong>Shop:</strong> ${poster.shop}</p>
-          <p><strong>Phone:</strong> ${poster.whatsapp}</p>
-
-          <a class="btn btn-whatsapp" href="https://wa.me/91${poster.whatsapp}?text=Hello%20${poster.name},%20regarding%20your%20job%20acceptance%20on%20ZaraFix." target="_blank">WhatsApp</a>
-
-          <button class="btn btn-reject" onclick="rejectPoster('${posterId}')">Reject</button>
-        </div>
-      `;
-    }
-
-    container.innerHTML = content;
+  if (!userId || !requestId) {
+    container.innerHTML = "<p>❌ Missing user or request ID in URL.</p>";
+  } else {
+    loadData(userId, requestId);
   }
 
-  // ✅ Reject Poster (remove from acceptedBy)
-  function rejectPoster(posterId) {
-    if (!confirm("Are you sure you want to reject this poster?")) return;
+  async function loadData(userId, requestId) {
+    try {
+      const reqSnap = await db.ref(`requests/${userId}/${requestId}`).once("value");
+      const reqData = reqSnap.val();
 
-    const ref = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
-    ref.remove().then(() => {
-      alert("Poster rejected successfully.");
-      loadAcceptedPosters(); // refresh UI
-    });
+      if (!reqData || !reqData.acceptedBy) {
+        container.innerHTML = "<p>🚫 No one has accepted this request yet.</p>";
+        return;
+      }
+
+      const acceptedBy = reqData.acceptedBy;
+      let html = "";
+
+      for (const posterId in acceptedBy) {
+        const posterSnap = await db.ref(`posters/${posterId}`).once("value");
+        const poster = posterSnap.val();
+
+        if (!poster) continue;
+
+        html += `
+          <div class="card">
+            <h3>👨‍🔧 ${poster.name}</h3>
+            <p><strong>Category:</strong> ${poster.category}</p>
+            <p><strong>Shop:</strong> ${poster.shop}</p>
+            <p><strong>Phone:</strong> ${poster.whatsapp}</p>
+
+            <a class="btn btn-whatsapp" href="https://wa.me/91${poster.whatsapp}?text=Hello%20${poster.name},%20regarding%20your%20accepted%20request%20on%20ZaraFix." target="_blank">WhatsApp</a>
+            <button class="btn btn-reject" onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">Reject</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+
+    } catch (error) {
+      container.innerHTML = `<p>Error: ${error.message}</p>`;
+    }
   }
 
-  // 🚀 Load on page load
-  loadAcceptedPosters();
+  function rejectPoster(userId, requestId, posterId) {
+    if (confirm("Reject this poster from accepted list?")) {
+      db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).remove().then(() => {
+        alert("Rejected successfully.");
+        location.reload();
+      });
+    }
+  }
 </script>
 
 </body>
