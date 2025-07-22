@@ -1,73 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Requests</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix - Service Request Form</title>
   <style>
-    body { font-family: Arial; background: #f1f1f1; padding: 20px; }
-    .card {
-      background: #fff;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
     }
-    .card h3 { margin: 0 0 10px; }
+    .form-container {
+      background: white;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+    }
+    button {
+      background: linear-gradient(45deg, #4caf50, #388e3c);
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(56, 142, 60, 0.6);
+      transition: all 0.3s ease;
+      border-radius: 12px;
+    }
+    button:hover {
+      box-shadow: 0 6px 12px rgba(56, 142, 60, 0.9);
+      transform: translateY(-2px);
+    }
+    .message {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+      color: green;
+    }
   </style>
 </head>
 <body>
 
-<h2>🛠️ Admin Request Dashboard</h2>
-<div id="requestsContainer"></div>
+  <div class="form-container">
+    <h2>Service Request Form</h2>
+    <form id="serviceRequestForm">
+      <input type="text" id="name" placeholder="पूरा नाम" required />
+      <input type="text" id="address" placeholder="पता" required />
+      <input type="tel" id="whatsapp" placeholder="WhatsApp नंबर" pattern="[0-9]{10}" required />
+      
+      <select id="category" required>
+        <option value="">-- सेवा चुनें --</option>
+        <option value="Plumber">Plumber</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Carpenter">Carpenter</option>
+        <option value="AC Repair">AC Repair</option>
+        <option value="Refrigerator Repair">Refrigerator Repair</option>
+        <option value="Washing Machine Repair">Washing Machine Repair</option>
+        <option value="TV Repair">TV Repair</option>
+        <option value="Computer Repair">Computer Repair</option>
+        <option value="Mobile Repair">Mobile Repair</option>
+        <option value="RO / Water Purifier Technician">RO / Water Purifier Technician</option>
+        <option value="Gas Stove Repair">Gas Stove Repair</option>
+        <option value="CCTV Installation">CCTV Installation</option>
+        <option value="Inverter / Battery Technician">Inverter / Battery Technician</option>
+        <option value="Printer / Scanner Repair">Printer / Scanner Repair</option>
+        <option value="Welder / Fabrication">Welder / Fabrication</option>
+        <!-- आप अपनी सारी Categories यहाँ रख सकते हैं -->
+      </select>
+      
+      <textarea id="problem" placeholder="समस्या का विवरण लिखें" rows="4" required></textarea>
+      
+      <button type="submit">Submit करें</button>
+    </form>
+    <div class="message" id="message"></div>
+  </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Firebase JS SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  // 🔁 Timestamp ko readable format banane ka function
-  function formatTimestamp(ts) {
-    const date = new Date(ts);
-    const options = {
-      year: 'numeric', month: 'long', day: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true
+  <script>
+    // अपने Firebase Config यहाँ डालें
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
-    return date.toLocaleString('en-IN', options);
-  }
 
-  // 📥 Sabhi requests fetch karo
-  db.ref("requests").once("value", snapshot => {
-    const container = document.getElementById("requestsContainer");
-    snapshot.forEach(userSnap => {
-      userSnap.forEach(reqSnap => {
-        const data = reqSnap.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>${data.category || "Unknown"}</h3>
-          <p><strong>Name:</strong> ${data.name || ""}</p>
-          <p><strong>Address:</strong> ${data.address || ""}</p>
-          <p><strong>Problem:</strong> ${data.problem || ""}</p>
-          <p><strong>WhatsApp:</strong> ${data.whatsapp || ""}</p>
-          <p><strong>Status:</strong> ${data.status || ""}</p>
-          <p><strong>Submitted:</strong> ${formatTimestamp(data.timestamp)}</p>
-        `;
-        container.appendChild(card);
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const form = document.getElementById('serviceRequestForm');
+    const messageDiv = document.getElementById('message');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const whatsapp = document.getElementById('whatsapp').value.trim();
+      const category = document.getElementById('category').value;
+      const problem = document.getElementById('problem').value.trim();
+
+      if (!name || !address || !whatsapp || !category || !problem) {
+        messageDiv.style.color = 'red';
+        messageDiv.textContent = 'कृपया सभी फील्ड सही से भरें।';
+        return;
+      }
+
+      // Firebase में डेटा भेजना
+      const newRequestRef = database.ref('serviceRequests').push();
+      newRequestRef.set({
+        name,
+        address,
+        whatsapp,
+        category,
+        problem,
+        status: 'pending',
+        timestamp: Date.now()
+      })
+      .then(() => {
+        messageDiv.style.color = 'green';
+        messageDiv.textContent = 'आपकी रिक्वेस्ट सफलतापूर्वक सबमिट हो गई है। कृपया इंतजार करें।';
+        form.reset();
+      })
+      .catch((error) => {
+        messageDiv.style.color = 'red';
+        messageDiv.textContent = 'रिक्वेस्ट सबमिट करने में त्रुटि: ' + error.message;
       });
     });
-  });
-</script>
+  </script>
 
 </body>
 </html>
