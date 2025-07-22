@@ -1,106 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Dashboard - ZaraFix</title>
+  <title>📋 Admin Panel - All Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 1rem; background: #f9f9f9; }
-    h1 { text-align: center; }
-    .request-card {
-      background: #fff; padding: 1rem; margin-bottom: 1rem;
-      border-radius: 10px; box-shadow: 0 0 5px #ccc;
+    body { font-family: Arial; background: #f5f5f5; padding: 10px; }
+    h2 { text-align: center; }
+    .card {
+      background: white; margin: 10px 0; padding: 10px;
+      border-left: 6px solid #4CAF50; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .poster-info {
-      background: #eef; padding: 0.5rem; margin-top: 0.5rem;
-      border-left: 4px solid #448aff;
-    }
+    .poster { margin-left: 10px; padding: 5px; background: #eef; border-left: 3px solid #00bcd4; }
   </style>
 </head>
 <body>
-  <h1>📋 Admin Panel - All Requests</h1>
-  <div id="requestList">Loading requests...</div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<h2>📋 Admin Panel - All Requests</h2>
+<div id="requestList">Loading requests...</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script>
+  // 🔧 Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "480206018141",
+    appId: "1:480206018141:web:e7881db931a19191f86b60"
+  };
 
-    const requestList = document.getElementById("requestList");
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    // Load posters for reference
-    let postersData = {};
-    db.ref("posters").once("value").then(snapshot => {
-      postersData = snapshot.val() || {};
-    });
+  const requestList = document.getElementById("requestList");
 
-    // Load and auto-update requests
-    db.ref("requests").on("value", snapshot => {
+  function loadRequests() {
+    db.ref("requests").on("value", async (snapshot) => {
       const data = snapshot.val();
       requestList.innerHTML = "";
+      const cards = [];
 
-      let allRequests = [];
+      if (data) {
+        // Get posters once to avoid multiple DB calls
+        const postersSnapshot = await db.ref("posters").once("value");
+        const postersData = postersSnapshot.val() || {};
 
-      for (let userId in data) {
-        for (let requestId in data[userId]) {
-          let req = data[userId][requestId];
-          req.userId = userId;
-          req.requestId = requestId;
-          allRequests.push(req);
+        for (let userId in data) {
+          for (let requestId in data[userId]) {
+            const req = data[userId][requestId];
+            const div = document.createElement("div");
+            div.className = "card";
+            div.innerHTML = `
+              <b>📌 Category:</b> ${req.category}<br>
+              <b>📝 Description:</b> ${req.description}<br>
+              <b>📍 Location:</b> ${req.location || "N/A"}<br>
+              <b>👤 User ID:</b> ${userId}<br>
+              <b>🆔 Request ID:</b> ${requestId}
+              <br><b>✅ Accepted By:</b>
+            `;
+
+            if (req.acceptedBy) {
+              for (let posterId in req.acceptedBy) {
+                const poster = postersData[posterId];
+                if (poster) {
+                  div.innerHTML += `
+                    <div class="poster">
+                      <b>${poster.name}</b> (${poster.category})<br>
+                      🏪 ${poster.shop}<br>
+                      📱 ${poster.whatsapp}<br>
+                      💰 Wallet: ₹${poster.wallet}
+                    </div>
+                  `;
+                } else {
+                  div.innerHTML += `<div class="poster">❌ Poster data not found for ID: ${posterId}</div>`;
+                }
+              }
+            } else {
+              div.innerHTML += "❌ Not accepted by any poster";
+            }
+
+            // Add to top
+            cards.unshift(div);
+          }
         }
-      }
-
-      // Sort by latest first
-      allRequests.reverse();
-
-      if (allRequests.length === 0) {
-        requestList.innerHTML = "<p>No requests found.</p>";
+      } else {
+        requestList.innerHTML = "😴 No requests found.";
         return;
       }
 
-      allRequests.forEach(req => {
-        const card = document.createElement("div");
-        card.className = "request-card";
-
-        let html = `
-          <strong>Category:</strong> ${req.category} <br>
-          <strong>Description:</strong> ${req.description} <br>
-          <strong>Location:</strong> ${req.location || "N/A"} <br>
-        `;
-
-        // If accepted by someone, show poster details
-        if (req.acceptedBy) {
-          html += "<div><strong>Accepted By:</strong></div>";
-          for (let posterId in req.acceptedBy) {
-            const poster = postersData[posterId];
-            if (poster) {
-              html += `
-                <div class="poster-info">
-                  <strong>Name:</strong> ${poster.name} <br>
-                  <strong>Shop:</strong> ${poster.shop} <br>
-                  <strong>Category:</strong> ${poster.category} <br>
-                  <strong>WhatsApp:</strong> ${poster.whatsapp}
-                </div>
-              `;
-            }
-          }
-        }
-
-        card.innerHTML = html;
-        requestList.appendChild(card);
-      });
+      cards.forEach(c => requestList.appendChild(c));
     });
-  </script>
+  }
+
+  loadRequests();
+</script>
+
 </body>
 </html>
