@@ -9,8 +9,7 @@
 <body>
   <h2>🔐 Google Login</h2>
   <button onclick="login()">Login with Google</button>
-  <p id="userInfo"></p>
-
+  <div id="userInfo"></div>
   <h3>📋 My Service Requests</h3>
   <div id="myRequests"></div>
 
@@ -21,70 +20,65 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "410690883299",
-      appId: "1:410690883299:web:646fda87933b7d4acff761"
+      messagingSenderId: "448989892983",
+      appId: "1:448989892983:web:e0636cc603f90b45820cb0"
     };
-
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
 
     function login() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(result => {
+      firebase.auth().signInWithPopup(provider).then((result) => {
         const user = result.user;
         document.getElementById("userInfo").innerText = `✅ Logged in as: ${user.displayName} (${user.email})`;
-        loadRequests(user.uid);
+        loadMyRequests(user.uid);
       });
     }
 
-    function loadRequests(uid) {
-      db.ref('requests/' + uid).once('value', snap => {
-        const data = snap.val();
-        const container = document.getElementById("myRequests");
-        container.innerHTML = "";
-
-        if (!data) {
-          container.innerHTML = "<p>No requests found.</p>";
+    function loadMyRequests(uid) {
+      const requestDiv = document.getElementById("myRequests");
+      requestDiv.innerHTML = "⏳ Loading...";
+      firebase.database().ref("requests/" + uid).once("value", snapshot => {
+        requestDiv.innerHTML = "";
+        if (!snapshot.exists()) {
+          requestDiv.innerHTML = "❌ No requests found.";
           return;
         }
+        snapshot.forEach(reqSnap => {
+          const req = reqSnap.val();
+          const card = document.createElement("div");
+          card.style.border = "1px solid #ccc";
+          card.style.padding = "10px";
+          card.style.margin = "10px";
 
-        Object.entries(data).forEach(([reqID, req]) => {
-          const div = document.createElement("div");
-          div.style.border = "1px solid #999";
-          div.style.padding = "10px";
-          div.style.margin = "10px";
-
-          let acceptInfo = "Not accepted yet";
-          let phone = "-";
-          let address = "-";
-          let whatsappBtn = "";
+          let acceptedInfo = `<b>Accepted By:</b> Not accepted yet`;
 
           if (req.acceptedBy) {
-            const acceptedKeys = Object.keys(req.acceptedBy).filter(key => key !== 'name' && key !== 'phone' && key !== 'address');
-            if (acceptedKeys.length > 0) {
-              acceptInfo = req.acceptedBy.name || "N/A";
-              phone = req.acceptedBy.phone || "N/A";
-              address = req.acceptedBy.address || "N/A";
-
-              whatsappBtn = `<a href="https://wa.me/${phone}" target="_blank">
-                <button>📱 WhatsApp</button>
-              </a>`;
-            }
+            const accepterUid = Object.keys(req.acceptedBy)[0];
+            firebase.database().ref("users/" + accepterUid).once("value", accepterSnap => {
+              const accepter = accepterSnap.val();
+              if (accepter) {
+                acceptedInfo = `
+                  <b>Accepted By:</b><br>
+                  • Name: ${accepter.name}<br>
+                  • Phone: ${accepter.phone}<br>
+                  • Address: ${accepter.address}<br>
+                  <a href="https://wa.me/${accepter.phone}" target="_blank">📲 WhatsApp</a>
+                `;
+              }
+              card.innerHTML = `
+                <b>Service:</b> ${req.category}<br>
+                <b>Issue:</b> ${req.description}<br>
+                ${acceptedInfo}
+              `;
+            });
+          } else {
+            card.innerHTML = `
+              <b>Service:</b> ${req.category}<br>
+              <b>Issue:</b> ${req.description}<br>
+              ${acceptedInfo}
+            `;
           }
-
-          div.innerHTML = `
-            <strong>📌 Category:</strong> ${req.category}<br>
-            <strong>📝 Issue:</strong> ${req.description}<br>
-            <strong>📅 Date:</strong> ${req.datetime}<br>
-            <strong>📍 Location:</strong> ${req.location}<br><br>
-            <strong>✅ Accepted By:</strong><br>
-            • Name: ${acceptInfo}<br>
-            • Phone: ${phone}<br>
-            • Address: ${address}<br><br>
-            ${whatsappBtn}
-          `;
-          container.appendChild(div);
+          requestDiv.appendChild(card);
         });
       });
     }
