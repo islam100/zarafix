@@ -1,115 +1,110 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🎯 Accepted Posters - ZaraFix</title>
+  <title>🎯 Posters Who Accepted Your Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f4f4f4; margin: 0; padding: 20px; text-align: center; }
+    body { font-family: Arial; background: #f2f2f2; padding: 20px; text-align: center; }
     .card {
-      background: white;
-      padding: 15px;
-      margin: 10px auto;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      max-width: 400px;
+      background: white; padding: 15px; margin: 10px auto; max-width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 10px;
+      transition: transform 0.2s;
     }
-    button {
-      padding: 8px 16px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
+    .card:hover { transform: scale(1.02); }
+    .btn {
+      padding: 10px 20px; background: #007BFF; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
     }
+    .btn:hover { background: #0056b3; }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
 
 <h2>🎯 Posters Who Accepted Your Request</h2>
-<div id="authSection">
-  <button onclick="logout()" style="display:none;" id="logoutBtn">Logout</button>
-</div>
-<div id="content">Loading...</div>
+<div id="authSection"></div>
+<div id="output">Loading...</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
-  // ✅ Firebase Config
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
+    apiKey: "AIzaSy...",
+    authDomain: "your-project.firebaseapp.com",
+    databaseURL: "https://your-project.firebaseio.com",
+    projectId: "your-project",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
   };
+
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // 🔄 Check Login
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-      loadAcceptedPosters(user.uid);
-    } else {
-      document.getElementById('content').innerText = 'Please login first.';
+  const output = document.getElementById('output');
+  const authSection = document.getElementById('authSection');
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      authSection.innerHTML = `<button class="btn" onclick="login()">Login with Google</button>`;
+      output.innerHTML = 'Please login first.';
+      return;
     }
+
+    authSection.innerHTML = `<button class="btn" onclick="logout()">Logout</button>`;
+    const userId = user.uid;
+
+    const reqSnap = await db.ref('requests/' + userId).once('value');
+    const reqData = reqSnap.val();
+
+    if (!reqData) {
+      output.innerHTML = '❌ No requests found.';
+      return;
+    }
+
+    let acceptedList = [];
+    for (const reqId in reqData) {
+      const request = reqData[reqId];
+      if (request.acceptedBy) {
+        acceptedList.push(...Object.keys(request.acceptedBy));
+      }
+    }
+
+    if (acceptedList.length === 0) {
+      output.innerHTML = '❌ No posters have accepted your request yet.';
+      return;
+    }
+
+    let html = '';
+    for (const posterId of acceptedList) {
+      const posterSnap = await db.ref('posters/' + posterId).once('value');
+      const poster = posterSnap.val();
+      if (!poster) continue;
+
+      html += `
+        <div class="card">
+          <h3>🧰 ${poster.name}</h3>
+          <p>📍 ${poster.shop} - ${poster.category}</p>
+          <a class="btn" href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a>
+          <br><br>
+          <a class="btn" href="https://www.google.com/maps?q=${poster.lat || 0},${poster.lng || 0}" target="_blank">📍 View Live Location</a>
+        </div>
+      `;
+    }
+
+    output.innerHTML = html;
   });
 
-  // 🔓 Logout
-  function logout() {
-    auth.signOut().then(() => {
-      location.reload();
-    });
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   }
 
-  // 📥 Load Accepted Posters
-  function loadAcceptedPosters(userId) {
-    const contentDiv = document.getElementById('content');
-    contentDiv.innerHTML = 'Loading...';
-
-    db.ref(`requests/${userId}`).once('value', snap => {
-      const allRequests = snap.val();
-      if (!allRequests) {
-        contentDiv.innerHTML = '❌ No service requests found.';
-        return;
-      }
-
-      let found = false;
-      contentDiv.innerHTML = '';
-
-      Object.keys(allRequests).forEach(reqId => {
-        const acceptedBy = allRequests[reqId].acceptedBy;
-        if (acceptedBy) {
-          found = true;
-          Object.keys(acceptedBy).forEach(posterId => {
-            db.ref(`posters/${posterId}`).once('value', posterSnap => {
-              const poster = posterSnap.val();
-              if (poster) {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                  <h3>🧰 ${poster.name}</h3>
-                  <p>🏪 ${poster.shop}</p>
-                  <p>📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">${poster.whatsapp}</a></p>
-                  <p>📍 <a href="https://www.google.com/maps?q=${poster.location || ''}" target="_blank">Live Location</a></p>
-                `;
-                contentDiv.appendChild(card);
-              }
-            });
-          });
-        }
-      });
-
-      setTimeout(() => {
-        if (!found) {
-          contentDiv.innerHTML = '❌ No posters have accepted your request yet.';
-        }
-      }, 2000); // Give 2 sec to load all
-    });
+  function logout() {
+    auth.signOut();
   }
 </script>
 
