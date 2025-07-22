@@ -4,101 +4,153 @@
   <title>📋 Admin Panel - All Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f5f5f5; padding: 10px; }
-    h2 { text-align: center; }
-    .card {
-      background: white; margin: 10px 0; padding: 10px;
-      border-left: 6px solid #4CAF50; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0; padding: 0;
     }
-    .poster { margin-left: 10px; padding: 5px; background: #eef; border-left: 3px solid #00bcd4; }
+    header {
+      background: #007BFF;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+    }
+    .request-card {
+      background: white;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .actions {
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .accept { background: #28a745; color: white; }
+    .reject { background: #dc3545; color: white; }
+    .poster-details {
+      background: #f9f9f9;
+      padding: 8px;
+      margin-top: 5px;
+      font-size: 14px;
+      border-left: 3px solid #007BFF;
+    }
   </style>
 </head>
 <body>
+  <header>📋 Admin Panel - All Requests</header>
+  <div id="requestsContainer">Loading requests...</div>
 
-<h2>📋 Admin Panel - All Requests</h2>
-<div id="requestList">Loading requests...</div>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "423515607759",
+      appId: "1:423515607759:web:0d1b88cbe9cc0fd9c3bbdf"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script>
-  // 🔧 Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "480206018141",
-    appId: "1:480206018141:web:e7881db931a19191f86b60"
-  };
+    function loadRequests() {
+      const container = document.getElementById('requestsContainer');
+      container.innerHTML = '<p>Loading requests...</p>';
+      
+      db.ref('requests').once('value', async (snapshot) => {
+        const data = snapshot.val();
+        const allRequests = [];
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const requestList = document.getElementById("requestList");
-
-  function loadRequests() {
-    db.ref("requests").on("value", async (snapshot) => {
-      const data = snapshot.val();
-      requestList.innerHTML = "";
-      const cards = [];
-
-      if (data) {
-        // Get posters once to avoid multiple DB calls
-        const postersSnapshot = await db.ref("posters").once("value");
-        const postersData = postersSnapshot.val() || {};
-
-        for (let userId in data) {
-          for (let requestId in data[userId]) {
-            const req = data[userId][requestId];
-            const div = document.createElement("div");
-            div.className = "card";
-            div.innerHTML = `
-              <b>📌 Category:</b> ${req.category}<br>
-              <b>📝 Description:</b> ${req.description}<br>
-              <b>📍 Location:</b> ${req.location || "N/A"}<br>
-              <b>👤 User ID:</b> ${userId}<br>
-              <b>🆔 Request ID:</b> ${requestId}
-              <br><b>✅ Accepted By:</b>
-            `;
-
-            if (req.acceptedBy) {
-              for (let posterId in req.acceptedBy) {
-                const poster = postersData[posterId];
-                if (poster) {
-                  div.innerHTML += `
-                    <div class="poster">
-                      <b>${poster.name}</b> (${poster.category})<br>
-                      🏪 ${poster.shop}<br>
-                      📱 ${poster.whatsapp}<br>
-                      💰 Wallet: ₹${poster.wallet}
-                    </div>
-                  `;
-                } else {
-                  div.innerHTML += `<div class="poster">❌ Poster data not found for ID: ${posterId}</div>`;
-                }
-              }
-            } else {
-              div.innerHTML += "❌ Not accepted by any poster";
-            }
-
-            // Add to top
-            cards.unshift(div);
+        for (const userId in data) {
+          for (const reqId in data[userId]) {
+            const req = data[userId][reqId];
+            req.requestId = reqId;
+            req.userId = userId;
+            allRequests.push(req);
           }
         }
-      } else {
-        requestList.innerHTML = "😴 No requests found.";
-        return;
-      }
 
-      cards.forEach(c => requestList.appendChild(c));
-    });
-  }
+        // Sort: Newest First (Assuming reqId has time-based sorting logic, else we reverse)
+        allRequests.reverse();
 
-  loadRequests();
-</script>
+        // Fetch posters info for acceptedBy
+        const postersSnap = await db.ref('posters').once('value');
+        const posters = postersSnap.val() || {};
 
+        container.innerHTML = '';
+        allRequests.forEach(req => {
+          const div = document.createElement('div');
+          div.className = 'request-card';
+
+          div.innerHTML = `
+            <strong>📂 Category:</strong> ${req.category || 'N/A'}<br>
+            <strong>📍 Location:</strong> ${req.location || 'N/A'}<br>
+            <strong>📝 Problem:</strong> ${req.description || 'N/A'}<br>
+            <strong>📌 Status:</strong> ${req.status || 'pending'}
+            <div class="actions">
+              <button class="accept" onclick="acceptRequest('${req.userId}', '${req.requestId}')">✅ Accept</button>
+              <button class="reject" onclick="rejectRequest('${req.userId}', '${req.requestId}')">❌ Reject</button>
+            </div>
+          `;
+
+          // Show who accepted (poster details)
+          if (req.acceptedBy) {
+            for (const pid in req.acceptedBy) {
+              const p = posters[pid];
+              if (p) {
+                div.innerHTML += `
+                  <div class="poster-details">
+                    <strong>✔ Accepted By:</strong><br>
+                    👤 ${p.name}<br>
+                    📱 ${p.whatsapp}<br>
+                    🏪 ${p.shop}<br>
+                    🧰 ${p.category}
+                  </div>
+                `;
+              }
+            }
+          }
+
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function acceptRequest(userId, requestId) {
+      const posterId = prompt("Enter Poster ID to accept this request:");
+      if (!posterId) return;
+
+      const updateRef = `requests/${userId}/${requestId}/acceptedBy`;
+      firebase.database().ref(updateRef).set({
+        [posterId]: true
+      }).then(() => {
+        alert("✅ Request Accepted!");
+        loadRequests();
+      });
+    }
+
+    function rejectRequest(userId, requestId) {
+      const ref = `requests/${userId}/${requestId}`;
+      firebase.database().ref(ref).remove().then(() => {
+        alert("❌ Request Rejected & Removed.");
+        loadRequests();
+      });
+    }
+
+    loadRequests();
+    setInterval(loadRequests, 10000); // 🔄 Auto-refresh every 10 sec
+  </script>
 </body>
 </html>
