@@ -1,205 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>⚒️ ZaraFix Service Request</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 10px;
-      background: #e0f7fa;
-    }
-    .form-container {
-      background: #fff;
-      max-width: 500px;
-      margin: auto; padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-    }
-    h2, h3 { text-align: center; margin-bottom: 15px; }
-    input, select, textarea {
-      width: 100%; padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    .btn-3d {
-      background: linear-gradient(145deg, #4CAF50, #43A047);
-      color: white;
-      border: none;
-      padding: 14px;
-      font-size: 16px;
-      border-radius: 12px;
-      box-shadow: 0 4px 0 #2e7d32;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 10px;
-      transition: all 0.2s ease;
-    }
-    .btn-3d:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #2e7d32;
-    }
-    #loginBtn { background: #007bff; color: white; margin-bottom: 15px; }
-    .request-box {
-      background: #ffffff;
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 10px;
-    }
-    .btn-reject {
-      background: red;
-      color: white;
-      border: none;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-  </style>
+  <title>Service Request Tracker</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
+  <h2>🔐 Google Login</h2>
+  <button onclick="googleLogin()">Login with Google</button>
+  <div id="userInfo" style="margin-top:20px;"></div>
 
-<div class="form-container">
-  <h2>⚒️ ZaraFix Service Request</h2>
-  <button id="loginBtn" class="btn-3d">🔐 Login with Google</button>
+  <h2>📋 My Service Requests</h2>
+  <div id="myRequests"></div>
 
-  <div id="userInfo" style="display:none; text-align:center; margin-bottom:15px;">
-    Logged in as <strong id="username"></strong>
-  </div>
-
-  <form id="serviceForm" style="display:none;">
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <input type="text" id="address" placeholder="Your Address" required>
-    <select id="category" required>
-      <option value="">-- Select Service --</option>
-      <option>Plumber</option><option>Electrician</option><option>Carpenter</option>
-      <option>AC Repair</option><option>Refrigerator Repair</option>
-      <!-- (shortened for brevity) -->
-    </select>
-    <textarea id="description" placeholder="Describe the issue..." rows="4" required></textarea>
-    <input type="hidden" id="datetime">
-    <input type="hidden" id="latlng">
-    <button type="button" class="btn-3d" onclick="submitRequest()">Submit Request</button>
-  </form>
-
-  <div id="dashboard" style="display:none;">
-    <h3>🔢 My Submitted Requests</h3>
-    <div id="requestList"></div>
-  </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  window.onload = () => {
-    const dt = new Date();
-    document.getElementById("datetime").value = dt.toLocaleString();
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(p => {
-        document.getElementById("latlng").value = `${p.coords.latitude},${p.coords.longitude}`;
-      });
-    }
-  };
-
-  document.getElementById("loginBtn").onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      document.getElementById("loginBtn").style.display = 'none';
-      document.getElementById("userInfo").style.display = 'block';
-      document.getElementById("username").innerText = user.displayName;
-      document.getElementById("serviceForm").style.display = 'block';
-      document.getElementById("dashboard").style.display = 'block';
-      loadUserRequests(user.uid);
-    }
-  });
-
-  function submitRequest() {
-    const u = auth.currentUser;
-    if (!u) return alert("Please login first.");
-
-    const data = {
-      name: document.getElementById("name").value.trim(),
-      whatsapp: document.getElementById("whatsapp").value.trim(),
-      address: document.getElementById("address").value.trim(),
-      category: document.getElementById("category").value,
-      description: document.getElementById("description").value.trim(),
-      datetime: document.getElementById("datetime").value,
-      location: document.getElementById("latlng").value,
-      acceptedBy: {
-        name: "Not accepted yet",
-        phone: "-",
-        address: "-"
-      }
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "401425088870",
+      appId: "1:401425088870:web:7518f21c8e7df379491f69"
     };
 
-    if (!data.name || !data.whatsapp || !data.address || !data.category || !data.description) {
-      return alert("Please fill all fields.");
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUID = "";
+
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        const user = result.user;
+        currentUID = user.uid;
+        document.getElementById("userInfo").innerHTML = `✅ Logged in as: ${user.displayName} (${user.email})`;
+        loadMyRequests();
+      }).catch(error => {
+        console.error("Login Failed", error);
+      });
     }
 
-    const reqId = db.ref().child("requests").push().key;
-    db.ref(`requests/${u.uid}/${reqId}`).set(data)
-      .then(() => {
-        alert("✅ Request submitted!");
-        document.querySelector("form").reset();
-        loadUserRequests(u.uid);
-      })
-      .catch(err => alert("❌ " + err.message));
-  }
+    function loadMyRequests() {
+      const myRequestsDiv = document.getElementById("myRequests");
+      myRequestsDiv.innerHTML = "<p>Loading...</p>";
 
-  function loadUserRequests(uid) {
-    const container = document.getElementById("requestList");
-    container.innerHTML = "Loading...";
-    db.ref(`requests/${uid}`).on("value", snapshot => {
-      const data = snapshot.val();
-      container.innerHTML = "";
-      if (!data) return container.innerHTML = "<p>No requests submitted yet.</p>";
-      Object.entries(data).forEach(([id, req]) => {
-        const div = document.createElement("div");
-        div.className = "request-box";
-        div.innerHTML = `
-          <strong>Service:</strong> ${req.category}<br>
-          <strong>Issue:</strong> ${req.description}<br>
-          <strong>Accepted By:</strong><br>
-          • Name: ${req.acceptedBy?.name || '-'}<br>
-          • Phone: ${req.acceptedBy?.phone || '-'}<br>
-          • Address: ${req.acceptedBy?.address || '-'}<br>
-          <button class="btn-reject" onclick="rejectRequest('${uid}', '${id}')">Reject</button>
-        `;
-        container.appendChild(div);
+      db.ref("requests").once("value", snap => {
+        myRequestsDiv.innerHTML = "";
+        const allRequests = snap.val();
+        for (let userId in allRequests) {
+          for (let reqId in allRequests[userId]) {
+            const req = allRequests[userId][reqId];
+
+            // Show only requests created by current user
+            if (userId === currentUID) {
+              const acceptedBy = req.acceptedBy;
+              let acceptedInfo = `<p><b>Accepted By:</b> Not accepted yet</p>`;
+              let whatsappBtn = "";
+
+              if (acceptedBy) {
+                const acceptedUID = Object.keys(acceptedBy)[0];
+                // Now get user info from "users"
+                db.ref("users/" + acceptedUID).once("value", userSnap => {
+                  const acceptor = userSnap.val();
+                  acceptedInfo = `
+                    <p><b>Accepted By:</b></p>
+                    <ul>
+                      <li><b>Name:</b> ${acceptor.name || '-'}</li>
+                      <li><b>Phone:</b> ${acceptor.phone || '-'}</li>
+                      <li><b>Address:</b> ${acceptor.address || '-'}</li>
+                    </ul>
+                  `;
+                  if (acceptor.phone) {
+                    whatsappBtn = `<a href="https://wa.me/${acceptor.phone}" target="_blank">
+                      📞 Chat on WhatsApp
+                    </a>`;
+                  }
+
+                  myRequestsDiv.innerHTML += `
+                    <hr>
+                    <p><b>Service:</b> ${req.category}</p>
+                    <p><b>Issue:</b> ${req.description}</p>
+                    ${acceptedInfo}
+                    ${whatsappBtn}
+                  `;
+                });
+              } else {
+                myRequestsDiv.innerHTML += `
+                  <hr>
+                  <p><b>Service:</b> ${req.category}</p>
+                  <p><b>Issue:</b> ${req.description}</p>
+                  ${acceptedInfo}
+                `;
+              }
+            }
+          }
+        }
       });
-    });
-  }
-
-  function rejectRequest(uid, reqId) {
-    db.ref(`requests/${uid}/${reqId}/acceptedBy`).set({
-      name: "Not accepted yet",
-      phone: "-",
-      address: "-"
-    });
-    alert("Request marked as unaccepted.");
-  }
-</script>
+    }
+  </script>
 </body>
 </html>
