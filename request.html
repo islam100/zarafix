@@ -6,128 +6,124 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(to right, #f4f4f4, #e0e0e0);
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 20px;
-      text-align: center;
     }
-    h1 {
+    h2 {
       color: #333;
     }
-    .form-box {
-      background: #fff;
-      padding: 20px;
-      margin: auto;
-      border-radius: 15px;
-      max-width: 400px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
-    input, textarea {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 8px;
+    input, textarea, button {
+      width: 300px;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 5px;
       border: 1px solid #ccc;
+      font-size: 16px;
     }
     button {
-      background: linear-gradient(to right, #4CAF50, #45a049);
+      background-color: #4CAF50;
       color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 12px;
       cursor: pointer;
-      font-size: 16px;
-      transition: transform 0.2s;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     button:hover {
-      transform: scale(1.05);
+      background-color: #45a049;
+    }
+    #logout {
+      background-color: #e53935;
     }
   </style>
 </head>
 <body>
+  <h2>ZaraFix - Service Request</h2>
 
-<h1>ZaraFix Service Request</h1>
+  <button id="login">🔐 Login with Google</button>
+  <button id="logout" style="display:none;">🚪 Logout</button>
 
-<div class="form-box" id="formBox">
-  <input type="text" id="name" placeholder="Your Name">
-  <input type="text" id="room" placeholder="Room Number">
-  <input type="text" id="phone" placeholder="Phone Number">
-  <textarea id="request" placeholder="Enter your service request"></textarea>
-  <button onclick="submitRequest()">Submit Request</button>
-</div>
+  <div id="form" style="display:none;">
+    <input type="text" id="room" placeholder="Room Number" required>
+    <input type="text" id="name" placeholder="Your Name" required>
+    <textarea id="request" placeholder="Enter your service request" required></textarea>
+    <button onclick="submitRequest()">📩 Submit Request</button>
+  </div>
 
-<br>
-<button onclick="signInWithGoogle()">🔐 Login with Google</button>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-  firebase.initializeApp(firebaseConfig);
-
-  let currentUser = null;
-
-  function signInWithGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).then(result => {
-      currentUser = result.user;
-      alert("Login successful: " + currentUser.email);
-    }).catch(error => {
-      alert("Login error: " + error.message);
-    });
-  }
-
-  function submitRequest() {
-    if (!currentUser) {
-      alert("Please login first.");
-      return;
-    }
-
-    const name = document.getElementById('name').value.trim();
-    const room = document.getElementById('room').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const request = document.getElementById('request').value.trim();
-
-    if (!name || !room || !phone || !request) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const userId = currentUser.uid;
-    const timestamp = Date.now();
-    const requestId = 'REQ' + timestamp;
-
-    const data = {
-      name,
-      room,
-      phone,
-      request,
-      timestamp: new Date().toLocaleString()
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    firebase.database().ref("requests/" + userId + "/" + requestId).set(data)
-      .then(() => {
-        alert("Request submitted successfully.");
-        document.getElementById('name').value = "";
-        document.getElementById('room').value = "";
-        document.getElementById('phone').value = "";
-        document.getElementById('request').value = "";
-      })
-      .catch(error => {
-        alert("Error saving request: " + error.message);
-      });
-  }
-</script>
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
 
+    const loginBtn = document.getElementById("login");
+    const logoutBtn = document.getElementById("logout");
+    const formDiv = document.getElementById("form");
+
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    logoutBtn.onclick = () => {
+      auth.signOut();
+    };
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        formDiv.style.display = "block";
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        formDiv.style.display = "none";
+      }
+    });
+
+    function submitRequest() {
+      const room = document.getElementById("room").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const requestText = document.getElementById("request").value.trim();
+      const user = auth.currentUser;
+
+      if (!room || !name || !requestText) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const requestId = Date.now();
+      const requestData = {
+        email: user.email,
+        name: name,
+        room: room,
+        request: requestText,
+        timestamp: new Date().toISOString()
+      };
+
+      database.ref("requests/" + room + "/" + requestId).set(requestData)
+        .then(() => {
+          alert("✅ Request submitted!");
+          document.getElementById("room").value = "";
+          document.getElementById("name").value = "";
+          document.getElementById("request").value = "";
+        })
+        .catch((error) => {
+          alert("❌ Error: " + error.message);
+        });
+    }
+  </script>
 </body>
 </html>
