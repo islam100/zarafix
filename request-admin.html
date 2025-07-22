@@ -1,121 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Accepted Posters</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Accepted Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      background: #f2f2f2;
     }
-    .btn {
-      padding: 10px 15px;
-      border: none;
+    h2 {
+      text-align: center;
+    }
+    select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
       border-radius: 5px;
-      margin: 5px;
-      cursor: pointer;
-      font-size: 14px;
+      border: 1px solid #ccc;
     }
-    .btn-whatsapp {
-      background-color: #25D366;
-      color: white;
+    .card {
+      background: white;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
     }
-    .btn-reject {
-      background-color: #dc3545;
-      color: white;
+    .btns {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .btns button {
+      flex: 1;
+      margin: 0 5px;
     }
   </style>
 </head>
 <body>
+  <h2>📋 Accepted Posters</h2>
+  <select id="requestDropdown">
+    <option value="">Select a Request</option>
+  </select>
 
-<h2>📋 Accepted Posters</h2>
-<div id="container">Loading...</div>
+  <div id="acceptedUsers"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "184655850551",
+      appId: "1:184655850551:web:0ed3ec2bb93e172ddc9290"
+    };
 
-<script>
-  // Firebase config - आपका असली डाटा
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    const dropdown = document.getElementById("requestDropdown");
+    const acceptedUsersDiv = document.getElementById("acceptedUsers");
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const userId = urlParams.get("user");
-  const requestId = urlParams.get("req");
-
-  const container = document.getElementById("container");
-
-  if (!userId || !requestId) {
-    container.innerHTML = "<p>❌ Missing user or request ID in URL.</p>";
-  } else {
-    loadData(userId, requestId);
-  }
-
-  async function loadData(userId, requestId) {
-    try {
-      const reqSnap = await db.ref(`requests/${userId}/${requestId}`).once("value");
-      const reqData = reqSnap.val();
-
-      if (!reqData || !reqData.acceptedBy) {
-        container.innerHTML = "<p>🚫 No one has accepted this request yet.</p>";
-        return;
-      }
-
-      const acceptedBy = reqData.acceptedBy;
-      let html = "";
-
-      for (const posterId in acceptedBy) {
-        const posterSnap = await db.ref(`posters/${posterId}`).once("value");
-        const poster = posterSnap.val();
-
-        if (!poster) continue;
-
-        html += `
-          <div class="card">
-            <h3>👨‍🔧 ${poster.name}</h3>
-            <p><strong>Category:</strong> ${poster.category}</p>
-            <p><strong>Shop:</strong> ${poster.shop}</p>
-            <p><strong>Phone:</strong> ${poster.whatsapp}</p>
-
-            <a class="btn btn-whatsapp" href="https://wa.me/91${poster.whatsapp}?text=Hello%20${poster.name},%20regarding%20your%20accepted%20request%20on%20ZaraFix." target="_blank">WhatsApp</a>
-            <button class="btn btn-reject" onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">Reject</button>
-          </div>
-        `;
-      }
-
-      container.innerHTML = html;
-
-    } catch (error) {
-      container.innerHTML = `<p>Error: ${error.message}</p>`;
-    }
-  }
-
-  function rejectPoster(userId, requestId, posterId) {
-    if (confirm("Reject this poster from accepted list?")) {
-      db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).remove().then(() => {
-        alert("Rejected successfully.");
-        location.reload();
+    db.ref("requests").once("value", (snap) => {
+      snap.forEach(userSnap => {
+        const userId = userSnap.key;
+        userSnap.forEach(reqSnap => {
+          const reqId = reqSnap.key;
+          const option = document.createElement("option");
+          option.value = `${userId}|${reqId}`;
+          option.textContent = `📌 ${reqId} by ${userId}`;
+          dropdown.appendChild(option);
+        });
       });
-    }
-  }
-</script>
+    });
 
+    dropdown.addEventListener("change", () => {
+      acceptedUsersDiv.innerHTML = "";
+      const val = dropdown.value;
+      if (!val) return;
+      const [userId, reqId] = val.split("|");
+
+      db.ref(`requests/${userId}/${reqId}`).once("value", (snap) => {
+        const data = snap.val();
+        if (!data || !data.acceptedBy) {
+          acceptedUsersDiv.innerHTML = "<p>No users accepted this request.</p>";
+          return;
+        }
+
+        Object.keys(data.acceptedBy).forEach(uid => {
+          db.ref(`users/${uid}`).once("value", (userSnap) => {
+            const u = userSnap.val();
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <strong>Name:</strong> ${u?.name || "N/A"}<br>
+              <strong>Phone:</strong> ${u?.phone || "N/A"}<br>
+              <strong>Email:</strong> ${u?.email || "N/A"}
+              <div class="btns">
+                <a href="https://wa.me/${u?.phone}" target="_blank"><button style="background:green;color:white;">WhatsApp</button></a>
+                <button onclick="rejectUser('${userId}', '${reqId}', '${uid}')" style="background:red;color:white;">Reject</button>
+              </div>
+            `;
+            acceptedUsersDiv.appendChild(card);
+          });
+        });
+      });
+    });
+
+    function rejectUser(userId, reqId, uid) {
+      if (confirm("Reject this user?")) {
+        firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy/${uid}`).remove().then(() => {
+          alert("User Rejected.");
+          dropdown.dispatchEvent(new Event("change"));
+        });
+      }
+    }
+  </script>
 </body>
 </html>
