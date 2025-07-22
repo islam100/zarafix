@@ -1,112 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🎯 Posters Who Accepted Your Request</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accepted Posters</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 20px; text-align: center; }
-    .card {
-      background: white; padding: 15px; margin: 10px auto; max-width: 400px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 10px;
-      transition: transform 0.2s;
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f0f0;
     }
-    .card:hover { transform: scale(1.02); }
-    .btn {
-      padding: 10px 20px; background: #007BFF; color: white;
-      border: none; border-radius: 5px; cursor: pointer;
+    h2 {
+      color: #333;
     }
-    .btn:hover { background: #0056b3; }
+    .poster {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    .poster p {
+      margin: 5px 0;
+    }
   </style>
 </head>
 <body>
 
-<h2>🎯 Posters Who Accepted Your Request</h2>
-<div id="authSection"></div>
-<div id="output">Loading...</div>
+  <h2>🎯 Posters Who Accepted Your Request</h2>
+  <div id="posterList">Loading...</div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSy...",
-    authDomain: "your-project.firebaseapp.com",
-    databaseURL: "https://your-project.firebaseio.com",
-    projectId: "your-project",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abc123"
-  };
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  const output = document.getElementById('output');
-  const authSection = document.getElementById('authSection');
+    const posterList = document.getElementById("posterList");
 
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      authSection.innerHTML = `<button class="btn" onclick="login()">Login with Google</button>`;
-      output.innerHTML = 'Please login first.';
-      return;
+    function getAcceptedPosters(userId) {
+      db.ref(`requests/${userId}`).once("value", (snapshot) => {
+        if (!snapshot.exists()) {
+          posterList.innerHTML = "No requests found.";
+          return;
+        }
+
+        let posterIds = new Set();
+
+        snapshot.forEach((reqSnap) => {
+          const accepted = reqSnap.val().acceptedBy;
+          if (accepted) {
+            Object.keys(accepted).forEach(id => posterIds.add(id));
+          }
+        });
+
+        if (posterIds.size === 0) {
+          posterList.innerHTML = "No one has accepted your requests yet.";
+          return;
+        }
+
+        // Now fetch details from posters
+        db.ref("posters").once("value", (postersSnap) => {
+          posterList.innerHTML = "";
+
+          posterIds.forEach(posterId => {
+            const poster = postersSnap.val()[posterId];
+            if (poster) {
+              const div = document.createElement("div");
+              div.className = "poster";
+              div.innerHTML = `
+                <p><strong>Name:</strong> ${poster.name}</p>
+                <p><strong>Category:</strong> ${poster.category}</p>
+                <p><strong>Shop:</strong> ${poster.shop}</p>
+                <p><strong>WhatsApp:</strong> ${poster.whatsapp}</p>
+              `;
+              posterList.appendChild(div);
+            }
+          });
+        });
+      });
     }
 
-    authSection.innerHTML = `<button class="btn" onclick="logout()">Logout</button>`;
-    const userId = user.uid;
-
-    const reqSnap = await db.ref('requests/' + userId).once('value');
-    const reqData = reqSnap.val();
-
-    if (!reqData) {
-      output.innerHTML = '❌ No requests found.';
-      return;
-    }
-
-    let acceptedList = [];
-    for (const reqId in reqData) {
-      const request = reqData[reqId];
-      if (request.acceptedBy) {
-        acceptedList.push(...Object.keys(request.acceptedBy));
-      }
-    }
-
-    if (acceptedList.length === 0) {
-      output.innerHTML = '❌ No posters have accepted your request yet.';
-      return;
-    }
-
-    let html = '';
-    for (const posterId of acceptedList) {
-      const posterSnap = await db.ref('posters/' + posterId).once('value');
-      const poster = posterSnap.val();
-      if (!poster) continue;
-
-      html += `
-        <div class="card">
-          <h3>🧰 ${poster.name}</h3>
-          <p>📍 ${poster.shop} - ${poster.category}</p>
-          <a class="btn" href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a>
-          <br><br>
-          <a class="btn" href="https://www.google.com/maps?q=${poster.lat || 0},${poster.lng || 0}" target="_blank">📍 View Live Location</a>
-        </div>
-      `;
-    }
-
-    output.innerHTML = html;
-  });
-
-  function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  }
-
-  function logout() {
-    auth.signOut();
-  }
-</script>
-
+    // You can dynamically pass userId from auth or URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get("user") || "userId1"; // fallback for test
+    getAcceptedPosters(userId);
+  </script>
 </body>
 </html>
