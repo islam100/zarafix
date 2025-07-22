@@ -2,133 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Service Requests</title>
+  <title>Submitted Service Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
+      font-family: Arial;
+      background: #f2f2f2;
     }
-
-    h2 {
-      text-align: center;
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 10px auto;
+      border-radius: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 500px;
+    }
+    .card h3 {
+      margin-top: 0;
       color: #333;
     }
-
-    .card {
-      background: #fff;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-      border-radius: 16px;
-      margin: 20px auto;
-      max-width: 500px;
-      padding: 20px;
-      transition: 0.3s;
-    }
-
-    .card:hover {
-      transform: scale(1.02);
-    }
-
-    .card p {
-      margin: 8px 0;
-      color: #444;
-    }
-
     .btn {
+      padding: 10px 16px;
       margin: 5px;
-      padding: 10px 20px;
-      font-weight: bold;
       border: none;
       border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      font-weight: bold;
       cursor: pointer;
-      transition: transform 0.2s ease-in-out;
+      transition: transform 0.2s ease;
     }
-
     .btn:hover {
       transform: scale(1.05);
     }
-
-    .whatsapp { background: #25D366; color: white; }
-    .reject { background: #f44336; color: white; }
-    .delete { background: #9E9E9E; color: white; }
-
+    .whatsapp {
+      background: #25d366;
+      color: white;
+    }
+    .reject {
+      background: #ff4d4d;
+      color: white;
+    }
+    .delete {
+      background: #555;
+      color: white;
+    }
   </style>
 </head>
 <body>
-
-  <h2>🎯 Submitted Service Requests</h2>
-  <div id="requestContainer"></div>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <h2 style="text-align:center;">📋 Submitted Service Requests</h2>
+  <div id="requestsContainer"></div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_MSG_ID",
+      messagingSenderId: "YOUR_MESSAGING_ID",
       appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const container = document.getElementById("requestContainer");
+    const container = document.getElementById('requestsContainer');
 
-    db.ref("requests").once("value", async (snapshot) => {
+    db.ref("requests").once("value").then(snapshot => {
       const data = snapshot.val();
       if (!data) {
-        container.innerHTML = "<p>❌ कोई Request नहीं मिला।</p>";
+        container.innerHTML = "<p style='text-align:center;'>❌ कोई Request नहीं मिला।</p>";
         return;
       }
 
-      for (const userId in data) {
-        const userRequests = data[userId];
-        for (const reqId in userRequests) {
-          const req = userRequests[reqId];
+      Object.entries(data).forEach(([userId, userRequests]) => {
+        Object.entries(userRequests).forEach(([reqId, request]) => {
           const card = document.createElement("div");
           card.className = "card";
 
-          let accepterInfo = "⏳ Loading...";
-          if (req.acceptedBy) {
-            // Get full poster data
-            const acceptedUserId = req.acceptedBy;
-            const posterSnap = await db.ref(`posterUsers/${acceptedUserId}`).once("value");
-            const poster = posterSnap.val();
-            if (poster) {
-              accepterInfo = `
-                ✅ <strong>Accepted By:</strong> ${poster.name}<br>
-                📞 <a class="btn whatsapp" target="_blank" href="https://wa.me/${poster.phone}">WhatsApp</a>
-              `;
-            } else {
-              accepterInfo = "❌ Accepted user data not found.";
-            }
-          } else {
-            accepterInfo = "❌ Not Accepted Yet.";
-          }
+          const poster = request.acceptedBy || { name: "❌ Not Accepted", phone: "" };
 
           card.innerHTML = `
-            <p>🧑‍🔧 <strong>Name:</strong> ${req.name || "N/A"}</p>
-            <p>📌 <strong>Category:</strong> ${req.category || "N/A"}</p>
-            <p>📍 <strong>Address:</strong> ${req.address || "N/A"}</p>
-            <p>📍 <strong>Pincode:</strong> ${req.pincode || "N/A"}</p>
-            <p>📅 <strong>Issue:</strong> ${req.issue || "N/A"}</p>
-            <p>📍 <strong>Location:</strong> ${req.location || "N/A"}</p>
-            <div>${accepterInfo}</div>
-            <br>
-            <button class="btn reject">Reject</button>
-            <button class="btn delete">Delete</button>
+            <h3>🧑‍🔧 Name: ${request.name || "Unknown"}</h3>
+            <p>📌 Category: ${request.category || "N/A"}</p>
+            <p>📍 Address: ${request.address || "N/A"}</p>
+            <p>📅 Issue: ${request.issue || "N/A"}</p>
+            <p>📍 Location: ${request.location || "N/A"}</p>
+            <p>✅ Accepted By: ${poster.name}</p>
+
+            ${poster.phone ? `<a class="btn whatsapp" href="https://wa.me/${poster.phone}" target="_blank">WhatsApp</a>` : ""}
+
+            <button class="btn reject" onclick="alert('Rejected')">Reject</button>
+            <button class="btn delete" onclick="alert('Deleted')">Delete</button>
           `;
 
           container.appendChild(card);
-        }
-      }
+        });
+      });
     });
   </script>
 </body>
