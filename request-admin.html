@@ -1,39 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Accepted Posters</title>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Requests</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f0f0f0;
-    }
-    h2 {
-      color: #333;
-    }
-    .poster {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 15px;
-      margin-bottom: 10px;
-    }
-    .poster p {
-      margin: 5px 0;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .card { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 8px; background: #f9f9f9; }
+    .accepted { background-color: #e0ffe0; }
   </style>
 </head>
 <body>
+  <h2>Accepted Requests</h2>
+  <div id="requestsContainer">Loading...</div>
 
-  <h2>🎯 Posters Who Accepted Your Request</h2>
-  <div id="posterList">Loading...</div>
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -44,58 +29,69 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    const posterList = document.getElementById("posterList");
+    async function fetchData() {
+      const container = document.getElementById("requestsContainer");
+      container.innerHTML = "Fetching data...";
 
-    function getAcceptedPosters(userId) {
-      db.ref(`requests/${userId}`).once("value", (snapshot) => {
-        if (!snapshot.exists()) {
-          posterList.innerHTML = "No requests found.";
-          return;
-        }
+      try {
+        const [requestsSnap, postersSnap] = await Promise.all([
+          get(ref(db, "requests")),
+          get(ref(db, "posters"))
+        ]);
 
-        let posterIds = new Set();
+        const requestsData = requestsSnap.val() || {};
+        const postersData = postersSnap.val() || {};
 
-        snapshot.forEach((reqSnap) => {
-          const accepted = reqSnap.val().acceptedBy;
-          if (accepted) {
-            Object.keys(accepted).forEach(id => posterIds.add(id));
+        container.innerHTML = "";
+
+        let found = false;
+
+        for (const userId in requestsData) {
+          const userRequests = requestsData[userId];
+          for (const requestId in userRequests) {
+            const request = userRequests[requestId];
+            const acceptedBy = request.acceptedBy || {};
+
+            const acceptedPosters = Object.keys(acceptedBy);
+            if (acceptedPosters.length === 0) continue;
+
+            found = true;
+
+            const card = document.createElement("div");
+            card.className = "card accepted";
+            card.innerHTML = `
+              <h4>Category: ${request.category}</h4>
+              <p><strong>Description:</strong> ${request.description}</p>
+              <p><strong>Location:</strong> ${request.location || "N/A"}</p>
+              <h5>Accepted By:</h5>
+              ${acceptedPosters.map(pid => {
+                const poster = postersData[pid];
+                return poster
+                  ? `<div style="margin-left: 10px;">
+                      <p><strong>Name:</strong> ${poster.name}</p>
+                      <p><strong>Shop:</strong> ${poster.shop}</p>
+                      <p><strong>WhatsApp:</strong> <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp}</a></p>
+                    </div>`
+                  : `<p>Poster ID: ${pid} (Details not found)</p>`;
+              }).join("")}
+            `;
+            container.appendChild(card);
           }
-        });
-
-        if (posterIds.size === 0) {
-          posterList.innerHTML = "No one has accepted your requests yet.";
-          return;
         }
 
-        // Now fetch details from posters
-        db.ref("posters").once("value", (postersSnap) => {
-          posterList.innerHTML = "";
-
-          posterIds.forEach(posterId => {
-            const poster = postersSnap.val()[posterId];
-            if (poster) {
-              const div = document.createElement("div");
-              div.className = "poster";
-              div.innerHTML = `
-                <p><strong>Name:</strong> ${poster.name}</p>
-                <p><strong>Category:</strong> ${poster.category}</p>
-                <p><strong>Shop:</strong> ${poster.shop}</p>
-                <p><strong>WhatsApp:</strong> ${poster.whatsapp}</p>
-              `;
-              posterList.appendChild(div);
-            }
-          });
-        });
-      });
+        if (!found) {
+          container.innerHTML = "<p>No accepted requests yet.</p>";
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        container.innerHTML = "<p>Error loading data.</p>";
+      }
     }
 
-    // You can dynamically pass userId from auth or URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get("user") || "userId1"; // fallback for test
-    getAcceptedPosters(userId);
+    fetchData();
   </script>
 </body>
 </html>
