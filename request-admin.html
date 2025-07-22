@@ -1,93 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User Request Form with Tracking</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="firebase-config.js"></script>
+  <title>Google Login with Firebase</title>
+  <style>
+    body { font-family: Arial; text-align: center; padding: 50px; }
+    #userDetails { margin-top: 20px; display: none; }
+    img { border-radius: 50%; width: 80px; height: 80px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  </style>
 </head>
 <body>
-  <h2>User Request System</h2>
 
-  <!-- Login Button -->
+  <h2>🔐 Login with Google</h2>
   <button onclick="googleLogin()">Login with Google</button>
-  <p id="user-info"></p>
 
-  <!-- Request Form -->
-  <div id="request-form" style="display:none;">
-    <h3>Submit Request</h3>
-    <input id="category" placeholder="Category"><br>
-    <textarea id="description" placeholder="Description"></textarea><br>
-    <input id="location" placeholder="Location"><br>
-    <button onclick="submitRequest()">Submit</button>
+  <div id="userDetails">
+    <h3>Welcome, <span id="username"></span>!</h3>
+    <img id="userpic" src="" alt="User Pic" />
+    <p>Email: <span id="useremail"></span></p>
+    <button onclick="logout()">Logout</button>
   </div>
 
-  <!-- My Requests -->
-  <div id="my-requests" style="display:none;">
-    <h3>My Requests</h3>
-    <ul id="request-list"></ul>
-  </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 
+  <!-- Firebase Config -->
   <script>
-    let currentUser = null;
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "417582347755",
+      appId: "1:417582347755:web:67a186153ac4df00a6f1c2",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
 
+  <!-- App Logic -->
+  <script>
     function googleLogin() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider).then(result => {
-        currentUser = result.user;
-        document.getElementById('user-info').innerText = "Logged in as: " + currentUser.email;
-        document.getElementById('request-form').style.display = 'block';
-        document.getElementById('my-requests').style.display = 'block';
-        loadRequests();
-      }).catch(error => {
-        alert("Login failed: " + error.message);
-      });
-    }
-
-    function submitRequest() {
-      const category = document.getElementById('category').value;
-      const description = document.getElementById('description').value;
-      const location = document.getElementById('location').value;
-
-      if (!category || !description || !location) return alert("Fill all fields!");
-
-      const uid = currentUser.uid;
-      const requestId = firebase.database().ref().child('requests').push().key;
-
-      const requestData = {
-        category, description, location,
-        acceptedBy: null,
-        timestamp: Date.now(),
-        email: currentUser.email
-      };
-
-      firebase.database().ref('requests/' + uid + '/' + requestId).set(requestData).then(() => {
-        alert("Request Submitted");
-        document.getElementById('category').value = '';
-        document.getElementById('description').value = '';
-        document.getElementById('location').value = '';
-        loadRequests();
-      });
-    }
-
-    function loadRequests() {
-      const uid = currentUser.uid;
-      firebase.database().ref('requests/' + uid).once('value', snapshot => {
-        const list = document.getElementById('request-list');
-        list.innerHTML = '';
-        snapshot.forEach(child => {
-          const req = child.val();
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <b>${req.category}</b> - ${req.description} (${req.location})<br>
-            <small>Accepted By: ${req.acceptedBy || 'Not yet accepted'}</small>
-            <hr>
-          `;
-          list.appendChild(li);
+      firebase.auth().signInWithPopup(provider)
+        .then(result => {
+          const user = result.user;
+          document.getElementById('username').textContent = user.displayName;
+          document.getElementById('useremail').textContent = user.email;
+          document.getElementById('userpic').src = user.photoURL;
+          document.getElementById('userDetails').style.display = 'block';
+        })
+        .catch(error => {
+          console.error("Login Failed", error);
+          alert("Login failed: " + error.message);
         });
+    }
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        document.getElementById('userDetails').style.display = 'none';
+        alert("Logged out");
       });
     }
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('username').textContent = user.displayName;
+        document.getElementById('useremail').textContent = user.email;
+        document.getElementById('userpic').src = user.photoURL;
+        document.getElementById('userDetails').style.display = 'block';
+      }
+    });
   </script>
+
 </body>
 </html>
