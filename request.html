@@ -1,93 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Service Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <title>ZaraFix - All in One</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f1f1f1;
+    }
+    header {
+      background: #222;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      font-size: 24px;
+    }
+    .box {
+      margin: 10px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    input, select, button, textarea {
+      width: 100%;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .notice-marquee, .complaint-marquee {
+      background: #fffae6;
+      padding: 10px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .btn {
+      background: linear-gradient(#4CAF50, #388E3C);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h2>🔐 Google Login</h2>
-  <button onclick="login()">Login with Google</button>
-  <p id="userInfo"></p>
+  <header>ZaraFix - Service System</header>
 
-  <h3>📋 My Service Requests</h3>
-  <div id="myRequests"></div>
+  <div class="notice-marquee" id="noticeBoard">📢 Loading Notices...</div>
+  <div class="complaint-marquee" id="complaintBoard">😡 Loading Complaints...</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "410690883299",
-      appId: "1:410690883299:web:646fda87933b7d4acff761"
-    };
+  <div class="box" id="loginBox">
+    <button class="btn" onclick="googleLogin()">🔐 Login with Google</button>
+  </div>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+  <div class="box" id="userSection" style="display:none;">
+    <div class="section-title">🔧 Request a Service</div>
+    <input id="serviceType" placeholder="Enter Service Type (e.g. Electrician)">
+    <textarea id="serviceDesc" placeholder="Describe your issue"></textarea>
+    <button class="btn" onclick="submitRequest()">📩 Submit Request</button>
+  </div>
 
-    function login() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(result => {
-        const user = result.user;
-        document.getElementById("userInfo").innerText = `✅ Logged in as: ${user.displayName} (${user.email})`;
-        loadRequests(user.uid);
-      });
-    }
+  <div class="box" id="posterSection" style="display:none;">
+    <div class="section-title">📋 Pending Requests</div>
+    <div id="pendingRequests">Loading...</div>
+  </div>
 
-    function loadRequests(uid) {
-      db.ref('requests/' + uid).once('value', snap => {
-        const data = snap.val();
-        const container = document.getElementById("myRequests");
-        container.innerHTML = "";
+  <div class="box" id="adminSection" style="display:none;">
+    <div class="section-title">📢 Post Notice</div>
+    <input id="noticeText" placeholder="Enter notice">
+    <button class="btn" onclick="postNotice()">📌 Post Notice</button>
 
-        if (!data) {
-          container.innerHTML = "<p>No requests found.</p>";
-          return;
-        }
+    <div class="section-title">🔍 Search Requests</div>
+    <input id="searchKey" placeholder="Search by User ID">
+    <button class="btn" onclick="searchRequests()">🔍 Search</button>
+    <div id="searchResults"></div>
+  </div>
 
-        Object.entries(data).forEach(([reqID, req]) => {
-          const div = document.createElement("div");
-          div.style.border = "1px solid #999";
-          div.style.padding = "10px";
-          div.style.margin = "10px";
+  <div class="box" id="complaintSection" style="display:none;">
+    <div class="section-title">😡 Post Complaint</div>
+    <textarea id="complaintText" placeholder="Write your complaint here"></textarea>
+    <button class="btn" onclick="postComplaint()">🚨 Submit Complaint</button>
+  </div>
 
-          let acceptInfo = "Not accepted yet";
-          let phone = "-";
-          let address = "-";
-          let whatsappBtn = "";
-
-          if (req.acceptedBy) {
-            const acceptedKeys = Object.keys(req.acceptedBy).filter(key => key !== 'name' && key !== 'phone' && key !== 'address');
-            if (acceptedKeys.length > 0) {
-              acceptInfo = req.acceptedBy.name || "N/A";
-              phone = req.acceptedBy.phone || "N/A";
-              address = req.acceptedBy.address || "N/A";
-
-              whatsappBtn = `<a href="https://wa.me/${phone}" target="_blank">
-                <button>📱 WhatsApp</button>
-              </a>`;
-            }
-          }
-
-          div.innerHTML = `
-            <strong>📌 Category:</strong> ${req.category}<br>
-            <strong>📝 Issue:</strong> ${req.description}<br>
-            <strong>📅 Date:</strong> ${req.datetime}<br>
-            <strong>📍 Location:</strong> ${req.location}<br><br>
-            <strong>✅ Accepted By:</strong><br>
-            • Name: ${acceptInfo}<br>
-            • Phone: ${phone}<br>
-            • Address: ${address}<br><br>
-            ${whatsappBtn}
-          `;
-          container.appendChild(div);
-        });
-      });
-    }
-  </script>
+  <script src="firebase-config.js"></script>
+  <script src="zara-fix-main.js"></script>
 </body>
 </html>
