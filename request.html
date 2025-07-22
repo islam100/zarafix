@@ -1,156 +1,138 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Service Request Form</title>
+  <title>Login with Google - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f1f1f1;
+      text-align: center;
+      background: linear-gradient(135deg, #f0f0f0, #d0d0d0);
       margin: 0;
       padding: 0;
     }
+
     .container {
-      max-width: 500px;
-      margin: 20px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      margin-top: 100px;
     }
-    input, textarea, select, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 10px;
-      box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
-      font-size: 16px;
+
+    h2 {
+      color: #333;
     }
+
     button {
-      background: linear-gradient(to right, #4CAF50, #45a049);
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      transform: scale(1.02);
-    }
-    .hidden { display: none; }
-    .request-card {
-      background: #fff;
-      border-left: 6px solid #4CAF50;
-      padding: 15px;
+      padding: 15px 30px;
       margin: 10px;
+      border: none;
       border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .status {
+      font-size: 16px;
       font-weight: bold;
-    }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DB_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE",
-      messagingSenderId: "YOUR_MSG_ID",
-      appId: "YOUR_APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-
-    let user = null;
-    firebase.auth().onAuthStateChanged(u => {
-      user = u;
-      document.getElementById("loginBtn").style.display = user ? "none" : "block";
-      document.getElementById("formContainer").style.display = user ? "block" : "none";
-      if(user) loadRequests();
-    });
-
-    function login() {
-      firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      color: white;
+      background: linear-gradient(45deg, #4CAF50, #2E7D32);
+      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.2s;
     }
 
-    function submitForm() {
-      const name = document.getElementById("name").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const category = document.getElementById("category").value;
-      const problem = document.getElementById("problem").value;
-      const status = "Pending";
-      const timestamp = Date.now();
+    button:hover {
+      transform: scale(1.05);
+    }
 
-      if (!name || !whatsapp || !category || !problem) {
-        alert("Please fill all fields"); return;
+    #logoutBtn {
+      background: linear-gradient(45deg, #f44336, #c62828);
+    }
+
+    @media only screen and (max-width: 600px) {
+      .container {
+        margin-top: 50px;
+        padding: 10px;
       }
 
-      firebase.database().ref("requests/" + timestamp).set({
-        name, whatsapp, category, problem, status, timestamp
-      }).then(() => {
-        alert("Request Submitted. Please wait for provider to accept.");
-        document.getElementById("requestForm").reset();
-      });
+      button {
+        width: 80%;
+      }
     }
 
-    function loadRequests() {
-      const adminEmail = "admin@example.com";
-      if(user.email !== adminEmail) return;
-
-      firebase.database().ref("requests").on("value", snapshot => {
-        const data = snapshot.val();
-        const container = document.getElementById("adminRequests");
-        container.innerHTML = "";
-        const sortedKeys = Object.keys(data || {}).sort((a,b) => b - a);
-        sortedKeys.forEach(key => {
-          const r = data[key];
-          const card = document.createElement("div");
-          card.className = "request-card";
-          card.innerHTML = `
-            <div><strong>Name:</strong> ${r.name}</div>
-            <div><strong>WhatsApp:</strong> ${r.whatsapp}</div>
-            <div><strong>Category:</strong> ${r.category}</div>
-            <div><strong>Problem:</strong> ${r.problem}</div>
-            <div><strong>Status:</strong> <span class="status">${r.status}</span></div>
-            <button onclick="updateStatus('${key}', 'Accepted')">Accept</button>
-            <button onclick="updateStatus('${key}', 'Rejected')">Reject</button>
-          `;
-          container.appendChild(card);
-        });
-      });
+    #userInfo {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #444;
     }
-
-    function updateStatus(key, newStatus) {
-      firebase.database().ref("requests/" + key + "/status").set(newStatus);
-    }
-  </script>
+  </style>
 </head>
 <body>
   <div class="container">
-    <h2>Service Request</h2>
-    <button id="loginBtn" onclick="login()">Login with Google</button>
-    <div id="formContainer" class="hidden">
-      <form id="requestForm">
-        <input id="name" placeholder="Your Name" />
-        <input id="whatsapp" placeholder="WhatsApp Number" />
-        <select id="category">
-          <option value="">Select Category</option>
-          <option>Electrician</option>
-          <option>Plumber</option>
-          <option>Carpenter</option>
-          <option>AC Mechanic</option>
-          <option>Painter</option>
-        </select>
-        <textarea id="problem" placeholder="Describe your problem..."></textarea>
-        <button type="button" onclick="submitForm()">Submit Request</button>
-      </form>
-    </div>
+    <h2>Welcome to ZaraFix</h2>
+
+    <!-- Login/Logout Buttons -->
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+
+    <!-- Display User Info -->
+    <div id="userInfo"></div>
   </div>
 
-  <div class="container" id="adminRequests"></div>
+  <script>
+    // ✅ Firebase Config (replace with your own project config)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "295894358089",
+      appId: "1:295894358089:web:16161db0e96e2180ab7095",
+      measurementId: "G-V8DR4BQSVR"
+    };
+
+    // ✅ Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
+
+    // ✅ Login with Google
+    loginBtn.addEventListener("click", function () {
+      var provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then(result => {
+          console.log("User signed in:", result.user);
+        })
+        .catch(error => {
+          console.error("Login error:", error);
+        });
+    });
+
+    // ✅ Logout
+    logoutBtn.addEventListener("click", function () {
+      firebase.auth().signOut()
+        .then(() => {
+          console.log("User signed out.");
+        })
+        .catch(error => {
+          console.error("Logout error:", error);
+        });
+    });
+
+    // ✅ Auth State Listener
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (user) {
+        // Logged In
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        userInfo.innerHTML = `👤 ${user.displayName || user.email}`;
+      } else {
+        // Logged Out
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        userInfo.innerHTML = "";
+      }
+    });
+  </script>
 </body>
 </html>
