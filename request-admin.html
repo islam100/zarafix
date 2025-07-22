@@ -1,68 +1,114 @@
-<h2>🎯 Posters Who Accepted Your Request</h2>
-<div id="acceptedContainer">Loading...</div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      const userId = user.uid;
-      const container = document.getElementById('acceptedContainer');
-      container.innerHTML = 'Loading...';
-
-      const userRequestsRef = ref(db, `requests/${userId}`);
-      onValue(userRequestsRef, async (snapshot) => {
-        if (!snapshot.exists()) {
-          container.innerHTML = "❌ You have no requests.";
-          return;
-        }
-
-        let postersShown = false;
-        container.innerHTML = "";
-
-        const requests = snapshot.val();
-        for (const requestId in requests) {
-          const request = requests[requestId];
-          if (request.acceptedBy) {
-            for (const posterId in request.acceptedBy) {
-              const posterSnap = await get(ref(db, `posters/${posterId}`));
-              if (posterSnap.exists()) {
-                const poster = posterSnap.val();
-                postersShown = true;
-                const card = `
-                  <div style="padding:15px;margin:10px;border-radius:10px;background:#e3f2fd;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
-                    🧰 <b>${poster.name}</b> from ${poster.shop} <br>
-                    📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp Now</a>
-                  </div>
-                `;
-                container.innerHTML += card;
-              }
-            }
-          }
-        }
-
-        if (!postersShown) {
-          container.innerHTML = "❌ No posters have accepted your request yet.";
-        }
-      });
-    } else {
-      document.getElementById('acceptedContainer').innerHTML = "⚠️ Please login first.";
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📋 ZaraFix - Your Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    h2 { text-align: center; }
+    .card {
+      background: #fff; border-radius: 15px; padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 20px;
     }
-  });
-</script>
+    .accepted {
+      background: #e0f7fa;
+      padding: 10px;
+      margin-top: 10px;
+      border-left: 5px solid #00796b;
+    }
+    a.whatsapp {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 6px 10px;
+      background: #25D366;
+      color: white;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎯 Posters Who Accepted Your Request</h2>
+  <div id="requestsContainer">Loading...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase, ref, onValue, get, child
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1Qz6LmTEeQGcZ8VnLfN7mjMaW8RKLPMc",
+      authDomain: "zarafix.firebaseapp.com",
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "1002590485216",
+      appId: "1:1002590485216:web:b190a4bb8bd1cc2dfcf0e0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth();
+
+    const requestsContainer = document.getElementById("requestsContainer");
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userId = user.uid;
+        const userRequestsRef = ref(db, `requests/${userId}`);
+
+        onValue(userRequestsRef, async (snapshot) => {
+          requestsContainer.innerHTML = "";
+          let foundAccepted = false;
+
+          snapshot.forEach((childSnap) => {
+            const data = childSnap.val();
+            const acceptedBy = data.acceptedBy || {};
+
+            if (Object.keys(acceptedBy).length > 0) {
+              foundAccepted = true;
+              const card = document.createElement("div");
+              card.className = "card";
+
+              card.innerHTML = `<h3>🛠️ ${data.problem || "Your Request"}</h3>
+                <p><strong>Address:</strong> ${data.address || "N/A"}</p>
+                <p><strong>Pincode:</strong> ${data.pincode || "N/A"}</p>`;
+
+              const acceptedDiv = document.createElement("div");
+              acceptedDiv.className = "accepted";
+              acceptedDiv.innerHTML = `<strong>✅ Accepted By:</strong><br>`;
+
+              for (const posterId in acceptedBy) {
+                const posterRef = ref(db, `posters/${posterId}`);
+                const posterSnap = await get(posterRef);
+                if (posterSnap.exists()) {
+                  const poster = posterSnap.val();
+                  acceptedDiv.innerHTML += `
+                    <p>👤 ${poster.name || "No name"}<br>
+                    📍 ${poster.address || "No address"}<br>
+                    📱 <a class="whatsapp" target="_blank" href="https://wa.me/${poster.whatsapp}">WhatsApp</a></p><hr>`;
+                } else {
+                  acceptedDiv.innerHTML += `<p>⚠️ Poster info not found for ${posterId}</p>`;
+                }
+              }
+
+              card.appendChild(acceptedDiv);
+              requestsContainer.appendChild(card);
+            }
+          });
+
+          if (!foundAccepted) {
+            requestsContainer.innerHTML = `<p>❌ No posters have accepted your request yet.</p>`;
+          }
+        });
+      } else {
+        requestsContainer.innerHTML = "Please log in first.";
+      }
+    });
+  </script>
+</body>
+</html>
