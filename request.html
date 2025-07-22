@@ -1,216 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Request</title>
+  <title>Admin Dashboard - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #e3f2fd, #ffffff);
-      margin: 0;
-      padding: 0;
+    body { font-family: sans-serif; margin: 0; padding: 1rem; background: #f9f9f9; }
+    h1 { text-align: center; }
+    .request-card {
+      background: #fff; padding: 1rem; margin-bottom: 1rem;
+      border-radius: 10px; box-shadow: 0 0 5px #ccc;
     }
-    header {
-      padding: 10px;
-      text-align: center;
-      background: #0d47a1;
-      color: white;
-      font-size: 24px;
+    .poster-info {
+      background: #eef; padding: 0.5rem; margin-top: 0.5rem;
+      border-left: 4px solid #448aff;
     }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
-    button {
-      background: linear-gradient(to right, #4caf50, #388e3c);
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 15px;
-      font-size: 16px;
-      width: 100%;
-      cursor: pointer;
-      box-shadow: 0 5px #2e7d32;
-      transition: all 0.2s ease-in-out;
-    }
-    button:hover {
-      box-shadow: 0 2px #2e7d32;
-      transform: scale(0.98);
-    }
-    .status {
-      text-align: center;
-      font-weight: bold;
-      margin: 15px 0;
-    }
-    .green-led {
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      background-color: green;
-      animation: blink 1s infinite;
-      display: inline-block;
-      margin-left: 10px;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-    .admin-panel {
-      background: #fce4ec;
-      padding: 15px;
-      border-radius: 10px;
-    }
-    .hidden { display: none; }
   </style>
 </head>
 <body>
+  <h1>📋 Admin Panel - All Requests</h1>
+  <div id="requestList">Loading requests...</div>
 
-<header>ZaraFix - Request Form</header>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<div class="container">
-  <div id="userInfo" class="status hidden">👤 <span id="userName"></span> <button onclick="logout()">Logout</button></div>
-  <div id="loginSection">
-    <button onclick="login()">🔐 Login with Google</button>
-  </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  <div id="requestForm" class="hidden card">
-    <h3>Service Request</h3>
-    <input id="name" placeholder="Your Name" required>
-    <input id="address" placeholder="Your Address" required>
-    <input id="whatsapp" placeholder="WhatsApp Number" required>
-    <select id="category" required>
-      <option value="">-- Select Category --</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Plumber">Plumber</option>
-      <option value="Painter">Painter</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
-    <textarea id="problem" placeholder="Describe your problem..." rows="3" required></textarea>
-    <button onclick="submitRequest()">📩 Submit Request</button>
-    <div id="formStatus" class="status"></div>
-  </div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  <div id="adminPanel" class="admin-panel hidden">
-    <h3>📋 Admin Panel - All Requests</h3>
-    <div id="requestsContainer"></div>
-  </div>
-</div>
+    const requestList = document.getElementById("requestList");
 
-<!-- Firebase + Auth -->
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-  authDomain: "zara-fix.firebaseapp.com",
-  databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-  projectId: "zara-fix",
-  storageBucket: "zara-fix.appspot.com",
-  messagingSenderId: "476473209200",
-  appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+    // Load posters for reference
+    let postersData = {};
+    db.ref("posters").once("value").then(snapshot => {
+      postersData = snapshot.val() || {};
+    });
 
-const admins = {
-  "zarafix3@gmail.com": true,
-  "zarasamajiksevasanstha@gmail.com": true
-};
+    // Load and auto-update requests
+    db.ref("requests").on("value", snapshot => {
+      const data = snapshot.val();
+      requestList.innerHTML = "";
 
-let currentUser;
+      let allRequests = [];
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    document.getElementById('loginSection').classList.add('hidden');
-    document.getElementById('userInfo').classList.remove('hidden');
-    document.getElementById('userName').innerText = user.displayName;
-    if (admins[user.email]) {
-      loadRequests();
-      document.getElementById('adminPanel').classList.remove('hidden');
-    } else {
-      document.getElementById('requestForm').classList.remove('hidden');
-    }
-  }
-});
+      for (let userId in data) {
+        for (let requestId in data[userId]) {
+          let req = data[userId][requestId];
+          req.userId = userId;
+          req.requestId = requestId;
+          allRequests.push(req);
+        }
+      }
 
-function login() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-}
-function logout() {
-  auth.signOut().then(() => location.reload());
-}
+      // Sort by latest first
+      allRequests.reverse();
 
-function submitRequest() {
-  const name = document.getElementById("name").value;
-  const address = document.getElementById("address").value;
-  const whatsapp = document.getElementById("whatsapp").value;
-  const category = document.getElementById("category").value;
-  const problem = document.getElementById("problem").value;
+      if (allRequests.length === 0) {
+        requestList.innerHTML = "<p>No requests found.</p>";
+        return;
+      }
 
-  if (!name || !address || !whatsapp || !category || !problem) {
-    alert("Please fill all fields.");
-    return;
-  }
-
-  const reqRef = db.ref("requests").push();
-  reqRef.set({
-    name, address, whatsapp, category, problem, status: "pending", time: Date.now()
-  });
-
-  document.getElementById("formStatus").innerText = "✅ Request submitted. Please wait for accept...";
-}
-
-function loadRequests() {
-  const container = document.getElementById("requestsContainer");
-  db.ref("requests").orderByChild("time").on("value", snap => {
-    container.innerHTML = "";
-    const data = snap.val();
-    if (data) {
-      Object.keys(data).reverse().forEach(id => {
-        const req = data[id];
+      allRequests.forEach(req => {
         const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <b>Name:</b> ${req.name}<br>
-          <b>WhatsApp:</b> ${req.whatsapp}<br>
-          <b>Address:</b> ${req.address}<br>
-          <b>Category:</b> ${req.category}<br>
-          <b>Problem:</b> ${req.problem}<br>
-          <b>Status:</b> ${req.status === "accepted" ? 'Accepted <span class="green-led"></span>' : req.status}
-          <br><br>
-          <button onclick="updateStatus('${id}', 'accepted')">✅ Accept</button>
-          <button onclick="updateStatus('${id}', 'rejected')">❌ Reject</button>
+        card.className = "request-card";
+
+        let html = `
+          <strong>Category:</strong> ${req.category} <br>
+          <strong>Description:</strong> ${req.description} <br>
+          <strong>Location:</strong> ${req.location || "N/A"} <br>
         `;
-        container.appendChild(card);
+
+        // If accepted by someone, show poster details
+        if (req.acceptedBy) {
+          html += "<div><strong>Accepted By:</strong></div>";
+          for (let posterId in req.acceptedBy) {
+            const poster = postersData[posterId];
+            if (poster) {
+              html += `
+                <div class="poster-info">
+                  <strong>Name:</strong> ${poster.name} <br>
+                  <strong>Shop:</strong> ${poster.shop} <br>
+                  <strong>Category:</strong> ${poster.category} <br>
+                  <strong>WhatsApp:</strong> ${poster.whatsapp}
+                </div>
+              `;
+            }
+          }
+        }
+
+        card.innerHTML = html;
+        requestList.appendChild(card);
       });
-    }
-  });
-}
-
-function updateStatus(id, status) {
-  db.ref("requests/" + id).update({ status });
-}
-</script>
-
+    });
+  </script>
 </body>
 </html>
-
