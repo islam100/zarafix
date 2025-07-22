@@ -1,128 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🎯 ZaraFix - User Dashboard</title>
+  <title>🎯 ZaraFix - Your Accepted Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f0f0f0;
-      padding: 20px;
-      margin: 0;
-    }
-    h2 { text-align: center; }
-    .card {
-      background: #fff;
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    h2 { text-align: center; color: #333; }
+    .poster-card {
+      background: white;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
       padding: 15px;
-      margin: 10px auto;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 15px auto;
       max-width: 500px;
+      border-radius: 20px;
+      transition: transform 0.2s;
     }
-    .card h3 {
-      margin: 0 0 10px;
-    }
-    .btn {
-      padding: 8px 12px;
-      margin: 5px;
-      border: none;
-      border-radius: 6px;
-      background: #007BFF;
+    .poster-card:hover { transform: scale(1.02); }
+    .whatsapp-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: green;
       color: white;
-      cursor: pointer;
-    }
-    .btn.whatsapp {
-      background: #25D366;
+      border-radius: 8px;
+      text-decoration: none;
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
 <body>
+  <h2>🎯 Posters Who Accepted Your Request</h2>
+  <div id="result">Loading...</div>
 
-<h2>🎯 Posters Who Accepted Your Request</h2>
-<div id="requestsContainer">Loading...</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const resultDiv = document.getElementById('result');
 
-<!-- Firebase scripts -->
-<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-database.js"></script>
-
-<script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com   ",
-    databaseURL: " https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: " zara-fix ",
-    storageBucket: "zara-fix.appspot.com ",
-    messagingSenderId: "476473209200",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5 "
-  };
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const container = document.getElementById("requestsContainer");
-
-  auth.onAuthStateChanged(user => {
-    if (!user) {
-      container.innerHTML = "❌ Please login first.";
-      return;
-    }
-
-    const userId = user.uid;
-    const requestsRef = db.ref("requests/" + userId);
-
-    requestsRef.once("value", snapshot => {
-      if (!snapshot.exists()) {
-        container.innerHTML = "❌ You haven't posted any service request.";
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        resultDiv.innerHTML = "<p>Please login first.</p>";
         return;
       }
 
-      container.innerHTML = ""; // clear loading
+      const uid = user.uid;
+      const requestsRef = db.ref(`requests/${uid}`);
+      requestsRef.once('value', snapshot => {
+        const requests = snapshot.val();
+        if (!requests) {
+          resultDiv.innerHTML = "<p>You have no requests yet.</p>";
+          return;
+        }
 
-      snapshot.forEach(childSnap => {
-        const req = childSnap.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>${req.category}</h3>
-          <p><strong>Description:</strong> ${req.description}</p>
-          <p><strong>Address:</strong> ${req.address}</p>
-          <p><strong>Posted:</strong> ${req.datetime}</p>
-          <div id="accept-${childSnap.key}">Checking accepted posters...</div>
-        `;
-        container.appendChild(card);
+        let found = false;
+        let html = '';
 
-        // Check acceptedBy
-        const acceptDiv = document.getElementById("accept-" + childSnap.key);
-        if (req.acceptedBy) {
-          let content = "";
-          const acceptedIds = Object.keys(req.acceptedBy);
-          let count = 0;
-          acceptedIds.forEach(posterId => {
-            db.ref("posters/" + posterId).once("value", posterSnap => {
-              if (posterSnap.exists()) {
-                const p = posterSnap.val();
-                content += `
-                  <p><strong>${p.name}</strong> (${p.shop})</p>
-                  <a class="btn whatsapp" href="https://wa.me/${p.whatsapp}" target="_blank">📲 WhatsApp</a>
-                  <a class="btn" href="https://www.google.com/maps?q=${req.location}" target="_blank">📍 View Map</a>
-                  <hr>
+        Object.entries(requests).forEach(([reqId, reqData]) => {
+          const acceptedBy = reqData.acceptedBy || {};
+          const posterIds = Object.keys(acceptedBy).filter(pid => acceptedBy[pid]);
+
+          if (posterIds.length === 0) return;
+
+          found = true;
+          posterIds.forEach(pid => {
+            db.ref(`posters/${pid}`).once('value', pSnap => {
+              const pdata = pSnap.val();
+              if (pdata) {
+                html += `
+                  <div class="poster-card">
+                    <h3>${pdata.name}</h3>
+                    <p><strong>Category:</strong> ${pdata.category}</p>
+                    <p><strong>Shop:</strong> ${pdata.shop}</p>
+                    <a class="whatsapp-btn" href="https://wa.me/91${pdata.whatsapp}" target="_blank">Chat on WhatsApp</a>
+                  </div>
                 `;
-                count++;
-              }
-              if (count === acceptedIds.length) {
-                acceptDiv.innerHTML = content || "❌ No posters found.";
+                resultDiv.innerHTML = html;
               }
             });
           });
-        } else {
-          acceptDiv.innerHTML = "❌ No posters have accepted your request yet.";
-        }
+        });
+
+        setTimeout(() => {
+          if (!found) resultDiv.innerHTML = "<p>❌ No posters have accepted your request yet.</p>";
+        }, 3000);
       });
     });
-  });
-</script>
-
+  </script>
 </body>
 </html>
