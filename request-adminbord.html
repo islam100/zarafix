@@ -3,53 +3,63 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ZaraFix Admin Dashboard</title>
+<title>ZaraFix Admin Panel</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     margin: 20px;
-    background: #f0f0f0;
+    background: #fafafa;
   }
-  #loginBtn, #logoutBtn {
+  button {
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;
+    border-radius: 5px;
     border: none;
-    border-radius: 6px;
     color: white;
+  }
+  #loginBtn {
     background-color: #4285F4;
-    display: block;
-    margin: 10px auto;
   }
   #logoutBtn {
     background-color: #db4437;
+    display: none;
   }
   #adminPanel {
-    max-width: 800px;
-    margin: auto;
+    max-width: 700px;
+    margin: 20px auto;
     display: none;
+  }
+  .request-card {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
   }
 </style>
 </head>
 <body>
 
-<h1 style="text-align:center;">ZaraFix Admin Dashboard</h1>
+<h1 style="text-align:center;">ZaraFix Admin Panel</h1>
 
-<button id="loginBtn">Login with Google</button>
-<button id="logoutBtn" style="display:none;">Logout</button>
+<div style="text-align:center;">
+  <button id="loginBtn">Login with Google</button>
+  <button id="logoutBtn">Logout</button>
+</div>
 
 <div id="adminPanel">
-  <p>Welcome, Admin! Your requests will appear here.</p>
+  <h2>All Requests (Newest First)</h2>
   <div id="requestsContainer">Loading requests...</div>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <script>
-  // Your Firebase configuration
+  // अपने Firebase config डालें यहाँ:
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
@@ -60,7 +70,6 @@
     appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
 
   const auth = firebase.auth();
@@ -71,86 +80,80 @@
   const adminPanel = document.getElementById('adminPanel');
   const requestsContainer = document.getElementById('requestsContainer');
 
-  // Login button click
-  loginBtn.addEventListener('click', () => {
+  loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert('Login failed: ' + err.message));
-  });
+    auth.signInWithPopup(provider).catch(err => alert("Login failed: " + err.message));
+  };
 
-  // Logout button click
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.onclick = () => {
     auth.signOut();
-  });
+  };
 
-  // Check if user is admin
-  function checkIsAdmin(uid) {
-    return db.ref('admins/' + uid).once('value').then(snap => {
-      return snap.exists() && snap.val() === true;
-    });
+  // एडमिन चेक (UID Firebase console में admins node में होना चाहिए)
+  async function isAdmin(uid) {
+    const snapshot = await db.ref('admins/' + uid).once('value');
+    return snapshot.exists() && snapshot.val() === true;
   }
 
-  // Show requests in admin panel
+  // Requests को रेंडर करना
   function renderRequests(requests) {
-    requestsContainer.innerHTML = '';
     if (!requests) {
-      requestsContainer.textContent = 'No requests found.';
+      requestsContainer.innerHTML = "No requests found.";
       return;
     }
 
-    // Flatten all requests
+    // सभी requests को एक लिस्ट में ले लो
     let allRequests = [];
     for (const userId in requests) {
-      for (const requestId in requests[userId]) {
-        allRequests.push({ userId, requestId, data: requests[userId][requestId] });
+      for (const reqId in requests[userId]) {
+        const req = requests[userId][reqId];
+        allRequests.push({ userId, reqId, ...req });
       }
     }
 
-    // Sort descending by requestId (assuming it's timestamp or sortable)
-    allRequests.sort((a, b) => b.requestId.localeCompare(a.requestId));
+    // नया सबसे ऊपर दिखाने के लिए sort कर लो (Request ID से, assume timestamp जैसा है)
+    allRequests.sort((a, b) => b.reqId.localeCompare(a.reqId));
 
-    allRequests.forEach(({ userId, requestId, data }) => {
+    requestsContainer.innerHTML = "";
+    allRequests.forEach(req => {
       const card = document.createElement('div');
-      card.style.background = 'white';
-      card.style.padding = '10px';
-      card.style.marginBottom = '10px';
-      card.style.borderRadius = '6px';
-      card.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+      card.className = 'request-card';
 
       card.innerHTML = `
-        <b>Category:</b> ${data.category || 'N/A'}<br>
-        <b>Description:</b> ${data.description || 'N/A'}<br>
-        <b>Location:</b> ${data.location || 'N/A'}<br>
-        <b>User ID:</b> ${userId}<br>
-        <b>Request ID:</b> ${requestId}<br>
-        <b>Status:</b> ${data.acceptedBy ? 'Accepted' : 'Pending'}
+        <b>Category:</b> ${req.category || 'N/A'}<br>
+        <b>Description:</b> ${req.description || 'N/A'}<br>
+        <b>Location:</b> ${req.location || 'N/A'}<br>
+        <b>User ID:</b> ${req.userId}<br>
+        <b>Request ID:</b> ${req.reqId}<br>
+        <b>Status:</b> ${req.acceptedBy ? 'Accepted' : 'Pending'}
       `;
 
       requestsContainer.appendChild(card);
     });
   }
 
-  // Listen auth state change
   auth.onAuthStateChanged(async user => {
     if (user) {
-      // Check admin
-      const isAdmin = await checkIsAdmin(user.uid);
-      if (!isAdmin) {
-        alert('You are not authorized as admin.');
+      const admin = await isAdmin(user.uid);
+      if (!admin) {
+        alert("You are not authorized as admin.");
         auth.signOut();
         return;
       }
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'block';
-      adminPanel.style.display = 'block';
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      adminPanel.style.display = "block";
 
-      // Listen to requests realtime
+      // Firebase से requests सुनो (live update)
       db.ref('requests').on('value', snapshot => {
         renderRequests(snapshot.val());
       });
+
     } else {
-      loginBtn.style.display = 'block';
-      logoutBtn.style.display = 'none';
-      adminPanel.style.display = 'none';
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      adminPanel.style.display = "none";
+      requestsContainer.innerHTML = "";
     }
   });
 </script>
