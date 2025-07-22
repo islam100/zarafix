@@ -3,52 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Service Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <title>User Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      margin: 0;
-      background: #f5f5f5;
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 1rem;
     }
-    .button {
-      padding: 10px 20px;
-      margin: 5px;
-      background: linear-gradient(145deg, #00c6ff, #0072ff);
-      color: white;
-      font-weight: bold;
-      border: none;
+    h2 {
+      text-align: center;
+    }
+    .request {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
       border-radius: 10px;
-      box-shadow: 3px 3px 5px #aaa;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    button {
+      background: linear-gradient(to right, #4CAF50, #45A049);
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
       cursor: pointer;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
       transition: transform 0.1s;
     }
-    .button:active {
+    button:active {
       transform: scale(0.97);
     }
-    .card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 0 10px #ccc;
-    }
-    .hide {
+    .hidden {
       display: none;
     }
     .whatsapp {
-      background: #25d366;
+      margin-top: 8px;
+      display: inline-block;
+      background: #25D366;
     }
   </style>
 </head>
 <body>
+
   <h2>📋 My Service Requests</h2>
-  <p id="user-info">🔐 Please login first</p>
-  <button id="login-btn" class="button">Login with Google</button>
-  <div id="requests"></div>
+  <div id="loginSection">
+    <button onclick="login()">🔐 Login with Google</button>
+  </div>
+  <div id="loggedInUser" class="hidden"></div>
+  <div id="requestList"></div>
 
   <script>
     const firebaseConfig = {
@@ -57,71 +62,72 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "526649938754",
-      appId: "1:526649938754:web:382bca8b19c589234f33f3"
+      messagingSenderId: "469478507295",
+      appId: "1:469478507295:web:ea40c113d2b0d3f113f8b5"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const loginBtn = document.getElementById("login-btn");
-    const userInfo = document.getElementById("user-info");
-    const requestsDiv = document.getElementById("requests");
-
-    loginBtn.addEventListener("click", () => {
+    function login() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    });
+      auth.signInWithPopup(provider).then(result => {
+        document.getElementById("loginSection").classList.add("hidden");
+        loadRequests(result.user);
+      });
+    }
 
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        loginBtn.style.display = "none";
-        userInfo.innerHTML = `✅ Logged in as: ${user.displayName} (${user.email})`;
-        loadUserRequests(user.email);
-      }
-    });
+    function loadRequests(user) {
+      document.getElementById("loggedInUser").innerHTML =
+        `✅ Logged in as: ${user.displayName} (${user.email})`;
+      document.getElementById("loggedInUser").classList.remove("hidden");
 
-    function loadUserRequests(userEmail) {
-      db.ref("requests").once("value", (snapshot) => {
+      db.ref("requests").orderByKey().once("value", snapshot => {
         const data = snapshot.val();
-        requestsDiv.innerHTML = "";
-        for (let uid in data) {
-          for (let reqId in data[uid]) {
-            const req = data[uid][reqId];
-            if (req.email === userEmail) {
+        const list = document.getElementById("requestList");
+        list.innerHTML = "";
+
+        let found = false;
+
+        for (let userId in data) {
+          for (let reqId in data[userId]) {
+            const req = data[userId][reqId];
+            if (req.email === user.email) {
+              found = true;
               const accepted = req.acceptedBy || {};
-              const acceptedName = accepted.name && accepted.name !== "Not accepted yet" ? accepted.name : "Not accepted yet";
+              const name = accepted.name || "Not accepted yet";
               const phone = accepted.phone || "-";
               const address = accepted.address || "-";
 
-              let html = `
-                <div class="card">
-                  <strong>Service:</strong> ${req.service || "N/A"}<br/>
-                  <strong>Issue:</strong> ${req.issue || "N/A"}<br/>
-                  <strong>Accepted By:</strong><br/>
-                  Name: ${acceptedName}<br/>
-                  Phone: ${phone}<br/>
-                  Address: ${address}<br/>
-              `;
+              const waLink = phone !== "-" ? `<a class="whatsapp" href="https://wa.me/${phone}" target="_blank">Chat on WhatsApp</a>` : "";
 
-              if (acceptedName !== "Not accepted yet" && phone !== "-") {
-                const encodedMsg = encodeURIComponent("Hello, I booked your service via ZaraFix.");
-                html += `<a href="https://wa.me/${phone}?text=${encodedMsg}" target="_blank">
-                  <button class="button whatsapp">Chat on WhatsApp</button>
-                </a>`;
-              }
-
-              html += `</div>`;
-              requestsDiv.innerHTML += html;
+              list.innerHTML += `
+                <div class="request">
+                  <b>Service:</b> ${req.service || "N/A"}<br>
+                  <b>Issue:</b> ${req.issue || "N/A"}<br>
+                  <b>Accepted By:</b><br>
+                  Name: ${name}<br>
+                  Phone: ${phone}<br>
+                  Address: ${address}<br>
+                  ${waLink}
+                </div>`;
             }
           }
         }
-        if (!requestsDiv.innerHTML) {
-          requestsDiv.innerHTML = "<p>😕 No requests found.</p>";
+
+        if (!found) {
+          list.innerHTML = "<p>😕 No requests found.</p>";
         }
       });
     }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("loginSection").classList.add("hidden");
+        loadRequests(user);
+      }
+    });
   </script>
 </body>
 </html>
