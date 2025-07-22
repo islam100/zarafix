@@ -3,10 +3,9 @@
 <head>
   <title>ZaraFix - Accepted Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -48,7 +47,7 @@
   <div id="acceptedPostersContainer">Loading...</div>
 
   <script>
-    // 🔐 Firebase Config (change this with your real config)
+    // Firebase config — replace with your own project config
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -60,69 +59,54 @@
     };
     firebase.initializeApp(firebaseConfig);
 
-    // 🔧 TESTING: fix userId (replace with real UID or use auth check)
-    const userId = "YOUR_USER_ID"; // ← yaha apna userId daalein
+    const userId = "userId1"; // ← replace with dynamic user UID later
+    const container = document.getElementById('acceptedPostersContainer');
 
-    function loadAcceptedPosters() {
-      const container = document.getElementById('acceptedPostersContainer');
-      firebase.database().ref('requests/' + userId).once('value').then(snapshot => {
-        const requests = snapshot.val();
-        container.innerHTML = '';
-        if (!requests) {
-          container.innerHTML = "<p>❌ No service requests found.</p>";
+    firebase.database().ref('requests/' + userId).once('value').then(snapshot => {
+      const requests = snapshot.val();
+      container.innerHTML = '';
+      if (!requests) {
+        container.innerHTML = "<p>❌ No requests found.</p>";
+        return;
+      }
+
+      Object.entries(requests).forEach(([requestId, request]) => {
+        if (!request.acceptedBy) {
+          container.innerHTML = "<p>⛔ No posters accepted your request yet.</p>";
           return;
         }
 
-        let hasAccepted = false;
+        Object.keys(request.acceptedBy).forEach(posterId => {
+          firebase.database().ref('posters/' + posterId).once('value').then(posterSnap => {
+            const p = posterSnap.val();
+            if (!p) return;
 
-        Object.entries(requests).forEach(([requestId, request]) => {
-          if (request.acceptedBy) {
-            Object.keys(request.acceptedBy).forEach(posterId => {
-              hasAccepted = true;
-
-              firebase.database().ref('posterUsers/' + posterId).once('value').then(posterSnap => {
-                const p = posterSnap.val();
-                if (!p) return;
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                  <h3>🧑‍🔧 <b>${p.name}</b></h3>
-                  <p>🏪 <b>Shop:</b> ${p.shop}</p>
-                  <p>🔧 <b>Category:</b> ${p.category}</p>
-                  <p>📍 <b>Address:</b> ${p.address}</p>
-                  <p>📬 <b>Pincode:</b> ${p.pincode}</p>
-                  <p>📞 <b>WhatsApp:</b> <a href="https://wa.me/91${p.whatsapp.trim()}" target="_blank" style="color:green;">${p.whatsapp}</a></p>
-                  <button class="button reject-btn" onclick="rejectPoster('${requestId}', '${posterId}')">❌ Reject</button>
-                  <a class="button whatsapp-btn" href="https://wa.me/91${p.whatsapp.trim()}" target="_blank">💬 WhatsApp</a>
-                `;
-                container.appendChild(card);
-              });
-            });
-          }
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <h3>🧑‍🔧 <b>${p.name}</b></h3>
+              <p>🏪 <b>Shop:</b> ${p.shop}</p>
+              <p>🔧 <b>Category:</b> ${p.category}</p>
+              <p>📞 <b>WhatsApp:</b> <a href="https://wa.me/91${p.whatsapp.trim()}" target="_blank" style="color:green;">${p.whatsapp}</a></p>
+              <button class="button reject-btn" onclick="rejectPoster('${requestId}', '${posterId}')">❌ Reject</button>
+              <a class="button whatsapp-btn" href="https://wa.me/91${p.whatsapp.trim()}" target="_blank">💬 WhatsApp</a>
+            `;
+            container.appendChild(card);
+          });
         });
-
-        setTimeout(() => {
-          if (!hasAccepted) {
-            container.innerHTML = "<p>⛔ No posters accepted your request yet.</p>";
-          }
-        }, 2000);
       });
-    }
+    });
 
     function rejectPoster(requestId, posterId) {
       if (confirm("Are you sure you want to reject this poster?")) {
         firebase.database().ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).remove()
-          .then(() => {
-            alert("Poster rejected.");
-            loadAcceptedPosters();
-          })
-          .catch(err => alert("Error: " + err.message));
+        .then(() => {
+          alert("Poster rejected.");
+          location.reload();
+        })
+        .catch(err => alert("Error: " + err.message));
       }
     }
-
-    // 🚀 Load posters
-    loadAcceptedPosters();
   </script>
 
 </body>
