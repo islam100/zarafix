@@ -1,137 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login with Google - ZaraFix</title>
+  <title>ZaraFix - Service Request</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-
   <style>
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: linear-gradient(135deg, #f0f0f0, #d0d0d0);
       margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      padding: 20px;
     }
 
     .container {
-      margin-top: 100px;
+      max-width: 450px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
 
     h2 {
+      text-align: center;
       color: #333;
     }
 
-    button {
-      padding: 15px 30px;
-      margin: 10px;
-      border: none;
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
       border-radius: 12px;
+      border: 1px solid #ccc;
       font-size: 16px;
-      font-weight: bold;
+    }
+
+    button {
+      background: linear-gradient(to right, #667eea, #764ba2);
       color: white;
-      background: linear-gradient(45deg, #4CAF50, #2E7D32);
-      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    button:hover {
-      transform: scale(1.05);
-    }
-
-    #logoutBtn {
-      background: linear-gradient(45deg, #f44336, #c62828);
-    }
-
-    @media only screen and (max-width: 600px) {
-      .container {
-        margin-top: 50px;
-        padding: 10px;
-      }
-
-      button {
-        width: 80%;
-      }
-    }
-
-    #userInfo {
-      margin-top: 20px;
-      font-size: 18px;
       font-weight: bold;
-      color: #444;
+      border: none;
+      box-shadow: 0 6px #999;
+      transition: all 0.2s;
+    }
+
+    button:active {
+      box-shadow: 0 2px #666;
+      transform: translateY(4px);
+    }
+
+    .top-bar {
+      text-align: right;
+      margin-bottom: 15px;
+    }
+
+    #welcome-text {
+      font-weight: bold;
+      color: green;
+      text-align: center;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Welcome to ZaraFix</h2>
 
-    <!-- Login/Logout Buttons -->
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-
-    <!-- Display User Info -->
-    <div id="userInfo"></div>
+  <div class="top-bar">
+    <button id="login-btn" onclick="login()">Login with Google</button>
+    <button id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
   </div>
 
+  <div class="container">
+    <h2>Service Request Form</h2>
+    <div id="welcome-text"></div>
+
+    <form id="serviceForm">
+      <input type="text" id="name" placeholder="Full Name" required />
+      <input type="text" id="phone" placeholder="WhatsApp Number" required />
+
+      <select id="category" required>
+        <option value="">Select Service</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+        <option value="Carpenter">Carpenter</option>
+        <option value="AC Mechanic">AC Mechanic</option>
+        <option value="Painter">Painter</option>
+      </select>
+
+      <button type="submit">Submit Request</button>
+    </form>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
   <script>
-    // ✅ Firebase Config (replace with your own project config)
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "295894358089",
-      appId: "1:295894358089:web:16161db0e96e2180ab7095",
-      measurementId: "G-V8DR4BQSVR"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
-    // ✅ Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const userInfo = document.getElementById("userInfo");
-
-    // ✅ Login with Google
-    loginBtn.addEventListener("click", function () {
-      var provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
-        .then(result => {
-          console.log("User signed in:", result.user);
-        })
-        .catch(error => {
-          console.error("Login error:", error);
-        });
-    });
-
-    // ✅ Logout
-    logoutBtn.addEventListener("click", function () {
-      firebase.auth().signOut()
-        .then(() => {
-          console.log("User signed out.");
-        })
-        .catch(error => {
-          console.error("Logout error:", error);
-        });
-    });
-
-    // ✅ Auth State Listener
-    firebase.auth().onAuthStateChanged(function (user) {
+    // Monitor auth state
+    auth.onAuthStateChanged(user => {
       if (user) {
-        // Logged In
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        userInfo.innerHTML = `👤 ${user.displayName || user.email}`;
+        document.getElementById("login-btn").style.display = "none";
+        document.getElementById("logout-btn").style.display = "inline-block";
+        document.getElementById("welcome-text").innerText = `👤 ${user.displayName}`;
       } else {
-        // Logged Out
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        userInfo.innerHTML = "";
+        document.getElementById("login-btn").style.display = "inline-block";
+        document.getElementById("logout-btn").style.display = "none";
+        document.getElementById("welcome-text").innerText = "";
       }
+    });
+
+    function login() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+
+    // Handle form submit
+    document.getElementById("serviceForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please login first.");
+        return;
+      }
+
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      const category = document.getElementById("category").value;
+
+      const timestamp = Date.now();
+      const requestData = {
+        name,
+        phone,
+        category,
+        userEmail: user.email,
+        time: new Date().toLocaleString()
+      };
+
+      const requestId = `REQ${timestamp}`;
+      database.ref(`requests/${user.uid}/${requestId}`).set(requestData)
+        .then(() => {
+          alert("Request submitted successfully!");
+          document.getElementById("serviceForm").reset();
+        })
+        .catch(error => {
+          alert("Error submitting request: " + error.message);
+        });
     });
   </script>
 </body>
