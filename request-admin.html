@@ -1,156 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Submitted Service Requests</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 4px 4px 15px rgba(0,0,0,0.1);
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 600px;
-      position: relative;
-    }
-    .card h3 {
-      margin-top: 0;
-      color: #333;
-    }
-    .card p {
-      margin: 5px 0;
-    }
-    .btn {
-      padding: 10px 16px;
-      margin: 10px 5px 0 0;
-      border: none;
-      border-radius: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.2s;
-      box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
-    }
-    .btn:hover {
-      transform: scale(1.05);
-    }
-    .whatsapp {
-      background: #25D366;
-      color: white;
-    }
-    .reject {
-      background: #f39c12;
-      color: white;
-    }
-    .delete {
-      background: #e74c3c;
-      color: white;
-    }
-  </style>
+  <title>Accepted Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
   <h2>🎯 Submitted Service Requests</h2>
-  <div id="requestsContainer"></div>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <div id="requestList">Loading...</div>
 
   <script>
-    // 🔐 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const container = document.getElementById("requestsContainer");
+    const currentPosterId = "posterId1"; // 🔁 इसे लॉगिन UID से बदलना होगा
 
-    // 🔄 Load all requests
-    db.ref("requests").once("value", async (snapshot) => {
-      if (!snapshot.exists()) {
-        container.innerHTML = "<p style='text-align:center;'>❌ कोई Accepted Request नहीं मिला।</p>";
-        return;
-      }
+    function loadAcceptedRequests() {
+      db.ref("requests").once("value", (snapshot) => {
+        const data = snapshot.val();
+        const container = document.getElementById("requestList");
+        container.innerHTML = "";
 
-      const data = snapshot.val();
-      for (let userId in data) {
-        for (let requestId in data[userId]) {
-          const req = data[userId][requestId];
+        let found = false;
 
-          const card = document.createElement("div");
-          card.className = "card";
-
-          // 🟢 Accepted By?
-          const accepted = req.acceptedBy?.name || "❌ Not Accepted Yet";
-
-          card.innerHTML = `
-            <h3>${req.category || "Service Request"}</h3>
-            <p><strong>नाम:</strong> ${req.name}</p>
-            <p><strong>पता:</strong> ${req.address || "N/A"}, ${req.pincode || ""}</p>
-            <p><strong>काम का विवरण:</strong> ${req.description || "N/A"}</p>
-            <p><strong>स्थान:</strong> ${req.location || "N/A"}</p>
-            <p><strong>Accepted By:</strong> ${accepted}</p>
-          `;
-
-          // 🔍 Get poster's WhatsApp
-          const posterSnap = await db.ref("posters/" + userId).once("value");
-          const poster = posterSnap.val();
-          if (poster?.whatsapp) {
-            const whatsappBtn = document.createElement("button");
-            whatsappBtn.className = "btn whatsapp";
-            whatsappBtn.innerText = "WhatsApp Poster";
-            whatsappBtn.onclick = () => {
-              window.open("https://wa.me/" + poster.whatsapp, "_blank");
-            };
-            card.appendChild(whatsappBtn);
-          }
-
-          // ❌ Reject Button
-          const rejectBtn = document.createElement("button");
-          rejectBtn.className = "btn reject";
-          rejectBtn.innerText = "Reject";
-          rejectBtn.onclick = () => {
-            db.ref(`requests/${userId}/${requestId}/acceptedBy`).remove();
-            alert("✅ Request rejected!");
-            location.reload();
-          };
-          card.appendChild(rejectBtn);
-
-          // 🗑️ Delete Button
-          const deleteBtn = document.createElement("button");
-          deleteBtn.className = "btn delete";
-          deleteBtn.innerText = "Delete";
-          deleteBtn.onclick = () => {
-            if (confirm("क्या आप वाकई इस request को हटाना चाहते हैं?")) {
-              db.ref(`requests/${userId}/${requestId}`).remove();
-              alert("🗑️ Request deleted!");
-              location.reload();
+        for (let userId in data) {
+          for (let requestId in data[userId]) {
+            const request = data[userId][requestId];
+            if (request.acceptedBy && request.acceptedBy[currentPosterId]) {
+              found = true;
+              const div = document.createElement("div");
+              div.style.border = "1px solid #ccc";
+              div.style.margin = "10px";
+              div.style.padding = "10px";
+              div.innerHTML = `
+                <strong>Category:</strong> ${request.category}<br>
+                <strong>Description:</strong> ${request.description}<br>
+                <strong>Location:</strong> ${request.location}
+              `;
+              container.appendChild(div);
             }
-          };
-          card.appendChild(deleteBtn);
-
-          container.appendChild(card);
+          }
         }
-      }
-    });
+
+        if (!found) {
+          container.innerHTML = "❌ कोई Accepted Request नहीं मिला।";
+        }
+      });
+    }
+
+    window.onload = loadAcceptedRequests;
   </script>
 </body>
 </html>
