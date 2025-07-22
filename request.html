@@ -1,97 +1,95 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Request</title>
+  <title>Service Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: Arial; padding: 20px; background: #f4f4f4;
-    }
-    .form-box {
-      max-width: 400px; margin: auto; background: #fff; padding: 20px; border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, select, textarea, button {
-      width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px; border: 1px solid #ccc;
-    }
-    .status-box {
-      margin-top: 20px; padding: 15px; background: #e0f7fa; border-radius: 5px; display: none;
-    }
-    .led {
-      width: 15px; height: 15px; border-radius: 50%; background: gray; display: inline-block;
-    }
-    .green { background: green !important; }
-    .red { background: red !important; }
-  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
-<body>
-  <div class="form-box">
-    <h2>Service Request Form</h2>
-    <input type="text" id="name" placeholder="Your Name">
-    <input type="text" id="address" placeholder="Your Address">
-    <select id="category">
-      <option value="">Select Category</option>
-      <option value="plumber">Plumber</option>
-      <option value="electrician">Electrician</option>
-      <option value="carpenter">Carpenter</option>
-    </select>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number">
-    <textarea id="problem" placeholder="Describe your problem"></textarea>
-    <button onclick="submitRequest()">Submit Request</button>
+<body style="font-family:sans-serif; padding:20px">
 
-    <div class="status-box" id="statusBox">
-      <p id="statusText">Please wait for accept...</p>
-      <div class="led" id="led"></div>
-    </div>
-  </div>
+<h2>🛠️ ZaraFix - Service Request</h2>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
+<!-- Login Button -->
+<div id="loginDiv">
+  <button onclick="login()">🔐 Login with Google</button>
+</div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<!-- Service Request Form -->
+<div id="formDiv" style="display:none;">
+  <p>Welcome, <span id="userName"></span> 👋</p>
+  <form id="requestForm">
+    <input type="text" id="name" placeholder="Your Name" required><br><br>
+    <input type="text" id="address" placeholder="Your Address" required><br><br>
+    <input type="text" id="category" placeholder="Service Category" required><br><br>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required><br><br>
+    <textarea id="problem" placeholder="Describe your Problem" required></textarea><br><br>
+    <button type="submit">📨 Submit Request</button>
+  </form>
+  <p id="statusMsg"></p>
+</div>
 
-    function submitRequest() {
-      const name = document.getElementById('name').value;
-      const address = document.getElementById('address').value;
-      const category = document.getElementById('category').value;
-      const whatsapp = document.getElementById('whatsapp').value;
-      const problem = document.getElementById('problem').value;
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
 
-      if (!name || !address || !category || !whatsapp || !problem) {
-        alert("Please fill all fields"); return;
-      }
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-      const reqRef = db.ref('requests').push();
-      reqRef.set({
-        name, address, category, whatsapp, problem,
-        status: 'pending'
-      });
+  // Login function
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  }
 
-      document.getElementById('statusBox').style.display = 'block';
-      document.getElementById('statusText').textContent = 'Please wait for accept...';
-
-      reqRef.on('value', snapshot => {
-        const data = snapshot.val();
-        if (data && data.status === 'accepted') {
-          document.getElementById('statusText').textContent = '✅ Your request was accepted!';
-          document.getElementById('led').classList.add('green');
-        } else if (data && data.status === 'rejected') {
-          document.getElementById('statusText').textContent = '❌ Your request was rejected.';
-          document.getElementById('led').classList.add('red');
-        }
-      });
+  // Check Auth State
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById("loginDiv").style.display = "none";
+      document.getElementById("formDiv").style.display = "block";
+      document.getElementById("userName").innerText = user.displayName;
+    } else {
+      document.getElementById("loginDiv").style.display = "block";
+      document.getElementById("formDiv").style.display = "none";
     }
-  </script>
+  });
+
+  // Submit form
+  document.getElementById("requestForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const uid = user.uid;
+    const name = document.getElementById("name").value;
+    const address = document.getElementById("address").value;
+    const category = document.getElementById("category").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const problem = document.getElementById("problem").value;
+
+    const requestRef = db.ref("requests/" + uid);
+    requestRef.set({
+      name, address, category, whatsapp, problem,
+      status: "pending",
+      timestamp: Date.now()
+    }).then(() => {
+      document.getElementById("statusMsg").innerText = "⏳ Please wait for accept...";
+      document.getElementById("requestForm").reset();
+    }).catch(err => {
+      alert("Error: " + err.message);
+    });
+  });
+</script>
+
 </body>
 </html>
