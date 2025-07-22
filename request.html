@@ -1,129 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Request</title>
+  <title>ZaraFix Request Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-    h2 {
-      color: #333;
-    }
-    input, textarea, button {
-      width: 300px;
-      padding: 10px;
-      margin: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    #logout {
-      background-color: #e53935;
-    }
+    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+    form { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; max-width: 500px; margin: auto; }
+    input, select, textarea, button { display: block; width: 100%; padding: 10px; margin: 10px 0; }
+    #status { text-align: center; margin-top: 10px; font-weight: bold; }
+    #loginBtn { background: #4285F4; color: white; font-weight: bold; border: none; border-radius: 5px; }
   </style>
 </head>
 <body>
-  <h2>ZaraFix - Service Request</h2>
 
-  <button id="login">🔐 Login with Google</button>
-  <button id="logout" style="display:none;">🚪 Logout</button>
+<h2 style="text-align:center;">🛠 ZaraFix - Submit Request</h2>
 
-  <div id="form" style="display:none;">
-    <input type="text" id="room" placeholder="Room Number" required>
-    <input type="text" id="name" placeholder="Your Name" required>
-    <textarea id="request" placeholder="Enter your service request" required></textarea>
-    <button onclick="submitRequest()">📩 Submit Request</button>
-  </div>
+<button id="loginBtn">🔐 Login with Google</button>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<form id="requestForm" style="display:none;">
+  <input type="text" id="name" placeholder="Your Name" required>
+  <input type="text" id="address" placeholder="Your Address" required>
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option value="AC Repair">AC Repair</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Other">Other</option>
+  </select>
+  <textarea id="problem" placeholder="Describe your problem..." required></textarea>
+  <button type="submit">📤 Submit Request</button>
+</form>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
+<div id="status"></div>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const database = firebase.database();
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
 
-    const loginBtn = document.getElementById("login");
-    const logoutBtn = document.getElementById("logout");
-    const formDiv = document.getElementById("form");
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const database = firebase.database();
 
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    };
+  const loginBtn = document.getElementById('loginBtn');
+  const requestForm = document.getElementById('requestForm');
+  const statusMessage = document.getElementById('status');
 
-    logoutBtn.onclick = () => {
-      auth.signOut();
-    };
+  let currentUID = null;
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        formDiv.style.display = "block";
-      } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        formDiv.style.display = "none";
-      }
-    });
+  loginBtn.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then((result) => {
+        currentUID = result.user.uid;
+        requestForm.style.display = 'block';
+        loginBtn.style.display = 'none';
+        statusMessage.textContent = "✅ Logged in as " + result.user.displayName;
+      })
+      .catch((error) => {
+        statusMessage.textContent = "❌ Login failed: " + error.message;
+      });
+  });
 
-    function submitRequest() {
-      const room = document.getElementById("room").value.trim();
-      const name = document.getElementById("name").value.trim();
-      const requestText = document.getElementById("request").value.trim();
-      const user = auth.currentUser;
-
-      if (!room || !name || !requestText) {
-        alert("Please fill all fields.");
-        return;
-      }
-
-      const requestId = Date.now();
-      const requestData = {
-        email: user.email,
-        name: name,
-        room: room,
-        request: requestText,
-        timestamp: new Date().toISOString()
-      };
-
-      database.ref("requests/" + room + "/" + requestId).set(requestData)
-        .then(() => {
-          alert("✅ Request submitted!");
-          document.getElementById("room").value = "";
-          document.getElementById("name").value = "";
-          document.getElementById("request").value = "";
-        })
-        .catch((error) => {
-          alert("❌ Error: " + error.message);
-        });
+  requestForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!currentUID) {
+      statusMessage.textContent = "User not logged in.";
+      return;
     }
-  </script>
+
+    const name = document.getElementById('name').value;
+    const address = document.getElementById('address').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const category = document.getElementById('category').value;
+    const problem = document.getElementById('problem').value;
+
+    const requestData = {
+      name, address, whatsapp, category, description: problem,
+      timestamp: new Date().toISOString()
+    };
+
+    database.ref(`requests/${currentUID}`).push(requestData)
+      .then(() => {
+        statusMessage.textContent = "✅ Request submitted successfully!";
+        requestForm.reset();
+      })
+      .catch((error) => {
+        statusMessage.textContent = "❌ Error: " + error.message;
+      });
+  });
+</script>
+
 </body>
 </html>
