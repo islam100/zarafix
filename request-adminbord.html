@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      background: #f8f9fa;
+    }
+    header {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #333;
+    }
+    #loginBtn, #logoutBtn {
+      padding: 10px 20px;
+      background: #4285f4;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 20px;
+      display: block;
+      width: 150px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #logoutBtn {
+      background: #db4437;
+    }
+    #adminPanel {
+      max-width: 800px;
+      margin: auto;
+    }
+    .request-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgb(0 0 0 / 0.1);
+      padding: 15px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    .led {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .led-green {
+      background-color: #28a745;
+      box-shadow: 0 0 5px #28a745;
+    }
+    .led-yellow {
+      background-color: #ffc107;
+      box-shadow: 0 0 5px #ffc107;
+    }
+    .btn {
+      padding: 6px 10px;
+      margin-right: 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      font-size: 14px;
+    }
+    .btn-accept {
+      background-color: #28a745;
+    }
+    .btn-reject {
+      background-color: #dc3545;
+    }
+    .btn-delete {
+      background-color: #6c757d;
+    }
+    .poster-info {
+      margin-top: 10px;
+      background: #f1f3f5;
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 14px;
+      color: #333;
+    }
+    .whatsapp-btn {
+      background-color: #25d366;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      text-decoration: none;
+      margin-top: 5px;
+      display: inline-block;
+    }
+    @media (max-width: 600px) {
+      .request-card {
+        font-size: 14px;
+      }
+      #loginBtn, #logoutBtn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>ZaraFix Admin Dashboard</header>
+
+<button id="loginBtn">🔐 Login with Google</button>
+<button id="logoutBtn" style="display:none;">🚪 Logout</button>
+
+<div id="adminPanel" style="display:none;">
+  <div id="requestsContainer">
+    Loading requests...
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const adminPanel = document.getElementById('adminPanel');
+  const requestsContainer = document.getElementById('requestsContainer');
+
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(console.error);
+  };
+
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  // Check if user is admin
+  function checkIsAdmin(uid) {
+    return db.ref('admins/' + uid).once('value').then(snap => {
+      return snap.exists() && snap.val() === true;
+    });
+  }
+
+  function renderRequests(requests, posters) {
+    // Clear container
+    requestsContainer.innerHTML = '';
+    // Create array of [userId, requestId, data]
+    let requestList = [];
+
+    for (const userId in requests) {
+      for (const requestId in requests[userId]) {
+        const data = requests[userId][requestId];
+        requestList.push({ userId, requestId, data });
+      }
+    }
+
+    // Sort newest first (by requestId assuming timestamp)
+    requestList.sort((a, b) => {
+      // If requestId is timestamp, compare descending
+      return b.requestId.localeCompare(a.requestId);
+    });
+
+    if (requestList.length === 0) {
+      requestsContainer.innerHTML = '<p>No requests found.</p>';
+      return;
+    }
+
+    requestList.forEach(({ userId, requestId, data }) => {
+      const { category, description, location, acceptedBy } = data;
+
+      // LED color
+      const ledClass = acceptedBy ? 'led-green' : 'led-yellow';
+
+      // Accepted posters details
+      let acceptedHtml = '';
+      if (acceptedBy) {
+        const acceptedIds = Object.keys(acceptedBy);
+        acceptedIds.forEach(posterId => {
+          if (posters[posterId]) {
+            const p = posters[posterId];
+            acceptedHtml += `
+              <div>
+                👤 ${p.name} <br/>
+                🏪 ${p.shop} <br/>
+                🧰 ${p.category} <br/>
+                📱 <a class="whatsapp-btn" href="https://wa.me/${p.whatsapp}" target="_blank">${p.whatsapp}</a>
+                <br/>
+                💰 Wallet: ₹${p.wallet}
+              </div><hr/>
+            `;
+          }
+        });
+      } else {
+        acceptedHtml = '❌ Not accepted by any poster';
+      }
+
+      // Create card html
+      const card = document.createElement('div');
+      card.className = 'request-card';
+
+      card.innerHTML = `
+        <span class="led ${ledClass}" title="${acceptedBy ? 'Accepted' : 'Pending'}"></span>
+        <b>Category:</b> ${category || 'N/A'}<br/>
+        <b>Location:</b> ${location || 'N/A'}<br/>
+        <b>Problem:</b> ${description || 'N/A'}<br/>
+        <b>User ID:</b> ${userId}<br/>
+        <b>Request ID:</b> ${requestId}<br/>
+        <hr/>
+        <b>Accepted By:</b><br/>
+        ${acceptedHtml}
+        <button class="btn btn-accept">✅ Accept</button>
+        <button class="btn btn-reject">❌ Reject</button>
+        <button class="btn btn-delete">🗑 Delete</button>
+      `;
+
+      // Attach event listeners
+      const acceptBtn = card.querySelector('.btn-accept');
+      const rejectBtn = card.querySelector('.btn-reject');
+      const deleteBtn = card.querySelector('.btn-delete');
+
+      acceptBtn.onclick = () => acceptRequest(userId, requestId);
+      rejectBtn.onclick = () => rejectRequest(userId, requestId);
+      deleteBtn.onclick = () => deleteRequest(userId, requestId);
+
+      requestsContainer.appendChild(card);
+    });
+  }
+
+  // Accept request (mark acceptedBy with current admin UID)
+  function acceptRequest(userId, requestId) {
+    const user = auth.currentUser;
+    if (!user) return alert('Please login first');
+    const posterId = user.uid;
+
+    // Update acceptedBy node with posterId:true
+    const acceptedByRef = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
+    acceptedByRef.set(true).then(() => {
+      alert('Request accepted!');
+    }).catch(err => alert(err.message));
+  }
+
+  // Reject request (remove acceptedBy for current admin)
+  function rejectRequest(userId, requestId) {
+    const user = auth.currentUser;
+    if (!user) return alert('Please login first');
+    const posterId = user.uid;
+
+    const acceptedByRef = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
+    acceptedByRef.remove().then(() => {
+      alert('Request rejected!');
+    }).catch(err => alert(err.message));
+  }
+
+  // Delete entire request
+  function deleteRequest(userId, requestId) {
+    if (!confirm('Are you sure to delete this request?')) return;
+    db.ref(`requests/${userId}/${requestId}`).remove()
+      .then(() => alert('Request deleted!'))
+      .catch(err => alert(err.message));
+  }
+
+  // Load posters (service providers)
+  async function loadPosters() {
+    const snapshot = await db.ref('posters').once('value');
+    return snapshot.val() || {};
+  }
+
+  // Load all requests and render
+  async function loadAndRender() {
+    try {
+      const [requestsSnap, posters] = await Promise.all([
+        db.ref('requests').once('value'),
+        loadPosters()
+      ]);
+
+      const requests = requestsSnap.val() || {};
+      renderRequests(requests, posters);
+    } catch (error) {
+      requestsContainer.innerHTML = '<p>Error loading data.</p>';
+      console.error(error);
+    }
+  }
+
+  // Setup realtime listener for requests
+  function setupRealtimeListener() {
+    db.ref('requests').on('value', async (snapshot) => {
+      const requests = snapshot.val() || {};
+      const posters = await loadPosters();
+      renderRequests(requests, posters);
+    });
+  }
+
+  // Auth state change
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      // Check admin
+      const isAdmin = await checkIsAdmin(user.uid);
+      if (!isAdmin) {
+        alert('You are not authorized as admin.');
+        auth.signOut();
+        return;
+      }
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'block';
+      adminPanel.style.display
