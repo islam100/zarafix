@@ -1,116 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>🛠️ My Posted Requests</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Service Request Poster</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding:10px; background:#f5f5f5; }
+    body { font-family: Arial; background: #f5f5f5; padding: 20px; }
     .card {
-      background:white; border-radius:16px;
-      padding:15px; margin-bottom:15px;
-      box-shadow:0 4px 8px rgba(0,0,0,0.1);
-      transition:transform 0.2s;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin: 15px auto;
+      padding: 20px;
+      max-width: 500px;
     }
-    .card:hover { transform:translateY(-2px); }
-    .btn3d {
-      display:inline-block; margin-top:10px;
-      padding:10px 16px; border:none;
-      border-radius:8px; font-weight:bold;
-      box-shadow:0 4px 0 rgba(0,0,0,0.2);
-      cursor:pointer; transition:all .1s;
+    .title { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+    .info { margin: 5px 0; }
+    .btns { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
-    .btn3d:active { transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.2); }
-    .btn-whatsapp { background:linear-gradient(to top, #25D366,#128C7E); color:white; }
-    .btn-reject { background:linear-gradient(to top, #FF5252,#FF1744); color:white; }
-    .btn-delete { background:linear-gradient(to top, #FFA726,#FB8C00); color:white; }
+    .whatsapp { background: #25D366; }
+    .reject { background: #f44336; }
+    .delete { background: #9c27b0; }
   </style>
 </head>
 <body>
 
-<h2>🎯 My Service Requests</h2>
-<div id="requestsContainer">Loading...</div>
+  <h2>🎯 Submitted Service Requests</h2>
+  <div id="requests"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "...",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
 
-  auth.onAuthStateChanged(user => {
-    if (user) loadRequests(user.uid);
-    else location.href = 'index.html';
-  });
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  function loadRequests(uid) {
-    const container = document.getElementById('requestsContainer');
-    db.ref(`requests/${uid}`).once('value', snap => {
-      const data = snap.val();
-      container.innerHTML = '';
-      if (!data) {
-        container.innerHTML = '<p>No requests found.</p>';
-        return;
-      }
-      Object.entries(data).forEach(([reqId, req]) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        let html = `
-          <p><strong>Category:</strong> ${req.category || 'N/A'}</p>
-          <p><strong>Description:</strong> ${req.description || 'N/A'}</p>
-          <p><strong>Location:</strong> ${req.location || 'N/A'}</p>
-        `;
-        if (req.acceptedBy) {
-          const posterUID = Object.keys(req.acceptedBy)[0];
-          html += `<p><strong>Accepted By:</strong> loading...</p>`;
-          card.innerHTML = html;
-          db.ref(`posters/${posterUID}`).once('value', pSnap => {
-            const p = pSnap.val();
-            const wa = p.whatsapp.startsWith('91') ? p.whatsapp : '91'+p.whatsapp;
-            const acceptedHtml = `
-              <p><strong>Accepted By:</strong></p>
-              <p>👨‍🔧 ${p.name}</p>
-              <p>🏪 ${p.shop}</p>
-            `;
-            card.innerHTML = html + acceptedHtml + `
-              <div>
-                <button class="btn3d btn-whatsapp" onclick="window.open('https://wa.me/${wa}','_blank')">📱 WhatsApp</button>
-                <button class="btn3d btn-reject" onclick="reject('${uid}','${reqId}')">❌ Reject</button>
-                <button class="btn3d btn-delete" onclick="del('${uid}','${reqId}')">🗑️ Delete</button>
-              </div>
-            `;
-          });
-        } else {
-          html += `<p><strong>Accepted By:</strong> Not accepted yet</p>`;
-          card.innerHTML = html + `
-            <div>
-              <button class="btn3d btn-delete" onclick="del('${uid}','${reqId}')">🗑️ Delete</button>
-            </div>
-          `;
+    function renderCard(reqId, data) {
+      const accepted = data.acceptedBy ? data.acceptedBy : "❌ Not yet accepted";
+      const acceptedUser = data.acceptedUser || {};
+      const whatsAppBtn = acceptedUser.phone
+        ? `<a href="https://wa.me/${acceptedUser.phone}" target="_blank">
+             <button class="whatsapp">WhatsApp ${acceptedUser.name || ""}</button>
+           </a>`
+        : '';
+
+      return `
+        <div class="card">
+          <div class="title">🧑‍🔧 Name: ${data.name || "Unknown"}</div>
+          <div class="info">📌 Category: ${data.category || "N/A"}</div>
+          <div class="info">📍 Address: ${data.address || "N/A"}</div>
+          <div class="info">📅 Issue: ${data.issue || "N/A"}</div>
+          <div class="info">📍 Location: ${data.location || "N/A"}</div>
+          <div class="info">✅ Accepted By: ${acceptedUser.name || "❌ Not Accepted"}</div>
+          <div class="btns">
+            ${whatsAppBtn}
+            <button class="reject" onclick="rejectRequest('${reqId}')">Reject</button>
+            <button class="delete" onclick="deleteRequest('${reqId}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function loadRequests() {
+      firebase.database().ref("requests").once("value", snap => {
+        const container = document.getElementById("requests");
+        container.innerHTML = "";
+        const data = snap.val();
+        if (!data) {
+          container.innerHTML = "<p>❌ कोई Request नहीं मिला।</p>";
+          return;
         }
-        container.appendChild(card);
-      });
-    });
-  }
 
-  function reject(uid, reqId) {
-    firebase.database().ref(`requests/${uid}/${reqId}/acceptedBy`).remove()
-      .then(() => location.reload());
-  }
-  function del(uid, reqId) {
-    if (confirm('Delete this request?'))
-      firebase.database().ref(`requests/${uid}/${reqId}`).remove()
-        .then(() => location.reload());
-  }
-</script>
+        Object.entries(data).forEach(([reqId, req]) => {
+          // Load user who accepted
+          if (req.acceptedBy) {
+            firebase.database().ref("users/" + req.acceptedBy).once("value", snap => {
+              const user = snap.val();
+              req.acceptedUser = user || {};
+              container.innerHTML += renderCard(reqId, req);
+            });
+          } else {
+            container.innerHTML += renderCard(reqId, req);
+          }
+        });
+      });
+    }
+
+    function rejectRequest(reqId) {
+      firebase.database().ref("requests/" + reqId + "/acceptedBy").remove();
+      alert("❌ Request Rejected");
+      loadRequests();
+    }
+
+    function deleteRequest(reqId) {
+      firebase.database().ref("requests/" + reqId).remove();
+      alert("🗑️ Request Deleted");
+      loadRequests();
+    }
+
+    window.onload = loadRequests;
+  </script>
+
 </body>
 </html>
