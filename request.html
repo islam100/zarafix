@@ -2,78 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Service Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Service Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
+      padding: 10px;
       margin: 0;
-      padding: 1rem;
-      background-color: #f4f4f4;
+      background: #f5f5f5;
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 2rem;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-    }
-    h2, h3 {
-      text-align: center;
-    }
-    .btn {
+    .button {
       padding: 10px 20px;
-      margin: 10px 0;
-      border: none;
-      background: linear-gradient(to right, #4CAF50, #2e7d32);
+      margin: 5px;
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
       color: white;
-      font-size: 1rem;
-      cursor: pointer;
-      border-radius: 12px;
-      box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
-    }
-    .btn:active {
-      transform: scale(0.98);
-    }
-    .request-box {
-      background: #e0f7fa;
-      margin: 1rem 0;
-      padding: 1rem;
+      font-weight: bold;
+      border: none;
       border-radius: 10px;
+      box-shadow: 3px 3px 5px #aaa;
+      cursor: pointer;
+      transition: transform 0.1s;
     }
-    .accepted-by {
-      background: #fce4ec;
-      padding: 0.5rem;
-      border-radius: 8px;
+    .button:active {
+      transform: scale(0.97);
     }
-    .accepted-by b {
-      display: inline-block;
-      width: 90px;
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+      box-shadow: 0 0 10px #ccc;
     }
-    @media screen and (max-width: 600px) {
-      .container {
-        padding: 1rem;
-      }
+    .hide {
+      display: none;
+    }
+    .whatsapp {
+      background: #25d366;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div id="loginSection">
-      <h2>🔐 Google Login</h2>
-      <button id="loginBtn" class="btn">Login with Google</button>
-    </div>
-    <div id="loggedInSection" style="display:none">
-      <h3>📋 My Service Requests</h3>
-      <p id="userInfo"></p>
-      <div id="requestList"></div>
-    </div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <h2>📋 My Service Requests</h2>
+  <p id="user-info">🔐 Please login first</p>
+  <button id="login-btn" class="button">Login with Google</button>
+  <div id="requests"></div>
 
   <script>
     const firebaseConfig = {
@@ -82,69 +57,69 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "437175877527",
-      appId: "1:437175877527:web:850290207f61b68d92d241"
+      messagingSenderId: "526649938754",
+      appId: "1:526649938754:web:382bca8b19c589234f33f3"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const database = firebase.database();
+    const db = firebase.database();
 
-    const loginBtn = document.getElementById('loginBtn');
-    const loginSection = document.getElementById('loginSection');
-    const loggedInSection = document.getElementById('loggedInSection');
-    const userInfo = document.getElementById('userInfo');
-    const requestList = document.getElementById('requestList');
+    const loginBtn = document.getElementById("login-btn");
+    const userInfo = document.getElementById("user-info");
+    const requestsDiv = document.getElementById("requests");
 
-    loginBtn.addEventListener('click', () => {
+    loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(result => {
-        const user = result.user;
-        showUserRequests(user);
-      });
+      auth.signInWithPopup(provider);
     });
 
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged((user) => {
       if (user) {
-        showUserRequests(user);
+        loginBtn.style.display = "none";
+        userInfo.innerHTML = `✅ Logged in as: ${user.displayName} (${user.email})`;
+        loadUserRequests(user.email);
       }
     });
 
-    function showUserRequests(user) {
-      loginSection.style.display = 'none';
-      loggedInSection.style.display = 'block';
-      userInfo.innerText = `✅ Logged in as: ${user.displayName} (${user.email})`;
+    function loadUserRequests(userEmail) {
+      db.ref("requests").once("value", (snapshot) => {
+        const data = snapshot.val();
+        requestsDiv.innerHTML = "";
+        for (let uid in data) {
+          for (let reqId in data[uid]) {
+            const req = data[uid][reqId];
+            if (req.email === userEmail) {
+              const accepted = req.acceptedBy || {};
+              const acceptedName = accepted.name && accepted.name !== "Not accepted yet" ? accepted.name : "Not accepted yet";
+              const phone = accepted.phone || "-";
+              const address = accepted.address || "-";
 
-      const userId = user.uid;
-      const requestRef = database.ref(`requests/${userId}`);
+              let html = `
+                <div class="card">
+                  <strong>Service:</strong> ${req.service || "N/A"}<br/>
+                  <strong>Issue:</strong> ${req.issue || "N/A"}<br/>
+                  <strong>Accepted By:</strong><br/>
+                  Name: ${acceptedName}<br/>
+                  Phone: ${phone}<br/>
+                  Address: ${address}<br/>
+              `;
 
-      requestRef.once('value', snapshot => {
-        requestList.innerHTML = '';
-        if (!snapshot.exists()) {
-          requestList.innerHTML = '<p>No service requests found.</p>';
-          return;
+              if (acceptedName !== "Not accepted yet" && phone !== "-") {
+                const encodedMsg = encodeURIComponent("Hello, I booked your service via ZaraFix.");
+                html += `<a href="https://wa.me/${phone}?text=${encodedMsg}" target="_blank">
+                  <button class="button whatsapp">Chat on WhatsApp</button>
+                </a>`;
+              }
+
+              html += `</div>`;
+              requestsDiv.innerHTML += html;
+            }
+          }
         }
-
-        snapshot.forEach(childSnapshot => {
-          const req = childSnapshot.val();
-          const acceptedByData = req.acceptedBy || {};
-
-          let acceptedInfo = `<div class='accepted-by'>
-            <b>Accepted By:</b><br>
-            <b>Name:</b> ${acceptedByData.name || "Not accepted yet"}<br>
-            <b>Phone:</b> ${acceptedByData.phone || "-"}<br>
-            <b>Address:</b> ${acceptedByData.address || "-"}<br>
-            ${acceptedByData.phone ? `<a class='btn' href='https://wa.me/${acceptedByData.phone}' target='_blank'>Chat on WhatsApp</a>` : ""}
-          </div>`;
-
-          requestList.innerHTML += `
-            <div class="request-box">
-              <b>Service:</b> ${req.category || "N/A"}<br>
-              <b>Issue:</b> ${req.description || "N/A"}<br>
-              ${acceptedInfo}
-            </div>
-          `;
-        });
+        if (!requestsDiv.innerHTML) {
+          requestsDiv.innerHTML = "<p>😕 No requests found.</p>";
+        }
       });
     }
   </script>
