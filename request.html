@@ -1,59 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      padding: 1rem;
-    }
-    h2 {
-      text-align: center;
-    }
-    .request {
-      background: white;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    button {
-      background: linear-gradient(to right, #4CAF50, #45A049);
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-      transition: transform 0.1s;
-    }
-    button:active {
-      transform: scale(0.97);
-    }
-    .hidden {
-      display: none;
-    }
-    .whatsapp {
-      margin-top: 8px;
-      display: inline-block;
-      background: #25D366;
-    }
-  </style>
+  <title>My Service Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
+  <h2>🔐 Google Login</h2>
+  <button onclick="login()">Login with Google</button>
+  <p id="userInfo"></p>
 
-  <h2>📋 My Service Requests</h2>
-  <div id="loginSection">
-    <button onclick="login()">🔐 Login with Google</button>
-  </div>
-  <div id="loggedInUser" class="hidden"></div>
-  <div id="requestList"></div>
+  <h3>📋 My Service Requests</h3>
+  <div id="myRequests"></div>
 
   <script>
     const firebaseConfig = {
@@ -62,8 +21,8 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "469478507295",
-      appId: "1:469478507295:web:ea40c113d2b0d3f113f8b5"
+      messagingSenderId: "410690883299",
+      appId: "1:410690883299:web:646fda87933b7d4acff761"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -73,61 +32,62 @@
     function login() {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider).then(result => {
-        document.getElementById("loginSection").classList.add("hidden");
-        loadRequests(result.user);
+        const user = result.user;
+        document.getElementById("userInfo").innerText = `✅ Logged in as: ${user.displayName} (${user.email})`;
+        loadRequests(user.uid);
       });
     }
 
-    function loadRequests(user) {
-      document.getElementById("loggedInUser").innerHTML =
-        `✅ Logged in as: ${user.displayName} (${user.email})`;
-      document.getElementById("loggedInUser").classList.remove("hidden");
+    function loadRequests(uid) {
+      db.ref('requests/' + uid).once('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById("myRequests");
+        container.innerHTML = "";
 
-      db.ref("requests").orderByKey().once("value", snapshot => {
-        const data = snapshot.val();
-        const list = document.getElementById("requestList");
-        list.innerHTML = "";
+        if (!data) {
+          container.innerHTML = "<p>No requests found.</p>";
+          return;
+        }
 
-        let found = false;
+        Object.entries(data).forEach(([reqID, req]) => {
+          const div = document.createElement("div");
+          div.style.border = "1px solid #999";
+          div.style.padding = "10px";
+          div.style.margin = "10px";
 
-        for (let userId in data) {
-          for (let reqId in data[userId]) {
-            const req = data[userId][reqId];
-            if (req.email === user.email) {
-              found = true;
-              const accepted = req.acceptedBy || {};
-              const name = accepted.name || "Not accepted yet";
-              const phone = accepted.phone || "-";
-              const address = accepted.address || "-";
+          let acceptInfo = "Not accepted yet";
+          let phone = "-";
+          let address = "-";
+          let whatsappBtn = "";
 
-              const waLink = phone !== "-" ? `<a class="whatsapp" href="https://wa.me/${phone}" target="_blank">Chat on WhatsApp</a>` : "";
+          if (req.acceptedBy) {
+            const acceptedKeys = Object.keys(req.acceptedBy).filter(key => key !== 'name' && key !== 'phone' && key !== 'address');
+            if (acceptedKeys.length > 0) {
+              acceptInfo = req.acceptedBy.name || "N/A";
+              phone = req.acceptedBy.phone || "N/A";
+              address = req.acceptedBy.address || "N/A";
 
-              list.innerHTML += `
-                <div class="request">
-                  <b>Service:</b> ${req.service || "N/A"}<br>
-                  <b>Issue:</b> ${req.issue || "N/A"}<br>
-                  <b>Accepted By:</b><br>
-                  Name: ${name}<br>
-                  Phone: ${phone}<br>
-                  Address: ${address}<br>
-                  ${waLink}
-                </div>`;
+              whatsappBtn = `<a href="https://wa.me/${phone}" target="_blank">
+                <button>📱 WhatsApp</button>
+              </a>`;
             }
           }
-        }
 
-        if (!found) {
-          list.innerHTML = "<p>😕 No requests found.</p>";
-        }
+          div.innerHTML = `
+            <strong>📌 Category:</strong> ${req.category}<br>
+            <strong>📝 Issue:</strong> ${req.description}<br>
+            <strong>📅 Date:</strong> ${req.datetime}<br>
+            <strong>📍 Location:</strong> ${req.location}<br><br>
+            <strong>✅ Accepted By:</strong><br>
+            • Name: ${acceptInfo}<br>
+            • Phone: ${phone}<br>
+            • Address: ${address}<br><br>
+            ${whatsappBtn}
+          `;
+          container.appendChild(div);
+        });
       });
     }
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("loginSection").classList.add("hidden");
-        loadRequests(user);
-      }
-    });
   </script>
 </body>
 </html>
