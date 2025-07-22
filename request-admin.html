@@ -1,128 +1,87 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - User Request</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
+  <title>Request Status - ZaraFix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; padding: 20px; }
-    .hidden { display: none; }
+    body { font-family: Arial; padding: 20px; background: #f7f7f7; }
+    .card { background: white; padding: 20px; margin: 15px auto; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; }
+    .card h3 { margin-top: 0; }
+    .btn { padding: 10px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-whatsapp { background: #25D366; color: white; }
+    .btn-reject { background: #dc3545; color: white; }
   </style>
 </head>
 <body>
 
-  <h2>ZaraFix - Request Repair</h2>
-  <div id="userInfo" class="hidden">
-    Logged in as: <span id="userEmail"></span>
-    <button onclick="logout()">Logout</button>
-  </div>
-  <div id="loginDiv">
-    <button onclick="login()">Login with Google</button>
-  </div>
+  <h2>🔍 Request Status</h2>
+  <div id="statusContainer">Loading...</div>
 
-  <div id="requestForm" class="hidden">
-    <h3>Submit Your Request</h3>
-    <input id="category" placeholder="Category (e.g., Electrician)" /><br><br>
-    <input id="location" placeholder="Location" /><br><br>
-    <textarea id="description" placeholder="Describe your issue..."></textarea><br><br>
-    <button onclick="submitRequest()">Submit</button>
-  </div>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <div id="myRequests" class="hidden">
-    <h3>Your Requests</h3>
-    <ul id="requestList"></ul>
-  </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+    };
 
-<script type="module">
-  // Firebase Config
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-  import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  const firebaseConfig = {
-    apiKey: " AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com  ",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com ",
-    messagingSenderId: " 476473209200 ",
-    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-  };
+    const requestId = "REQ001"; // dynamically set karna ho toh query param se le sakte ho
+    const container = document.getElementById("statusContainer");
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth();
-  const db = getDatabase();
+    // Fetch both request and acceptance data
+    Promise.all([
+      db.ref("requests/" + requestId).once("value"),
+      db.ref("accepted/" + requestId).once("value")
+    ]).then(([reqSnap, accSnap]) => {
+      const req = reqSnap.val();
+      const acc = accSnap.val();
 
-  let currentUser = null;
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      currentUser = user;
-      document.getElementById("userEmail").innerText = user.email;
-      document.getElementById("loginDiv").classList.add("hidden");
-      document.getElementById("userInfo").classList.remove("hidden");
-      document.getElementById("requestForm").classList.remove("hidden");
-      document.getElementById("myRequests").classList.remove("hidden");
-      loadMyRequests();
-    } else {
-      currentUser = null;
-      document.getElementById("loginDiv").classList.remove("hidden");
-      document.getElementById("userInfo").classList.add("hidden");
-      document.getElementById("requestForm").classList.add("hidden");
-      document.getElementById("myRequests").classList.add("hidden");
-    }
-  });
-
-  window.login = () => {
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider);
-  };
-
-  window.logout = () => {
-    signOut(auth);
-  };
-
-  window.submitRequest = () => {
-    const category = document.getElementById("category").value;
-    const location = document.getElementById("location").value;
-    const description = document.getElementById("description").value;
-    if (!category || !location || !description) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const requestRef = ref(db, "requests/" + currentUser.uid);
-    const newReqRef = push(requestRef);
-    set(newReqRef, {
-      category,
-      location,
-      description,
-      acceptedBy: null,
-      time: Date.now()
-    });
-
-    alert("Request submitted!");
-    document.getElementById("category").value = "";
-    document.getElementById("location").value = "";
-    document.getElementById("description").value = "";
-  };
-
-  function loadMyRequests() {
-    const userReqRef = ref(db, "requests/" + currentUser.uid);
-    onValue(userReqRef, (snapshot) => {
-      const list = document.getElementById("requestList");
-      list.innerHTML = "";
-      const data = snapshot.val();
-      for (let key in data) {
-        const req = data[key];
-        const li = document.createElement("li");
-        li.innerText = `🔧 ${req.category} | ${req.description} | Accepted by: ${req.acceptedBy ? Object.keys(req.acceptedBy)[0] : "Not yet"}`;
-        list.appendChild(li);
+      if (!req) {
+        container.innerHTML = "<p>Request not found.</p>";
+        return;
       }
-    });
-  }
-</script>
 
+      let html = `
+        <div class="card">
+          <h3>📋 ${req.title}</h3>
+          <p>${req.description}</p>
+          <hr/>
+      `;
+
+      if (acc) {
+        html += `
+          <p><strong>Accepted By:</strong> ${acc.name}</p>
+          <p><strong>Email:</strong> ${acc.acceptedBy}</p>
+          <p><strong>Phone:</strong> ${acc.phone}</p>
+          <a class="btn btn-whatsapp" href="https://wa.me/91${acc.phone}?text=Hello%20${acc.name},%20regarding%20your%20job%20acceptance%20on%20ZaraFix." target="_blank">WhatsApp</a>
+          <button class="btn btn-reject" onclick="rejectRequest('${requestId}')">Reject</button>
+        `;
+      } else {
+        html += `<p>⏳ No one has accepted this request yet.</p>`;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+    });
+
+    function rejectRequest(reqId) {
+      if (confirm("Are you sure you want to reject this acceptance?")) {
+        // Remove accepted user
+        firebase.database().ref("accepted/" + reqId).remove().then(() => {
+          alert("Rejected successfully.");
+          location.reload();
+        });
+      }
+    }
+  </script>
 </body>
 </html>
