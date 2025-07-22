@@ -1,47 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>🎯 Posters Who Accepted</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: Arial, sans-serif; padding: 10px; background: #f0f0f0; }
-    .card {
-      background: #fff;
-      margin: 15px 0;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    .btn {
-      padding: 10px 15px;
-      margin: 10px 5px 0 0;
-      border: none;
-      border-radius: 25px;
-      cursor: pointer;
-      color: white;
-      font-weight: bold;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
-    }
-    .whatsapp-btn {
-      background-color: #25D366;
-    }
-    .reject-btn {
-      background-color: #f44336;
-    }
-  </style>
-</head>
-<body>
-
 <h2>🎯 Posters Who Accepted Your Request</h2>
-<div id="posterList">Loading...</div>
+<div id="acceptedContainer">Loading...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
@@ -56,69 +18,51 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const auth = getAuth();
+  const auth = getAuth(app);
 
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth, (user) => {
     if (user) {
       const userId = user.uid;
-      const requestsRef = ref(db, `requests/${userId}`);
-      get(requestsRef).then(snapshot => {
-        const posterList = document.getElementById('posterList');
-        posterList.innerHTML = "";
+      const container = document.getElementById('acceptedContainer');
+      container.innerHTML = 'Loading...';
 
-        if (snapshot.exists()) {
-          const requests = snapshot.val();
-          let found = false;
+      const userRequestsRef = ref(db, `requests/${userId}`);
+      onValue(userRequestsRef, async (snapshot) => {
+        if (!snapshot.exists()) {
+          container.innerHTML = "❌ You have no requests.";
+          return;
+        }
 
-          Object.entries(requests).forEach(([reqId, reqData]) => {
-            if (reqData.acceptedBy) {
-              Object.keys(reqData.acceptedBy).forEach(posterId => {
-                const posterRef = ref(db, `posters/${posterId}`);
-                get(posterRef).then(posterSnap => {
-                  if (posterSnap.exists()) {
-                    const poster = posterSnap.val();
-                    found = true;
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.innerHTML = `
-                      <h3>👤 ${poster.name}</h3>
-                      <p>📍 Category: ${poster.category}</p>
-                      <p>🏪 Shop: ${poster.shop}</p>
-                      <p>📍 Address: ${poster.address}</p>
-                      <p>📞 WhatsApp: ${poster.whatsapp}</p>
-                      <a class="btn whatsapp-btn" href="https://wa.me/91${poster.whatsapp.trim()}" target="_blank">Chat on WhatsApp</a>
-                      <button class="btn reject-btn">❌ Reject</button>
-                    `;
+        let postersShown = false;
+        container.innerHTML = "";
 
-                    card.querySelector('.reject-btn').onclick = () => {
-                      const acceptedByRef = ref(db, `requests/${userId}/${reqId}/acceptedBy/${posterId}`);
-                      remove(acceptedByRef).then(() => {
-                        alert('Poster rejected successfully.');
-                        location.reload();
-                      });
-                    };
-
-                    posterList.appendChild(card);
-                  }
-                });
-              });
+        const requests = snapshot.val();
+        for (const requestId in requests) {
+          const request = requests[requestId];
+          if (request.acceptedBy) {
+            for (const posterId in request.acceptedBy) {
+              const posterSnap = await get(ref(db, `posters/${posterId}`));
+              if (posterSnap.exists()) {
+                const poster = posterSnap.val();
+                postersShown = true;
+                const card = `
+                  <div style="padding:15px;margin:10px;border-radius:10px;background:#e3f2fd;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                    🧰 <b>${poster.name}</b> from ${poster.shop} <br>
+                    📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp Now</a>
+                  </div>
+                `;
+                container.innerHTML += card;
+              }
             }
-          });
+          }
+        }
 
-          setTimeout(() => {
-            if (!found) posterList.innerHTML = "❌ No posters have accepted your request yet.";
-          }, 1500);
-
-        } else {
-          posterList.innerHTML = "❌ No service requests found.";
+        if (!postersShown) {
+          container.innerHTML = "❌ No posters have accepted your request yet.";
         }
       });
     } else {
-      alert("⚠️ Please login first.");
-      window.location.href = "index.html";
+      document.getElementById('acceptedContainer').innerHTML = "⚠️ Please login first.";
     }
   });
 </script>
-
-</body>
-</html>
