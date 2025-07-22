@@ -1,111 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Request Form</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <title>User Request Form with Tracking</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="firebase-config.js"></script>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    .form-box { max-width: 400px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
-    .form-box input, textarea, select { width: 100%; padding: 8px; margin: 8px 0; }
-    .request-list { margin-top: 30px; }
-  </style>
 </head>
 <body>
+  <h2>User Request System</h2>
 
-<h2>ZaraFix Repair Request</h2>
+  <!-- Login Button -->
+  <button onclick="googleLogin()">Login with Google</button>
+  <p id="user-info"></p>
 
-<div class="form-box" id="formBox">
-  <label>Category</label>
-  <select id="category">
-    <option>Electrician</option>
-    <option>Car Mechanic</option>
-    <option>Plumber</option>
-  </select>
+  <!-- Request Form -->
+  <div id="request-form" style="display:none;">
+    <h3>Submit Request</h3>
+    <input id="category" placeholder="Category"><br>
+    <textarea id="description" placeholder="Description"></textarea><br>
+    <input id="location" placeholder="Location"><br>
+    <button onclick="submitRequest()">Submit</button>
+  </div>
 
-  <label>Description</label>
-  <textarea id="description" placeholder="Issue description"></textarea>
+  <!-- My Requests -->
+  <div id="my-requests" style="display:none;">
+    <h3>My Requests</h3>
+    <ul id="request-list"></ul>
+  </div>
 
-  <label>Location</label>
-  <input type="text" id="location" placeholder="Enter your location">
+  <script>
+    let currentUser = null;
 
-  <button onclick="submitRequest()">Submit Request</button>
-</div>
-
-<h3>Your Requests</h3>
-<div class="request-list" id="requestList">
-  <p>Loading your requests...</p>
-</div>
-
-<script>
-  let currentUserUID = null;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUserUID = user.uid;
-      loadRequests();
-    } else {
-      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    }
-  });
-
-  function submitRequest() {
-    const category = document.getElementById("category").value;
-    const description = document.getElementById("description").value.trim();
-    const location = document.getElementById("location").value.trim();
-
-    if (!category || !description || !location) {
-      alert("Please fill all fields.");
-      return;
-    }
-
-    const requestId = db.ref().child("requests").push().key;
-
-    const requestData = {
-      category,
-      description,
-      location,
-      acceptedBy: {},
-      timestamp: Date.now()
-    };
-
-    db.ref(`requests/${currentUserUID}/${requestId}`).set(requestData).then(() => {
-      alert("Request submitted!");
-      document.getElementById("description").value = "";
-      document.getElementById("location").value = "";
-      loadRequests();
-    });
-  }
-
-  function loadRequests() {
-    db.ref(`requests/${currentUserUID}`).on("value", (snapshot) => {
-      const data = snapshot.val();
-      const container = document.getElementById("requestList");
-      container.innerHTML = "";
-
-      if (!data) {
-        container.innerHTML = "<p>No requests yet.</p>";
-        return;
-      }
-
-      Object.entries(data).forEach(([id, req]) => {
-        const div = document.createElement("div");
-        div.style.border = "1px solid #ddd";
-        div.style.padding = "10px";
-        div.style.marginBottom = "10px";
-        div.innerHTML = `
-          <strong>${req.category}</strong><br/>
-          ${req.description}<br/>
-          📍 ${req.location}<br/>
-          ✔ Accepted By: ${Object.keys(req.acceptedBy || {}).length || 0} service provider(s)
-        `;
-        container.appendChild(div);
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then(result => {
+        currentUser = result.user;
+        document.getElementById('user-info').innerText = "Logged in as: " + currentUser.email;
+        document.getElementById('request-form').style.display = 'block';
+        document.getElementById('my-requests').style.display = 'block';
+        loadRequests();
+      }).catch(error => {
+        alert("Login failed: " + error.message);
       });
-    });
-  }
-</script>
+    }
 
+    function submitRequest() {
+      const category = document.getElementById('category').value;
+      const description = document.getElementById('description').value;
+      const location = document.getElementById('location').value;
+
+      if (!category || !description || !location) return alert("Fill all fields!");
+
+      const uid = currentUser.uid;
+      const requestId = firebase.database().ref().child('requests').push().key;
+
+      const requestData = {
+        category, description, location,
+        acceptedBy: null,
+        timestamp: Date.now(),
+        email: currentUser.email
+      };
+
+      firebase.database().ref('requests/' + uid + '/' + requestId).set(requestData).then(() => {
+        alert("Request Submitted");
+        document.getElementById('category').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('location').value = '';
+        loadRequests();
+      });
+    }
+
+    function loadRequests() {
+      const uid = currentUser.uid;
+      firebase.database().ref('requests/' + uid).once('value', snapshot => {
+        const list = document.getElementById('request-list');
+        list.innerHTML = '';
+        snapshot.forEach(child => {
+          const req = child.val();
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <b>${req.category}</b> - ${req.description} (${req.location})<br>
+            <small>Accepted By: ${req.acceptedBy || 'Not yet accepted'}</small>
+            <hr>
+          `;
+          list.appendChild(li);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
