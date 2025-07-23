@@ -3,52 +3,49 @@
 <head>
   <title>📋 Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 10px;
+      padding: 20px;
       background: #f2f2f2;
     }
     h2 {
       text-align: center;
     }
-    .request-card {
+    .card {
       background: white;
       padding: 15px;
-      margin-bottom: 15px;
+      margin: 15px auto;
+      box-shadow: 0 0 8px rgba(0,0,0,0.2);
       border-radius: 10px;
-      box-shadow: 2px 2px 8px #ccc;
+      max-width: 500px;
     }
-    .poster {
-      background: #eafaf1;
-      padding: 10px;
-      border: 1px solid #b2d8c9;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-    button {
-      margin: 5px;
-      padding: 6px 12px;
+    .btn {
+      margin-right: 10px;
+      padding: 5px 10px;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
     }
-    .whatsapp-btn {
+    .delete {
+      background: #e74c3c;
+      color: white;
+    }
+    .whatsapp {
       background: #25D366;
       color: white;
     }
-    .delete-btn {
-      background: #e74c3c;
-      color: white;
+    .label {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <h2>📋 Service Requests</h2>
-  <div id="requestsContainer">Loading...</div>
+  <div id="requestList"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
@@ -63,71 +60,44 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function loadRequests() {
-      const container = document.getElementById('requestsContainer');
-      container.innerHTML = '⏳ Loading...';
+    const requestList = document.getElementById('requestList');
 
-      db.ref("requests").once('value', snapshot => {
-        container.innerHTML = '';
+    function fetchRequests() {
+      db.ref('requests').on('value', snapshot => {
+        requestList.innerHTML = '';
         const data = snapshot.val();
-
         if (!data) {
-          container.innerHTML = '<p>No requests found.</p>';
+          requestList.innerHTML = '<p>No requests found.</p>';
           return;
         }
-
         Object.entries(data).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([requestId, request]) => {
+          Object.entries(userRequests).forEach(([reqId, req]) => {
             const card = document.createElement('div');
-            card.className = 'request-card';
+            card.className = 'card';
 
             card.innerHTML = `
-              <b>Category:</b> ${request.category}<br>
-              <b>Description:</b> ${request.description}<br>
-              <b>Location:</b> ${request.location}<br>
-              <div id="acceptedBy-${userId}-${requestId}"><b>Accepted By:</b></div>
+              <div><span class="label">नाम:</span> ${req.name || 'N/A'}</div>
+              <div><span class="label">काम:</span> ${req.work || 'N/A'}</div>
+              <div><span class="label">विवरण:</span> ${req.detail || 'N/A'}</div>
+              <div><span class="label">तारीख:</span> ${req.date || 'N/A'}</div>
+              <br>
+              <button class="btn whatsapp" onclick="window.open('https://wa.me/91${req.phone}', '_blank')">WhatsApp ${req.name || ''}</button>
+              <button class="btn delete" onclick="deleteRequest('${userId}', '${reqId}')">❌ Delete</button>
             `;
 
-            container.appendChild(card);
-
-            // Show all accepted posters
-            const accepted = request.acceptedBy || {};
-            Object.keys(accepted).forEach(posterId => {
-              db.ref("posters/" + posterId).once('value', posterSnap => {
-                const poster = posterSnap.val();
-                if (poster) {
-                  const div = document.createElement('div');
-                  div.className = 'poster';
-                  div.innerHTML = `
-                    <b>Name:</b> ${poster.name}<br>
-                    <b>Category:</b> ${poster.category}<br>
-                    <b>Shop:</b> ${poster.shop}<br>
-                    <b>Wallet:</b> ₹${poster.wallet}<br><br>
-                    <a href="https://wa.me/${poster.whatsapp}" target="_blank">
-                      <button class="whatsapp-btn">WhatsApp</button>
-                    </a>
-                    <button class="delete-btn" onclick="rejectPoster('${userId}', '${requestId}', '${posterId}')">Reject</button>
-                  `;
-                  document.getElementById(`acceptedBy-${userId}-${requestId}`).appendChild(div);
-                }
-              });
-            });
+            requestList.appendChild(card);
           });
         });
       });
     }
 
-    function rejectPoster(userId, requestId, posterId) {
-      if (confirm("Are you sure you want to reject this poster?")) {
-        const ref = db.ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`);
-        ref.remove().then(() => {
-          alert("Poster rejected.");
-          loadRequests();
-        });
+    function deleteRequest(userId, reqId) {
+      if (confirm('Confirm Delete?')) {
+        db.ref(`requests/${userId}/${reqId}`).remove();
       }
     }
 
-    loadRequests();
+    fetchRequests();
   </script>
 </body>
 </html>
