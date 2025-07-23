@@ -1,76 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <title>ZaraFix - Service Request</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      margin: 0;
+      font-family: sans-serif;
+      background: #f8f8f8;
       padding: 20px;
+      max-width: 500px;
+      margin: auto;
     }
-    h1 { text-align: center; }
-    form {
-      max-width: 400px;
-      margin: 0 auto 20px;
-      padding: 20px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    h2 {
+      text-align: center;
+      color: #333;
     }
-    form input, form select, form button {
-      display: block;
+    input, textarea, button {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
       border-radius: 5px;
       border: 1px solid #ccc;
     }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .btn {
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
+    button {
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
       cursor: pointer;
     }
-    .accept-btn { background-color: green; color: white; }
-    .reject-btn { background-color: red; color: white; }
-    .whatsapp-btn {
-      background-color: #25D366;
-      color: white;
-      padding: 8px 12px;
-      text-decoration: none;
-      display: inline-block;
-      border-radius: 5px;
-      margin-top: 10px;
+    button:hover {
+      background-color: #218838;
+    }
+    .success {
+      color: green;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>ZaraFix - Requests</h1>
-  <form id="requestForm">
-    <input type="text" id="name" placeholder="Your Name" required>
-    <input type="text" id="service" placeholder="Service Required" required>
-    <select id="subcategory">
-      <option value="AC Repair">AC Repair</option>
-      <option value="Plumber">Plumber</option>
-      <option value="Electrician">Electrician</option>
-    </select>
-    <button type="submit">Submit Request</button>
-  </form>
 
-  <div id="requestContainer"></div>
+  <h2>🛠 ZaraFix - Service Request</h2>
+
+  <input type="text" id="name" placeholder="आपका नाम" required />
+  <input type="text" id="phone" placeholder="फोन नंबर" required />
+  <textarea id="issue" rows="4" placeholder="समस्या लिखें..." required></textarea>
+  <button onclick="submitRequest()">भेजें</button>
+
+  <p id="msg" class="success"></p>
+
+  <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -79,84 +60,40 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "462049857181",
-      appId: "1:462049857181:web:04f3c4b116a491d54a34ea"
+      messagingSenderId: "476473209200",
+      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
+
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const database = firebase.database();
 
-    const requestForm = document.getElementById('requestForm');
-    const container = document.getElementById('requestContainer');
+    function submitRequest() {
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const issue = document.getElementById('issue').value.trim();
 
-    requestForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const name = document.getElementById('name').value;
-      const service = document.getElementById('service').value;
-      const subcategory = document.getElementById('subcategory').value;
-      const newKey = db.ref().child('requests').push().key;
-
-      db.ref('requests/' + newKey).set({
-        name,
-        service,
-        subcategory,
-        status: 'pending',
-        timestamp: Date.now(),
-        posterId: 'posterId1'
-      });
-
-      requestForm.reset();
-    });
-
-    function renderRequestCard(key, data) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `<strong>${data.name}</strong><br>Service: ${data.service}<br>Subcategory: ${data.subcategory}`;
-
-      if (data.status === 'pending') {
-        const acceptBtn = document.createElement('button');
-        acceptBtn.className = 'btn accept-btn';
-        acceptBtn.textContent = 'Accept';
-        acceptBtn.onclick = () => {
-          db.ref('requests/' + key).update({
-            status: 'accepted',
-            acceptedBy: 'posterId1'
-          });
-        };
-        card.appendChild(acceptBtn);
-
-        const rejectBtn = document.createElement('button');
-        rejectBtn.className = 'btn reject-btn';
-        rejectBtn.textContent = 'Reject';
-        rejectBtn.onclick = () => {
-          db.ref('requests/' + key).remove();
-        };
-        card.appendChild(rejectBtn);
-      } else if (data.status === 'accepted') {
-        card.innerHTML += `<br>✅ Accepted`;
-
-        if (data.acceptedBy) {
-          db.ref('users/' + data.acceptedBy).once('value').then(snap => {
-            const user = snap.val();
-            if (user) {
-              card.innerHTML += `<br>Accepted By: ${user.name}`;
-              card.innerHTML += `<br><a class="whatsapp-btn" href="https://wa.me/${user.whatsapp}" target="_blank">Contact on WhatsApp</a>`;
-            }
-          });
-        }
+      if (!name || !phone || !issue) {
+        alert("कृपया सभी फ़ील्ड भरें।");
+        return;
       }
 
-      container.prepend(card);
-    }
+      const requestId = "REQ" + Date.now();
 
-    db.ref('requests').on('value', snapshot => {
-      container.innerHTML = '';
-      const all = [];
-      snapshot.forEach(child => {
-        all.push({ key: child.key, data: child.val() });
+      database.ref('requests/' + requestId).set({
+        name: name,
+        phone: phone,
+        issue: issue,
+        status: "pending",
+        time: new Date().toLocaleString()
+      }).then(() => {
+        document.getElementById('msg').textContent = "आपका अनुरोध सफलतापूर्वक भेजा गया।";
+        document.getElementById('name').value = "";
+        document.getElementById('phone').value = "";
+        document.getElementById('issue').value = "";
+      }).catch((error) => {
+        alert("त्रुटि: " + error.message);
       });
-      all.sort((a, b) => b.data.timestamp - a.data.timestamp);
-      all.forEach(req => renderRequestCard(req.key, req.data));
-    });
+    }
   </script>
 </body>
 </html>
