@@ -1,195 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Poster Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f9f9f9;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background-color: #f2f2f2;
     }
-    h2 {
-      text-align: center;
+    .container {
+      max-width: 600px; margin: 20px auto;
+      padding: 20px; background-color: #fff; border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    form, .dashboard, .wait-msg {
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-      border-radius: 20px;
-      background: #fff;
-      box-shadow: 5px 5px 15px #ccc;
+    h2 { text-align: center; }
+    input, select, button {
+      width: 100%; padding: 10px; margin: 8px 0;
+      border-radius: 5px; border: 1px solid #ccc;
     }
-    input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+    .job-card {
+      background: #e6f2ff; padding: 10px; margin-top: 15px; border-radius: 10px;
     }
-    button {
-      margin-top: 15px;
-      width: 100%;
-      padding: 12px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      box-shadow: 0 5px #388E3C;
-      transition: 0.2s ease;
-    }
-    button:hover {
-      background: #45a049;
-    }
-    .dashboard, .wait-msg {
-      display: none;
-      text-align: center;
-      font-size: 18px;
-      color: #333;
+    .btn-green { background-color: #4CAF50; color: white; border: none; }
+    .btn-red { background-color: #f44336; color: white; border: none; }
+    .btn-wa {
+      display: inline-block; margin-top: 5px;
+      background: #25D366; color: white; padding: 10px;
+      text-align: center; text-decoration: none; border-radius: 5px;
     }
   </style>
 </head>
 <body>
+<div class="container" id="formContainer">
+  <h2>Poster Registration</h2>
+  <input type="text" id="name" placeholder="Your Name">
+  <input type="text" id="shopname" placeholder="Shop Name">
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+  <input type="text" id="pincode" placeholder="Pincode">
+  <input type="text" id="address" placeholder="Address">
+  <input type="text" id="category" placeholder="Category">
+  <button onclick="submitForm()">Submit</button>
+</div>
 
-  <form id="posterForm">
-    <h2>🧾 Poster Register</h2>
-    <input type="text" id="name" placeholder="Full Name" required />
-    <input type="text" id="shopname" placeholder="Shop Name" required />
-    <input type="number" id="whatsapp" placeholder="WhatsApp Number" required inputmode="numeric" pattern="\d*" />
-    <input type="text" id="pincode" placeholder="Pincode" required inputmode="numeric" maxlength="6" />
-    <textarea id="address" placeholder="Full Address" required></textarea>
+<div class="container" id="waitContainer" style="display:none;">
+  <h3>Wait for approval...</h3>
+</div>
 
-    <select id="category" required>
-      <option value="">Select Category</option>
-      <option value="Clothing">Clothing</option>
-      <option value="Electronics">Electronics</option>
-    </select>
+<div class="container" id="dashboard" style="display:none;">
+  <h2>My Wallet</h2>
+  <div id="wallet">Loading...</div>
+  <div id="jobs"></div>
+</div>
 
-    <select id="subcategory" required>
-      <option value="">Select Subcategory</option>
-    </select>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "",
+    appId: ""
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    <button type="submit">Submit</button>
-  </form>
+  function submitForm() {
+    const name = document.getElementById('name').value;
+    const shopname = document.getElementById('shopname').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const pincode = document.getElementById('pincode').value;
+    const address = document.getElementById('address').value;
+    const category = document.getElementById('category').value;
 
-  <div class="wait-msg" id="waitMessage">
-    ✅ Registration submitted. <br> ⏳ <strong>Wait for approval...</strong>
-  </div>
-
-  <div class="dashboard" id="dashboard">
-    <h2>🎉 Welcome to Your Poster Dashboard</h2>
-    <p>Your registration has been approved.</p>
-    <!-- Poster data can be shown here -->
-  </div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "YOUR_ID",
-      appId: "YOUR_ID"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    const posterForm = document.getElementById("posterForm");
-    const waitMsg = document.getElementById("waitMessage");
-    const dashboard = document.getElementById("dashboard");
-
-    const category = document.getElementById("category");
-    const subcategory = document.getElementById("subcategory");
-
-    const subCats = {
-      "Clothing": ["Men", "Women", "Kids"],
-      "Electronics": ["Mobiles", "TV", "Laptops"]
-    };
-
-    category.addEventListener("change", () => {
-      subcategory.innerHTML = "<option value=''>Select Subcategory</option>";
-      if (subCats[category.value]) {
-        subCats[category.value].forEach(sub => {
-          const opt = document.createElement("option");
-          opt.value = sub;
-          opt.textContent = sub;
-          subcategory.appendChild(opt);
-        });
-      }
-    });
-
-    // Check approval from Firebase (based on phone or other unique field)
-    function checkApproval(whatsapp) {
-      db.ref("posterUsers").orderByChild("whatsapp").equalTo(whatsapp).once("value", (snapshot) => {
-        if (snapshot.exists()) {
-          const userData = Object.values(snapshot.val())[0];
-          if (userData.approved === true) {
-            posterForm.style.display = "none";
-            waitMsg.style.display = "none";
-            dashboard.style.display = "block";
-          } else {
-            posterForm.style.display = "none";
-            waitMsg.style.display = "block";
-          }
-        }
-      });
+    if (!name || !shopname || !whatsapp || !pincode || !address || !category) {
+      alert('Please fill all fields'); return;
     }
 
-    // On Form Submit
-    posterForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = document.getElementById("name").value.trim();
-      const shopname = document.getElementById("shopname").value.trim();
-      const whatsapp = document.getElementById("whatsapp").value.trim();
-      const pincode = document.getElementById("pincode").value.trim();
-      const address = document.getElementById("address").value.trim();
-      const cat = category.value;
-      const subcat = subcategory.value;
+    const newRef = db.ref('posterUsers').push();
+    newRef.set({
+      name, shopname, whatsapp, pincode, address, category,
+      approved: false, wallet: 0
+    });
+    localStorage.setItem('posterNo', whatsapp);
+    document.getElementById('formContainer').style.display = 'none';
+    document.getElementById('waitContainer').style.display = 'block';
+  }
 
-      if (pincode.length !== 6) {
-        alert("Please enter valid 6-digit Pincode.");
-        return;
+  const no = localStorage.getItem('posterNo');
+  if (no) {
+    db.ref('posterUsers').orderByChild('whatsapp').equalTo(no).once('value', snap => {
+      if (snap.exists()) {
+        const key = Object.keys(snap.val())[0];
+        const data = snap.val()[key];
+        if (data.approved) {
+          document.getElementById('formContainer').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          document.getElementById('wallet').innerText = '₹' + (data.wallet || 0);
+
+          db.ref('posterWorks').orderByChild('assignedTo').equalTo(no).on('value', jobSnap => {
+            const jobsDiv = document.getElementById('jobs');
+            jobsDiv.innerHTML = '';
+            jobSnap.forEach(job => {
+              const jobData = job.val();
+              const jobCard = document.createElement('div');
+              jobCard.className = 'job-card';
+              jobCard.innerHTML = `
+                <strong>${jobData.task}</strong><br>
+                ${jobData.details || ''}<br>
+                <button class="btn-green" onclick="acceptJob('${job.key}')">Accept</button>
+                <button class="btn-red" onclick="rejectJob('${job.key}')">Reject</button>
+              `;
+              jobsDiv.appendChild(jobCard);
+            });
+          });
+
+        } else {
+          document.getElementById('formContainer').style.display = 'none';
+          document.getElementById('waitContainer').style.display = 'block';
+        }
       }
-
-      const newUserRef = db.ref("posterUsers").push();
-      newUserRef.set({
-        name,
-        shopname,
-        whatsapp,
-        pincode,
-        address,
-        category: cat,
-        subcategory: subcat,
-        approved: false,
-        timestamp: new Date().toISOString()
-      }).then(() => {
-        posterForm.reset();
-        posterForm.style.display = "none";
-        waitMsg.style.display = "block";
-      });
     });
+  }
 
-    // On load, check approval by WhatsApp number (if stored in localStorage)
-    window.addEventListener("load", () => {
-      const savedWhatsapp = localStorage.getItem("whatsapp");
-      if (savedWhatsapp) {
-        checkApproval(savedWhatsapp);
-      }
-    });
+  function acceptJob(id) {
+    db.ref('posterWorks/' + id + '/status').set('accepted');
+    const wa = document.createElement('a');
+    wa.href = 'https://wa.me/917378342192?text=Job%20Accepted%20ID%3A%20' + id;
+    wa.className = 'btn-wa';
+    wa.target = '_blank';
+    wa.innerText = 'Contact Admin';
+    document.querySelector(`[onclick="acceptJob('${id}')"]`).parentElement.appendChild(wa);
+  }
 
-    // Save whatsapp to localStorage for session persistence
-    document.getElementById("whatsapp").addEventListener("blur", (e) => {
-      localStorage.setItem("whatsapp", e.target.value.trim());
-    });
-  </script>
+  function rejectJob(id) {
+    db.ref('posterWorks/' + id + '/status').set('rejected');
+    alert('Job rejected');
+  }
+</script>
 </body>
 </html>
