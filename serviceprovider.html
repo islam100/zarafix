@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🧰 Poster Registration - ZaraFix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(#d1eaff, #ffffff);
+      padding: 20px;
+    }
+    .form-container, .job-section, .message {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    input, select {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+    }
+    .btn3d {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 30px;
+      box-shadow: 0 6px #0d47a1;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn3d:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px #0d47a1;
+    }
+    .hide {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="formSection" class="form-container">
+  <h2>🧰 Poster Registration</h2>
+  <input type="text" id="name" placeholder="Full Name" required>
+  <input type="text" id="shop" placeholder="Shop Name" required>
+  <input type="text" id="address" placeholder="Address" required>
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Car Mechanic">Car Mechanic</option>
+    <option value="AC Repair">AC Repair</option>
+    <option value="Plumber">Plumber</option>
+  </select>
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+  <input type="text" id="aadhaar" placeholder="Aadhaar Number" required>
+  <button class="btn3d" onclick="submitForm()">Submit</button>
+</div>
+
+<div id="waitApproval" class="message hide">
+  <h3>⏳ Wait for admin approval</h3>
+</div>
+
+<div id="jobSection" class="job-section hide">
+  <h3>🎯 Jobs Matching Your Category</h3>
+  <div id="jobList"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSy...YourKey...",
+    authDomain: "your-app.firebaseapp.com",
+    databaseURL: "https://your-app.firebaseio.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let currentUser;
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      checkApprovalAndWallet(user.uid);
+    } else {
+      window.location.href = "index.html"; // redirect to login
+    }
+  });
+
+  function submitForm() {
+    const name = document.getElementById("name").value;
+    const shop = document.getElementById("shop").value;
+    const address = document.getElementById("address").value;
+    const category = document.getElementById("category").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const aadhaar = document.getElementById("aadhaar").value;
+
+    if (!name || !shop || !address || !category || !whatsapp || !aadhaar) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    const posterData = {
+      name, shop, address, category, whatsapp, aadhaar,
+      approved: false,
+      wallet: 100,
+      uid: currentUser.uid
+    };
+
+    db.ref("posters/" + currentUser.uid).set(posterData);
+    document.getElementById("formSection").classList.add("hide");
+    document.getElementById("waitApproval").classList.remove("hide");
+  }
+
+  function checkApprovalAndWallet(uid) {
+    db.ref("posters/" + uid).on("value", snap => {
+      if (!snap.exists()) return;
+      const data = snap.val();
+
+      if (data.approved === true) {
+        document.getElementById("formSection").classList.add("hide");
+        document.getElementById("waitApproval").classList.add("hide");
+        document.getElementById("jobSection").classList.remove("hide");
+        loadJobs(data.category);
+      } else {
+        document.getElementById("formSection").classList.add("hide");
+        document.getElementById("waitApproval").classList.remove("hide");
+      }
+    });
+  }
+
+  function loadJobs(category) {
+    db.ref("requests").once("value", snap => {
+      const jobList = document.getElementById("jobList");
+      jobList.innerHTML = "";
+
+      snap.forEach(userSnap => {
+        const userId = userSnap.key;
+        const userRequests = userSnap.val();
+
+        for (let key in userRequests) {
+          const req = userRequests[key];
+          if (req.category === category && req.status === "pending") {
+            const div = document.createElement("div");
+            div.style.marginBottom = "20px";
+            div.style.borderBottom = "1px solid #ccc";
+            div.innerHTML = `
+              <p><b>${req.name}</b> - ${req.problem}</p>
+              <p>${req.address}</p>
+              <button class="btn3d" onclick="acceptJob('${userId}', '${key}')">✅ Accept</button>
+              <button class="btn3d" style="background:red" onclick="rejectJob('${userId}', '${key}')">❌ Reject</button>
+            `;
+            jobList.appendChild(div);
+          }
+        }
+      });
+    });
+  }
+
+  function acceptJob(userId, jobId) {
+    const posterRef = db.ref("posters/" + currentUser.uid);
+    posterRef.once("value", snap => {
+      const wallet = snap.val().wallet || 0;
+      if (wallet < 20) {
+        alert("⚠️ Please recharge wallet.");
+        return;
+      }
+
+      posterRef.update({ wallet: wallet - 20 });
+      db.ref(`requests/${userId}/${jobId}/acceptedBy/${currentUser.uid}`).set({
+        posterId: currentUser.uid,
+        name: snap.val().name,
+        whatsapp: snap.val().whatsapp
+      });
+
+      alert("✅ Job accepted! WhatsApp button will appear.");
+    });
+  }
+
+  function rejectJob(userId, jobId) {
+    db.ref(`requests/${userId}/${jobId}/rejectedBy/${currentUser.uid}`).set(true);
+    alert("❌ Job rejected.");
+  }
+</script>
+
+</body>
+</html>
