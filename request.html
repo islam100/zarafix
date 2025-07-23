@@ -1,13 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Requests - ZaraFix</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f1f1f1;
+      margin: 0;
+      padding: 0;
+    }
+    .request-card {
+      background: white;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .btn {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #e0e0e0, #ffffff);
+      box-shadow: 3px 3px 6px #bebebe, -3px -3px 6px #ffffff;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #d1d1d1;
+    }
+    .accepted {
+      background-color: #e6ffe6;
+    }
+    .whatsapp-btn {
+      background-color: #25D366;
+      color: white;
+    }
+  </style>
 </head>
 <body>
-  <h2>मेरे द्वारा किए गए Request:</h2>
+  <h2 style="text-align:center">Service Dashboard</h2>
   <div id="requestList"></div>
 
   <script>
@@ -20,44 +56,83 @@
       messagingSenderId: "476473209200",
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
+
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const user = {
+      name: "Ali Khan",
+      phone: "917378342192"
+    };
 
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
-        const userId = user.uid;
-        const requestRef = firebase.database().ref("requests/" + userId);
+    function loadRequests() {
+      const list = document.getElementById("requestList");
+      list.innerHTML = "Loading...";
+      db.ref("requests").once("value", snapshot => {
+        list.innerHTML = "";
+        snapshot.forEach(userSnap => {
+          const userId = userSnap.key;
+          const userData = userSnap.val();
 
-        requestRef.once("value", snapshot => {
-          const requests = snapshot.val();
-          const container = document.getElementById("requestList");
-          container.innerHTML = "";
+          for (let reqId in userData) {
+            const req = userData[reqId];
+            const card = document.createElement("div");
+            card.className = "request-card";
 
-          if (requests) {
-            Object.entries(requests).forEach(([requestId, requestData]) => {
-              let html = `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-                <strong>काम:</strong> ${requestData.category}<br>
-                <strong>विवरण:</strong> ${requestData.description}<br>`;
+            card.innerHTML = `
+              <b>काम:</b> ${req.job}<br>
+              <b>विवरण:</b> ${req.details}<br>
+              <b>Requester:</b> ${req.name}<br>
+              <div id="acceptedList-${userId}-${reqId}"></div>
+              <button class="btn" onclick="acceptRequest('${userId}', '${reqId}')">Accept</button>
+              <button class="btn" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
+              <button class="btn" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+            `;
 
-              if (requestData.acceptedBy) {
-                const accepterIds = Object.keys(requestData.acceptedBy);
-                html += `<strong>Accept किया:</strong> ${accepterIds.join(", ")}`;
-              } else {
-                html += `<strong>Accept किया:</strong> अभी किसी ने नहीं किया`;
-              }
-
-              html += "</div>";
-              container.innerHTML += html;
-            });
-          } else {
-            container.innerHTML = "आपने अभी कोई request नहीं की है।";
+            list.appendChild(card);
+            loadAccepted(userId, reqId);
           }
         });
+      });
+    }
 
-      } else {
-        alert("कृपया पहले लॉगिन करें");
-        window.location.href = "index.html";
-      }
-    });
+    function acceptRequest(userId, reqId) {
+      const now = new Date().toLocaleString();
+      const ref = db.ref(`requests/${userId}/${reqId}/acceptedBy/${user.phone}`);
+      ref.set({ name: user.name, phone: user.phone, time: now }, loadRequests);
+    }
+
+    function rejectRequest(userId, reqId) {
+      db.ref(`requests/${userId}/${reqId}/acceptedBy/${user.phone}`).remove(loadRequests);
+    }
+
+    function deleteRequest(userId, reqId) {
+      db.ref(`requests/${userId}/${reqId}`).remove(loadRequests);
+    }
+
+    function loadAccepted(userId, reqId) {
+      const container = document.getElementById(`acceptedList-${userId}-${reqId}`);
+      db.ref(`requests/${userId}/${reqId}/acceptedBy`).once("value", snap => {
+        if (!snap.exists()) {
+          container.innerHTML = "<i>अभी किसी ने Accept नहीं किया</i>";
+          return;
+        }
+        container.innerHTML = "<b>Accepted by:</b><br>";
+        snap.forEach(child => {
+          const data = child.val();
+          const phone = data.phone;
+          const name = data.name;
+          const time = data.time;
+          container.innerHTML += `
+            <div class="accepted">
+              ${name} (${time})<br>
+              <a class="btn whatsapp-btn" href="https://wa.me/${phone}" target="_blank">WhatsApp</a>
+            </div>
+          `;
+        });
+      });
+    }
+
+    loadRequests();
   </script>
 </body>
 </html>
