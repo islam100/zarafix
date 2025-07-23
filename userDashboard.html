@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🧾 Your Service Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+      margin: 0;
+      padding: 10px;
+      text-align: center;
+    }
+    h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      margin: 15px auto;
+      max-width: 500px;
+      text-align: left;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.03);
+    }
+    .btn {
+      background-color: #dc3545;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background-color: #c82333;
+    }
+    .accept-info {
+      background: #e6f7ff;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📋 Your Service Requests</h2>
+  <div id="requestsContainer">Loading...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+    const auth = getAuth();
+
+    const container = document.getElementById('requestsContainer');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userId = user.uid;
+        const userRef = ref(db, 'requests/' + userId);
+        onValue(userRef, (snapshot) => {
+          container.innerHTML = '';
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            Object.keys(data).forEach((key) => {
+              const req = data[key];
+              const card = document.createElement('div');
+              card.className = 'card';
+
+              const date = new Date(req.timestamp || Date.now());
+              const dateTime = date.toLocaleString();
+
+              card.innerHTML = `
+                <strong>👤 Name:</strong> ${req.name}<br>
+                <strong>📂 Category:</strong> ${req.category}<br>
+                <strong>📍 Address:</strong> ${req.address}<br>
+                <strong>⚠️ Problem:</strong> ${req.problem}<br>
+                <strong>📅 Date:</strong> ${dateTime}<br>
+                <strong>📌 Status:</strong> ${req.status}<br><br>
+              `;
+
+              // Accepted By
+              if (req.acceptedBy) {
+                const acceptDiv = document.createElement('div');
+                acceptDiv.className = 'accept-info';
+
+                const accepted = Object.values(req.acceptedBy);
+                acceptDiv.innerHTML = `<strong>✅ Accepted By: ${accepted.length}</strong><br>`;
+                accepted.forEach(poster => {
+                  acceptDiv.innerHTML += `
+                    👨‍🔧 ${poster.name}<br>
+                    📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a><br>
+                    🗺️ <a href="https://www.google.com/maps?q=${poster.lat},${poster.lng}" target="_blank">Live Location</a><br><br>
+                  `;
+                });
+                card.appendChild(acceptDiv);
+              } else {
+                card.innerHTML += `<strong>❌ No one accepted yet</strong><br>`;
+              }
+
+              // Delete button
+              const delBtn = document.createElement('button');
+              delBtn.className = 'btn';
+              delBtn.innerText = '🗑️ Delete Request';
+              delBtn.onclick = () => {
+                if (confirm('Are you sure you want to delete this request?')) {
+                  remove(ref(db, `requests/${userId}/${key}`));
+                }
+              };
+              card.appendChild(delBtn);
+
+              container.appendChild(card);
+            });
+          } else {
+            container.innerHTML = '🛠️ You have not submitted any requests yet.';
+          }
+        });
+      } else {
+        container.innerHTML = "🔒 Please login to see your dashboard.";
+      }
+    });
+  </script>
+</body>
+</html>
