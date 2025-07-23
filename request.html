@@ -1,89 +1,107 @@
-<div id="requestsSection">
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📋 Service Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h2 { color: #333; }
+    .request-box {
+      background: #fff; border-radius: 10px; padding: 15px;
+      margin-bottom: 15px; box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    .request-box p { margin: 5px 0; }
+    .btn {
+      padding: 6px 12px; margin-right: 8px;
+      border: none; border-radius: 5px; cursor: pointer;
+    }
+    .btn-whatsapp { background: #25D366; color: white; }
+    .btn-delete { background: red; color: white; }
+  </style>
+</head>
+<body>
   <h2>📋 Service Requests</h2>
-</div>
+  <div id="requestsContainer">Loading...</div>
 
-<style>
-  .card {
-    border-radius: 12px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-    padding: 15px;
-    margin: 10px 0;
-    background: #f0f8ff;
-  }
-  .btn-3d {
-    padding: 6px 14px;
-    margin-right: 5px;
-    background: linear-gradient(to right, #007bff, #0056b3);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 5px 0 #004080;
-    cursor: pointer;
-  }
-  .btn-3d:hover {
-    background: linear-gradient(to right, #0056b3, #003d80);
-  }
-</style>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "898215092434",
+      appId: "1:898215092434:web:38c0aa17e6f97e6dff4d4e"
+    };
 
-<script>
-  const db = firebase.database();
-  const requestsSection = document.getElementById('requestsSection');
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  db.ref('requests').on('value', (snapshot) => {
-    requestsSection.innerHTML = '<h2>📋 Service Requests</h2>';
-    const requests = snapshot.val();
-    if (!requests) {
-      requestsSection.innerHTML += '<p>No requests found.</p>';
-      return;
-    }
+    const container = document.getElementById("requestsContainer");
 
-    Object.entries(requests).forEach(([userId, userRequests]) => {
-      Object.entries(userRequests).forEach(([reqId, req]) => {
-        const description = req.description || 'N/A';
-        const category = req.category || 'N/A';
-        const date = req.date || 'N/A';
-        const acceptedBy = req.acceptedBy || {};
+    async function loadRequests() {
+      const requestsSnap = await db.ref("requests").once("value");
+      const postersSnap = await db.ref("posters").once("value");
 
-        Object.entries(acceptedBy).forEach(([posterId, accepted]) => {
-          if (accepted) {
-            db.ref('posters/' + posterId).once('value', (posterSnap) => {
-              const poster = posterSnap.val();
-              if (!poster) return;
+      const requestsData = requestsSnap.val() || {};
+      const posters = postersSnap.val() || {};
 
-              const name = poster.name || 'Unknown';
-              const phone = poster.whatsapp || '';
-              const card = document.createElement('div');
-              card.className = 'card';
+      container.innerHTML = "";
 
-              card.innerHTML = `
-                <b>काम:</b> ${category}<br>
-                <b>विवरण:</b> ${description}<br>
-                <b>तारीख:</b> ${date}<br>
-                <b>Accept किया:</b> ✅ ${name} (${phone})<br>
-                <button class="btn-3d" onclick="window.open('https://wa.me/${phone}', '_blank')">WhatsApp ${name}</button>
-                <button class="btn-3d" onclick="deleteRequest('${userId}', '${reqId}', '${posterId}')">❌ Delete</button>
-                <button class="btn-3d" onclick="rejectRequest('${userId}', '${reqId}', '${posterId}')">🚫 Reject</button>
+      for (const userId in requestsData) {
+        for (const reqId in requestsData[userId]) {
+          const req = requestsData[userId][reqId];
+          const box = document.createElement("div");
+          box.className = "request-box";
+
+          box.innerHTML += `<p><strong>काम:</strong> ${req.category || '—'}</p>`;
+          box.innerHTML += `<p><strong>विवरण:</strong> ${req.description || '—'}</p>`;
+          box.innerHTML += `<p><strong>स्थान:</strong> ${req.location || '—'}</p>`;
+
+          if (req.acceptedBy) {
+            box.innerHTML += `<p><strong>Accept किया:</strong></p>`;
+            for (const posterId in req.acceptedBy) {
+              const p = posters[posterId];
+              const name = p?.name || "Unknown";
+              const number = p?.whatsapp || "";
+
+              const wBtn = number
+                ? `<a href="https://wa.me/${number}" target="_blank" class="btn btn-whatsapp">WhatsApp ${name}</a>`
+                : "";
+
+              box.innerHTML += `
+                <div style="margin-left: 10px;">
+                  ✅ ${name}
+                  ${wBtn}
+                  <button class="btn btn-delete" onclick="deleteRequest('${userId}', '${reqId}')">❌ Delete</button>
+                </div>
               `;
-
-              requestsSection.appendChild(card);
-            });
+            }
+          } else {
+            box.innerHTML += `<p>अभी तक किसी ने Accept नहीं किया।</p>`;
           }
+
+          container.appendChild(box);
+        }
+      }
+
+      if (container.innerHTML === "") {
+        container.innerHTML = "<p>कोई रिक्वेस्ट उपलब्ध नहीं है।</p>";
+      }
+    }
+
+    function deleteRequest(userId, reqId) {
+      if (confirm("क्या आप यह रिक्वेस्ट हटाना चाहते हैं?")) {
+        db.ref(`requests/${userId}/${reqId}`).remove().then(() => {
+          alert("रिक्वेस्ट हटाई गई ✅");
+          loadRequests();
         });
-      });
-    });
-  });
-
-  function deleteRequest(userId, requestId, posterId) {
-    if (confirm('क्या आप इस request को डिलीट करना चाहते हैं?')) {
-      firebase.database().ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).remove();
-      alert("Request Deleted");
+      }
     }
-  }
 
-  function rejectRequest(userId, requestId, posterId) {
-    if (confirm('Reject करें?')) {
-      firebase.database().ref(`requests/${userId}/${requestId}/acceptedBy/${posterId}`).set(false);
-      alert("Request Rejected");
-    }
-  }
-</script>
+    loadRequests();
+  </script>
+</body>
+</html>
