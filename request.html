@@ -1,52 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Service Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <title>My Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f1f1f1;
-      margin: 0;
-      padding: 0;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f2f2f2; }
+    h2 { text-align: center; }
     .request-card {
-      background: white;
-      margin: 10px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 10px auto;
+      max-width: 500px;
     }
+    .request-card p { margin: 6px 0; }
     .btn {
-      margin: 5px;
-      padding: 10px 15px;
       border: none;
-      border-radius: 8px;
-      background: linear-gradient(145deg, #e0e0e0, #ffffff);
-      box-shadow: 3px 3px 6px #bebebe, -3px -3px 6px #ffffff;
+      padding: 8px 12px;
+      margin: 5px 4px 0 0;
+      border-radius: 10px;
       cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.2);
     }
-    .btn:hover {
-      background: #d1d1d1;
-    }
-    .accepted {
-      background-color: #e6ffe6;
-    }
-    .whatsapp-btn {
-      background-color: #25D366;
-      color: white;
-    }
+    .accept { background: #4CAF50; color: white; }
+    .reject { background: #f44336; color: white; }
+    .delete { background: #333; color: white; }
+    .whatsapp { background: #25D366; color: white; }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center">Service Dashboard</h2>
+  <h2>मेरे द्वारा किए गए Request</h2>
   <div id="requestList"></div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
@@ -57,82 +49,57 @@
       appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const user = {
-      name: "Ali Khan",
-      phone: "917378342192"
-    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth();
 
-    function loadRequests() {
-      const list = document.getElementById("requestList");
-      list.innerHTML = "Loading...";
-      db.ref("requests").once("value", snapshot => {
-        list.innerHTML = "";
-        snapshot.forEach(userSnap => {
-          const userId = userSnap.key;
-          const userData = userSnap.val();
+    const requestList = document.getElementById("requestList");
 
-          for (let reqId in userData) {
-            const req = userData[reqId];
-            const card = document.createElement("div");
-            card.className = "request-card";
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        const uid = user.uid;
+        const myRequestsRef = ref(db, 'requests/' + uid);
+
+        onValue(myRequestsRef, snapshot => {
+          requestList.innerHTML = '';
+          snapshot.forEach(reqSnap => {
+            const requestId = reqSnap.key;
+            const data = reqSnap.val();
+
+            let card = document.createElement('div');
+            card.className = 'request-card';
+
+            let acceptText = 'अभी किसी ने नहीं किया';
+            let whatsappButtons = '';
+            if (data.acceptedBy) {
+              acceptText = '';
+              Object.entries(data.acceptedBy).forEach(([uid, provider]) => {
+                acceptText += `<div>✅ ${provider.name} (${provider.date})</div>`;
+                whatsappButtons += `<a class="btn whatsapp" target="_blank" href="https://wa.me/${provider.phone}">WhatsApp ${provider.name}</a>`;
+              });
+            }
 
             card.innerHTML = `
-              <b>काम:</b> ${req.job}<br>
-              <b>विवरण:</b> ${req.details}<br>
-              <b>Requester:</b> ${req.name}<br>
-              <div id="acceptedList-${userId}-${reqId}"></div>
-              <button class="btn" onclick="acceptRequest('${userId}', '${reqId}')">Accept</button>
-              <button class="btn" onclick="rejectRequest('${userId}', '${reqId}')">Reject</button>
-              <button class="btn" onclick="deleteRequest('${userId}', '${reqId}')">Delete</button>
+              <p><strong>काम:</strong> ${data.service}</p>
+              <p><strong>विवरण:</strong> ${data.description}</p>
+              <p><strong>तारीख:</strong> ${data.date || ''}</p>
+              <p><strong>Accept किया:</strong><br> ${acceptText}</p>
+              ${whatsappButtons}
+              <button class="btn delete" onclick="deleteRequest('${uid}', '${requestId}')">❌ Delete</button>
             `;
 
-            list.appendChild(card);
-            loadAccepted(userId, reqId);
-          }
+            requestList.appendChild(card);
+          });
         });
-      });
-    }
+      }
+    });
 
-    function acceptRequest(userId, reqId) {
-      const now = new Date().toLocaleString();
-      const ref = db.ref(`requests/${userId}/${reqId}/acceptedBy/${user.phone}`);
-      ref.set({ name: user.name, phone: user.phone, time: now }, loadRequests);
+    window.deleteRequest = function(userId, reqId) {
+      if (confirm("क्या आप इस Request को हटाना चाहते हैं?")) {
+        const delRef = ref(db, `requests/${userId}/${reqId}`);
+        remove(delRef);
+      }
     }
-
-    function rejectRequest(userId, reqId) {
-      db.ref(`requests/${userId}/${reqId}/acceptedBy/${user.phone}`).remove(loadRequests);
-    }
-
-    function deleteRequest(userId, reqId) {
-      db.ref(`requests/${userId}/${reqId}`).remove(loadRequests);
-    }
-
-    function loadAccepted(userId, reqId) {
-      const container = document.getElementById(`acceptedList-${userId}-${reqId}`);
-      db.ref(`requests/${userId}/${reqId}/acceptedBy`).once("value", snap => {
-        if (!snap.exists()) {
-          container.innerHTML = "<i>अभी किसी ने Accept नहीं किया</i>";
-          return;
-        }
-        container.innerHTML = "<b>Accepted by:</b><br>";
-        snap.forEach(child => {
-          const data = child.val();
-          const phone = data.phone;
-          const name = data.name;
-          const time = data.time;
-          container.innerHTML += `
-            <div class="accepted">
-              ${name} (${time})<br>
-              <a class="btn whatsapp-btn" href="https://wa.me/${phone}" target="_blank">WhatsApp</a>
-            </div>
-          `;
-        });
-      });
-    }
-
-    loadRequests();
   </script>
 </body>
 </html>
