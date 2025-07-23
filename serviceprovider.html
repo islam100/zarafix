@@ -1,201 +1,206 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🧰 Poster Registration - ZaraFix</title>
+  <title>ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(#d1eaff, #ffffff);
+      background: linear-gradient(to right, #f0f8ff, #ffffff);
+      margin: 0;
       padding: 20px;
     }
-    .form-container, .job-section, .message {
-      max-width: 500px;
+    .form-section, .dashboard-section {
+      max-width: 600px;
       margin: auto;
-      background: white;
+      background: #fff;
       padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
+    .hidden { display: none; }
     input, select {
+      display: block;
       width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      border-radius: 12px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
       border: 1px solid #ccc;
     }
-    .btn3d {
-      background: #2196f3;
+    .btn {
+      background: #007bff;
       color: white;
+      padding: 10px 20px;
       border: none;
-      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 3px 3px 0px #0056b3;
+      font-size: 16px;
+    }
+    .card {
+      background: #f9f9f9;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 15px;
+      box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    }
+    .btn-3d {
       margin-top: 10px;
-      border-radius: 30px;
-      box-shadow: 0 6px #0d47a1;
+      display: inline-block;
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 10px;
+      box-shadow: 4px 4px 0 #0044cc;
       font-weight: bold;
-      cursor: pointer;
+      text-decoration: none;
     }
-    .btn3d:active {
-      transform: translateY(4px);
-      box-shadow: 0 2px #0d47a1;
+    .btn-red {
+      background: red;
+      box-shadow: 4px 4px 0 darkred;
     }
-    .hide {
-      display: none;
+    .timestamp {
+      font-size: 12px;
+      color: gray;
     }
   </style>
 </head>
 <body>
+  <div id="posterForm" class="form-section">
+    <h2>🧰 Poster Registration</h2>
+    <input id="name" placeholder="Your Name" required />
+    <input id="shop" placeholder="Shop Name" required />
+    <input id="address" placeholder="Address" required />
+    <input id="aadhar" placeholder="Aadhar Number" required />
+    <select id="category">
+      <option value="">Select Category</option>
+      <option>Electrician</option>
+      <option>Plumber</option>
+      <option>Car Mechanic</option>
+      <option>Mobile Repair</option>
+    </select>
+    <input id="whatsapp" placeholder="WhatsApp Number" required />
+    <button class="btn" onclick="submitPosterForm()">Submit</button>
+  </div>
 
-<div id="formSection" class="form-container">
-  <h2>🧰 Poster Registration</h2>
-  <input type="text" id="name" placeholder="Full Name" required>
-  <input type="text" id="shop" placeholder="Shop Name" required>
-  <input type="text" id="address" placeholder="Address" required>
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Car Mechanic">Car Mechanic</option>
-    <option value="AC Repair">AC Repair</option>
-    <option value="Plumber">Plumber</option>
-  </select>
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-  <input type="text" id="aadhaar" placeholder="Aadhaar Number" required>
-  <button class="btn3d" onclick="submitForm()">Submit</button>
-</div>
+  <div id="waitMsg" class="form-section hidden">
+    <h3>⏳ Please wait for admin approval...</h3>
+  </div>
 
-<div id="waitApproval" class="message hide">
-  <h3>⏳ Wait for admin approval</h3>
-</div>
+  <div id="posterDashboard" class="dashboard-section hidden">
+    <h2>🎯 Your Job Dashboard</h2>
+    <div id="walletBalance">Wallet: ₹0</div>
+    <div id="jobsList"></div>
+  </div>
 
-<div id="jobSection" class="job-section hide">
-  <h3>🎯 Jobs Matching Your Category</h3>
-  <div id="jobList"></div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSy...YourKey...",
-    authDomain: "your-app.firebaseapp.com",
-    databaseURL: "https://your-app.firebaseio.com",
-    projectId: "your-app",
-    storageBucket: "your-app.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abc123"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  let currentUser;
-
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      checkApprovalAndWallet(user.uid);
-    } else {
-      window.location.href = "index.html"; // redirect to login
-    }
-  });
-
-  function submitForm() {
-    const name = document.getElementById("name").value;
-    const shop = document.getElementById("shop").value;
-    const address = document.getElementById("address").value;
-    const category = document.getElementById("category").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-    const aadhaar = document.getElementById("aadhaar").value;
-
-    if (!name || !shop || !address || !category || !whatsapp || !aadhaar) {
-      alert("Please fill all fields");
-      return;
-    }
-
-    const posterData = {
-      name, shop, address, category, whatsapp, aadhaar,
-      approved: false,
-      wallet: 100,
-      uid: currentUser.uid
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-    db.ref("posters/" + currentUser.uid).set(posterData);
-    document.getElementById("formSection").classList.add("hide");
-    document.getElementById("waitApproval").classList.remove("hide");
-  }
+    let userId = null;
 
-  function checkApprovalAndWallet(uid) {
-    db.ref("posters/" + uid).on("value", snap => {
-      if (!snap.exists()) return;
-      const data = snap.val();
-
-      if (data.approved === true) {
-        document.getElementById("formSection").classList.add("hide");
-        document.getElementById("waitApproval").classList.add("hide");
-        document.getElementById("jobSection").classList.remove("hide");
-        loadJobs(data.category);
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        userId = user.uid;
+        checkPosterStatus();
       } else {
-        document.getElementById("formSection").classList.add("hide");
-        document.getElementById("waitApproval").classList.remove("hide");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider);
       }
     });
-  }
 
-  function loadJobs(category) {
-    db.ref("requests").once("value", snap => {
-      const jobList = document.getElementById("jobList");
-      jobList.innerHTML = "";
+    function submitPosterForm() {
+      const data = {
+        name: name.value,
+        shop: shop.value,
+        address: address.value,
+        aadhar: aadhar.value,
+        category: category.value,
+        whatsapp: whatsapp.value,
+        status: "pending",
+        wallet: 0,
+        timestamp: Date.now()
+      };
+      db.ref("posters/" + userId).set(data);
+      posterForm.classList.add("hidden");
+      waitMsg.classList.remove("hidden");
+    }
 
-      snap.forEach(userSnap => {
-        const userId = userSnap.key;
-        const userRequests = userSnap.val();
-
-        for (let key in userRequests) {
-          const req = userRequests[key];
-          if (req.category === category && req.status === "pending") {
-            const div = document.createElement("div");
-            div.style.marginBottom = "20px";
-            div.style.borderBottom = "1px solid #ccc";
-            div.innerHTML = `
-              <p><b>${req.name}</b> - ${req.problem}</p>
-              <p>${req.address}</p>
-              <button class="btn3d" onclick="acceptJob('${userId}', '${key}')">✅ Accept</button>
-              <button class="btn3d" style="background:red" onclick="rejectJob('${userId}', '${key}')">❌ Reject</button>
-            `;
-            jobList.appendChild(div);
+    function checkPosterStatus() {
+      db.ref("posters/" + userId).once("value", snap => {
+        if (snap.exists()) {
+          const poster = snap.val();
+          if (poster.status === "approved") {
+            loadDashboard(poster);
+          } else {
+            posterForm.classList.add("hidden");
+            waitMsg.classList.remove("hidden");
           }
         }
       });
-    });
-  }
+    }
 
-  function acceptJob(userId, jobId) {
-    const posterRef = db.ref("posters/" + currentUser.uid);
-    posterRef.once("value", snap => {
-      const wallet = snap.val().wallet || 0;
-      if (wallet < 20) {
-        alert("⚠️ Please recharge wallet.");
-        return;
-      }
+    function loadDashboard(poster) {
+      waitMsg.classList.add("hidden");
+      posterForm.classList.add("hidden");
+      posterDashboard.classList.remove("hidden");
+      document.getElementById("walletBalance").innerText = "Wallet: ₹" + poster.wallet;
 
-      posterRef.update({ wallet: wallet - 20 });
-      db.ref(`requests/${userId}/${jobId}/acceptedBy/${currentUser.uid}`).set({
-        posterId: currentUser.uid,
-        name: snap.val().name,
-        whatsapp: snap.val().whatsapp
+      db.ref("requests").once("value", snap => {
+        const allJobs = snap.val();
+        jobsList.innerHTML = "";
+        for (let userKey in allJobs) {
+          for (let jobId in allJobs[userKey]) {
+            const job = allJobs[userKey][jobId];
+            if (job.category === poster.category) {
+              const timeStr = new Date(job.timestamp).toLocaleString();
+              const div = document.createElement("div");
+              div.className = "card";
+              div.innerHTML = `
+                <b>${job.name}</b><br>
+                📍 ${job.address}<br>
+                🔧 ${job.problem}<br>
+                <div class='timestamp'>🕒 ${timeStr}</div>
+                <button class="btn-3d" onclick="acceptJob('${userKey}','${jobId}')">Accept</button>
+                <button class="btn-3d btn-red" onclick="rejectJob('${userKey}','${jobId}')">Reject</button>
+              `;
+              jobsList.appendChild(div);
+            }
+          }
+        }
       });
+    }
 
-      alert("✅ Job accepted! WhatsApp button will appear.");
-    });
-  }
+    function acceptJob(userKey, jobId) {
+      const jobRef = db.ref(`requests/${userKey}/${jobId}`);
+      db.ref(`posters/${userId}`).once("value", snap => {
+        const poster = snap.val();
+        if (poster.wallet >= 20) {
+          jobRef.child("acceptedBy").push({ posterId: userId });
+          db.ref(`posters/${userId}/wallet`).set(poster.wallet - 20);
+          alert("✅ Job accepted! You can now contact on WhatsApp.");
+        } else {
+          alert("❌ Wallet balance low! Please recharge.");
+        }
+      });
+    }
 
-  function rejectJob(userId, jobId) {
-    db.ref(`requests/${userId}/${jobId}/rejectedBy/${currentUser.uid}`).set(true);
-    alert("❌ Job rejected.");
-  }
-</script>
-
+    function rejectJob(userKey, jobId) {
+      db.ref(`requests/${userKey}/${jobId}/rejectedBy`).push({ posterId: userId });
+      alert("❌ Job rejected.");
+    }
+  </script>
 </body>
 </html>
