@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f8ff; margin: 0; padding: 20px; }
+    h2 { color: #333; }
+    .section { margin-bottom: 30px; }
+    .card {
+      background: white; border-radius: 15px; padding: 15px; margin: 10px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card button {
+      background: #007bff; color: white; border: none; padding: 8px 12px;
+      border-radius: 10px; cursor: pointer; margin: 5px;
+    }
+    .wallet { font-weight: bold; color: green; }
+    .pending { color: orange; }
+    .approved { color: green; }
+  </style>
+</head>
+<body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+
+  <div id="posterList" class="section">
+    <h3>All Posters (Service Providers)</h3>
+  </div>
+
+  <div id="requestList" class="section">
+    <h3>User Requests</h3>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2";
+
+    auth.onAuthStateChanged(user => {
+      if (!user || user.uid !== adminUID) {
+        document.body.innerHTML = "<h3>Access denied. Admins only.</h3>";
+        return;
+      }
+      loadPosters();
+      loadRequests();
+    });
+
+    function loadPosters() {
+      db.ref("posters").once("value", snap => {
+        const container = document.getElementById("posterList");
+        container.innerHTML = "<h3>All Posters (Service Providers)</h3>";
+        snap.forEach(child => {
+          const data = child.val();
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <b>${data.name}</b> (${data.category})<br>
+            Shop: ${data.shop} <br>
+            WhatsApp: ${data.whatsapp}<br>
+            Wallet: <span class="wallet">₹${data.wallet || 0}</span><br>
+            Status: <span class="${data.status === 'approved' ? 'approved' : 'pending'}">${data.status || 'pending'}</span><br>
+            ${data.status !== 'approved' ? `<button onclick="approvePoster('${child.key}')">Approve</button>` : ''}
+            <button onclick="rechargePoster('${child.key}')">Recharge ₹100</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function approvePoster(uid) {
+      db.ref("posters/" + uid).update({ status: "approved" });
+      alert("Approved successfully!");
+      loadPosters();
+    }
+
+    function rechargePoster(uid) {
+      const ref = db.ref("posters/" + uid + "/wallet");
+      ref.once("value", snap => {
+        const current = snap.val() || 0;
+        ref.set(current + 100);
+        alert("₹100 recharged successfully");
+        loadPosters();
+      });
+    }
+
+    function loadRequests() {
+      db.ref("requests").once("value", snap => {
+        const container = document.getElementById("requestList");
+        container.innerHTML = "<h3>User Requests</h3>";
+        snap.forEach(userSnap => {
+          userSnap.forEach(reqSnap => {
+            const data = reqSnap.val();
+            const div = document.createElement("div");
+            div.className = "card";
+            div.innerHTML = `
+              <b>${data.name}</b> (${data.category})<br>
+              Problem: ${data.problem}<br>
+              Address: ${data.address}<br>
+              WhatsApp: ${data.whatsapp}<br>
+              Status: ${data.status || 'pending'}<br>
+              <button onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">Delete</button>
+            `;
+            container.appendChild(div);
+          });
+        });
+      });
+    }
+
+    function deleteRequest(userId, reqId) {
+      if (confirm("Are you sure to delete this request?")) {
+        db.ref(`requests/${userId}/${reqId}`).remove();
+        alert("Deleted successfully");
+        loadRequests();
+      }
+    }
+  </script>
+</body>
+</html>
