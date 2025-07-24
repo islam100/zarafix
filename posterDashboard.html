@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🧰 Poster Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #eef; padding: 20px; }
+    .card {
+      background: #fff; padding: 15px; margin: 10px 0;
+      border-radius: 10px; box-shadow: 0 0 5px #aaa;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="logout()">Logout</button>
+  <h2>🧰 Poster Dashboard</h2>
+  <div id="postList">Loading...</div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script>
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) return location.href = "index.html";
+      const uid = user.uid;
+      const db = firebase.database();
+      db.ref(`requests/${uid}`).once("value", snap => {
+        const data = snap.val();
+        let html = "";
+        for (let id in data) {
+          const r = data[id];
+          html += `
+            <div class="card">
+              🛠️ ${r.name} - ${r.category}<br>
+              📍 ${r.address}<br>
+              📞 WhatsApp: <a href="https://wa.me/91${r.whatsapp}" target="_blank">${r.whatsapp}</a><br>
+              ❓ ${r.problem}<br>
+              🕒 ${new Date(r.timestamp).toLocaleString()}
+            </div>
+          `;
+        }
+        document.getElementById("postList").innerHTML = html || "No requests found.";
+      });
+    });
+
+    function logout() {
+      firebase.auth().signOut().then(() => location.href = "index.html");
+    }
+  </script>
+</body>
+</html>
