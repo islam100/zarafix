@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZaraFix - Poster Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      padding: 10px;
+    }
+    .header {
+      text-align: center;
+      background: #2196F3;
+      color: white;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .wallet {
+      background: #fff;
+      padding: 10px;
+      margin: 10px auto;
+      max-width: 300px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      max-width: 600px;
+      text-align: left;
+      position: relative;
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #0d47a1;
+    }
+    .card button {
+      margin: 5px 5px 0 0;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .accept-btn {
+      background: #4CAF50;
+      color: white;
+    }
+    .reject-btn {
+      background: #F44336;
+      color: white;
+    }
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+    }
+    .location-btn {
+      background: #3f51b5;
+      color: white;
+    }
+    .already-accepted {
+      color: gray;
+      font-weight: bold;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ccc;
+      border-top: 3px solid #2196F3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .accepted-section {
+      border-top: 2px dashed #aaa;
+      margin-top: 20px;
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">🔧 ZaraFix - Poster Dashboard</div>
+  <div class="wallet" id="wallet">Loading Wallet...</div>
+  <div id="jobsContainer"></div>
+  <div class="accepted-section">
+    <h3>✅ Accepted Jobs</h3>
+    <div id="acceptedJobsContainer"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_KEY",
+      authDomain: "YOUR_DOMAIN",
+      databaseURL: "YOUR_DB",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUser = null;
+    let userCategory = '';
+    let walletAmount = 0;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return window.location.href = "index.html";
+      currentUser = user;
+
+      db.ref("posters/" + user.uid).once("value", snap => {
+        const data = snap.val();
+        if (!data) return alert("Poster not registered!");
+        userCategory = data.category;
+        loadWallet();
+        loadJobs();
+      });
+    });
+
+    function loadWallet() {
+      db.ref("wallets/" + currentUser.uid).on("value", snap => {
+        walletAmount = snap.val() || 0;
+        document.getElementById("wallet").innerHTML = `Wallet: ₹${walletAmount}`;
+      });
+    }
+
+    function loadJobs() {
+      db.ref("requests").on("value", snap => {
+        const allJobs = snap.val() || {};
+        const jobsContainer = document.getElementById("jobsContainer");
+        const acceptedContainer = document.getElementById("acceptedJobsContainer");
+        jobsContainer.innerHTML = "";
+        acceptedContainer.innerHTML = "";
+
+        Object.entries(allJobs).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([jobId, job]) => {
+          if (job.category !== userCategory) return;
+
+          const acceptedBy = job.acceptedBy || {};
+          const isAcceptedByMe = acceptedBy[currentUser.uid];
+          const isRejectedByMe = job.rejectedBy && job.rejectedBy[currentUser.uid];
+          const jobAge = Date.now() - job.timestamp;
+
+          // auto delete after 36 hrs
+          if (jobAge > 36 * 60 * 60 * 1000) {
+            db.ref("requests/" + jobId).remove();
+            return;
+          }
+
+          let html = `<div class="card">
+            <h3>${job.name} - ${job.category}</h3>
+            <p><strong>Problem:</strong> ${job.problem}</p>
+            <p><strong>Address:</strong> ${job.address}</p>`;
+
+          if (isAcceptedByMe) {
+            html += `
+              <a class="whatsapp-btn" target="_blank" href="https://wa.me/${job.whatsapp}">WhatsApp</a>
+              <a class="location-btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${job.lat},${job.lng}">Live Location</a>
+              <button class="reject-btn" onclick="deleteAccepted('${jobId}')">Delete</button>
+            `;
+            acceptedContainer.innerHTML += html + "</div>";
+          } else if (isRejectedByMe) {
+            // don't show
+          } else {
+            if (walletAmount < 100) {
+              html += `<p style="color:red;"><strong>Please recharge. Wallet below ₹100</strong></p>`;
+            } else {
+              html += `
+                <button class="accept-btn" onclick="acceptJob('${jobId}', this)">Accept</button>
+                <button class="reject-btn" onclick="rejectJob('${jobId}')">Reject</button>
+              `;
+            }
+
+            if (acceptedBy[currentUser.uid]) {
+              html += `<p class="already-accepted">Already Accepted</p>`;
+            }
+
+            jobsContainer.innerHTML += html + "</div>";
+          }
+        });
+      });
+    }
+
+    function acceptJob(jobId, btn) {
+      btn.innerHTML = '<span class="spinner"></span>';
+      btn.disabled = true;
+
+      if (walletAmount < 100) {
+        alert("Insufficient Wallet Balance");
+        return;
+      }
+
+      db.ref("requests/" + jobId + "/acceptedBy/" + currentUser.uid).set(true).then(() => {
+        db.ref("wallets/" + currentUser.uid).set(walletAmount - 20);
+        alert("✅ ₹20 Deducted. Job Accepted!");
+      });
+    }
+
+    function rejectJob(jobId) {
+      db.ref("requests/" + jobId + "/rejectedBy/" + currentUser.uid).set(true);
+      alert("❌ आपने reject किया है");
+    }
+
+    function deleteAccepted(jobId) {
+      db.ref("requests/" + jobId + "/acceptedBy/" + currentUser.uid).remove();
+      alert("✅ Deleted your acceptance");
+    }
+  </script>
+</body>
+</html>
