@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZaraFix Admin - Recharge Requests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .hidden { display: none; }
+    button {
+      padding: 10px 20px;
+      background: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    button:hover { background: #1976d2; }
+  </style>
+</head>
+<body>
+  <h2>🪙 ZaraFix Admin - Recharge Requests</h2>
+  <div id="loginSection">
+    <button onclick="loginWithGoogle()">Login with Google</button>
+  </div>
+  <div id="dashboard" class="hidden">
+    <div id="rechargeContainer"></div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const loginSection = document.getElementById("loginSection");
+    const dashboard = document.getElementById("dashboard");
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        loginSection.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+        loadRechargeRequests();
+      }
+    });
+
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then(() => {
+        loginSection.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+        loadRechargeRequests();
+      }).catch(e => alert("Login Failed: " + e.message));
+    }
+
+    function loadRechargeRequests() {
+      const container = document.getElementById("rechargeContainer");
+      container.innerHTML = "Loading...";
+
+      firebase.database().ref("rechargeRequests").once("value", snapshot => {
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "❌ No Recharge Requests Found.";
+          return;
+        }
+
+        snapshot.forEach(child => {
+          const data = child.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <strong>🧑 Name:</strong> ${data.name || "N/A"}<br>
+            <strong>📞 WhatsApp:</strong> ${data.whatsapp || "N/A"}<br>
+            <strong>🪙 Amount:</strong> ₹100<br>
+            <strong>🕒 Date:</strong> ${new Date(data.timestamp || Date.now()).toLocaleString()}<br>
+            <strong>🖼️ Screenshot:</strong><br>
+            <img src="${data.screenshot}" width="100%" style="max-width:300px"><br>
+            <strong>✅ Status:</strong> ${data.recharged ? "Done" : "Pending"}
+          `;
+          container.appendChild(card);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
