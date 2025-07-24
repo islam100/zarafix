@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: 'Arial', sans-serif; background: #f0f0f0; padding: 10px; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .container { max-width: 900px; margin: auto; }
+    .card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+      transition: all 0.3s;
+    }
+    .card:hover { transform: scale(1.01); }
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: green;
+      box-shadow: 0 0 10px green;
+      animation: blink 1s infinite alternate;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+    .btn {
+      background: #1976d2;
+      color: #fff;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-green { background: green; }
+    .btn-red { background: red; }
+    select, input[type=date] {
+      padding: 5px;
+      margin-right: 10px;
+      border-radius: 5px;
+    }
+    .filter-bar {
+      margin: 20px auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <div class="filter-bar">
+    <label>📅 Date: <input type="date" id="filterDate"></label>
+    <label>🔧 Category: 
+      <select id="filterCategory">
+        <option value="">All</option>
+        <option value="AC Mechanic">AC Mechanic</option>
+        <option value="Car Mechanic">Car Mechanic</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+      </select>
+    </label>
+    <button class="btn" onclick="loadData()">Apply Filter</button>
+  </div>
+  <div class="container" id="dataContainer"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function loadData() {
+      const container = document.getElementById("dataContainer");
+      container.innerHTML = "";
+      const selectedDate = document.getElementById("filterDate").value;
+      const selectedCategory = document.getElementById("filterCategory").value;
+
+      db.ref("requests").once("value", snap => {
+        const allUsers = snap.val();
+        for (let userId in allUsers) {
+          for (let reqId in allUsers[userId]) {
+            const req = allUsers[userId][reqId];
+            if (selectedDate && !req.timestamp) continue;
+            if (selectedDate) {
+              const reqDate = new Date(req.timestamp).toISOString().split('T')[0];
+              if (reqDate !== selectedDate) continue;
+            }
+            if (selectedCategory && req.category !== selectedCategory) continue;
+
+            let card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <div><span class='led'></span><strong>${req.name || "No Name"}</strong> - ${req.category || ""}</div>
+              <div>📍 ${req.address || "No Address"}</div>
+              <div>📞 WhatsApp: <a href='https://wa.me/91${req.whatsapp}' target='_blank'>${req.whatsapp}</a></div>
+              <div>🔧 Problem: ${req.problem}</div>
+              <div>🕒 Date: ${req.timestamp ? new Date(req.timestamp).toLocaleString() : "N/A"}</div>
+            `;
+            container.appendChild(card);
+          }
+        }
+
+        // Load recharge requests
+        db.ref("rechargeRequests").once("value", rSnap => {
+          const requests = rSnap.val();
+          for (let id in requests) {
+            const r = requests[id];
+            let card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <div><span class='led'></span><strong>Recharge Request</strong> from ${r.userId}</div>
+              <div>📷 Screenshot: <a href='${r.screenshot}' target='_blank'>View</a></div>
+              <div>📅 ${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</div>
+              <div>
+                <button class='btn btn-green' onclick="approveRecharge('${r.userId}')">Approve</button>
+                <button class='btn btn-red' onclick="rejectRecharge('${r.userId}')">Reject</button>
+              </div>
+            `;
+            container.appendChild(card);
+          }
+        });
+      });
+    }
+
+    function approveRecharge(uid) {
+      db.ref("posters/" + uid + "/wallet").once("value", snap => {
+        let current = snap.val() || 0;
+        db.ref("posters/" + uid).update({ wallet: current + 100 });
+        alert("Recharge Approved");
+      });
+    }
+
+    function rejectRecharge(uid) {
+      db.ref("rechargeRequests/" + uid).remove();
+      alert("Recharge Rejected");
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
