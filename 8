@@ -1,110 +1,134 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Accepted Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <title>ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #f8f9fa, #e0f7fa);
+      padding: 10px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
     }
     .card {
-      border: 2px solid #ccc;
-      border-radius: 16px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
       padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 2px 2px 8px #aaa;
+      margin: 15px auto;
+      max-width: 500px;
     }
-    button {
-      margin-right: 10px;
-      padding: 10px 15px;
+    .btn {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-weight: bold;
+      color: white;
       border: none;
       border-radius: 10px;
-      box-shadow: 2px 2px 5px #666;
       cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: 0.3s;
     }
-    .whatsapp { background-color: #25D366; color: white; }
-    .delete { background-color: #f44336; color: white; }
-    .reject { background-color: #ff9800; color: white; }
+    .approve { background: #4CAF50; }
+    .delete { background: #f44336; }
+    .recharge { background: #2196F3; }
+    .btn:hover { opacity: 0.8; }
   </style>
 </head>
 <body>
-  <h2>✅ Your Accepted Requests</h2>
-  <div id="requestsContainer">Loading...</div>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
 
-  <script>
+  <div id="posterCards"></div>
+  <div id="requestCards"></div>
+  <div id="rechargeCards"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "473628251696",
-      appId: "1:473628251696:web:857cb4bb3c43ac9300305d"
+      apiKey: "",
+      authDomain: "",
+      databaseURL: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const container = document.getElementById("requestsContainer");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    const currentAdminEmail = "zarafix3@gmail.com"; // ← इसको बदलो अपने ईमेल से
+    const posterDiv = document.getElementById('posterCards');
+    const requestDiv = document.getElementById('requestCards');
+    const rechargeDiv = document.getElementById('rechargeCards');
 
-    db.ref("requests").once("value", snapshot => {
-      container.innerHTML = "";
-      snapshot.forEach(userSnap => {
-        userSnap.forEach(reqSnap => {
-          const req = reqSnap.val();
-          if (req.acceptedBy === currentAdminEmail) {
-            const card = document.createElement("div");
-            card.className = "card";
+    function createCard(title, content, buttons=[]) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<h3>${title}</h3><div>${content}</div>`;
+      buttons.forEach(btn => card.appendChild(btn));
+      return card;
+    }
 
-            const name = req.name || "N/A";
-            const address = req.address || "N/A";
-            const pincode = req.pincode || "N/A";
-            const category = req.category || "N/A";
-            const issue = req.issue || "N/A";
-            const location = req.location || "N/A";
-            const acceptedBy = req.acceptedBy || "N/A";
+    async function loadDashboard() {
+      const snapshot = await get(ref(db));
+      const data = snapshot.val();
 
-            const phone = req.phone || "911234567890"; // ← WhatsApp नंबर (default अगर missing है)
+      // Posters
+      for (const uid in data.posters) {
+        const p = data.posters[uid];
+        const content = `Name: ${p.name}<br>Shop: ${p.shop}<br>Category: ${p.category}<br>Wallet: ₹${p.wallet}<br>WhatsApp: ${p.whatsapp}`;
+        const approveBtn = document.createElement('button');
+        approveBtn.innerText = 'Approve';
+        approveBtn.className = 'btn approve';
+        approveBtn.onclick = () => update(ref(db, `admins/${uid}`), true);
 
-            card.innerHTML = `
-              🧑‍🔧 <strong>Name:</strong> ${name}<br>
-              📌 <strong>Category:</strong> ${category}<br>
-              📍 <strong>Address:</strong> ${address}<br>
-              📍 <strong>Pincode:</strong> ${pincode}<br>
-              📅 <strong>Issue:</strong> ${issue}<br>
-              📍 <strong>Location:</strong> ${location}<br>
-              ✅ <strong>Accepted By:</strong> ${acceptedBy}<br><br>
-              <button class="whatsapp" onclick="window.open('https://wa.me/${phone}', '_blank')">WhatsApp</button>
-              <button class="delete" onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">Delete</button>
-              <button class="reject" onclick="rejectRequest('${userSnap.key}', '${reqSnap.key}')">Reject</button>
-            `;
-            container.appendChild(card);
-          }
-        });
-      });
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerText = 'Delete';
+        deleteBtn.className = 'btn delete';
+        deleteBtn.onclick = () => remove(ref(db, `posters/${uid}`));
 
-      if (container.innerHTML === "") {
-        container.innerHTML = "❌ कोई Accepted Request नहीं मिला।";
+        posterDiv.appendChild(createCard(`Poster: ${p.name}`, content, [approveBtn, deleteBtn]));
       }
-    });
 
-    function deleteRequest(userId, reqId) {
-      if (confirm("क्या आप वाकई डिलीट करना चाहते हैं?")) {
-        firebase.database().ref(`requests/${userId}/${reqId}`).remove();
-        alert("Request Deleted");
-        location.reload();
+      // Requests
+      for (const userId in data.requests) {
+        for (const reqId in data.requests[userId]) {
+          const r = data.requests[userId][reqId];
+          const acceptList = r.acceptedBy ? Object.keys(r.acceptedBy).map(uid => data.posters[uid]?.name || uid).join(', ') : 'None';
+          const content = `User: ${r.name}<br>Category: ${r.category}<br>Problem: ${r.problem}<br>Status: ${r.status}<br>Accepted By: ${acceptList}<br>Time: ${new Date(r.timestamp).toLocaleString()}`;
+          const delBtn = document.createElement('button');
+          delBtn.innerText = 'Delete';
+          delBtn.className = 'btn delete';
+          delBtn.onclick = () => remove(ref(db, `requests/${userId}/${reqId}`));
+          requestDiv.appendChild(createCard(`Request: ${r.name}`, content, [delBtn]));
+        }
+      }
+
+      // Recharge Requests
+      for (const uid in data.recharge) {
+        const rec = data.recharge[uid];
+        if (rec.status === 'pending') {
+          const content = `User ID: ${uid}<br>Amount: ₹${rec.amount}<br>Time: ${new Date(rec.timestamp).toLocaleString()}<br><img src="${rec.screenshot}" width="100%">`;
+          const approveBtn = document.createElement('button');
+          approveBtn.innerText = 'Approve Recharge';
+          approveBtn.className = 'btn recharge';
+          approveBtn.onclick = async () => {
+            await update(ref(db, `posters/${uid}/wallet`), (data.posters[uid]?.wallet || 0) + 100);
+            await update(ref(db, `recharge/${uid}`), { status: 'approved' });
+            alert('Recharge Approved');
+            location.reload();
+          };
+          rechargeDiv.appendChild(createCard(`Recharge Request`, content, [approveBtn]));
+        }
       }
     }
 
-    function rejectRequest(userId, reqId) {
-      firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy`).remove();
-      alert("Request Rejected");
-      location.reload();
-    }
+    loadDashboard();
   </script>
 </body>
 </html>
