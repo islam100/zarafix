@@ -1,79 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Provider</title>
+  <title>ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #eef2f3; }
-    .container { max-width: 500px; margin: 30px auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-    h2 { text-align: center; color: #333; }
-    input, select, button {
-      width: 100%; padding: 10px; margin: 10px 0;
-      border-radius: 12px; border: 1px solid #ccc;
-    }
-    button {
-      background: #00c853; color: white; font-weight: bold; cursor: pointer; border: none;
-      box-shadow: 0 5px 10px rgba(0, 200, 83, 0.3);
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #00b74a;
-    }
-    .dashboard, .wait-msg, .register-form {
-      display: none;
-    }
+    body { font-family: Arial; background: #eef2f3; margin:0; padding:10px; }
     .card {
-      background: #fafafa;
-      padding: 15px;
-      border-radius: 12px;
-      margin-top: 15px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      background: white; border-radius: 20px; padding: 15px; margin: 15px 0;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1); transition: transform 0.2s;
+    }
+    .card:hover { transform: scale(1.01); }
+    button {
+      padding: 10px 20px; margin: 10px; border: none; border-radius: 12px;
+      background: linear-gradient(to right, #42a5f5, #478ed1); color: white;
+      font-weight: bold; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(66,165,245,0.3);
+    }
+    input, select {
+      padding: 10px; width: 95%; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🧰 ZaraFix Service Provider</h2>
-
-    <!-- Poster Registration Form -->
-    <div class="register-form">
-      <input type="text" id="name" placeholder="Full Name" required>
-      <input type="text" id="shop" placeholder="Shop Name" required>
-      <select id="category">
-        <option value="">Select Category</option>
-        <option>AC Mechanic</option>
-        <option>Electrician</option>
-        <option>Car Mechanic</option>
-        <option>Plumber</option>
-        <option>Refrigerator Repair</option>
-        <option>Mobile Repair</option>
-      </select>
-      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-      <button onclick="registerPoster()">Submit</button>
-    </div>
-
-    <!-- Wait Message -->
-    <div class="wait-msg">
-      <h3>⏳ Please wait for admin approval</h3>
-    </div>
-
-    <!-- Poster Dashboard -->
-    <div class="dashboard">
-      <h3>🎉 Welcome to Your Poster Dashboard</h3>
-      <div id="wallet"></div>
-      <div class="card">
-        <p>✅ You can now accept service jobs.</p>
-        <p>₹20 will be deducted per accept.</p>
-      </div>
-    </div>
+  <h2>🛠️ Poster Dashboard</h2>
+  <div id="registrationSection" style="display:none;">
+    <h3>🔐 Poster Registration</h3>
+    <input id="name" placeholder="Your Name" />
+    <input id="shop" placeholder="Shop Name" />
+    <input id="address" placeholder="Shop Address" />
+    <select id="category">
+      <option value="">Select Category</option>
+      <option>AC Mechanic</option>
+      <option>Electrician</option>
+      <option>Plumber</option>
+      <option>Car Mechanic</option>
+    </select>
+    <input id="whatsapp" placeholder="WhatsApp Number" />
+    <button onclick="registerPoster()">Submit</button>
+    <p id="walletError" style="color:red;"></p>
   </div>
 
-  <!-- Firebase + Script -->
+  <div id="approvalMsg" style="display:none;">
+    <p>⏳ Please wait for admin approval...</p>
+  </div>
+
+  <div id="dashboardSection" style="display:none;">
+    <h3>🔧 Matching Jobs</h3>
+    <div id="jobList"></div>
+    <h4>💰 Wallet: ₹<span id="wallet"></span></h4>
+  </div>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
   <script>
-    // 🔧 Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -87,63 +69,95 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // 🔐 Auth Check
-    auth.onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = "index.html"; // redirect if not logged in
-        return;
-      }
+    let currentUser = null;
 
-      const uid = user.uid;
-      const posterRef = db.ref("posters/" + uid);
-
-      posterRef.once("value", snapshot => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          if (data.approved === true) {
-            showDashboard(uid);
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        currentUser = user;
+        const posterRef = db.ref("posters/" + user.uid);
+        posterRef.once("value").then(snapshot => {
+          const poster = snapshot.val();
+          if (!poster) {
+            document.getElementById("registrationSection").style.display = "block";
+          } else if (!poster.approved) {
+            document.getElementById("approvalMsg").style.display = "block";
           } else {
-            document.querySelector(".wait-msg").style.display = "block";
+            document.getElementById("dashboardSection").style.display = "block";
+            document.getElementById("wallet").textContent = poster.wallet || 0;
+            loadJobs(poster.category);
           }
-        } else {
-          document.querySelector(".register-form").style.display = "block";
-        }
-      });
+        });
+      } else {
+        window.location.href = "/index.html";
+      }
     });
 
-    // 📝 Register Poster
     function registerPoster() {
       const name = document.getElementById("name").value;
       const shop = document.getElementById("shop").value;
+      const address = document.getElementById("address").value;
       const category = document.getElementById("category").value;
       const whatsapp = document.getElementById("whatsapp").value;
 
-      const uid = auth.currentUser.uid;
-      const walletRef = db.ref("wallets/" + uid);
+      if (!name || !shop || !address || !category || !whatsapp) {
+        alert("Please fill all fields.");
+        return;
+      }
 
-      walletRef.once("value", snap => {
-        const balance = snap.val() || 0;
-        if (balance < 100) {
-          alert("Minimum ₹100 required. Please recharge.");
-          return;
-        }
-
-        db.ref("posters/" + uid).set({
-          name, shop, category, whatsapp,
-          approved: false
-        }).then(() => {
-          alert("Submitted! Please wait for admin approval.");
-          location.reload();
-        });
+      const newPoster = {
+        name, shop, address, category, whatsapp,
+        wallet: 100,
+        approved: false
+      };
+      db.ref("posters/" + currentUser.uid).set(newPoster).then(() => {
+        alert("Submitted! Wait for admin approval.");
+        location.reload();
       });
     }
 
-    // 🧾 Show Dashboard
-    function showDashboard(uid) {
-      document.querySelector(".dashboard").style.display = "block";
-      db.ref("wallets/" + uid).once("value", snap => {
-        const balance = snap.val() || 0;
-        document.getElementById("wallet").innerHTML = `<p>💰 Wallet Balance: ₹${balance}</p>`;
+    function loadJobs(category) {
+      db.ref("requests").on("value", snapshot => {
+        const jobs = snapshot.val();
+        const container = document.getElementById("jobList");
+        container.innerHTML = "";
+        for (let userId in jobs) {
+          for (let jobId in jobs[userId]) {
+            const job = jobs[userId][jobId];
+            if (job.category === category && (!job.acceptedBy || !job.acceptedBy[currentUser.uid])) {
+              const div = document.createElement("div");
+              div.className = "card";
+              div.innerHTML = `
+                <b>${job.name}</b><br>
+                📍 ${job.address}<br>
+                ⚙️ ${job.problem}<br>
+                <button onclick="acceptJob('${userId}', '${jobId}')">Accept</button>
+              `;
+              container.appendChild(div);
+            }
+          }
+        }
+      });
+    }
+
+    function acceptJob(userId, jobId) {
+      const walletRef = db.ref("posters/" + currentUser.uid + "/wallet");
+      walletRef.once("value").then(snapshot => {
+        const wallet = snapshot.val();
+        if (wallet < 20) {
+          alert("❌ Not enough balance. Please recharge.");
+          return;
+        }
+
+        const updates = {};
+        updates["requests/" + userId + "/" + jobId + "/acceptedBy/" + currentUser.uid] = {
+          uid: currentUser.uid,
+          timestamp: Date.now()
+        };
+        updates["posters/" + currentUser.uid + "/wallet"] = wallet - 20;
+
+        db.ref().update(updates).then(() => {
+          alert("✅ Job accepted! ₹20 deducted.");
+        });
       });
     }
   </script>
