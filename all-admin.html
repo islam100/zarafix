@@ -1,205 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Admin Dashboard</title>
+  <title>ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin: 0; background: #f0f0f0; }
-    .header {
-      background: linear-gradient(to right, #004e92, #000428);
-      color: white; padding: 15px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
+    body { font-family: Arial; background: #f5f5f5; padding: 10px; margin: 0; }
+    h2 { text-align: center; color: #333; }
+
     .dropdown {
-      position: relative;
-      display: inline-block;
+      display: flex;
+      justify-content: center;
+      margin: 10px;
     }
-    .dropdown button {
-      background-color: #0077cc;
-      color: white;
-      padding: 10px 20px;
+
+    select {
+      padding: 10px;
       font-size: 16px;
-      border: none;
-      cursor: pointer;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      border: 1px solid #aaa;
+      background: linear-gradient(to right, #80d0c7, #0093e9);
+      color: white;
+      font-weight: bold;
     }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: white;
-      min-width: 180px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      z-index: 1;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .dropdown-content a {
-      color: black;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
-    }
-    .dropdown-content a:hover {
-      background-color: #f1f1f1;
-    }
-    .dropdown:hover .dropdown-content { display: block; }
-    .container {
-      padding: 20px;
-    }
+
     .card {
       background: white;
-      border-radius: 15px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-      padding: 20px;
-      margin-bottom: 20px;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 20px;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+      max-width: 500px;
     }
-    .btn-3d {
-      padding: 10px 16px;
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
       border: none;
       border-radius: 10px;
-      color: white;
-      margin-right: 10px;
-      cursor: pointer;
       font-weight: bold;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      color: white;
+      transition: 0.3s;
     }
-    .approve { background: #28a745; }
-    .reject { background: #dc3545; }
+
+    .approve { background: green; }
+    .reject { background: red; }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .section { display: none; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h2>🛠️ ZaraFix - Admin Panel</h2>
-    <div class="dropdown">
-      <button>📂 Menu</button>
-      <div class="dropdown-content">
-        <a href="#recharges">💳 Recharge Requests</a>
-        <a href="#requests">📋 Service Requests</a>
-        <a href="#posters">🧰 Posters</a>
-      </div>
-    </div>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+
+  <div class="dropdown">
+    <select id="sectionSelector">
+      <option value="posters">📋 Posters</option>
+      <option value="requests">📄 Requests</option>
+      <option value="recharges">💳 Recharge Requests</option>
+    </select>
   </div>
 
-  <div class="container" id="adminContent">
-    <p>Loading admin dashboard...</p>
-  </div>
+  <div id="posters" class="section"></div>
+  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
+
+    const adminUID = "QT3LkEToHwaiORatoKfTx8QE45s2";
+
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    const adminUids = {
-      "QT3LkEToHwaiORatoKfTx8QE45s2": true
-    };
-
-    auth.onAuthStateChanged(user => {
-      if (!user || !adminUids[user.uid]) {
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user || user.uid !== adminUID) {
         alert("Access denied. Admins only.");
         window.location.href = "index.html";
         return;
       }
+      loadPosters();
+      loadRequests();
+      loadRecharges();
+    });
 
-      document.getElementById("adminContent").innerHTML = "<h3>✅ Admin logged in</h3><div id='data'></div>";
-      const dataDiv = document.getElementById('data');
+    function loadPosters() {
+      db.ref('posters').once('value', snap => {
+        const container = document.getElementById('posters');
+        container.innerHTML = '';
+        snap.forEach(child => {
+          const poster = child.val();
+          const uid = child.key;
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <strong>${poster.name}</strong><br>
+            Category: ${poster.category}<br>
+            Wallet: ₹${poster.wallet}<br>
+            <button class="btn approve" onclick="approvePoster('${uid}')">Approve</button>
+            <button class="btn reject" onclick="rejectPoster('${uid}')">Reject</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
 
-      // Load service requests
-      db.ref("requests").once("value").then(snapshot => {
-        dataDiv.innerHTML += "<h3 id='requests'>📋 All Service Requests</h3>";
-        snapshot.forEach(userSnap => {
+    function approvePoster(uid) {
+      alert("Approved poster: " + uid);
+      // Update logic if needed
+    }
+
+    function rejectPoster(uid) {
+      alert("Rejected poster: " + uid);
+      // Update logic if needed
+    }
+
+    function loadRequests() {
+      db.ref('requests').once('value', snap => {
+        const container = document.getElementById('requests');
+        container.innerHTML = '';
+        snap.forEach(userSnap => {
           userSnap.forEach(reqSnap => {
             const req = reqSnap.val();
-            let html = `<div class="card">
-              <strong>🔧 Category:</strong> ${req.category}<br>
-              <strong>📍 Address:</strong> ${req.address}<br>
-              <strong>📞 WhatsApp:</strong> ${req.whatsapp}<br>
-              <strong>📝 Problem:</strong> ${req.problem}<br>
-              <strong>👤 Name:</strong> ${req.name}<br>
-              <strong>⏱️ Status:</strong> ${req.status || 'pending'}<br>`;
-
-            if (req.acceptedBy) {
-              html += `<strong>✅ Accepted By:</strong><ul>`;
-              for (let uid in req.acceptedBy) {
-                const acc = req.acceptedBy[uid];
-                html += `<li>${acc.name} (${acc.whatsapp}) - ${acc.shop}</li>`;
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <strong>${req.name}</strong><br>
+              Issue: ${req.problem}<br>
+              Address: ${req.address}<br>
+              Status: ${req.status}<br>
+              Accepted By: ${
+                req.acceptedBy ? Object.values(req.acceptedBy).map(p => p.name).join(", ") : 'None'
               }
-              html += `</ul>`;
-            } else {
-              html += `<em>No one accepted yet.</em>`;
-            }
-
-            html += `</div>`;
-            dataDiv.innerHTML += html;
+            `;
+            container.appendChild(card);
           });
         });
       });
+    }
 
-      // Load posters
-      db.ref("posters").once("value").then(snapshot => {
-        dataDiv.innerHTML += "<h3 id='posters'>🧰 All Posters</h3>";
-        snapshot.forEach(posterSnap => {
-          const poster = posterSnap.val();
-          const uid = posterSnap.key;
-          const status = poster.approved ? "✅ Approved" : "❌ Not Approved";
-
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <strong>👤 Name:</strong> ${poster.name}<br>
-            <strong>🏪 Shop:</strong> ${poster.shop}<br>
-            <strong>📍 Address:</strong> ${poster.address}<br>
-            <strong>📞 WhatsApp:</strong> ${poster.whatsapp}<br>
-            <strong>🔧 Category:</strong> ${poster.category}<br>
-            <strong>💰 Wallet:</strong> ₹${poster.wallet || 0}<br>
-            <strong>Status:</strong> ${status}<br><br>
-            <button class="btn-3d approve" onclick="approvePoster('${uid}')">✅ Approve</button>
-            <button class="btn-3d reject" onclick="rejectPoster('${uid}')">❌ Reject</button>
+    function loadRecharges() {
+      db.ref('recharge').once('value', snap => {
+        const container = document.getElementById('recharges');
+        container.innerHTML = '';
+        snap.forEach(child => {
+          const rec = child.val();
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            UID: ${child.key}<br>
+            Amount: ₹${rec.amount}<br>
+            Status: ${rec.status}<br>
+            <a href="${rec.screenshot}" target="_blank">View Screenshot</a>
           `;
-          dataDiv.appendChild(card);
+          container.appendChild(div);
         });
       });
+    }
 
-      // Load recharge requests
-      db.ref("recharges").once("value").then(snapshot => {
-        dataDiv.innerHTML += "<h3 id='recharges'>💳 Recharge Requests</h3>";
-        snapshot.forEach(rechargeSnap => {
-          const r = rechargeSnap.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <strong>👤 User ID:</strong> ${rechargeSnap.key}<br>
-            <strong>📷 Screenshot:</strong><br>
-            <img src="${r.screenshot}" width="200"><br>
-            <strong>✅ Verified:</strong> ${r.verified ? "Yes" : "No"}
-          `;
-          dataDiv.appendChild(card);
-        });
-      });
+    document.getElementById("sectionSelector").addEventListener("change", (e) => {
+      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(e.target.value).style.display = 'block';
     });
 
-    function approvePoster(uid) {
-      firebase.database().ref("posters/" + uid).update({ approved: true });
-      alert("Poster Approved");
-      location.reload();
-    }
-    function rejectPoster(uid) {
-      firebase.database().ref("posters/" + uid).update({ approved: false });
-      alert("Poster Rejected");
-      location.reload();
-    }
+    // Show default section
+    document.getElementById("sectionSelector").value = "posters";
+    document.getElementById("posters").style.display = "block";
   </script>
 </body>
 </html>
