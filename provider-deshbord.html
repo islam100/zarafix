@@ -1,146 +1,109 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Provider</title>
+  <title>👨‍🔧 Poster Panel - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #eef2f3;
+      font-family: Arial;
+      background: #e0f7fa;
       margin: 0;
       padding: 20px;
       text-align: center;
     }
-    h2 { color: #333; }
-    input, select {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #aaa;
-      border-radius: 8px;
-    }
     button {
-      background: #28a745;
+      padding: 10px 20px;
+      font-size: 18px;
+      margin: 10px;
+      background: #00796b;
       color: white;
-      padding: 12px 25px;
       border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      margin-top: 10px;
+      border-radius: 5px;
       cursor: pointer;
-      box-shadow: 2px 2px 10px #aaa;
     }
-    button:hover { background: #218838; }
-    #dashboardSection { display: none; }
-    .card {
+    #posterInfo {
       background: white;
       padding: 20px;
-      border-radius: 15px;
-      box-shadow: 2px 2px 12px rgba(0,0,0,0.1);
-      margin: 20px auto;
-      width: 90%;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       max-width: 400px;
-      text-align: left;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
+  <h2>👨‍🔧 Poster Panel</h2>
+  <button id="loginBtn">Login with Google</button>
 
-<h2>🧰 ZaraFix - Service Provider Registration</h2>
+  <div id="posterInfo" style="display:none;">
+    <h3>🧰 Poster Dashboard</h3>
+    <p><strong>Name:</strong> <span id="name"></span></p>
+    <p><strong>Address:</strong> <span id="address"></span></p>
+    <p><strong>Shop:</strong> <span id="shop"></span></p>
+    <p><strong>Category:</strong> <span id="category"></span></p>
+    <p><strong>WhatsApp:</strong> <span id="whatsapp"></span></p>
+    <p><strong>Wallet:</strong> ₹<span id="wallet"></span></p>
+  </div>
 
-<div id="formSection">
-  <input id="name" placeholder="Full Name" />
-  <input id="address" placeholder="Your Address" />
-  <input id="shop" placeholder="Shop Name" />
-  <input id="whatsapp" placeholder="WhatsApp Number" />
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option>AC Mechanic</option>
-    <option>Electrician</option>
-    <option>Car Mechanic</option>
-    <option>Plumber</option>
-    <option>Painter</option>
-    <option>Carpenter</option>
-  </select>
-  <br>
-  <button onclick="submitForm()">Submit Registration</button>
-</div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<div id="dashboardSection">
-  <h3>🎉 Welcome to Your Poster Dashboard</h3>
-  <div class="card" id="posterInfo"></div>
-</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    const loginBtn = document.getElementById("loginBtn");
+    const posterInfo = document.getElementById("posterInfo");
 
-<script>
-  // ✅ Your Firebase Config
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
+    loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+          const user = result.user;
+          loadPosterData(user.uid);
+        })
+        .catch((error) => {
+          alert("Login Failed: " + error.message);
+        });
+    });
 
-  let currentUser = null;
-
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      firebase.database().ref("posters/" + currentUser.uid).once("value").then(snapshot => {
+    function loadPosterData(uid) {
+      firebase.database().ref("posters/" + uid).once("value").then(snapshot => {
         if (snapshot.exists()) {
-          showDashboard(snapshot.val());
+          const data = snapshot.val();
+          document.getElementById("name").innerText = data.name || '';
+          document.getElementById("address").innerText = data.address || '';
+          document.getElementById("shop").innerText = data.shop || '';
+          document.getElementById("whatsapp").innerText = data.whatsapp || '';
+          document.getElementById("category").innerText = data.category || '';
+          document.getElementById("wallet").innerText = data.wallet || '0';
+
+          loginBtn.style.display = "none";
+          posterInfo.style.display = "block";
         } else {
-          document.getElementById("formSection").style.display = "block";
+          alert("❌ Poster data not found. Please register first.");
         }
       });
-    } else {
-      window.location.href = "index.html"; // Not logged in
-    }
-  });
-
-  function submitForm() {
-    const data = {
-      name: document.getElementById("name").value.trim(),
-      address: document.getElementById("address").value.trim(),
-      shop: document.getElementById("shop").value.trim(),
-      whatsapp: document.getElementById("whatsapp").value.trim(),
-      category: document.getElementById("category").value,
-      wallet: 100,
-      approved: false
-    };
-
-    if (!data.name || !data.address || !data.shop || !data.whatsapp || !data.category) {
-      alert("❌ Please fill all fields.");
-      return;
     }
 
-    firebase.database().ref("posters/" + currentUser.uid).set(data).then(() => {
-      showDashboard(data);
+    // Auto check if already logged in
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        loadPosterData(user.uid);
+      }
     });
-  }
-
-  function showDashboard(data) {
-    document.getElementById("formSection").style.display = "none";
-    document.getElementById("dashboardSection").style.display = "block";
-    document.getElementById("posterInfo").innerHTML = `
-      <b>Name:</b> ${data.name}<br>
-      <b>Address:</b> ${data.address}<br>
-      <b>Shop:</b> ${data.shop}<br>
-      <b>WhatsApp:</b> ${data.whatsapp}<br>
-      <b>Category:</b> ${data.category}<br>
-      <b>Wallet:</b> ₹${data.wallet}<br>
-      <b>Approved:</b> ${data.approved ? "✅ Yes" : "❌ No"}
-    `;
-  }
-</script>
-
+  </script>
 </body>
 </html>
