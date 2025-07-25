@@ -1,152 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Poster Registration</title>
+  <title>ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #ffffff);
       margin: 0;
-      background: linear-gradient(to right, #e3f2fd, #fff);
-      padding: 0;
-      display: flex;
-      justify-content: center;
-    }
-    .container {
-      max-width: 450px;
-      width: 90%;
-      background: #fff;
-      margin-top: 30px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
       padding: 20px;
       text-align: center;
     }
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 20px;
-      color: #007bff;
-    }
-    input, select {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 16px;
-    }
-    button {
-      background: linear-gradient(145deg, #4facfe, #00f2fe);
+    .hidden { display: none; }
+    .btn {
+      padding: 12px 24px;
+      margin: 10px;
+      background: linear-gradient(to right, #00bcd4, #009688);
       color: white;
-      padding: 12px;
-      width: 100%;
       border: none;
-      border-radius: 12px;
-      font-size: 18px;
+      border-radius: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      font-size: 18px;
+      transition: transform 0.2s;
     }
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    .btn:hover {
+      transform: scale(1.05);
     }
-    .spinner {
-      display: none;
-      margin: 10px auto;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #007bff;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      margin: 15px auto;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: left;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    @media (max-width: 480px) {
-      .logo {
-        font-size: 20px;
-      }
-      input, select, button {
-        font-size: 14px;
-      }
+    #wallet {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">🔧 ZaraFix Poster Registration</div>
-    <form id="posterForm">
-      <input type="text" id="name" placeholder="Your Name" required>
-      <input type="text" id="address" placeholder="Your Address" required>
-      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-      <select id="category" required>
-        <option value="">Select Category</option>
-        <option>Electrician</option>
-        <option>Plumber</option>
-        <option>AC Mechanic</option>
-        <option>Car Mechanic</option>
-        <option>Refrigerator Repair</option>
-      </select>
-      <button type="submit">🚀 Register</button>
-      <div class="spinner" id="loadingSpinner"></div>
-    </form>
+  <div id="loginSection">
+    <button class="btn" onclick="googleLogin()">🔐 Login with Google</button>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  <div id="dashboard" class="hidden">
+    <h2>👋 Welcome to Poster Dashboard</h2>
+    <div id="approvalStatus">⏳ Checking approval...</div>
+    <div id="wallet">Wallet: ₹0</div>
+    <div id="workList"></div>
+  </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase();
-    const auth = getAuth();
+    let currentUser, userId, userCategory, wallet = 0;
 
-    const form = document.getElementById("posterForm");
-    const spinner = document.getElementById("loadingSpinner");
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    }
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        alert("Please login first");
-        window.location.href = "index.html";
-      } else {
-        form.addEventListener("submit", function(e) {
-          e.preventDefault();
-          spinner.style.display = "block";
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        currentUser = user;
+        userId = user.uid;
+        document.getElementById("loginSection").style.display = 'none';
+        document.getElementById("dashboard").style.display = 'block';
 
-          const name = document.getElementById("name").value;
-          const address = document.getElementById("address").value;
-          const whatsapp = document.getElementById("whatsapp").value;
-          const category = document.getElementById("category").value;
+        const posterSnap = await db.ref("posters/" + userId).once("value");
+        if (!posterSnap.exists()) {
+          document.getElementById("approvalStatus").innerText = "❌ Not registered. Contact admin.";
+          return;
+        }
+        const poster = posterSnap.val();
+        if (!poster.approved) {
+          document.getElementById("approvalStatus").innerText = "⏳ Please wait for approval...";
+          return;
+        }
+        document.getElementById("approvalStatus").innerText = "✅ You are approved!";
+        userCategory = poster.category;
+        wallet = poster.wallet || 0;
+        document.getElementById("wallet").innerText = `Wallet: ₹${wallet}`;
 
-          set(ref(db, 'posters/' + user.uid), {
-            name,
-            address,
-            whatsapp,
-            category,
-            wallet: 100,
-            timestamp: Date.now()
-          }).then(() => {
-            spinner.style.display = "none";
-            alert("Registration Successful");
-            window.location.href = "posterDashboard.html";
-          }).catch((error) => {
-            spinner.style.display = "none";
-            alert("Error: " + error.message);
-          });
-        });
+        loadMatchingRequests();
       }
     });
+
+    function loadMatchingRequests() {
+      db.ref("requests").once("value", snap => {
+        const workList = document.getElementById("workList");
+        workList.innerHTML = "";
+        snap.forEach(child => {
+          const userId1 = child.key;
+          const userRequests = child.val();
+          for (let key in userRequests) {
+            const req = userRequests[key];
+            const now = Date.now();
+            if (now - req.timestamp > 7 * 24 * 60 * 60 * 1000) continue; // Auto delete after 7 days
+            if (req.category !== userCategory) continue;
+
+            const accepted = req.acceptedBy && req.acceptedBy[userId];
+            const alreadyAccepted = !!accepted;
+            const dateStr = new Date(req.timestamp).toLocaleString();
+
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <b>👤 ${req.name}</b><br>
+              🛠️ ${req.problem}<br>
+              📍 ${req.address}<br>
+              📅 ${dateStr}<br>
+              ${alreadyAccepted ? `
+                <a class="btn" style="background:#25d366" href="https://wa.me/91${req.whatsapp}" target="_blank">📱 WhatsApp</a>
+              ` : wallet >= 100 ? `
+                <button class="btn" onclick="acceptJob('${userId1}', '${key}', '${req.whatsapp}', this)">✅ Accept</button>
+                <button class="btn" style="background:red" onclick="this.parentElement.remove()">❌ Reject</button>
+              ` : `<div style='color:red'>💰 Wallet me ₹100 hona jaruri hai. Please recharge ₹100.</div>`}
+            `;
+            workList.prepend(card);
+          }
+        });
+      });
+    }
+
+    function acceptJob(userId1, key, whatsapp, btn) {
+      if (wallet < 100) return alert("Wallet me ₹100 jaruri hai!");
+      const acceptRef = db.ref(`requests/${userId1}/${key}/acceptedBy/${userId}`);
+      acceptRef.set({ name: currentUser.displayName, whatsapp: "" }).then(() => {
+        const walletRef = db.ref("posters/" + userId + "/wallet");
+        wallet -= 20;
+        walletRef.set(wallet);
+        document.getElementById("wallet").innerText = `Wallet: ₹${wallet}`;
+        btn.parentElement.innerHTML = `<a class="btn" style="background:#25d366" href="https://wa.me/91${whatsapp}" target="_blank">📱 WhatsApp</a>`;
+      });
+    }
   </script>
 </body>
 </html>
