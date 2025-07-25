@@ -1,107 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>👨‍🔧 Poster Panel - ZaraFix</title>
+  <title>🧰 ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial;
-      background: #e0f7fa;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
       margin: 0;
       padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      padding: 20px;
+      max-width: 400px;
+      margin: 30px auto;
+      text-align: left;
+    }
+    h2 {
+      color: #0d47a1;
       text-align: center;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      margin: 10px;
-      background: #00796b;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #posterInfo {
-      background: white;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      max-width: 400px;
-      margin-left: auto;
-      margin-right: auto;
+    .label {
+      font-weight: bold;
+      color: #333;
     }
   </style>
 </head>
 <body>
-  <h2>👨‍🔧 Poster Panel</h2>
-  <button id="loginBtn">Login with Google</button>
-
-  <div id="posterInfo" style="display:none;">
-    <h3>🧰 Poster Dashboard</h3>
-    <p><strong>Name:</strong> <span id="name"></span></p>
-    <p><strong>Address:</strong> <span id="address"></span></p>
-    <p><strong>Shop:</strong> <span id="shop"></span></p>
-    <p><strong>Category:</strong> <span id="category"></span></p>
-    <p><strong>WhatsApp:</strong> <span id="whatsapp"></span></p>
-    <p><strong>Wallet:</strong> ₹<span id="wallet"></span></p>
+  <div class="card">
+    <h2>🧰 Poster Dashboard</h2>
+    <div id="posterDetails">Loading...</div>
   </div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
 
-    const loginBtn = document.getElementById("loginBtn");
-    const posterInfo = document.getElementById("posterInfo");
-
-    loginBtn.addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-          const user = result.user;
-          loadPosterData(user.uid);
-        })
-        .catch((error) => {
-          alert("Login Failed: " + error.message);
-        });
-    });
-
-    function loadPosterData(uid) {
-      firebase.database().ref("posters/" + uid).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          document.getElementById("name").innerText = data.name || '';
-          document.getElementById("address").innerText = data.address || '';
-          document.getElementById("shop").innerText = data.shop || '';
-          document.getElementById("whatsapp").innerText = data.whatsapp || '';
-          document.getElementById("category").innerText = data.category || '';
-          document.getElementById("wallet").innerText = data.wallet || '0';
-
-          loginBtn.style.display = "none";
-          posterInfo.style.display = "block";
-        } else {
-          alert("❌ Poster data not found. Please register first.");
-        }
-      });
-    }
-
-    // Auto check if already logged in
-    firebase.auth().onAuthStateChanged(user => {
+    firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-        loadPosterData(user.uid);
+        const userId = user.uid;
+        firebase.database().ref('posters/' + userId).once('value').then((snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            document.getElementById("posterDetails").innerHTML = `
+              <div><span class="label">Name:</span> ${data.name || 'N/A'}</div><br>
+              <div><span class="label">Address:</span> ${data.address || 'N/A'}</div><br>
+              <div><span class="label">Shop:</span> ${data.shop || 'N/A'}</div><br>
+              <div><span class="label">Category:</span> ${data.category || 'N/A'}</div><br>
+              <div><span class="label">WhatsApp:</span> ${data.whatsapp || 'N/A'}</div><br>
+              <div><span class="label">Wallet:</span> ₹${data.wallet !== undefined ? data.wallet : '0'}</div>
+            `;
+          } else {
+            document.getElementById("posterDetails").innerText = "❌ Poster data not found.";
+          }
+        });
+      } else {
+        // Not logged in
+        window.location.href = "index.html";
       }
     });
   </script>
