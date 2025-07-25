@@ -1,166 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🧰 ZaraFix Poster Panel</title>
+  <title>✨ Poster Dashboard - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #fceabb, #f8b500);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       padding: 20px;
+      margin-top: 30px;
+    }
+    h2 {
       text-align: center;
     }
     .card {
-      background: white;
-      padding: 20px;
-      margin: 10px auto;
-      max-width: 400px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-      border-radius: 20px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 15px 0;
+      background: #f9f9f9;
     }
-    button {
+    .btn {
       padding: 10px 20px;
-      background: #00796b;
+      background: #28a745;
       color: white;
       border: none;
       border-radius: 10px;
       cursor: pointer;
-      margin: 10px;
+      font-weight: bold;
     }
-    button:hover {
-      background: #004d40;
-    }
-    input, select {
-      width: 90%;
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+    .btn:disabled {
+      background: #ccc;
     }
   </style>
 </head>
 <body>
-  <h2>👨‍🔧 Poster Panel</h2>
+  <div class="container">
+    <h2>🧠 Poster Dashboard</h2>
+    <p><strong>Name:</strong> <span id="posterName">Loading...</span></p>
+    <p><strong>Address:</strong> <span id="posterAddress">Loading...</span></p>
+    <p><strong>Shop:</strong> <span id="posterShop">Loading...</span></p>
+    <p><strong>Category:</strong> <span id="posterCategory">Loading...</span></p>
+    <p><strong>WhatsApp:</strong> <span id="posterWhatsApp">Loading...</span></p>
+    <p><strong>Wallet:</strong> ₹<span id="wallet">0</span></p>
 
-  <div id="loginDiv">
-    <button onclick="googleLogin()">🔐 Login with Google</button>
-  </div>
-
-  <div id="formDiv" style="display:none;" class="card">
-    <h3>📋 Poster Registration</h3>
-    <input id="name" placeholder="Name"><br>
-    <input id="address" placeholder="Address"><br>
-    <input id="shop" placeholder="Shop Name"><br>
-    <input id="whatsapp" placeholder="WhatsApp Number"><br>
-    <select id="category">
-      <option value="">Select Category</option>
-      <option>AC Mechanic</option>
-      <option>Electrician</option>
-      <option>Plumber</option>
-      <option>Car Mechanic</option>
-      <option>Painter</option>
-      <option>Other</option>
-    </select><br>
-    <button onclick="submitPoster()">Submit</button>
-  </div>
-
-  <div id="dashboardDiv" style="display:none;" class="card">
-    <h3>🧰 Poster Dashboard</h3>
-    <p><strong>Name:</strong> <span id="d_name">Loading...</span></p>
-    <p><strong>Address:</strong> <span id="d_address">Loading...</span></p>
-    <p><strong>Shop:</strong> <span id="d_shop">Loading...</span></p>
-    <p><strong>Category:</strong> <span id="d_category">Loading...</span></p>
-    <p><strong>WhatsApp:</strong> <span id="d_whatsapp">Loading...</span></p>
-    <p><strong>Wallet:</strong> ₹<span id="d_wallet">0</span></p>
+    <div id="requestsContainer"></div>
   </div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
-
-    const auth = firebase.auth();
     const db = firebase.database();
-    let currentUserId = null;
+    const auth = firebase.auth();
 
-    function googleLogin() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(res => {
-          document.getElementById("loginDiv").style.display = "none";
-          currentUserId = res.user.uid;
-          checkPosterProfile();
-        }).catch(err => {
-          alert("Login failed");
-        });
-    }
+    let currentUserId;
+    let posterData;
 
-    function checkPosterProfile() {
-      db.ref("posters/" + currentUserId).once("value", snapshot => {
-        if (snapshot.exists()) {
-          loadDashboard(snapshot.val());
-        } else {
-          document.getElementById("formDiv").style.display = "block";
-        }
-      });
-    }
-
-    function submitPoster() {
-      const name = document.getElementById("name").value;
-      const address = document.getElementById("address").value;
-      const shop = document.getElementById("shop").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const category = document.getElementById("category").value;
-
-      if (!name || !address || !shop || !whatsapp || !category) {
-        alert("Please fill all fields");
-        return;
-      }
-
-      const data = {
-        name, address, shop, whatsapp, category,
-        approved: true,
-        wallet: 100
-      };
-
-      db.ref("posters/" + currentUserId).set(data, err => {
-        if (!err) {
-          alert("Registered successfully!");
-          loadDashboard(data);
-        }
-      });
-    }
-
-    function loadDashboard(data) {
-      document.getElementById("formDiv").style.display = "none";
-      document.getElementById("dashboardDiv").style.display = "block";
-
-      document.getElementById("d_name").innerText = data.name || "Not set";
-      document.getElementById("d_address").innerText = data.address || "Not set";
-      document.getElementById("d_shop").innerText = data.shop || "Not set";
-      document.getElementById("d_category").innerText = data.category || "Not set";
-      document.getElementById("d_whatsapp").innerText = data.whatsapp || "Not set";
-      document.getElementById("d_wallet").innerText = data.wallet || "0";
-    }
-
-    // Auto login check
     auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("loginDiv").style.display = "none";
-        currentUserId = user.uid;
-        checkPosterProfile();
-      }
+      if (!user) return location.href = "index.html";
+      currentUserId = user.uid;
+      db.ref("posters/" + currentUserId).once("value", snap => {
+        posterData = snap.val();
+        document.getElementById("posterName").textContent = posterData.name;
+        document.getElementById("posterAddress").textContent = posterData.address;
+        document.getElementById("posterShop").textContent = posterData.shop || 'Not set';
+        document.getElementById("posterCategory").textContent = posterData.category;
+        document.getElementById("posterWhatsApp").textContent = posterData.whatsapp;
+        document.getElementById("wallet").textContent = posterData.wallet || 0;
+        loadRequests();
+      });
     });
+
+    function loadRequests() {
+      db.ref("requests").once("value", snap => {
+        const requests = snap.val();
+        const container = document.getElementById("requestsContainer");
+        container.innerHTML = "";
+        for (let key in requests) {
+          const req = requests[key];
+          if (req.category === posterData.category && req.status === "pending") {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <p><strong>Name:</strong> ${req.name}</p>
+              <p><strong>Address:</strong> ${req.address}</p>
+              <p><strong>Problem:</strong> ${req.problem}</p>
+              <button class="btn" onclick="acceptJob('${key}', this)">Accept Job</button>
+            `;
+            container.appendChild(card);
+          }
+        }
+      });
+    }
+
+    function acceptJob(requestId, btn) {
+      if (posterData.wallet < 20) return alert("Insufficient wallet balance. Please recharge.");
+      btn.disabled = true;
+      const newWallet = posterData.wallet - 20;
+      db.ref("posters/" + currentUserId).update({ wallet: newWallet });
+      db.ref("requests/" + requestId + "/acceptedBy").push({
+        name: posterData.name,
+        whatsapp: posterData.whatsapp,
+        location: posterData.address
+      });
+      document.getElementById("wallet").textContent = newWallet;
+      alert("Job accepted! ₹20 deducted.");
+    }
   </script>
 </body>
 </html>
