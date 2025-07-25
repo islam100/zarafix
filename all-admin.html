@@ -1,104 +1,215 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
-    h2 { text-align: center; margin: 20px 0; }
-    .tabs { display: flex; justify-content: center; gap: 10px; margin: 20px; }
-    .tabs button {
+    body {
+      font-family: Arial;
+      margin: 0;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .button-group {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    button {
+      margin: 5px;
       padding: 10px 20px;
-      background: #2196F3;
+      font-weight: bold;
+      background: #007bff;
       color: white;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      box-shadow: 2px 2px 5px #999;
-    }
-    .tabs button.active { background: #0b7dda; }
-    .section { display: none; padding: 10px; }
-    .section.active { display: block; }
-    .card {
-      background: white;
-      margin: 10px auto;
-      padding: 15px;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin: 10px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       max-width: 600px;
       position: relative;
     }
     .led {
-      width: 12px;
-      height: 12px;
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
-      animation: blink 1s infinite;
       position: absolute;
       top: 15px;
       right: 15px;
+      animation: blink 1s infinite;
     }
     @keyframes blink {
-      0%, 100% { opacity: 1; }
+      0% { opacity: 1; }
       50% { opacity: 0; }
+      100% { opacity: 1; }
     }
-    .led.green { background: green; }
-    .led.yellow { background: yellow; }
-    .led.blue { background: blue; }
-    input[type="text"] {
-      width: 90%;
-      max-width: 600px;
-      padding: 8px;
-      margin: 10px auto;
-      display: block;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+    .section {
+      display: none;
     }
   </style>
 </head>
 <body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <div class="button-group">
+    <button onclick="showSection('requests')">Service Requests</button>
+    <button onclick="showSection('posters')">Posters</button>
+    <button onclick="showSection('recharges')">Recharges</button>
+  </div>
+  <div id="requests" class="section"></div>
+  <div id="posters" class="section"></div>
+  <div id="recharges" class="section"></div>
 
-<h2>🛠️ ZaraFix Admin Dashboard</h2>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
 
-<div class="tabs">
-  <button onclick="showSection('requests')" class="active">Service Requests</button>
-  <button onclick="showSection('posters')">Posters</button>
-  <button onclick="showSection('recharge')">Recharge Requests</button>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOIf7QxQtFFToG3kK5r9ASzKoTzi5LMDM",
+      authDomain: "zarafix.firebaseapp.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "146863975253",
+      appId: "1:146863975253:web:22d96f7a0e5f4e9f62d503",
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com"
+    };
 
-<!-- Search Boxes -->
-<input type="text" id="requestSearch" onkeyup="filterCards('requests', this.value)" placeholder="🔍 Search Requests">
-<input type="text" id="posterSearch" onkeyup="filterCards('posters', this.value)" placeholder="🔍 Search Posters" style="display:none">
-<input type="text" id="rechargeSearch" onkeyup="filterCards('recharge', this.value)" placeholder="🔍 Search Recharges" style="display:none">
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+    const auth = getAuth();
 
-<!-- Sections -->
-<div id="requests" class="section active"></div>
-<div id="posters" class="section"></div>
-<div id="recharge" class="section"></div>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
 
-<script>
-const sections = ['requests', 'posters', 'recharge'];
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const uid = user.uid;
+        const adminRef = ref(db, 'admins/' + uid);
+        onValue(adminRef, (snap) => {
+          if (snap.exists()) {
+            loadRequests();
+            loadPosters();
+            loadRecharges();
+          } else {
+            alert("Access denied. Admins only.");
+          }
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
 
-function showSection(id) {
-  sections.forEach(sec => {
-    document.getElementById(sec).classList.remove('active');
-    document.getElementById(sec + 'Search').style.display = 'none';
-  });
-  document.getElementById(id).classList.add('active');
-  document.getElementById(id + 'Search').style.display = 'block';
-  document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-}
+    function createLed(status, acceptedBy) {
+      let color = 'blue';
+      if (acceptedBy && Object.keys(acceptedBy).length > 0) color = 'green';
+      else if (status === 'pending') color = 'yellow';
+      return `<div class="led" style="background: ${color};"></div>`;
+    }
 
-function filterCards(sectionId, searchValue) {
-  searchValue = searchValue.toLowerCase();
-  const cards = document.getElementById(sectionId).getElementsByClassName('card');
-  for (let card of cards) {
-    card.style.display = card.innerText.toLowerCase().includes(searchValue) ? 'block' : 'none';
-  }
-}
-</script>
+    function loadRequests() {
+      const reqRef = ref(db, 'requests');
+      onValue(reqRef, (snap) => {
+        const container = document.getElementById('requests');
+        container.innerHTML = '';
+        const all = snap.val();
+        for (let userId in all) {
+          for (let reqId in all[userId]) {
+            const r = all[userId][reqId];
+            const led = createLed(r.status, r.acceptedBy);
+            const acceptedCount = r.acceptedBy ? Object.keys(r.acceptedBy).length : 0;
+            container.innerHTML += `
+              <div class="card">
+                ${led}
+                <b>Name:</b> ${r.name}<br>
+                <b>Category:</b> ${r.category}<br>
+                <b>Problem:</b> ${r.problem}<br>
+                <b>Address:</b> ${r.address}<br>
+                <b>WhatsApp:</b> ${r.whatsapp}<br>
+                <b>Accepted by:</b> ${acceptedCount}
+              </div>`;
+          }
+        }
+      });
+    }
 
-<!-- Firebase & Data Rendering (Add below this comment in the full version) -->
+    function loadPosters() {
+      const postRef = ref(db, 'posters');
+      const reqRef = ref(db, 'requests');
+      onValue(postRef, (snap) => {
+        const posters = snap.val();
+        const container = document.getElementById('posters');
+        container.innerHTML = '';
+        onValue(reqRef, (reqSnap) => {
+          const allRequests = reqSnap.val();
+          for (let uid in posters) {
+            let acceptedCount = 0;
+            for (let userId in allRequests) {
+              for (let reqId in allRequests[userId]) {
+                const r = allRequests[userId][reqId];
+                if (r.acceptedBy && r.acceptedBy[uid]) acceptedCount++;
+              }
+            }
+            const p = posters[uid];
+            container.innerHTML += `
+              <div class="card">
+                <b>Name:</b> ${p.name}<br>
+                <b>Shop:</b> ${p.shop}<br>
+                <b>Category:</b> ${p.category}<br>
+                <b>WhatsApp:</b> ${p.whatsapp}<br>
+                <b>Wallet:</b> ₹${p.wallet || 0}<br>
+                <b>Accepted Jobs:</b> ${acceptedCount}<br>
+                <button onclick="rechargeWallet('${uid}')">Recharge ₹100</button>
+              </div>`;
+          }
+        });
+      });
+    }
 
+    function loadRecharges() {
+      const refR = ref(db, 'recharges');
+      onValue(refR, (snap) => {
+        const container = document.getElementById('recharges');
+        container.innerHTML = '';
+        const all = snap.val();
+        for (let uid in all) {
+          const r = all[uid];
+          container.innerHTML += `
+            <div class="card">
+              <b>Poster ID:</b> ${uid}<br>
+              <b>Screenshot:</b><br>
+              <img src="${r.screenshot}" width="100%"><br>
+              <button onclick="approveRecharge('${uid}')">Approve</button>
+            </div>`;
+        }
+      });
+    }
+
+    window.rechargeWallet = function(uid) {
+      const wRef = ref(db, 'posters/' + uid);
+      update(wRef, { wallet: 100 });
+      alert("Wallet recharged to ₹100");
+    }
+
+    window.approveRecharge = function(uid) {
+      const postRef = ref(db, 'posters/' + uid);
+      update(postRef, { wallet: 100 });
+      const recRef = ref(db, 'recharges/' + uid);
+      update(recRef, { approved: true });
+      alert("Recharge approved and wallet updated.");
+    }
+  </script>
 </body>
 </html>
