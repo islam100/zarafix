@@ -1,48 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🧰 ZaraFix - Poster Dashboard</title>
+  <title>🧰 Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      font-family: sans-serif;
+      background: #f1f1f1;
       margin: 0;
       padding: 20px;
+      text-align: center;
     }
     .card {
       background: white;
-      border-radius: 15px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      padding: 20px;
       max-width: 400px;
-      margin: 30px auto;
-      text-align: left;
+      margin: auto;
+      padding: 20px;
+      box-shadow: 0 0 10px #aaa;
+      border-radius: 10px;
     }
     h2 {
-      color: #0d47a1;
-      text-align: center;
+      color: #2c3e50;
     }
-    .label {
-      font-weight: bold;
-      color: #333;
+    .info {
+      margin: 10px 0;
+      font-size: 18px;
+    }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>🧰 Poster Dashboard</h2>
-    <div id="posterDetails">Loading...</div>
+
+  <h2>🧰 Poster Dashboard</h2>
+  <div class="card" id="dashboard" class="hidden">
+    <div class="info"><b>Name:</b> <span id="name">Loading...</span></div>
+    <div class="info"><b>Address:</b> <span id="address">Loading...</span></div>
+    <div class="info"><b>Shop:</b> <span id="shop">Loading...</span></div>
+    <div class="info"><b>Category:</b> <span id="category">Loading...</span></div>
+    <div class="info"><b>WhatsApp:</b> <span id="whatsapp">Loading...</span></div>
+    <div class="info"><b>Wallet:</b> ₹<span id="wallet">0</span></div>
   </div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <script>
-    const firebaseConfig = {
+    // 🔧 Firebase config
+    var firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
       projectId: "zara-fix-2e35a",
       storageBucket: "zara-fix-2e35a.appspot.com",
       messagingSenderId: "636550144008",
@@ -50,27 +61,28 @@
     };
     firebase.initializeApp(firebaseConfig);
 
-    firebase.auth().onAuthStateChanged((user) => {
+    // ✅ Check login
+    firebase.auth().onAuthStateChanged(function(user) {
       if (user) {
-        const userId = user.uid;
-        firebase.database().ref('posters/' + userId).once('value').then((snapshot) => {
+        const uid = user.uid;
+        const posterRef = firebase.database().ref('posters/' + uid);
+        posterRef.once('value').then((snapshot) => {
           const data = snapshot.val();
-          if (data) {
-            document.getElementById("posterDetails").innerHTML = `
-              <div><span class="label">Name:</span> ${data.name || 'N/A'}</div><br>
-              <div><span class="label">Address:</span> ${data.address || 'N/A'}</div><br>
-              <div><span class="label">Shop:</span> ${data.shop || 'N/A'}</div><br>
-              <div><span class="label">Category:</span> ${data.category || 'N/A'}</div><br>
-              <div><span class="label">WhatsApp:</span> ${data.whatsapp || 'N/A'}</div><br>
-              <div><span class="label">Wallet:</span> ₹${data.wallet !== undefined ? data.wallet : '0'}</div>
-            `;
+          if (data && data.approved) {
+            document.getElementById('name').innerText = data.name || 'N/A';
+            document.getElementById('address').innerText = data.address || 'N/A';
+            document.getElementById('shop').innerText = data.shop || 'N/A';
+            document.getElementById('category').innerText = data.category || 'N/A';
+            document.getElementById('whatsapp').innerText = data.whatsapp || 'N/A';
+            document.getElementById('wallet').innerText = data.wallet || '0';
+            document.getElementById('dashboard').classList.remove('hidden');
           } else {
-            document.getElementById("posterDetails").innerText = "❌ Poster data not found.";
+            alert("Your registration is pending approval.");
           }
         });
       } else {
-        // Not logged in
-        window.location.href = "index.html";
+        alert("Please login first.");
+        window.location.href = "index.html"; // or your login page
       }
     });
   </script>
