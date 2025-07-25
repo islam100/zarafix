@@ -45,7 +45,7 @@
     .btn:active { transform: scale(0.98); }
     .btn-green { background: green; }
     .btn-red { background: red; }
-    select, input[type=date] {
+    select {
       padding: 5px;
       margin-right: 10px;
       border-radius: 5px;
@@ -59,14 +59,7 @@
 <body>
   <h2>🛠️ ZaraFix Admin Dashboard</h2>
   <div class="filter-bar">
-
-    const selectedCategory = document.getElementById("filterCategory").value;
-
-    
-    
-    
-    
-    <label>🔧 Category: 
+    <label>🔧 Category:
       <select id="filterCategory">
         <option value="">All</option>
         <option value="AC Mechanic">AC Mechanic</option>
@@ -86,7 +79,8 @@
       projectId: "zara-fix-2e35a",
       storageBucket: "zara-fix-2e35a.appspot.com",
       messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -94,18 +88,13 @@
     function loadData() {
       const container = document.getElementById("dataContainer");
       container.innerHTML = "";
+      const selectedCategory = document.getElementById("filterCategory").value;
 
-
-
-
-
-
-
-
-
-
-
-      
+      db.ref("requests").once("value", snap => {
+        const allUsers = snap.val();
+        for (let userId in allUsers) {
+          for (let reqId in allUsers[userId]) {
+            const req = allUsers[userId][reqId];
             if (selectedCategory && req.category !== selectedCategory) continue;
 
             let card = document.createElement("div");
@@ -121,20 +110,21 @@
           }
         }
 
-        // Load recharge requests
-        db.ref("rechargeRequests").once("value", rSnap => {
+        // Recharge requests
+        db.ref("recharge").once("value", rSnap => {
           const requests = rSnap.val();
-          for (let id in requests) {
-            const r = requests[id];
+          for (let uid in requests) {
+            const r = requests[uid];
             let card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
-              <div><span class='led'></span><strong>Recharge Request</strong> from ${r.userId}</div>
+              <div><span class='led'></span><strong>Recharge Request</strong> from ${uid}</div>
               <div>📷 Screenshot: <a href='${r.screenshot}' target='_blank'>View</a></div>
+              <div>💰 Amount: ₹${r.amount}</div>
               <div>📅 ${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</div>
               <div>
-                <button class='btn btn-green' onclick="approveRecharge('${r.userId}')">Approve</button>
-                <button class='btn btn-red' onclick="rejectRecharge('${r.userId}')">Reject</button>
+                <button class='btn btn-green' onclick="approveRecharge('${uid}')">Approve</button>
+                <button class='btn btn-red' onclick="rejectRecharge('${uid}')">Reject</button>
               </div>
             `;
             container.appendChild(card);
@@ -147,13 +137,16 @@
       db.ref("posters/" + uid + "/wallet").once("value", snap => {
         let current = snap.val() || 0;
         db.ref("posters/" + uid).update({ wallet: current + 100 });
+        db.ref("recharge/" + uid).update({ status: "approved" });
         alert("Recharge Approved");
+        loadData();
       });
     }
 
     function rejectRecharge(uid) {
-      db.ref("rechargeRequests/" + uid).remove();
+      db.ref("recharge/" + uid).remove();
       alert("Recharge Rejected");
+      loadData();
     }
 
     window.onload = loadData;
