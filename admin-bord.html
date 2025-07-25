@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🛠️ ZaraFix - Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #f0f4f8; font-family: sans-serif; padding: 10px; }
+    h2 { text-align: center; }
+    .section { margin: 20px 0; }
+    .card {
+      background: #fff; border-radius: 10px; padding: 15px;
+      margin: 10px auto; max-width: 600px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .card h3 { margin: 5px 0; }
+    .tag { background: #e1f5fe; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .btn {
+      padding: 6px 12px; border: none; border-radius: 5px;
+      background: #2196F3; color: white; cursor: pointer; margin-top: 5px;
+    }
+    .btn:disabled { background: #aaa; }
+    .card p { margin: 5px 0; }
+    .wallet { font-weight: bold; color: green; }
+  </style>
+</head>
+<body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+
+  <div class="section">
+    <h3>📋 All Service Requests</h3>
+    <div id="requests"></div>
+  </div>
+
+  <div class="section">
+    <h3>🧰 All Service Providers</h3>
+    <div id="providers"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB...", // your key
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "...",
+      appId: "..."
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const requestsDiv = document.getElementById('requests');
+    const providersDiv = document.getElementById('providers');
+
+    // Load all service requests
+    onValue(ref(db, 'requests'), (snapshot) => {
+      requestsDiv.innerHTML = '';
+      const allUsers = snapshot.val();
+      for (let userId in allUsers) {
+        const userRequests = allUsers[userId];
+        for (let reqId in userRequests) {
+          const req = userRequests[reqId];
+          const accepted = req.acceptedBy ? Object.values(req.acceptedBy).map(p => `
+            <div>
+              🧑 <b>${p.name}</b> 
+              📞 <a href="https://wa.me/${p.whatsapp}" target="_blank">WhatsApp</a>
+            </div>
+          `).join('') : 'No one accepted yet';
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${req.name} (${req.category})</h3>
+            <p>📍 ${req.address}</p>
+            <p>📞 <a href="https://wa.me/${req.whatsapp}" target="_blank">${req.whatsapp}</a></p>
+            <p>🔧 Problem: ${req.problem}</p>
+            <p>🕒 ${new Date(req.timestamp).toLocaleString()}</p>
+            <p><b>Accepted By:</b><br>${accepted}</p>
+            <p class="tag">User ID: ${userId}</p>
+          `;
+          requestsDiv.appendChild(card);
+        }
+      }
+    });
+
+    // Load all posters (providers)
+    onValue(ref(db, 'posters'), (snapshot) => {
+      providersDiv.innerHTML = '';
+      const posters = snapshot.val();
+      for (let uid in posters) {
+        const p = posters[uid];
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${p.name} (${p.category})</h3>
+          <p>🏪 ${p.shop}</p>
+          <p>📞 <a href="https://wa.me/${p.whatsapp}" target="_blank">${p.whatsapp}</a></p>
+          <p class="wallet">Wallet: ₹${p.wallet || 0}</p>
+          <button class="btn" onclick="recharge('${uid}', ${p.wallet || 0})">Recharge ₹100</button>
+          <p class="tag">Poster ID: ${uid}</p>
+        `;
+        providersDiv.appendChild(card);
+      }
+    });
+
+    // Recharge wallet
+    window.recharge = (uid, currentBalance) => {
+      const confirmRecharge = confirm("Recharge ₹100 to wallet?");
+      if (!confirmRecharge) return;
+      const newBalance = (currentBalance || 0) + 100;
+      update(ref(db, 'posters/' + uid), { wallet: newBalance });
+      alert("✅ Recharged ₹100 for Poster ID: " + uid);
+    };
+  </script>
+</body>
+</html>
