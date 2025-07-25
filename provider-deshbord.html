@@ -1,20 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login Test - ZaraFix</title>
+  <title>Poster Form + Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; background: #f5f5f5; }
+    .section { display: none; margin-top: 20px; }
+    input, button { padding: 10px; margin: 5px; width: 80%; max-width: 300px; }
+    .card { background: white; padding: 15px; margin: 10px auto; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; }
+  </style>
 </head>
-<body style="text-align:center; font-family:sans-serif; padding:50px;">
-  <h2>🔐 Google Login Test</h2>
-  <button id="loginBtn" style="padding:10px 20px; font-size:18px;">Login with Google</button>
+<body>
 
+  <h2>👨‍🔧 Poster Panel</h2>
+  <button id="loginBtn">🔐 Login with Google</button>
+
+  <div id="formSection" class="section">
+    <h3>📋 Poster Registration Form</h3>
+    <div class="card">
+      <input type="text" id="name" placeholder="Full Name" required><br>
+      <input type="text" id="address" placeholder="Address" required><br>
+      <input type="text" id="shop" placeholder="Shop Name" required><br>
+      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required><br>
+      <button onclick="submitForm()">✅ Submit</button>
+    </div>
+  </div>
+
+  <div id="dashboardSection" class="section">
+    <h3>🧰 Poster Dashboard</h3>
+    <div id="posterInfo" class="card">Loading...</div>
+  </div>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
+    // ✅ Firebase Config
     var firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
       projectId: "zara-fix-2e35a",
       storageBucket: "zara-fix-2e35a.appspot.com",
       messagingSenderId: "636550144008",
@@ -22,28 +49,65 @@
     };
     firebase.initializeApp(firebaseConfig);
 
-    // 🔐 Login button click
-    document.getElementById("loginBtn").addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-          console.log("✅ Login Success", result.user);
-        })
-        .catch((error) => {
-          console.error("❌ Login Error:", error.message);
-          alert("Login failed: " + error.message);
-        });
-    });
+    let currentUser;
 
-    // ✅ Show logged-in state
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
+    // 🔐 Login Function
+    document.getElementById("loginBtn").onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then((result) => {
+        currentUser = result.user;
         document.getElementById("loginBtn").style.display = "none";
-        document.body.innerHTML += `<p>👋 Welcome, ${user.displayName}</p>`;
-      } else {
-        console.log("User not logged in");
+        checkPosterData();
+      }).catch((err) => {
+        alert("Login failed: " + err.message);
+      });
+    };
+
+    // ✅ Check login on page load
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("loginBtn").style.display = "none";
+        checkPosterData();
       }
     });
+
+    // 👀 Check if poster is already registered
+    function checkPosterData() {
+      firebase.database().ref("posters/" + currentUser.uid).once("value").then(snapshot => {
+        if (snapshot.exists()) {
+          showDashboard(snapshot.val());
+        } else {
+          document.getElementById("formSection").style.display = "block";
+        }
+      });
+    }
+
+    // ✅ Submit Form
+    function submitForm() {
+      const data = {
+        name: document.getElementById("name").value,
+        address: document.getElementById("address").value,
+        shop: document.getElementById("shop").value,
+        whatsapp: document.getElementById("whatsapp").value,
+      };
+
+      firebase.database().ref("posters/" + currentUser.uid).set(data).then(() => {
+        showDashboard(data);
+      });
+    }
+
+    // 📊 Show Dashboard
+    function showDashboard(data) {
+      document.getElementById("formSection").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+      document.getElementById("posterInfo").innerHTML = `
+        <b>Name:</b> ${data.name}<br>
+        <b>Address:</b> ${data.address}<br>
+        <b>Shop:</b> ${data.shop}<br>
+        <b>WhatsApp:</b> ${data.whatsapp}
+      `;
+    }
   </script>
 </body>
 </html>
