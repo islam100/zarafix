@@ -1,130 +1,127 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Access</title>
+  <title>🛠️ ZaraFix Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial;
-      background: linear-gradient(to bottom, #f0f4f7, #ffffff);
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom right, #e3f2fd, #ffffff);
       text-align: center;
-      padding: 40px 10px;
+      margin: 0;
+      padding: 20px;
     }
 
     h2 {
-      margin-bottom: 30px;
-      font-size: 24px;
       color: #333;
+      margin-bottom: 20px;
     }
 
     .btn {
-      display: inline-block;
-      margin: 10px;
-      padding: 15px 25px;
+      display: block;
+      margin: 15px auto;
+      padding: 14px 24px;
       font-size: 16px;
       border: none;
-      border-radius: 15px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
       cursor: pointer;
-      box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: all 0.3s ease;
+      width: 80%;
+      max-width: 300px;
+      color: white;
     }
 
     .btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 10px 18px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
     }
 
-    #providerBtn {
-      background-color: #00bcd4;
-      color: white;
-    }
+    #providerBtn { background: #4CAF50; } /* Green */
+    #requestBtn { background: #2196F3; } /* Blue */
+    #loginBtn    { background: #FF9800; } /* Orange */
+    #logoutBtn   { background: #f44336; } /* Red */
 
-    #requestBtn {
-      background-color: #4caf50;
-      color: white;
-    }
-
-    #loginBtn {
-      background-color: #ff5722;
-      color: white;
-      margin-top: 30px;
-    }
-
-    #logoutBtn {
-      background-color: #555;
-      color: white;
-      margin-top: 30px;
-      display: none;
-    }
-
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
+
   <h2>🛠️ Welcome to ZaraFix</h2>
 
-  <div id="buttons" class="hidden">
-    <button class="btn" id="providerBtn" onclick="goToProvider()">Registretion form</button>
-    <button class="btn" id="requestBtn" onclick="goToRequest()">deshbord</button>
+  <div id="authButtons">
+    <button class="btn" id="loginBtn" onclick="login()">🔐 Login with Google</button>
   </div>
 
-  <button class="btn" id="loginBtn" onclick="login()">🔐 Login</button>
-  <button class="btn" id="logoutBtn" onclick="logout()">🚪 Logout</button>
+  <div id="buttons" class="hidden">
+    <button class="btn" id="providerBtn" onclick="goToProvider()">🧰 Service Provider</button>
+    <button class="btn" id="requestBtn" onclick="goToRequest()">📋 Service Request</button>
+    <button class="btn" id="logoutBtn" onclick="logout()">🚪 Logout</button>
+  </div>
 
-  <!-- Firebase + Auth -->
-  <script type="module">
-    // Firebase config
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
+  <script>
+    // ✅ Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "AIzaSyC1FNO-uw8gyWDvUDyLxwW8Xt6TmDcs7hI", // ✅ Replace with your API Key
+      authDomain: "zarafix.firebaseapp.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "1074657686668",
+      appId: "1:1074657686668:web:21babc6ddfb340a423aef3"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const buttons = document.getElementById("buttons");
+    // ✅ Google Login
+    function login() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(() => {
+          showButtons();
+        })
+        .catch((error) => {
+          alert("Login Failed: " + error.message);
+        });
+    }
 
-    onAuthStateChanged(auth, (user) => {
+    // ✅ Logout
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById("buttons").classList.add("hidden");
+        document.getElementById("authButtons").style.display = "block";
+      });
+    }
+
+    // ✅ Page redirect functions
+    function goToProvider() {
+      window.location.href = "posterDashboard.html";
+    }
+
+    function goToRequest() {
+      window.location.href = "form.html";
+    }
+
+    // ✅ Show/hide UI after login
+    function showButtons() {
+      document.getElementById("buttons").classList.remove("hidden");
+      document.getElementById("authButtons").style.display = "none";
+    }
+
+    // ✅ Auto check login on page load
+    auth.onAuthStateChanged(user => {
       if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        buttons.classList.remove("hidden");
+        showButtons();
       } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        buttons.classList.add("hidden");
+        document.getElementById("buttons").classList.add("hidden");
+        document.getElementById("authButtons").style.display = "block";
       }
     });
-
-    window.login = function () {
-      signInWithPopup(auth, provider).catch((error) => {
-        alert("Login failed: " + error.message);
-      });
-    };
-
-    window.logout = function () {
-      signOut(auth);
-    };
-
-    window.goToProvider = function () {
-      window.location.href = "posterDashboard.html"; // update this if needed
-    };
-
-    window.goToRequest = function () {
-      window.location.href = "form.html"; // update this if needed
-    };
   </script>
+
 </body>
 </html>
