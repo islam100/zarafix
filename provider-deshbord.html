@@ -1,175 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>👨‍🔧 Poster Panel - ZaraFix</title>
+  <title>Login Test - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: Arial; margin: 0; padding: 20px; background: #f4f4f4; }
-    .btn, button { padding: 10px 20px; margin: 10px 0; background: #00bcd4; color: white; border: none; border-radius: 10px; box-shadow: 2px 2px 5px gray; }
-    .hidden { display: none; }
-    .card { background: white; padding: 15px; margin: 10px 0; border-radius: 15px; box-shadow: 3px 3px 8px #ccc; }
-    input, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc; }
-  </style>
 </head>
-<body>
+<body style="text-align:center; font-family:sans-serif; padding:50px;">
+  <h2>🔐 Google Login Test</h2>
+  <button id="loginBtn" style="padding:10px 20px; font-size:18px;">Login with Google</button>
 
-<h2>👨‍🔧 Poster Panel</h2>
-<button id="loginBtn" class="btn">Login with Google</button>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
-<div id="registerForm" class="hidden">
-  <h3>📝 Register as Service Provider</h3>
-  <input id="name" placeholder="Full Name">
-  <input id="address" placeholder="Address">
-  <input id="shop" placeholder="Shop Name">
-  <input id="whatsapp" placeholder="WhatsApp Number">
-  <select id="category">
-    <option value="">Select Category</option>
-    <option>AC Mechanic</option>
-    <option>Electrician</option>
-    <option>Car Mechanic</option>
-    <option>Plumber</option>
-    <option>Painter</option>
-    <option>Carpenter</option>
-  </select>
-  <div id="walletBox">Wallet: ₹<span id="wallet">0</span></div>
-  <button onclick="submitRegistration()">Submit</button>
-</div>
+  <script>
+    // ✅ Replace with your config
+    var firebaseConfig = {
+      apiKey: "AIzaSyBmtBgVuSt3I0cf3CcmUIywGhNk8NPltGM",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "215380235317",
+      appId: "1:215380235317:web:3e81ae27cf8001fcbd163f"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-<div id="rechargeForm" class="hidden">
-  <h3>💰 Recharge Wallet</h3>
-  <p>Scan UPI QR and upload screenshot</p>
-  <img src="https://i.ibb.co/JcZPFbn/qr.jpg" width="200">
-  <input type="file" id="screenshot" onchange="uploadScreenshot(this)">
-  <button onclick="submitRecharge()">Send to Admin</button>
-</div>
-
-<div id="dashboard" class="hidden">
-  <h3>📋 Available Jobs</h3>
-  <div id="jobList">Loading jobs...</div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCqA-PYeP6A2VZ_JlDRvhwWaJuY1NaAEEM",
-  authDomain: "zarafix.firebaseapp.com",
-  databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
-  projectId: "zarafix",
-  storageBucket: "zarafix.appspot.com",
-  messagingSenderId: "42247655569",
-  appId: "1:42247655569:web:e76cb97f4dd1c7e5cc630a"
-};
-firebase.initializeApp(firebaseConfig);
-
-let currentUser, wallet = 0;
-
-firebase.auth().onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    document.getElementById("loginBtn").style.display = "none";
-    checkPoster();
-  }
-});
-
-document.getElementById("loginBtn").onclick = () => {
-  firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-};
-
-function checkPoster() {
-  firebase.database().ref("posters/" + currentUser.uid).once("value", snap => {
-    if (snap.exists()) {
-      wallet = snap.val().wallet || 0;
-      if (wallet < 100) {
-        document.getElementById("rechargeForm").classList.remove("hidden");
-      } else {
-        loadDashboard(snap.val().category);
-      }
-    } else {
-      document.getElementById("registerForm").classList.remove("hidden");
-    }
-  });
-}
-
-function submitRegistration() {
-  const name = document.getElementById("name").value;
-  const address = document.getElementById("address").value;
-  const shop = document.getElementById("shop").value;
-  const whatsapp = document.getElementById("whatsapp").value;
-  const category = document.getElementById("category").value;
-  if (!name || !address || !shop || !whatsapp || !category) return alert("Fill all");
-
-  firebase.database().ref("posters/" + currentUser.uid).set({
-    name, address, shop, whatsapp, category, wallet: 100, lastDeduct: Date.now()
-  }, () => {
-    alert("Registered successfully");
-    document.getElementById("registerForm").classList.add("hidden");
-    loadDashboard(category);
-  });
-}
-
-function uploadScreenshot(input) {
-  const file = input.files[0];
-  const formData = new FormData();
-  formData.append("image", file);
-  fetch("https://api.imgbb.com/1/upload?key=72c022c1182b94d6baa3d4fc675dd641", {
-    method: "POST", body: formData
-  })
-  .then(res => res.json())
-  .then(data => {
-    window.ssURL = data.data.url;
-    alert("Uploaded");
-  });
-}
-
-function submitRecharge() {
-  if (!window.ssURL) return alert("Upload screenshot first");
-  firebase.database().ref("recharges/" + currentUser.uid).push({
-    screenshot: window.ssURL,
-    timestamp: Date.now()
-  });
-  window.open("https://wa.me/918806940156?text=Recharge+Request+From+" + currentUser.uid, "_blank");
-  alert("Recharge request sent.");
-}
-
-function loadDashboard(category) {
-  document.getElementById("dashboard").classList.remove("hidden");
-  firebase.database().ref("requests").on("value", snap => {
-    let html = "";
-    snap.forEach(userSnap => {
-      const userId = userSnap.key;
-      userSnap.forEach(reqSnap => {
-        const req = reqSnap.val();
-        const reqId = reqSnap.key;
-        if (req.category === category) {
-          const accepted = req.acceptedBy && req.acceptedBy[currentUser.uid];
-          html += `<div class="card">
-            <h4>${req.category}</h4>
-            <p><strong>Name:</strong> ${req.name}</p>
-            <p><strong>Address:</strong> ${req.address}</p>
-            <p><strong>Problem:</strong> ${req.problem}</p>
-            ${accepted ? `<a href="https://wa.me/${req.whatsapp}" target="_blank" class="btn">Chat on WhatsApp</a>` :
-            `<button onclick="acceptJob('${userId}', '${reqId}', '${req.whatsapp}')">Accept</button>`}
-          </div>`;
-        }
-      });
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+          console.log("✅ Login Success", result.user);
+          alert("Login successful! Check console.");
+        })
+        .catch((error) => {
+          console.error("❌ Login Error:", error.message);
+          alert("Login failed: " + error.message);
+        });
     });
-    document.getElementById("jobList").innerHTML = html || "No matching jobs";
-  });
-}
-
-function acceptJob(userId, reqId, whatsapp) {
-  firebase.database().ref("posters/" + currentUser.uid).once("value", snap => {
-    let wallet = snap.val().wallet || 0;
-    if (wallet < 20) return alert("Insufficient balance");
-    firebase.database().ref("posters/" + currentUser.uid + "/wallet").set(wallet - 20);
-    firebase.database().ref(`requests/${userId}/${reqId}/acceptedBy/${currentUser.uid}`).set(true);
-    alert("Accepted. Now you can chat on WhatsApp.");
-  });
-}
-</script>
-
+  </script>
 </body>
 </html>
