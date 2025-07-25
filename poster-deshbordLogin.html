@@ -1,73 +1,86 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Home</title>
+  <title>🛠️ ZaraFix - Entry</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
+      margin: 0;
+      font-family: Arial, sans-serif;
       background: linear-gradient(to bottom, #f0f4f8, #ffffff);
-      font-family: 'Segoe UI', sans-serif;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 40px 10px;
     }
 
-    .button {
+    h2 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      color: #333;
+    }
+
+    .btn {
       margin: 10px;
       padding: 15px 25px;
+      border: none;
       font-size: 16px;
       font-weight: bold;
-      border: none;
-      border-radius: 20px;
+      border-radius: 12px;
+      box-shadow: 4px 4px 10px rgba(0,0,0,0.2);
+      color: white;
       cursor: pointer;
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-      transition: all 0.2s ease;
-      width: 90%;
-      max-width: 300px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
+      transition: transform 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
     }
 
-    .button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+    .btn:hover {
+      transform: translateY(-3px);
     }
 
-    .provider-btn {
-      background-color: #4a90e2;
-      color: white;
+    .provider {
+      background: #2196F3;
     }
 
-    .request-btn {
-      background-color: #27ae60;
-      color: white;
+    .request {
+      background: #4CAF50;
     }
 
-    .login-btn {
-      background-color: #8e44ad;
-      color: white;
+    .login {
+      background: #FF9800;
     }
 
-    .logout-btn {
-      background-color: #e74c3c;
-      color: white;
+    .logout {
+      background: #E91E63;
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
+
   <h2>👋 Welcome to ZaraFix</h2>
 
-  <!-- Buttons -->
-  <a id="providerBtn" class="button provider-btn" href="posterDashboard.html">🧰 Service Provider</a>
-  <a id="requestBtn" class="button request-btn" href="form.html">📋 Service Request</a>
-  <button id="loginBtn" class="button login-btn" onclick="login()">🔐 Login</button>
-  <button id="logoutBtn" class="button logout-btn" onclick="logout()" style="display:none">🚪 Logout</button>
+  <button id="loginBtn" class="btn login">🔐 Login</button>
+  <button id="logoutBtn" class="btn logout hidden">🚪 Logout</button>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <a href="serviceProvider.html" id="providerBtn" class="btn provider hidden">🧰 Service Provider</a>
+  <a href="serviceRequest.html" id="requestBtn" class="btn request hidden">📋 Service Request</a>
 
-  <script>
+  <!-- Firebase + Auth -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth,
+      signInWithPopup,
+      GoogleAuthProvider,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -76,28 +89,41 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-    firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
 
-    function login() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const providerBtn = document.getElementById("providerBtn");
+    const requestBtn = document.getElementById("requestBtn");
 
-    function logout() {
-      auth.signOut();
-    }
+    loginBtn.addEventListener("click", () => {
+      signInWithPopup(auth, provider).catch(err => {
+        alert("Login Failed");
+        console.error(err);
+      });
+    });
 
-    auth.onAuthStateChanged(user => {
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth);
+    });
+
+    onAuthStateChanged(auth, user => {
       if (user) {
-        document.getElementById('loginBtn').style.display = 'none';
-        document.getElementById('logoutBtn').style.display = 'block';
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        providerBtn.classList.remove("hidden");
+        requestBtn.classList.remove("hidden");
       } else {
-        document.getElementById('loginBtn').style.display = 'block';
-        document.getElementById('logoutBtn').style.display = 'none';
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        providerBtn.classList.add("hidden");
+        requestBtn.classList.add("hidden");
       }
     });
   </script>
+
 </body>
 </html>
