@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>✨ Poster Dashboard - ZaraFix</title>
+  <title>🧰 Poster Dashboard - ZaraFix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -12,44 +12,41 @@
       background: linear-gradient(to right, #fceabb, #f8b500);
       margin: 0;
       padding: 0;
-      color: #333;
     }
     .container {
       max-width: 800px;
-      margin: auto;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      padding: 20px;
-      margin-top: 30px;
-    }
-    h2 {
-      text-align: center;
-    }
-    .card {
-      border: 2px solid #ddd;
+      margin: 40px auto;
+      background: white;
+      padding: 25px;
       border-radius: 12px;
-      padding: 15px;
-      margin: 15px 0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    h2 { text-align: center; }
+    .card {
       background: #f9f9f9;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
     }
     .btn {
-      padding: 10px 20px;
-      background: #28a745;
+      background: green;
       color: white;
+      padding: 10px 15px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
+      margin-top: 10px;
     }
     .btn:disabled {
-      background: #ccc;
+      background: gray;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🧠 Poster Dashboard</h2>
+    <h2>🧰 Poster Dashboard</h2>
     <p><strong>Name:</strong> <span id="posterName">Loading...</span></p>
     <p><strong>Address:</strong> <span id="posterAddress">Loading...</span></p>
     <p><strong>Shop:</strong> <span id="posterShop">Loading...</span></p>
@@ -61,52 +58,58 @@
   </div>
 
   <script>
+    // ✅ Aapka diya hua Firebase Config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
 
-    let currentUserId;
-    let posterData;
+    let currentUserId = null;
+    let posterData = null;
 
     auth.onAuthStateChanged(user => {
       if (!user) return location.href = "index.html";
       currentUserId = user.uid;
-      db.ref("posters/" + currentUserId).once("value", snap => {
+      db.ref("posters/" + currentUserId).once("value").then(snap => {
         posterData = snap.val();
+        if (!posterData) return alert("Poster profile not found.");
+
         document.getElementById("posterName").textContent = posterData.name;
         document.getElementById("posterAddress").textContent = posterData.address;
-        document.getElementById("posterShop").textContent = posterData.shop || 'Not set';
+        document.getElementById("posterShop").textContent = posterData.shop || "Not set";
         document.getElementById("posterCategory").textContent = posterData.category;
         document.getElementById("posterWhatsApp").textContent = posterData.whatsapp;
         document.getElementById("wallet").textContent = posterData.wallet || 0;
+
         loadRequests();
       });
     });
 
     function loadRequests() {
-      db.ref("requests").once("value", snap => {
-        const requests = snap.val();
+      db.ref("requests").once("value").then(snap => {
         const container = document.getElementById("requestsContainer");
         container.innerHTML = "";
-        for (let key in requests) {
-          const req = requests[key];
-          if (req.category === posterData.category && req.status === "pending") {
+        const requests = snap.val();
+        for (let id in requests) {
+          const req = requests[id];
+
+          // ✅ Filter: only pending requests of same category
+          if (req.category === posterData.category && req.status !== "accepted") {
             const card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
               <p><strong>Name:</strong> ${req.name}</p>
               <p><strong>Address:</strong> ${req.address}</p>
               <p><strong>Problem:</strong> ${req.problem}</p>
-              <button class="btn" onclick="acceptJob('${key}', this)">Accept Job</button>
+              <button class="btn" onclick="acceptJob('${id}', this)">Accept Job</button>
             `;
             container.appendChild(card);
           }
@@ -114,18 +117,32 @@
       });
     }
 
-    function acceptJob(requestId, btn) {
-      if (posterData.wallet < 20) return alert("Insufficient wallet balance. Please recharge.");
+    function acceptJob(reqId, btn) {
+      if (posterData.wallet < 20) {
+        alert("❌ Insufficient wallet balance.");
+        return;
+      }
       btn.disabled = true;
-      const newWallet = posterData.wallet - 20;
-      db.ref("posters/" + currentUserId).update({ wallet: newWallet });
-      db.ref("requests/" + requestId + "/acceptedBy").push({
+
+      const updates = {};
+      updates["posters/" + currentUserId + "/wallet"] = posterData.wallet - 20;
+      updates["requests/" + reqId + "/status"] = "accepted";
+      updates["requests/" + reqId + "/acceptedBy"] = {
+        uid: currentUserId,
         name: posterData.name,
-        whatsapp: posterData.whatsapp,
-        location: posterData.address
+        whatsapp: posterData.whatsapp
+      };
+
+      db.ref().update(updates, (err) => {
+        if (!err) {
+          posterData.wallet -= 20;
+          document.getElementById("wallet").textContent = posterData.wallet;
+          alert("✅ Job accepted! ₹20 deducted.");
+          btn.parentElement.remove(); // Remove request from list
+        } else {
+          alert("Something went wrong.");
+        }
       });
-      document.getElementById("wallet").textContent = newWallet;
-      alert("Job accepted! ₹20 deducted.");
     }
   </script>
 </body>
