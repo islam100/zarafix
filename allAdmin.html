@@ -1,0 +1,186 @@
+[⚠️ Suspicious Content] <!DOCTYPE html>
+<html>
+<head>
+  <title>ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f5f5f5; padding: 10px; margin: 0; }
+    h2 { text-align: center; color: #333; }
+
+    .dropdown {
+      display: flex;
+      justify-content: center;
+      margin: 10px;
+    }
+
+    select {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #aaa;
+      background: linear-gradient(to right, #80d0c7, #0093e9);
+      color: white;
+      font-weight: bold;
+    }
+
+    .card {
+      background: white;
+      margin: 10px auto;
+      padding: 15px;
+      border-radius: 20px;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+      max-width: 500px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      transition: 0.3s;
+    }
+
+    .approve { background: green; }
+    .reject { background: red; }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .section { display: none; }
+  </style>
+</head>
+<body>
+  <h2>🛠️ ZaraFix Admin Dashboard</h2>
+
+  <div class="dropdown">
+    <select id="sectionSelector">
+      <option value="posters">📋 Posters</option>
+      <option value="requests">📄 Requests</option>
+      <option value="recharges">💳 Recharge Requests</option>
+    </select>
+  </div>
+
+  <div id="posters" class="section"></div>
+  <div id="requests" class="section"></div>
+  <div id="recharges" class="section"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+
+    const adminUID = "QT3LkEToHwaiORatoKfTx8QE45s2";
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user || user.uid !== adminUID) {
+        alert("Access denied. Admins only.");
+        window.location.href = "index.html";
+        return;
+      }
+      loadPosters();
+      loadRequests();
+      loadRecharges();
+    });
+
+    function loadPosters() {
+      db.ref('posters').once('value', snap => {
+        const container = document.getElementById('posters');
+        container.innerHTML = '';
+        snap.forEach(child => {
+          const poster = child.val();
+          const uid = child.key;
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <strong>${poster.name}</strong><br>
+            Category: ${poster.category}<br>
+            Wallet: ₹${poster.wallet}<br>
+            <button class="btn approve" onclick="approvePoster('${uid}')">Approve</button>
+            <button class="btn reject" onclick="rejectPoster('${uid}')">Reject</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function approvePoster(uid) {
+      alert("Approved poster: " + uid);
+      // Update logic if needed
+    }
+
+    function rejectPoster(uid) {
+      alert("Rejected poster: " + uid);
+      // Update logic if needed
+    }
+
+    function loadRequests() {
+      db.ref('requests').once('value', snap => {
+        const container = document.getElementById('requests');
+        container.innerHTML = '';
+        snap.forEach(userSnap => {
+          userSnap.forEach(reqSnap => {
+            const req = reqSnap.val();
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <strong>${req.name}</strong><br>
+              Issue: ${req.problem}<br>
+              Address: ${req.address}<br>
+              Status: ${req.status}<br>
+              Accepted By: ${
+                req.acceptedBy ? Object.values(req.acceptedBy).map(p => p.name).join(", ") : 'None'
+              }
+            `;
+            container.appendChild(card);
+          });
+        });
+      });
+    }
+
+    function loadRecharges() {
+      db.ref('recharge').once('value', snap => {
+        const container = document.getElementById('recharges');
+        container.innerHTML = '';
+        snap.forEach(child => {
+          const rec = child.val();
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            UID: ${child.key}<br>
+            Amount: ₹${rec.amount}<br>
+            Status: ${rec.status}<br>
+            <a href="${rec.screenshot}" target="_blank">View Screenshot</a>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    document.getElementById("sectionSelector").addEventListener("change", (e) => {
+      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(e.target.value).style.display = 'block';
+    });
+
+    // Show default section
+    document.getElementById("sectionSelector").value = "posters";
+    document.getElementById("posters").style.display = "block";
+  </script>
+</body>
+</html>
