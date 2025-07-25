@@ -1,124 +1,191 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🎯 ZaraFix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 10px; }
-    h2 { text-align: center; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 {
+      color: #333;
+    }
+    select {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+    }
     .card {
       background: #fff;
-      margin: 15px auto;
-      padding: 15px;
       border-radius: 15px;
+      padding: 15px;
+      margin: 15px auto;
+      max-width: 400px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      max-width: 500px;
+      text-align: left;
       position: relative;
     }
-    .approve-btn, .recharge-btn {
-      padding: 8px 15px;
+    .approveBtn {
+      padding: 8px 12px;
+      background: #28a745;
+      color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      margin: 5px;
-      font-weight: bold;
+      margin-top: 10px;
     }
-    .approve-btn { background: #4CAF50; color: white; }
-    .recharge-btn { background: #2196F3; color: white; }
-    .approved-label { color: purple; font-weight: bold; }
-    .blink { animation: blink 1s infinite; color: green; }
+    .approved {
+      font-weight: bold;
+      color: purple;
+    }
+    .led {
+      width: 12px;
+      height: 12px;
+      background-color: green;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      animation: blink 1s infinite;
+    }
     @keyframes blink {
       0% { opacity: 1; }
       50% { opacity: 0.2; }
       100% { opacity: 1; }
     }
-    select {
-      margin-top: 10px;
-      width: 100%;
-      padding: 6px;
-      border-radius: 5px;
-    }
   </style>
 </head>
 <body>
-  <h2>🎯 ZaraFix Admin Dashboard</h2>
-  <div id="adminDashboard"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<h2>🎯 ZaraFix Admin Dashboard</h2>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyD-WCCt_HuzO_dWMWDe1dtu8YuUtxxxxxxx",
-      authDomain: "your-project-id.firebaseapp.com",
-      databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-      projectId: "your-project-id",
-      storageBucket: "your-project-id.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcdef123456"
-    };
+<select id="filterDropdown">
+  <option value="posters">Posters</option>
+  <option value="requests">Requests</option>
+  <option value="recharge">Recharge Requests</option>
+</select>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<div id="dashboardContainer"></div>
 
-    const dashboard = document.getElementById("adminDashboard");
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-    const postersRef = ref(db, 'posters');
-    onValue(postersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        dashboard.innerHTML = '';
-        const sorted = Object.entries(data).sort((a,b)=>b[1].timestamp - a[1].timestamp);
-        sorted.forEach(([uid, poster]) => {
-          const card = document.createElement('div');
-          card.className = 'card';
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-          card.innerHTML = `
-            <strong>🧑‍🔧 ${poster.name}</strong><br>
-            📍 ${poster.address} | 🏪 ${poster.shop}<br>
-            📞 ${poster.whatsapp}<br>
-            🔧 ${poster.category}<br>
-            💰 Wallet: ₹${poster.wallet || 0}<br>
-            <div id="status-${uid}">
-              ${poster.approved ? '<span class="approved-label">✅ Approved</span>' : '<span class="blink">🟢 Pending</span>'}
-            </div>
-            ${poster.approved ? '' : `<button class="approve-btn" onclick="approvePoster('${uid}')">Approve</button>`}
-            <button class="recharge-btn" onclick="showRechargeRequests('${uid}')">Recharge Requests</button>
-            <select id="recharges-${uid}" style="display:none;"><option>Loading...</option></select>
-          `;
+  const dashboard = document.getElementById("dashboardContainer");
+  const filterDropdown = document.getElementById("filterDropdown");
 
-          dashboard.appendChild(card);
-        });
-      }
-    });
+  function loadPosters() {
+    dashboard.innerHTML = "";
+    db.ref("posters").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const data = child.val();
+        const div = document.createElement("div");
+        div.className = "card";
 
-    window.approvePoster = function(uid) {
-      const updateRef = ref(db, 'posters/' + uid);
-      update(updateRef, { approved: true });
-    }
-
-    window.showRechargeRequests = function(uid) {
-      const rechargeRef = ref(db, 'rechargeRequests/' + uid);
-      const dropdown = document.getElementById('recharges-' + uid);
-      dropdown.style.display = 'block';
-      dropdown.innerHTML = '<option>Loading...</option>';
-
-      onValue(rechargeRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          dropdown.innerHTML = '<option disabled selected>Select Recharge</option>';
-          Object.values(data).forEach(req => {
-            const opt = document.createElement('option');
-            opt.text = `${req.timestamp || ''} - ₹100 - ${req.status || 'Pending'}`;
-            dropdown.appendChild(opt);
-          });
-        } else {
-          dropdown.innerHTML = '<option>No requests</option>';
+        const approved = data.approved === true;
+        if (!approved) {
+          const led = document.createElement("div");
+          led.className = "led";
+          div.appendChild(led);
         }
-      }, {
-        onlyOnce: true
+
+        div.innerHTML += `
+          <strong>Name:</strong> ${data.name}<br>
+          <strong>Shop:</strong> ${data.shop}<br>
+          <strong>Category:</strong> ${data.category}<br>
+          <strong>WhatsApp:</strong> ${data.whatsapp}<br>
+          <strong>Wallet:</strong> ₹${data.wallet || 0}<br>
+        `;
+
+        if (!approved) {
+          const btn = document.createElement("button");
+          btn.className = "approveBtn";
+          btn.innerText = "Approve";
+          btn.onclick = () => {
+            db.ref("posters/" + child.key).update({ approved: true });
+            db.ref("admins/" + child.key).set(true);
+            alert("Approved!");
+            loadPosters();
+          };
+          div.appendChild(btn);
+        } else {
+          div.innerHTML += `<div class="approved">✅ Approved</div>`;
+        }
+
+        dashboard.appendChild(div);
       });
-    }
-  </script>
+    });
+  }
+
+  function loadRequests() {
+    dashboard.innerHTML = "";
+    db.ref("requests").once("value", snapshot => {
+      snapshot.forEach(user => {
+        const userRequests = user.val();
+        for (const key in userRequests) {
+          const req = userRequests[key];
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <strong>Name:</strong> ${req.name}<br>
+            <strong>Category:</strong> ${req.category}<br>
+            <strong>Address:</strong> ${req.address}<br>
+            <strong>Problem:</strong> ${req.problem}<br>
+            <strong>WhatsApp:</strong> ${req.whatsapp}<br>
+            <strong>Status:</strong> ${req.status}<br>
+          `;
+          dashboard.appendChild(div);
+        }
+      });
+    });
+  }
+
+  function loadRechargeRequests() {
+    dashboard.innerHTML = "";
+    db.ref("recharges").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const data = child.val();
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <strong>User ID:</strong> ${child.key}<br>
+          <strong>Status:</strong> ${data.status || "pending"}<br>
+          <img src="${data.screenshot}" alt="screenshot" width="100%"><br>
+          <strong>Time:</strong> ${new Date(data.timestamp).toLocaleString()}
+        `;
+        dashboard.appendChild(div);
+      });
+    });
+  }
+
+  filterDropdown.addEventListener("change", () => {
+    const value = filterDropdown.value;
+    if (value === "posters") loadPosters();
+    else if (value === "requests") loadRequests();
+    else if (value === "recharge") loadRechargeRequests();
+  });
+
+  // Load default view
+  loadPosters();
+</script>
+
 </body>
 </html>
