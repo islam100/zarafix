@@ -4,71 +4,58 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f0f0f0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-    }
-    select {
-      padding: 10px;
-      font-size: 16px;
-      margin-bottom: 20px;
-      width: 100%;
-      max-width: 300px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
+    body { font-family: Arial; margin: 0; padding: 0; background: #f4f4f4; }
+    h2 { text-align: center; background: #6200ea; color: white; padding: 10px; margin: 0; }
+    select { margin: 10px; padding: 10px; font-size: 16px; }
     .card {
-      background: #fff;
+      background: white;
+      margin: 10px;
+      padding: 15px;
       border-radius: 12px;
-      padding: 20px;
-      margin: 10px auto;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      max-width: 500px;
-      position: relative;
-    }
-    .approve-btn {
-      background: green;
-      color: #fff;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     .led {
-      width: 15px;
       height: 15px;
+      width: 15px;
       border-radius: 50%;
-      background-color: green;
-      position: absolute;
-      top: 10px;
-      right: 10px;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    .led.green { background-color: #00c853; }
+    .led.yellow {
+      background-color: #ffeb3b;
       animation: blink 1s infinite;
     }
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
     }
+    button {
+      padding: 6px 12px;
+      background: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    button.approve { background: #388e3c; }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Dashboard</h2>
-  <select id="viewSelector">
-    <option value="providers">Providers</option>
-    <option value="requests">Users</option>
-    <option value="recharges">Recharge Requests</option>
-  </select>
-  <div id="dataContainer"></div>
+  <h2>🔧 ZaraFix Admin Dashboard</h2>
+  <div style="text-align:center">
+    <select id="viewType">
+      <option value="provider">📋 Providers</option>
+      <option value="request">🧾 Requests</option>
+      <option value="recharge">💰 Recharge</option>
+    </select>
+  </div>
+  <div id="output"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getDatabase, ref, get, update, onValue
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
@@ -78,110 +65,75 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const container = document.getElementById('dataContainer');
-    const viewSelector = document.getElementById('viewSelector');
 
-    function renderProviders(data) {
-      container.innerHTML = '';
-      for (const uid in data) {
-        const provider = data[uid];
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${provider.name}</h3>
-          <p>Shop: ${provider.shop}</p>
-          <p>Category: ${provider.category}</p>
-          <p>WhatsApp: ${provider.whatsapp}</p>
-          <p>Address: ${provider.address}</p>
-          <p>Wallet: ₹${provider.wallet || 0}</p>
-          <div id="status-${uid}"></div>
-        `;
-        if (!provider.approved) {
-          const btn = document.createElement('button');
-          btn.className = 'approve-btn';
-          btn.innerText = 'Approve';
-          btn.onclick = () => {
-            update(ref(db, `posters/${uid}`), { approved: true });
-          };
-          const led = document.createElement('div');
-          led.className = 'led';
-          card.appendChild(led);
-          card.appendChild(btn);
-        } else {
-          document.getElementById(`status-${uid}`)?.remove();
-          const approvedText = document.createElement('p');
-          approvedText.style.color = 'green';
-          approvedText.innerText = '✅ Approved';
-          card.appendChild(approvedText);
-        }
-        container.appendChild(card);
-      }
-    }
+    const viewType = document.getElementById("viewType");
+    const output = document.getElementById("output");
 
-    function renderUsers(data) {
-      container.innerHTML = '';
-      for (const uid in data) {
-        const userRequests = data[uid];
-        for (const reqId in userRequests) {
-          const req = userRequests[reqId];
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <h3>${req.name}</h3>
-            <p>Category: ${req.category}</p>
-            <p>Problem: ${req.problem}</p>
-            <p>Address: ${req.address}</p>
-            <p>WhatsApp: ${req.whatsapp}</p>
-            <p>Status: ${req.status}</p>
-          `;
-          container.appendChild(card);
-        }
-      }
-    }
+    viewType.addEventListener("change", loadData);
+    window.onload = loadData;
 
-    function renderRecharges(data) {
-      container.innerHTML = '';
-      for (const uid in data) {
-        const recharge = data[uid];
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>Recharge Request</h3>
-          <p>User ID: ${uid}</p>
-          <p>Screenshot: <a href="${recharge.screenshot}" target="_blank">View</a></p>
-          <p>Status: ${recharge.approved ? '✅ Approved' : 'Pending'}</p>
-        `;
-        container.appendChild(card);
-      }
-    }
-
-    function loadView(view) {
-      if (view === 'providers') {
-        onValue(ref(db, 'posters'), snapshot => {
-          const data = snapshot.val() || {};
-          renderProviders(data);
+    function loadData() {
+      const type = viewType.value;
+      output.innerHTML = "";
+      if (type === "provider") {
+        const refData = ref(db, 'posters');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const approved = data.approved;
+            const led = approved ? '<span class="led green"></span>' : '<span class="led yellow"></span>';
+            const btn = approved ? '✅ Approved' : `<button class='approve' onclick="approvePoster('${child.key}')">Approve</button>`;
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Shop: ${data.shop}<br>Category: ${data.category}<br>WhatsApp: ${data.whatsapp}<br>${btn}<br><button onclick="deletePoster('${child.key}')">❌ Delete</button></div>`;
+          });
         });
-      } else if (view === 'requests') {
-        onValue(ref(db, 'requests'), snapshot => {
-          const data = snapshot.val() || {};
-          renderUsers(data);
+      } else if (type === "request") {
+        const refData = ref(db, 'requests');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(user => {
+            user.forEach(child => {
+              const data = child.val();
+              const pending = !data.acceptedBy || Object.keys(data.acceptedBy).length === 0;
+              const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+              output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>${data.problem}<br>${data.address}<br>WhatsApp: ${data.whatsapp}<br><button onclick="deleteRequest('${user.key}', '${child.key}')">❌ Delete</button></div>`;
+            });
+          });
         });
-      } else if (view === 'recharges') {
-        onValue(ref(db, 'recharges'), snapshot => {
-          const data = snapshot.val() || {};
-          renderRecharges(data);
+      } else if (type === "recharge") {
+        const refData = ref(db, 'recharges');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const pending = !data.approved;
+            const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+            const btn = pending ? `<button class='approve' onclick="approveRecharge('${child.key}')">Approve</button>` : '✅ Approved';
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Screenshot: <a href="${data.screenshot}" target="_blank">View</a><br>${btn}<br><button onclick="deleteRecharge('${child.key}')">❌ Delete</button></div>`;
+          });
         });
       }
     }
 
-    viewSelector.addEventListener('change', e => {
-      loadView(e.target.value);
-    });
-
-    loadView(viewSelector.value); // Load default
+    window.approvePoster = (id) => {
+      update(ref(db, 'posters/' + id), { approved: true });
+      alert("Poster Approved");
+    }
+    window.deletePoster = (id) => {
+      if (confirm("Delete this poster?")) remove(ref(db, 'posters/' + id));
+    }
+    window.deleteRequest = (uid, rid) => {
+      if (confirm("Delete this request?")) remove(ref(db, `requests/${uid}/${rid}`));
+    }
+    window.approveRecharge = (id) => {
+      update(ref(db, 'recharges/' + id), { approved: true });
+      alert("Recharge Approved");
+    }
+    window.deleteRecharge = (id) => {
+      if (confirm("Delete this recharge request?")) remove(ref(db, 'recharges/' + id));
+    }
   </script>
 </body>
 </html>
