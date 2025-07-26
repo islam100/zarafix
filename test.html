@@ -5,149 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f4f8;
-      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom right, #e3f2fd, #ffffff);
       padding: 20px;
+      margin: 0;
     }
-
-    h1 {
+    h2 {
       text-align: center;
-      color: #1a237e;
+      color: #0077b6;
     }
-
     .card {
       background: white;
       border-radius: 20px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
       padding: 20px;
       margin: 20px auto;
       max-width: 500px;
-      transition: transform 0.3s;
+      transition: transform 0.3s ease;
     }
-
     .card:hover {
-      transform: scale(1.02);
+      transform: translateY(-5px);
     }
-
     .card h3 {
       margin-top: 0;
-      color: #0d47a1;
+      color: #0077b6;
     }
-
-    .accepted {
-      margin-top: 10px;
+    .accepted-list {
       background: #e3f2fd;
+      border-radius: 12px;
       padding: 10px;
-      border-radius: 10px;
+      margin-top: 10px;
     }
-
-    .accepted a {
-      display: inline-block;
-      margin-top: 5px;
-      background: #1e88e5;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 10px;
-      text-decoration: none;
-    }
-
-    .accepted a:hover {
-      background: #0d47a1;
+    .accepted-list p {
+      margin: 4px 0;
     }
   </style>
 </head>
 <body>
-
-  <h1>🌟 ZaraFix Admin - User Requests</h1>
+  <h2>🧾 All User Requests</h2>
   <div id="requestList"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getDatabase();
+    const db = getDatabase(app);
 
     const requestList = document.getElementById("requestList");
 
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        const adminRef = ref(db, "admins/" + user.uid);
-        onValue(adminRef, snap => {
-          if (snap.exists()) {
-            loadRequests();
-          } else {
-            alert("❌ Access Denied. Admins only.");
-          }
+    function renderRequestCard(userId, requestId, request) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <h3>🔧 Category: ${request.category}</h3>
+        <p><strong>👤 Name:</strong> ${request.name}</p>
+        <p><strong>📍 Address:</strong> ${request.address}</p>
+        <p><strong>📞 WhatsApp:</strong> ${request.whatsapp}</p>
+        <p><strong>📝 Problem:</strong> ${request.problem}</p>
+        <p><strong>Status:</strong> ${request.status}</p>
+        <div class="accepted-list">
+          <strong>✅ Accepted By:</strong>
+          ${request.acceptedBy ? Object.values(request.acceptedBy).map((poster, index) => `
+            <p>🧑 ${poster.name} | 📱 <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp}</a></p>
+          `).join("") : "<p>❌ No one accepted yet</p>"}
+        </div>
+      `;
+      requestList.appendChild(card);
+    }
+
+    const requestsRef = ref(db, "requests");
+    onValue(requestsRef, (snapshot) => {
+      requestList.innerHTML = "";
+      const data = snapshot.val();
+      if (data) {
+        Object.entries(data).forEach(([userId, userRequests]) => {
+          Object.entries(userRequests).forEach(([requestId, request]) => {
+            renderRequestCard(userId, requestId, request);
+          });
         });
       } else {
-        alert("Please login first.");
-        window.location.href = "index.html";
+        requestList.innerHTML = "<p>No requests found.</p>";
       }
     });
-
-    function loadRequests() {
-      const reqRef = ref(db, "requests");
-      onValue(reqRef, snap => {
-        requestList.innerHTML = "";
-        const data = snap.val();
-        if (!data) {
-          requestList.innerHTML = "<p>No requests found.</p>";
-          return;
-        }
-
-        for (const userId in data) {
-          const userRequests = data[userId];
-          for (const reqId in userRequests) {
-            const req = userRequests[reqId];
-
-            const card = document.createElement("div");
-            card.className = "card";
-
-            card.innerHTML = `
-              <h3>${req.name} - ${req.category}</h3>
-              <p><strong>Problem:</strong> ${req.problem}</p>
-              <p><strong>Address:</strong> ${req.address}</p>
-              <p><strong>WhatsApp:</strong> ${req.whatsapp}</p>
-              <p><strong>Status:</strong> ${req.status || "Pending"}</p>
-              <p><strong>Date:</strong> ${new Date(req.timestamp || Date.now()).toLocaleString()}</p>
-            `;
-
-            if (req.acceptedBy) {
-              const acceptedDiv = document.createElement("div");
-              acceptedDiv.className = "accepted";
-              acceptedDiv.innerHTML = `<strong>Accepted By:</strong><br>`;
-              for (const posterId in req.acceptedBy) {
-                const poster = req.acceptedBy[posterId];
-                acceptedDiv.innerHTML += `
-                  <p>🧰 ${poster.name} (${poster.category})<br>
-                  📍 ${poster.address}<br>
-                  📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a>
-                  </p>
-                `;
-              }
-              card.appendChild(acceptedDiv);
-            }
-
-            requestList.appendChild(card);
-          }
-        }
-      });
-    }
   </script>
-
 </body>
 </html>
