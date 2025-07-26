@@ -1,48 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix Admin Dashboard</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin: 0; padding: 0; background: #f2f2f2; }
-    header { background: #333; color: white; padding: 10px; text-align: center; font-size: 24px; }
-    .filter-bar { display: flex; justify-content: center; padding: 10px; background: #fff; position: sticky; top: 0; z-index: 100; }
-    .filter-bar select { padding: 8px 16px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; }
-    .container { display: flex; flex-wrap: wrap; justify-content: center; padding: 10px; }
+    body {
+      font-family: Arial;
+      background: #eef2f3;
+      padding: 20px;
+      text-align: center;
+    }
+    select {
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
     .card {
-      background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      margin: 10px; padding: 16px; width: 300px; position: relative;
-    }
-    .card h3 { margin: 0 0 10px 0; }
-    .led {
-      width: 12px; height: 12px; border-radius: 50%; background: green; animation: blink 1s infinite;
-      position: absolute; top: 12px; right: 12px;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.2; }
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 500px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      text-align: left;
+      position: relative;
     }
     .approve-btn {
-      background: #4CAF50; color: white; padding: 6px 12px; border: none; border-radius: 8px; cursor: pointer;
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
     }
-    .approved-label { color: green; font-weight: bold; }
+    .led {
+      width: 12px;
+      height: 12px;
+      background-color: green;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+      display: inline-block;
+      margin-left: 5px;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.1; }
+      100% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
-  <header>🛠️ ZaraFix Admin Dashboard</header>
-  <div class="filter-bar">
-    <select id="viewSelect" onchange="renderView()">
-      <option value="provider">Service Providers</option>
-      <option value="request">User Requests</option>
-      <option value="recharge">Recharge Requests</option>
-    </select>
-  </div>
-  <div class="container" id="dashboard"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <h2>🛠️ ZaraFix Admin Panel</h2>
 
+  <select id="typeSelector">
+    <option value="provider">Providers</option>
+    <option value="request">Requests</option>
+    <option value="recharge">Recharge</option>
+  </select>
+
+  <div id="dataContainer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -51,86 +75,90 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dashboard = document.getElementById("dashboard");
+    const container = document.getElementById('dataContainer');
+    const selector = document.getElementById('typeSelector');
 
-    function renderView() {
-      const view = document.getElementById("viewSelect").value;
-      dashboard.innerHTML = "Loading...";
+    selector.addEventListener('change', loadData);
+    loadData();
 
-      if (view === "provider") {
-        const postersRef = ref(db, 'posters');
-        onValue(postersRef, (snapshot) => {
-          const data = snapshot.val();
-          dashboard.innerHTML = "";
-          Object.entries(data || {}).forEach(([uid, provider]) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <h3>${provider.name}</h3>
-              <p><strong>Shop:</strong> ${provider.shop}</p>
-              <p><strong>Category:</strong> ${provider.category}</p>
-              <p><strong>WhatsApp:</strong> ${provider.whatsapp}</p>
-              <p><strong>Wallet:</strong> ₹${provider.wallet || 0}</p>
-              <div>${provider.approved ? '<span class="approved-label">✅ Approved</span>' : '<button class="approve-btn" onclick="approveProvider(\'' + uid + '\')">Approve</button><div class=\"led\"></div>'}</div>
-            `;
-            dashboard.appendChild(card);
-          });
-        });
-      }
+    function loadData() {
+      const type = selector.value;
+      container.innerHTML = '<p>Loading...</p>';
 
-      if (view === "request") {
-        const reqRef = ref(db, 'requests');
-        onValue(reqRef, (snapshot) => {
-          const data = snapshot.val();
-          dashboard.innerHTML = "";
-          Object.entries(data || {}).forEach(([userId, userReqs]) => {
-            Object.values(userReqs).forEach((req) => {
-              const card = document.createElement("div");
-              card.className = "card";
-              card.innerHTML = `
-                <h3>${req.name}</h3>
-                <p><strong>Category:</strong> ${req.category}</p>
-                <p><strong>Problem:</strong> ${req.problem}</p>
-                <p><strong>Address:</strong> ${req.address}</p>
-                <p><strong>WhatsApp:</strong> ${req.whatsapp}</p>
-                <p><strong>Status:</strong> ${req.status}</p>
-              `;
-              dashboard.appendChild(card);
+      let refPath = '';
+      if (type === 'provider') refPath = 'posters';
+      else if (type === 'request') refPath = 'requests';
+      else if (type === 'recharge') refPath = 'recharge';
+
+      db.ref(refPath).once('value', snapshot => {
+        container.innerHTML = '';
+        const data = snapshot.val();
+
+        if (!data) {
+          container.innerHTML = '<p>No data found</p>';
+          return;
+        }
+
+        if (type === 'request') {
+          Object.values(data).forEach(userRequests => {
+            Object.entries(userRequests).forEach(([reqId, item]) => {
+              renderCard(item);
             });
           });
-        });
-      }
-
-      if (view === "recharge") {
-        const rechargeRef = ref(db, 'rechargeRequests');
-        onValue(rechargeRef, (snapshot) => {
-          const data = snapshot.val();
-          dashboard.innerHTML = "";
-          Object.entries(data || {}).forEach(([uid, rec]) => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <h3>Recharge Request</h3>
-              <p><strong>User ID:</strong> ${uid}</p>
-              <p><strong>Status:</strong> ${rec.status}</p>
-              <p><strong>Img:</strong><br><img src="${rec.img}" width="100%" /></p>
-            `;
-            dashboard.appendChild(card);
+        } else {
+          Object.entries(data).forEach(([id, item]) => {
+            renderCard(item, id, type);
           });
-        });
-      }
+        }
+      });
     }
 
-    window.approveProvider = function(uid) {
-      const updateRef = ref(db, 'posters/' + uid);
-      update(updateRef, { approved: true });
-      alert("✅ Approved");
-    };
+    function renderCard(item, id = '', type = '') {
+      const card = document.createElement('div');
+      card.className = 'card';
 
-    renderView();
+      if (type === 'provider') {
+        card.innerHTML = `
+          <strong>Name:</strong> ${item.name}<br>
+          <strong>Shop:</strong> ${item.shop}<br>
+          <strong>Category:</strong> ${item.category}<br>
+          <strong>WhatsApp:</strong> ${item.whatsapp}<br>
+          <strong>Approved:</strong> ${item.approved ? '✅ Approved' : '<span style="color:red;">Pending</span>'}
+          ${!item.approved ? `<br><button class="approve-btn" onclick="approveProvider('${id}')">Approve</button> <span class="led"></span>` : ''}
+        `;
+      }
+      else if (type === 'recharge') {
+        card.innerHTML = `
+          <strong>User ID:</strong> ${item.userId}<br>
+          <strong>Screenshot:</strong><br><img src="${item.screenshot}" style="max-width:100%; border-radius:8px;"><br>
+          <strong>Status:</strong> ${item.approved ? '✅ Approved' : '⏳ Pending'}
+        `;
+      }
+      else if (type === 'request') {
+        card.innerHTML = `
+          <strong>Name:</strong> ${item.name}<br>
+          <strong>Category:</strong> ${item.category}<br>
+          <strong>Problem:</strong> ${item.problem}<br>
+          <strong>Location:</strong> ${item.address}<br>
+          <strong>WhatsApp:</strong> ${item.whatsapp}<br>
+          <strong>Status:</strong> ${item.status || 'pending'}
+        `;
+      }
+
+      container.appendChild(card);
+    }
+
+    function approveProvider(id) {
+      firebase.database().ref('posters/' + id).update({
+        approved: true
+      }).then(() => {
+        alert("✅ Approved!");
+        loadData(); // Refresh
+      });
+    }
   </script>
 </body>
 </html>
