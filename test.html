@@ -4,165 +4,127 @@
   <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; text-align: center; }
-    .dropdown {
-      margin: 20px auto;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 12px;
-      box-shadow: 2px 2px 10px #ccc;
-    }
-    .section { display: none; margin-top: 20px; }
-    .card {
-      background: white;
-      border-radius: 20px;
-      padding: 15px;
-      margin: 10px auto;
-      box-shadow: 3px 3px 12px rgba(0,0,0,0.2);
-      max-width: 400px;
-      text-align: left;
-    }
-    .logout-btn {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      padding: 8px 16px;
-      background: #e53935;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 2px 2px 8px #999;
-    }
+    body { font-family: Arial; margin: 0; padding: 10px; background: #f4f4f4; }
+    .hidden { display: none; }
+    select, button { padding: 10px; font-size: 16px; border-radius: 10px; margin-bottom: 10px; }
+    .section { display: none; background: white; padding: 20px; margin-top: 10px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    h2 { color: #333; }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix Admin Dashboard</h2>
-  <button class="logout-btn" onclick="logout()">Logout</button>
 
-  <select class="dropdown" id="sectionSelector" onchange="showSection()">
+<h2>🛠️ Welcome to ZaraFix</h2>
+<div id="adminLoginNotice" class="hidden">❌ Admin login kare</div>
+<button id="logoutBtn" class="hidden">Logout</button>
+
+<div id="adminControls" class="hidden">
+  <select id="adminSectionSelect">
     <option value="">-- Select Section --</option>
-    <option value="providers">📋 Service Providers</option>
-    <option value="requests">🧰 Service Requests</option>
-    <option value="recharges">💳 Recharge Approvals</option>
+    <option value="providers">All Service Providers</option>
+    <option value="requests">All User Requests</option>
+    <option value="recharge">Recharge Approvals</option>
   </select>
 
-  <div id="providers" class="section"></div>
-  <div id="requests" class="section"></div>
-  <div id="recharges" class="section"></div>
+  <div id="providersSection" class="section">
+    <h3>🧰 All Service Providers</h3>
+    <div id="providersList">Loading...</div>
+  </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <div id="requestsSection" class="section">
+    <h3>📋 All User Requests</h3>
+    <div id="requestsList">Loading...</div>
+  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+  <div id="rechargeSection" class="section">
+    <h3>💰 Recharge Approvals</h3>
+    <div id="rechargeList">Loading...</div>
+  </div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getDatabase();
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
+  };
 
-    const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // ← Change to your UID
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-    onAuthStateChanged(auth, user => {
-      if (!user || user.uid !== adminUID) {
-        alert("Access denied. Admins only.");
-        window.location.href = "index.html";
-      } else {
-        loadProviders();
-        loadRequests();
-        loadRecharges();
-      }
+  const adminUIDs = {
+    "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true // aapka admin UID yahan likha gaya hai
+  };
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  const adminLoginNotice = document.getElementById("adminLoginNotice");
+  const adminControls = document.getElementById("adminControls");
+  const adminSectionSelect = document.getElementById("adminSectionSelect");
+
+  logoutBtn.onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user && adminUIDs[user.uid]) {
+      adminLoginNotice.classList.add("hidden");
+      logoutBtn.classList.remove("hidden");
+      adminControls.classList.remove("hidden");
+    } else {
+      adminLoginNotice.classList.remove("hidden");
+      logoutBtn.classList.add("hidden");
+      adminControls.classList.add("hidden");
+    }
+  });
+
+  adminSectionSelect.onchange = () => {
+    document.querySelectorAll(".section").forEach(sec => sec.style.display = "none");
+    const selected = adminSectionSelect.value;
+    if (selected === "providers") loadProviders();
+    if (selected === "requests") loadRequests();
+    if (selected === "recharge") loadRecharges();
+  };
+
+  async function loadProviders() {
+    document.getElementById("providersSection").style.display = "block";
+    const snap = await get(ref(db, 'posters'));
+    const data = snap.exists() ? snap.val() : {};
+    const list = Object.values(data).map(p =>
+      `<div>🔧 ${p.name} - ${p.category} - Wallet: ₹${p.wallet || 0}</div>`
+    ).join('');
+    document.getElementById("providersList").innerHTML = list || "No providers found.";
+  }
+
+  async function loadRequests() {
+    document.getElementById("requestsSection").style.display = "block";
+    const snap = await get(ref(db, 'requests'));
+    const data = snap.exists() ? snap.val() : {};
+    let allRequests = [];
+    Object.values(data).forEach(userReqs => {
+      Object.values(userReqs).forEach(req => allRequests.push(req));
     });
+    const list = allRequests.map(r =>
+      `<div>📍 ${r.name} - ${r.category} - ${r.address}</div>`
+    ).join('');
+    document.getElementById("requestsList").innerHTML = list || "No requests found.";
+  }
 
-    function logout() {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
-    }
+  async function loadRecharges() {
+    document.getElementById("rechargeSection").style.display = "block";
+    const snap = await get(ref(db, 'recharges'));
+    const data = snap.exists() ? snap.val() : {};
+    const list = Object.entries(data).map(([uid, entry]) =>
+      `<div>📤 Recharge from ${entry.name || uid}<br>Screenshot: <a href="${entry.screenshot}" target="_blank">View</a></div>`
+    ).join('');
+    document.getElementById("rechargeList").innerHTML = list || "No recharges found.";
+  }
+</script>
 
-    function showSection() {
-      document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
-      const selected = document.getElementById("sectionSelector").value;
-      if (selected) document.getElementById(selected).style.display = 'block';
-    }
-
-    function loadProviders() {
-      const container = document.getElementById("providers");
-      onValue(ref(db, 'posters'), snapshot => {
-        container.innerHTML = "";
-        snapshot.forEach(child => {
-          const d = child.val();
-          container.innerHTML += `
-            <div class="card">
-              <strong>Name:</strong> ${d.name}<br>
-              <strong>Shop:</strong> ${d.shop}<br>
-              <strong>Category:</strong> ${d.category}<br>
-              <strong>WhatsApp:</strong> ${d.whatsapp}<br>
-              <strong>Wallet:</strong> ₹${d.wallet || 0}
-            </div>
-          `;
-        });
-      });
-    }
-
-    function loadRequests() {
-      const container = document.getElementById("requests");
-      onValue(ref(db, 'requests'), snapshot => {
-        container.innerHTML = "";
-        snapshot.forEach(userSnap => {
-          userSnap.forEach(reqSnap => {
-            const d = reqSnap.val();
-            container.innerHTML += `
-              <div class="card">
-                <strong>User:</strong> ${d.name}<br>
-                <strong>Address:</strong> ${d.address}<br>
-                <strong>Category:</strong> ${d.category}<br>
-                <strong>Problem:</strong> ${d.problem}<br>
-                <strong>WhatsApp:</strong> ${d.whatsapp}
-              </div>
-            `;
-          });
-        });
-      });
-    }
-
-    function loadRecharges() {
-      const container = document.getElementById("recharges");
-      onValue(ref(db, 'recharges'), snapshot => {
-        container.innerHTML = "";
-        snapshot.forEach(child => {
-          const d = child.val();
-          if (!d.approved) {
-            container.innerHTML += `
-              <div class="card">
-                <strong>User ID:</strong> ${d.userId}<br>
-                <strong>Screenshot:</strong><br>
-                <img src="${d.screenshot}" width="100%"><br>
-                <button onclick="approveRecharge('${child.key}')">✅ Approve</button>
-              </div>
-            `;
-          }
-        });
-      });
-    }
-
-    window.approveRecharge = function (key) {
-      const rechargeRef = ref(db, 'recharges/' + key);
-      update(rechargeRef, { approved: true });
-      alert("Recharge approved.");
-    }
-  </script>
 </body>
 </html>
