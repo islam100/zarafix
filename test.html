@@ -1,120 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #e9f5ff; margin: 0; padding: 10px; }
-    .container { max-width: 1000px; margin: auto; padding: 20px; }
-    h2 { text-align: center; color: #0b5394; }
+    body { font-family: Arial, sans-serif; background: #eef2f3; margin: 0; padding: 10px; }
+    .section { margin-bottom: 40px; }
+    h2 { background: #008080; color: white; padding: 10px; border-radius: 5px; }
     .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      padding: 15px;
-      margin: 15px 0;
-      transition: transform 0.2s;
+      background: #fff; margin: 10px 0; padding: 15px;
+      border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .card:hover { transform: scale(1.02); }
-    .btn {
-      background: #0b5394; color: white; border: none; padding: 10px 20px;
-      border-radius: 8px; cursor: pointer; margin-top: 10px;
+    button {
+      padding: 8px 12px; border: none; border-radius: 6px;
+      background: #28a745; color: white; margin-top: 5px;
+      cursor: pointer;
     }
-    .btn:hover { background: #073763; }
-    .section-title { font-size: 18px; margin-top: 30px; color: #073763; }
-    pre { white-space: pre-wrap; word-wrap: break-word; }
+    button.recharge { background: #007bff; }
+    button.approve { background: #ff9800; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 </head>
 <body>
-<div class="container">
-  <h2>📊 ZaraFix Admin Dashboard</h2>
+  <div class="section">
+    <h2>📋 Posters (Service Providers)</h2>
+    <div id="postersList"></div>
+  </div>
 
-  <div id="admins"></div>
-  <div id="posters"></div>
-  <div id="requests"></div>
+  <div class="section">
+    <h2>📬 User Service Requests</h2>
+    <div id="requestsList"></div>
+  </div>
 
-</div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    // Show all posters
+    const postersList = document.getElementById("postersList");
+    db.ref("posters").once("value", snap => {
+      postersList.innerHTML = "";
+      snap.forEach(child => {
+        const id = child.key;
+        const p = child.val();
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <b>Name:</b> ${p.name}<br>
+          <b>Shop:</b> ${p.shop}<br>
+          <b>Address:</b> ${p.address}<br>
+          <b>Category:</b> ${p.category}<br>
+          <b>WhatsApp:</b> <a href="https://wa.me/${p.whatsapp}" target="_blank">${p.whatsapp}</a><br>
+          <b>Wallet:</b> ₹${p.wallet || 0}<br>
+        `;
+        // Add Approve button if not approved
+        db.ref("admins/" + id).once("value", adminSnap => {
+          if (!adminSnap.exists()) {
+            const approveBtn = document.createElement("button");
+            approveBtn.textContent = "Approve";
+            approveBtn.className = "approve";
+            approveBtn.onclick = () => {
+              db.ref("admins/" + id).set(true);
+              alert("Approved!");
+              location.reload();
+            };
+            card.appendChild(approveBtn);
+          }
+        });
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
+        // Recharge Button
+        const rechargeBtn = document.createElement("button");
+        rechargeBtn.textContent = "Recharge ₹100";
+        rechargeBtn.className = "recharge";
+        rechargeBtn.onclick = () => {
+          const newAmount = (p.wallet || 0) + 100;
+          db.ref("posters/" + id + "/wallet").set(newAmount);
+          alert("Wallet recharged.");
+          location.reload();
+        };
+        card.appendChild(rechargeBtn);
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase();
-const auth = getAuth();
-
-onAuthStateChanged(auth, user => {
-  if (user) {
-    const uid = user.uid;
-    onValue(ref(db, 'admins/' + uid), snap => {
-      if (!snap.exists()) {
-        document.body.innerHTML = '<h3 style="color:red">Access denied. Admins only.</h3>';
-        return;
-      }
-      loadDashboard();
+        postersList.appendChild(card);
+      });
     });
-  } else {
-    window.location.href = '/index.html';
-  }
-});
 
-function loadDashboard() {
-  const postersRef = ref(db, 'posters');
-  const requestsRef = ref(db, 'requests');
+    // Show all service requests
+    const requestsList = document.getElementById("requestsList");
+    db.ref("requests").once("value", snap => {
+      requestsList.innerHTML = "";
+      snap.forEach(userSnap => {
+        userSnap.forEach(reqSnap => {
+          const req = reqSnap.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <b>Name:</b> ${req.name}<br>
+            <b>Category:</b> ${req.category}<br>
+            <b>Address:</b> ${req.address}<br>
+            <b>Problem:</b> ${req.problem}<br>
+            <b>WhatsApp:</b> ${req.whatsapp}<br>
+          `;
 
-  onValue(postersRef, snap => {
-    const posters = snap.val();
-    let html = '<h3 class="section-title">👨‍💼 All Service Providers</h3>';
-    for (let uid in posters) {
-      const p = posters[uid];
-      html += `<div class="card">
-        <b>🏠 Shop:</b> ${p.shop || ''}<br>
-        <b>👤 Name:</b> ${p.name || ''}<br>
-        <b>🏡 Address:</b> ${p.address || ''}<br>
-        <b>🏫 Category:</b> ${p.category || ''}<br>
-        <b>📞 WhatsApp:</b> ${p.whatsapp || ''}<br>
-        <b>💳 Wallet:</b> ₹${p.wallet || 0}<br>
-        <button class="btn" onclick="recharge('${uid}')">💵 Recharge ₹100</button>
-      </div>`;
-    }
-    document.getElementById('posters').innerHTML = html;
-  });
+          // Show who accepted
+          if (req.acceptedBy) {
+            const accepted = Object.values(req.acceptedBy);
+            card.innerHTML += `<b>Accepted By (${accepted.length}):</b><ul>`;
+            accepted.forEach(a => {
+              card.innerHTML += `<li>${a.name} - <a href="https://wa.me/${a.whatsapp}" target="_blank">${a.whatsapp}</a></li>`;
+            });
+            card.innerHTML += "</ul>";
+          } else {
+            card.innerHTML += `<b>Accepted By:</b> No one yet`;
+          }
 
-  onValue(requestsRef, snap => {
-    const data = snap.val();
-    let html = '<h3 class="section-title">📝 Service Requests</h3>';
-    for (let userId in data) {
-      const userRequests = data[userId];
-      for (let reqId in userRequests) {
-        const r = userRequests[reqId];
-        html += `<div class="card">
-          <b>👤 Name:</b> ${r.name}<br>
-          <b>📞 WhatsApp:</b> ${r.whatsapp}<br>
-          <b>🏠 Address:</b> ${r.address}<br>
-          <b>🏫 Category:</b> ${r.category}<br>
-          <b>❓ Problem:</b> ${r.problem}<br>
-          <b>✅ Accepted By:</b> <pre>${JSON.stringify(r.acceptedBy || {}, null, 2)}</pre>
-        </div>`;
-      }
-    }
-    document.getElementById('requests').innerHTML = html;
-  });
-}
-
-window.recharge = function(uid) {
-  update(ref(db, 'posters/' + uid), { wallet: 100 });
-  alert("Wallet recharged for UID: " + uid);
-};
-</script>
+          requestsList.appendChild(card);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
