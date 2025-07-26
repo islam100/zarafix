@@ -4,49 +4,39 @@
   <title>🛠️ Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 10px;
-    }
-
+    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
+    h2 { text-align: center; color: #333; }
     .card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: #fff;
       padding: 15px;
-      margin-bottom: 15px;
+      margin: 10px auto;
+      border-radius: 15px;
+      box-shadow: 0 0 10px #999;
+      max-width: 500px;
       position: relative;
     }
-
-    .led {
-      width: 12px;
-      height: 12px;
-      background-color: yellow;
+    .blinking-led {
+      width: 15px;
+      height: 15px;
+      background: yellow;
       border-radius: 50%;
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 15px;
+      right: 15px;
       animation: blink 1s infinite;
     }
-
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.1; }
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
     }
-
-    button {
-      background-color: red;
+    .delete-btn {
+      background: red;
       color: white;
       border: none;
-      padding: 6px 12px;
-      margin-top: 10px;
-      border-radius: 6px;
-    }
-
-    h2 {
-      text-align: center;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      float: right;
     }
   </style>
 </head>
@@ -54,91 +44,85 @@
   <h2>🛠️ Admin - All Service Requests</h2>
   <div id="requestsContainer"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
-      // 🔐 apka config yahan dalein
-      apiKey: "AIza...",
-      authDomain: "your-app.firebaseapp.com",
-      databaseURL: "https://your-app.firebaseio.com",
-      projectId: "your-app",
-      storageBucket: "your-app.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abc"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const container = document.getElementById("requestsContainer");
 
-    function loadRequests() {
-      const container = document.getElementById('requestsContainer');
-      container.innerHTML = '';
-      db.ref("requests").once("value", snapshot => {
-        if (!snapshot.exists()) {
-          container.innerHTML = "<p>No service requests found.</p>";
-          return;
-        }
+    onValue(ref(db, 'requests'), (snapshot) => {
+      container.innerHTML = "";
+      const data = snapshot.val();
+      if (!data) {
+        container.innerHTML = "<p>No service requests found.</p>";
+        return;
+      }
 
-        snapshot.forEach(userSnap => {
-          userSnap.forEach(reqSnap => {
-            const data = reqSnap.val();
-            const card = document.createElement("div");
-            card.className = "card";
+      Object.keys(data).forEach(userId => {
+        Object.keys(data[userId]).forEach(reqId => {
+          const req = data[userId][reqId];
+          const div = document.createElement("div");
+          div.className = "card";
 
-            let acceptedHTML = "";
-            if (data.acceptedBy && typeof data.acceptedBy === 'object') {
-              const acceptedList = Object.values(data.acceptedBy);
-              if (acceptedList.length > 0) {
-                acceptedHTML = "<b>✅ Accepted By:</b><br>";
-                acceptedList.forEach(poster => {
-                  acceptedHTML += `
-                    Name: ${poster.name || "N/A"}<br>
-                    WhatsApp: ${poster.whatsapp || "N/A"}<br>
-                    Shop: ${poster.shop || "N/A"}<br>
-                    Category: ${poster.category || "N/A"}<br><br>
-                  `;
-                });
-              } else {
-                acceptedHTML = "<b>⏳ Wait for Accept</b>";
-              }
+          if (req.approved) {
+            const led = document.createElement("div");
+            led.className = "blinking-led";
+            div.appendChild(led);
+          }
+
+          div.innerHTML += `
+            <b>👤 ${req.name || ""}</b><br>
+            📞 ${req.whatsapp || ""}<br><br>
+            🛠️ ${req.category || ""}<br><br>
+            📍 ${req.address || ""}<br><br>
+            ❓ ${req.problem || ""}<br><br>
+          `;
+
+          if (req.acceptedBy) {
+            const posters = Object.values(req.acceptedBy);
+            if (posters.length > 0) {
+              div.innerHTML += `<b>✅ Accepted By:</b><br>`;
+              posters.forEach(poster => {
+                div.innerHTML += `
+                  Name: ${poster.name || 'N/A'}<br>
+                  WhatsApp: ${poster.whatsapp || 'N/A'}<br>
+                  Shop: ${poster.shop || 'N/A'}<br>
+                  Category: ${poster.category || 'N/A'}<br><br>
+                `;
+              });
             } else {
-              acceptedHTML = "<b>⏳ Wait for Accept</b>";
+              div.innerHTML += `⏳ Wait for Accept<br>`;
             }
+          } else {
+            div.innerHTML += `⏳ Wait for Accept<br>`;
+          }
 
-            card.innerHTML = `
-              👤 ${data.name || ""}<br>
-              📞 ${data.whatsapp || ""}<br><br>
-              🛠️ ${data.category || ""}<br><br>
-              📍 ${data.address || ""}<br><br>
-              ❓ ${data.problem || ""}<br><br>
-              ${acceptedHTML}<br>
-              <button onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">🗑️ Delete</button>
-            `;
-
-            // LED only if accepted
-            if (acceptedHTML.includes("Accepted By")) {
-              const led = document.createElement("div");
-              led.className = "led";
-              card.appendChild(led);
+          const delBtn = document.createElement("button");
+          delBtn.className = "delete-btn";
+          delBtn.innerText = "🗑️ Delete";
+          delBtn.onclick = () => {
+            if (confirm("Delete this request?")) {
+              remove(ref(db, `requests/${userId}/${reqId}`));
             }
+          };
+          div.appendChild(delBtn);
 
-            container.appendChild(card);
-          });
+          container.appendChild(div);
         });
       });
-    }
-
-    function deleteRequest(userId, requestId) {
-      if (confirm("Delete this request?")) {
-        firebase.database().ref(`requests/${userId}/${requestId}`).remove().then(() => {
-          loadRequests();
-        });
-      }
-    }
-
-    loadRequests();
+    });
   </script>
 </body>
 </html>
