@@ -1,128 +1,134 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>🛠️ Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
+    body { font-family: Arial; background: #f2f2f2; padding: 20px; }
     .card {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      position: relative;
     }
-    .title { font-weight: bold; margin-bottom: 5px; }
-    .btn {
-      padding: 6px 12px;
-      margin: 5px 5px 0 0;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-delete {
-      background-color: red;
-      color: white;
-    }
-    .led-blink {
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
+    h2 { text-align: center; color: #333; }
+    .blinker {
+      height: 20px;
+      width: 20px;
       background-color: yellow;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      right: 10px;
       animation: blink 1s infinite;
-      display: inline-block;
-      margin-top: 5px;
     }
     @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.2; }
-      100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 10px;
+      background: red;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .accepted-section {
+      background-color: #e0ffe0;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-
   <h2>🛠️ Admin - All Service Requests</h2>
-  <div id="requestsContainer"></div>
+  <div id="requestList"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyCwV...your-api-key...",
-      authDomain: "zarafix.firebaseapp.com",
-      databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
-      projectId: "zarafix",
-      storageBucket: "zarafix.appspot.com",
-      messagingSenderId: "528456219401",
-      appId: "1:528456219401:web:75145f342b6c88e69f670e"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const requestList = document.getElementById("requestList");
 
-    const container = document.getElementById("requestsContainer");
+    function renderRequest(requestId, data) {
+      const card = document.createElement("div");
+      card.className = "card";
 
-    function renderRequests(data, posters) {
-      container.innerHTML = "";
-      for (let userId in data) {
-        for (let requestId in data[userId]) {
-          const request = data[userId][requestId];
-          const card = document.createElement("div");
-          card.className = "card";
-
-          card.innerHTML = `
-            <div class="title">👤 ${request.name}</div>
-            📞 ${request.whatsapp}<br>
-            🛠️ ${request.category}<br>
-            📍 ${request.address}<br>
-            ❓ ${request.problem}<br>
-          `;
-
-          // Check if someone accepted
-          if (request.acceptedBy && Object.keys(request.acceptedBy).length > 0) {
-            const posterId = Object.keys(request.acceptedBy)[0];
-            const acceptedInfo = posters[posterId] || {};
-
-            card.innerHTML += `
-              <br>
-              ✅ <strong>Accepted By:</strong><br>
-              Name: ${acceptedInfo.name || "N/A"}<br>
-              Shop: ${acceptedInfo.shop || "N/A"}<br>
-              Category: ${acceptedInfo.category || "N/A"}<br>
-              WhatsApp: <a href="https://wa.me/91${acceptedInfo.whatsapp}" target="_blank">${acceptedInfo.whatsapp}</a><br>
-              <div class="led-blink"></div>
-            `;
-          } else {
-            card.innerHTML += `
-              <br><div style="background:#fff3cd;padding:10px;border-radius:8px;">
-              ⏳ Wait for Accept
-              </div>`;
-          }
-
-          const deleteBtn = document.createElement("button");
-          deleteBtn.className = "btn btn-delete";
-          deleteBtn.innerText = "🗑️ Delete";
-          deleteBtn.onclick = () => {
-            if (confirm("Delete this request?")) {
-              remove(ref(db, `requests/${userId}/${requestId}`));
-            }
-          };
-
-          card.appendChild(deleteBtn);
-          container.appendChild(card);
-        }
+      if (data.acceptedBy) {
+        const blinker = document.createElement("div");
+        blinker.className = "blinker";
+        card.appendChild(blinker);
       }
+
+      card.innerHTML += `
+        <div>👤 <strong>${data.name || "N/A"}</strong></div>
+        <div>📞 ${data.whatsapp || "N/A"}</div>
+        <div>🛠️ ${data.category || "N/A"}</div>
+        <div>📍 ${data.address || "N/A"}</div>
+        <div>❓ ${data.problem || "N/A"}</div>
+      `;
+
+      if (data.acceptedBy) {
+        card.innerHTML += `
+          <div class="accepted-section">
+            ✅ <strong>Accepted By:</strong><br>
+            Name: ${data.acceptedBy.name || "N/A"}<br>
+            WhatsApp: ${data.acceptedBy.whatsapp || "N/A"}<br>
+            Shop: ${data.acceptedBy.shop || "N/A"}<br>
+            Category: ${data.acceptedBy.category || "N/A"}
+          </div>
+        `;
+      } else {
+        card.innerHTML += `<div>⏳ <strong>Wait for Accept</strong></div>`;
+      }
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "🗑️ Delete";
+      deleteBtn.onclick = () => {
+        if (confirm("Delete this request?")) {
+          db.ref("requests/" + data.userId + "/" + requestId).remove();
+        }
+      };
+      card.appendChild(deleteBtn);
+
+      requestList.appendChild(card);
     }
 
-    onValue(ref(db, 'requests'), (snapshot) => {
-      const requestsData = snapshot.val() || {};
-      onValue(ref(db, 'posters'), (postersSnap) => {
-        const postersData = postersSnap.val() || {};
-        renderRequests(requestsData, postersData);
+    function loadRequests() {
+      db.ref("requests").once("value", (snapshot) => {
+        requestList.innerHTML = "";
+        if (!snapshot.exists()) {
+          requestList.innerHTML = "<p>No service requests found.</p>";
+          return;
+        }
+
+        snapshot.forEach(userSnap => {
+          const userId = userSnap.key;
+          userSnap.forEach(reqSnap => {
+            renderRequest(reqSnap.key, { ...reqSnap.val(), userId });
+          });
+        });
       });
-    });
+    }
+
+    loadRequests();
   </script>
 </body>
 </html>
