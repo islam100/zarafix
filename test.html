@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Service Provider Registration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(to right, #e0f7fa, #ffffff);
+      padding: 20px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    input, select {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      box-shadow: 2px 2px 8px #ccc;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      background: linear-gradient(to right, #26a69a, #00796b);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      box-shadow: 3px 3px 10px #888;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🛠️ Register as Service Provider</h2>
+
+  <input type="text" id="name" placeholder="Full Name" required />
+  <input type="text" id="address" placeholder="Address" required />
+  <input type="text" id="shop" placeholder="Shop Name" required />
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+  
+  <select id="category" required>
+    <option value="">Select Category</option>
+    <option>AC Mechanic</option>
+    <option>Plumber</option>
+    <option>Electrician</option>
+    <option>Car Mechanic</option>
+    <option>Refrigerator Repair</option>
+  </select>
+
+  <button class="btn" onclick="submitForm()">🚀 Submit</button>
+
+  <!-- Firebase App -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function submitForm() {
+      const name = document.getElementById('name').value;
+      const address = document.getElementById('address').value;
+      const shop = document.getElementById('shop').value;
+      const whatsapp = document.getElementById('whatsapp').value;
+      const category = document.getElementById('category').value;
+
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          const uid = user.uid;
+
+          db.ref('wallets/' + uid).once('value').then(snapshot => {
+            const wallet = snapshot.val() || 0;
+            if (wallet < 100) {
+              alert("Wallet balance ₹100 required. Please recharge.");
+              return;
+            }
+
+            const data = {
+              name, address, shop, whatsapp, category, uid
+            };
+
+            db.ref('posters/' + uid).set(data).then(() => {
+              alert("Registration successful!");
+            });
+          });
+
+        } else {
+          alert("Please login first.");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
