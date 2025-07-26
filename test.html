@@ -1,69 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔧 ZaraFix Admin Dashboard</title>
+  <title>🔧 ZaraFix Admin Dashboard - Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; padding: 20px; margin: 0; }
-    h1 { text-align: center; }
-    .filter-buttons { text-align: center; margin-bottom: 20px; }
-    button {
-      padding: 10px 20px; margin: 5px;
-      border: none; border-radius: 10px;
-      background-color: #007bff; color: white;
-      cursor: pointer;
-      font-weight: bold;
+    body {
+      font-family: Arial;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
     }
     .card {
       background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       padding: 15px;
-      margin: 10px auto;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      max-width: 500px;
+      margin-bottom: 15px;
       position: relative;
     }
     .led {
-      width: 14px; height: 14px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       position: absolute;
-      top: 15px; right: 15px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      top: 15px;
+      right: 15px;
     }
-    .green { background-color: green; animation: blink 1s infinite; }
-    .yellow { background-color: yellow; animation: blink 1s infinite; }
-
+    .green {
+      background-color: green;
+    }
+    .yellow {
+      background-color: yellow;
+      animation: blink 1s infinite;
+    }
     @keyframes blink {
-      0% { opacity: 1; }
       50% { opacity: 0.2; }
-      100% { opacity: 1; }
     }
-
-    .acceptor {
-      background: #f1f1f1;
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 10px;
-    }
-
-    .delete-btn {
+    button {
       background-color: red;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 5px;
+      padding: 6px 12px;
       cursor: pointer;
-      margin-top: 10px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h1>🔧 ZaraFix Admin Dashboard</h1>
-  <div id="requestsContainer"></div>
+  <h1>🔧 ZaraFix Admin Dashboard - Requests</h1>
+  <div id="requestsContainer">Loading...</div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
@@ -76,62 +67,65 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const container = document.getElementById("requestsContainer");
 
-    function renderRequests(data) {
-      container.innerHTML = "";
-      for (let userId in data) {
-        for (let requestId in data[userId]) {
-          const req = data[userId][requestId];
-          const card = document.createElement("div");
-          card.className = "card";
+    function createCard(request, userId, requestId) {
+      const card = document.createElement("div");
+      card.className = "card";
 
-          // LED logic
-          const led = document.createElement("div");
-          const hasAccepted = req.acceptedBy && Object.keys(req.acceptedBy).length > 0;
-          led.className = "led " + (hasAccepted ? "green" : "yellow");
-          card.appendChild(led);
+      const led = document.createElement("div");
+      led.className = "led";
 
-          card.innerHTML += `
-            <h3>🧾 ${req.name || "Unnamed"}</h3>
-            <p>📍 ${req.address || "No address"}</p>
-            <p>📱 WhatsApp: ${req.whatsapp || "N/A"}</p>
+      let acceptedInfo = "";
+      const accepted = request.acceptedBy;
+      if (accepted && Object.keys(accepted).length > 0) {
+        led.classList.add("green");
+
+        Object.values(accepted).forEach(poster => {
+          acceptedInfo += `
+            <hr>
+            <b>✅ Accepted By:</b><br>
+            Name: ${poster.name || "N/A"}<br>
+            Shop: ${poster.shop || "N/A"}<br>
+            Address: ${poster.address || "N/A"}<br>
+            WhatsApp: <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp || "N/A"}</a>
           `;
-
-          // AcceptedBy posters list
-          if (hasAccepted) {
-            for (let posterId in req.acceptedBy) {
-              const poster = req.acceptedBy[posterId];
-              card.innerHTML += `
-                <div class="acceptor">
-                  ✅ <strong>${poster.name}</strong> (${poster.shop})<br/>
-                  📍 ${poster.address}<br/>
-                  📱 WhatsApp: ${poster.whatsapp}
-                </div>
-              `;
-            }
-          }
-
-          const delBtn = document.createElement("button");
-          delBtn.className = "delete-btn";
-          delBtn.innerText = "❌ Delete";
-          delBtn.onclick = () => {
-            if (confirm("Are you sure you want to delete this request?")) {
-              remove(ref(db, "requests/" + userId + "/" + requestId));
-            }
-          };
-
-          card.appendChild(delBtn);
-          container.appendChild(card);
-        }
+        });
+      } else {
+        led.classList.add("yellow");
       }
+
+      card.innerHTML = `
+        <b>🧾 ${request.name || "Unnamed"}</b><br>
+        📍 ${request.address || "No address"}<br><br>
+        📱 WhatsApp: <a href="https://wa.me/${request.whatsapp}" target="_blank">${request.whatsapp || "N/A"}</a><br>
+        ${acceptedInfo}
+        <br><br>
+        <button onclick="deleteRequest('${userId}', '${requestId}')">❌ Delete</button>
+      `;
+      card.appendChild(led);
+      container.appendChild(card);
     }
 
-    onValue(ref(db, "requests"), (snapshot) => {
+    window.deleteRequest = function(userId, requestId) {
+      if (confirm("Are you sure to delete this request?")) {
+        remove(ref(db, `requests/${userId}/${requestId}`));
+      }
+    };
+
+    onValue(ref(db, "requests"), snapshot => {
+      container.innerHTML = "";
       const data = snapshot.val();
-      if (data) renderRequests(data);
-      else container.innerHTML = "<p>No requests yet.</p>";
+      if (!data) {
+        container.innerHTML = "No requests found.";
+        return;
+      }
+
+      Object.entries(data).forEach(([userId, requests]) => {
+        Object.entries(requests).forEach(([requestId, request]) => {
+          createCard(request, userId, requestId);
+        });
+      });
     });
   </script>
 </body>
