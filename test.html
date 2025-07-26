@@ -1,143 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ Admin - All Service Requests</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; padding: 10px; }
+    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
     .card {
       background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-      padding: 20px;
-      margin: 20px 0;
-      transition: 0.3s;
-      border-left: 6px solid #2196F3;
-    }
-    .card h3 { margin: 5px 0; }
-    .btn {
-      background: linear-gradient(145deg, #00c6ff, #0072ff);
-      border: none;
-      color: white;
-      padding: 10px 15px;
-      margin: 5px;
+      padding: 15px;
       border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .title { font-weight: bold; margin-bottom: 5px; }
+    .btn {
+      padding: 6px 12px;
+      margin: 5px 5px 0 0;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
     }
-    .btn:active {
-      transform: scale(0.97);
+    .btn-delete {
+      background-color: red;
+      color: white;
     }
-    .led {
+    .led-blink {
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background-color: gray;
-      display: inline-block;
-      margin-left: 10px;
-    }
-    .led.blink {
       background-color: yellow;
       animation: blink 1s infinite;
+      display: inline-block;
+      margin-top: 5px;
     }
     @keyframes blink {
-      0%, 100% { background-color: yellow; }
-      50% { background-color: transparent; }
-    }
-    .accepted-box {
-      margin-top: 10px;
-      background: #e3f2fd;
-      padding: 10px;
-      border-radius: 10px;
+      0% { opacity: 1; }
+      50% { opacity: 0.2; }
+      100% { opacity: 1; }
     }
   </style>
 </head>
 <body>
+
   <h2>🛠️ Admin - All Service Requests</h2>
-  <div id="requests"></div>
+  <div id="requestsContainer"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "AIzaSyCwV...your-api-key...",
+      authDomain: "zarafix.firebaseapp.com",
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "528456219401",
+      appId: "1:528456219401:web:75145f342b6c88e69f670e"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    const requestsDiv = document.getElementById('requests');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    function renderRequests() {
-      db.ref("requests").once('value', (snapshot) => {
-        requestsDiv.innerHTML = '';
-        const data = snapshot.val();
-        if (!data) {
-          requestsDiv.innerHTML = "<p>No service requests found.</p>";
-          return;
-        }
+    const container = document.getElementById("requestsContainer");
 
-        Object.entries(data).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([reqId, req]) => {
-            const card = document.createElement('div');
-            card.className = "card";
+    function renderRequests(data, posters) {
+      container.innerHTML = "";
+      for (let userId in data) {
+        for (let requestId in data[userId]) {
+          const request = data[userId][requestId];
+          const card = document.createElement("div");
+          card.className = "card";
 
-            let approved = req.status === "approved";
-            let acceptedBy = req.acceptedBy || {};
+          card.innerHTML = `
+            <div class="title">👤 ${request.name}</div>
+            📞 ${request.whatsapp}<br>
+            🛠️ ${request.category}<br>
+            📍 ${request.address}<br>
+            ❓ ${request.problem}<br>
+          `;
 
-            let acceptInfo = '';
-            if (Object.keys(acceptedBy).length > 0) {
-              acceptInfo += `<div class="accepted-box"><strong>✅ Accepted By:</strong>`;
-              Object.entries(acceptedBy).forEach(([uid, info]) => {
-                acceptInfo += `<p>Name: ${info.name}<br>
-                               WhatsApp: <a href="https://wa.me/${info.whatsapp}" target="_blank">${info.whatsapp}</a><br>
-                               </p>`;
-              });
-              acceptInfo += `</div>`;
-            } else {
-              acceptInfo += `<p>⏳ <strong>Wait for Accept</strong></p>`;
-            }
+          // Check if someone accepted
+          if (request.acceptedBy && Object.keys(request.acceptedBy).length > 0) {
+            const posterId = Object.keys(request.acceptedBy)[0];
+            const acceptedInfo = posters[posterId] || {};
 
-            card.innerHTML = `
-              <h3>👤 ${req.name}</h3>
-              <p>📞 ${req.whatsapp}</p>
-              <p>🛠️ ${req.category}</p>
-              <p>📍 ${req.address}</p>
-              <p>❓ ${req.problem}</p>
-              ${acceptInfo}
-              <button class="btn" onclick="approveRequest('${userId}', '${reqId}', this)">Approve <span class="led ${approved ? 'blink' : ''}"></span></button>
-              <button class="btn" style="background:#f44336" onclick="deleteRequest('${userId}', '${reqId}')">🗑️ Delete</button>
+            card.innerHTML += `
+              <br>
+              ✅ <strong>Accepted By:</strong><br>
+              Name: ${acceptedInfo.name || "N/A"}<br>
+              Shop: ${acceptedInfo.shop || "N/A"}<br>
+              Category: ${acceptedInfo.category || "N/A"}<br>
+              WhatsApp: <a href="https://wa.me/91${acceptedInfo.whatsapp}" target="_blank">${acceptedInfo.whatsapp}</a><br>
+              <div class="led-blink"></div>
             `;
+          } else {
+            card.innerHTML += `
+              <br><div style="background:#fff3cd;padding:10px;border-radius:8px;">
+              ⏳ Wait for Accept
+              </div>`;
+          }
 
-            requestsDiv.appendChild(card);
-          });
-        });
-      });
-    }
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-delete";
+          deleteBtn.innerText = "🗑️ Delete";
+          deleteBtn.onclick = () => {
+            if (confirm("Delete this request?")) {
+              remove(ref(db, `requests/${userId}/${requestId}`));
+            }
+          };
 
-    function approveRequest(userId, reqId, btn) {
-      db.ref(`requests/${userId}/${reqId}`).update({
-        status: "approved"
-      }).then(() => {
-        const led = btn.querySelector('.led');
-        led.classList.add('blink');
-      });
-    }
-
-    function deleteRequest(userId, reqId) {
-      if (confirm("Delete this request?")) {
-        db.ref(`requests/${userId}/${reqId}`).remove().then(() => {
-          renderRequests();
-        });
+          card.appendChild(deleteBtn);
+          container.appendChild(card);
+        }
       }
     }
 
-    renderRequests();
+    onValue(ref(db, 'requests'), (snapshot) => {
+      const requestsData = snapshot.val() || {};
+      onValue(ref(db, 'posters'), (postersSnap) => {
+        const postersData = postersSnap.val() || {};
+        renderRequests(requestsData, postersData);
+      });
+    });
   </script>
 </body>
 </html>
