@@ -1,72 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Service Provider Registration</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix All-in-One Portal</title>
   <style>
     body {
-      font-family: Arial;
-      background: linear-gradient(to right, #e0f7fa, #ffffff);
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #f7f9fc, #ffffff);
+      margin: 0; padding: 20px;
       text-align: center;
     }
-
-    h2 {
-      margin-bottom: 20px;
-    }
-
-    input, select {
-      width: 90%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      box-shadow: 2px 2px 8px #ccc;
-    }
-
-    .btn {
-      padding: 14px 28px;
-      background: linear-gradient(to right, #26a69a, #00796b);
-      color: white;
-      border: none;
-      border-radius: 20px;
-      box-shadow: 3px 3px 10px #888;
+    h2 { margin-top: 0; }
+    .container { max-width: 500px; margin: auto; padding: 20px; background: #fff; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    select, input, button, textarea {
+      width: 100%; padding: 10px; margin: 10px 0;
+      border-radius: 8px; border: 1px solid #ccc;
       font-size: 16px;
-      cursor: pointer;
+    }
+    button {
+      background-color: #007bff; color: white; font-weight: bold;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
       transition: transform 0.2s;
     }
-
-    .btn:hover {
-      transform: scale(1.05);
-    }
+    button:hover { transform: scale(1.03); }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
+  <h2>🛠️ Welcome to ZaraFix</h2>
 
-  <h2>🛠️ Register as Service Provider</h2>
+  <div class="container">
+    <button onclick="login()" id="loginBtn">Login with Google</button>
+    <button onclick="logout()" id="logoutBtn" class="hidden">Logout</button>
 
-  <input type="text" id="name" placeholder="Full Name" required />
-  <input type="text" id="address" placeholder="Address" required />
-  <input type="text" id="shop" placeholder="Shop Name" required />
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
-  
-  <select id="category" required>
-    <option value="">Select Category</option>
-    <option>AC Mechanic</option>
-    <option>Plumber</option>
-    <option>Electrician</option>
-    <option>Car Mechanic</option>
-    <option>Refrigerator Repair</option>
-  </select>
+    <select id="roleSelector" class="hidden" onchange="handleRoleChange(this.value)">
+      <option value="">-- Select Role --</option>
+      <option value="user">Service User</option>
+      <option value="poster">Service Provider</option>
+      <option value="admin">Admin</option>
+    </select>
 
-  <button class="btn" onclick="submitForm()">🚀 Submit</button>
+    <!-- Dynamic Section -->
+    <div id="roleSection"></div>
+  </div>
 
-  <!-- Firebase App -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, push, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -76,42 +59,125 @@
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase();
+    const ADMIN_UID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2";
 
-    function submitForm() {
-      const name = document.getElementById('name').value;
-      const address = document.getElementById('address').value;
-      const shop = document.getElementById('shop').value;
-      const whatsapp = document.getElementById('whatsapp').value;
-      const category = document.getElementById('category').value;
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const roleSelector = document.getElementById("roleSelector");
+    const roleSection = document.getElementById("roleSection");
 
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          const uid = user.uid;
-
-          db.ref('wallets/' + uid).once('value').then(snapshot => {
-            const wallet = snapshot.val() || 0;
-            if (wallet < 100) {
-              alert("Wallet balance ₹100 required. Please recharge.");
-              return;
-            }
-
-            const data = {
-              name, address, shop, whatsapp, category, uid
-            };
-
-            db.ref('posters/' + uid).set(data).then(() => {
-              alert("Registration successful!");
-            });
-          });
-
-        } else {
-          alert("Please login first.");
-        }
+    function login() {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider).then(result => {
+        alert("Logged in as: " + result.user.displayName);
       });
     }
+
+    function logout() {
+      signOut(auth).then(() => alert("Logged out."));
+    }
+
+    function handleRoleChange(role) {
+      if (!role) return roleSection.innerHTML = "";
+      if (role === "poster") showPosterForm();
+      else if (role === "user") showUserForm();
+      else if (role === "admin") showAdminDashboard();
+    }
+
+    function showPosterForm() {
+      roleSection.innerHTML = `
+        <h3>Provider Registration</h3>
+        <input id="pname" placeholder="Full Name" />
+        <input id="pshop" placeholder="Shop Name" />
+        <input id="pwhatsapp" placeholder="WhatsApp Number" />
+        <select id="pcategory">${document.getElementById("category")?.innerHTML || '<option>AC Mechanic</option>'}</select>
+        <button onclick="submitPosterForm()">Submit</button>
+      `;
+    }
+
+    window.submitPosterForm = function () {
+      const user = auth.currentUser;
+      if (!user) return alert("Login required");
+
+      const data = {
+        name: document.getElementById("pname").value,
+        shop: document.getElementById("pshop").value,
+        whatsapp: document.getElementById("pwhatsapp").value,
+        category: document.getElementById("pcategory").value,
+        wallet: 0,
+        approved: false
+      };
+
+      set(ref(db, 'posters/' + user.uid), data).then(() => alert("Provider Registered. Await admin approval."));
+    }
+
+    function showUserForm() {
+      roleSection.innerHTML = `
+        <h3>Service Request</h3>
+        <input id="uname" placeholder="Your Name" />
+        <input id="uaddress" placeholder="Address" />
+        <input id="uwhatsapp" placeholder="WhatsApp" />
+        <select id="ucategory">${document.getElementById("category")?.innerHTML || '<option>Electrician</option>'}</select>
+        <textarea id="uproblem" placeholder="Describe Problem"></textarea>
+        <button onclick="submitUserRequest()">Submit Request</button>
+      `;
+    }
+
+    window.submitUserRequest = function () {
+      const user = auth.currentUser;
+      if (!user) return alert("Login required");
+
+      const reqRef = ref(db, 'requests/' + user.uid);
+      const data = {
+        name: document.getElementById("uname").value,
+        address: document.getElementById("uaddress").value,
+        whatsapp: document.getElementById("uwhatsapp").value,
+        category: document.getElementById("ucategory").value,
+        problem: document.getElementById("uproblem").value,
+        timestamp: Date.now(),
+        status: "pending"
+      };
+      const newReq = push(reqRef);
+      set(newReq, data).then(() => alert("Request submitted"));
+    }
+
+    function showAdminDashboard() {
+      const user = auth.currentUser;
+      if (!user || user.uid !== ADMIN_UID) return alert("Access denied");
+
+      roleSection.innerHTML = `<h3>Admin Dashboard</h3><p>Coming soon...</p>`;
+    }
+
+    // Monitor Auth
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        roleSelector.classList.remove("hidden");
+      } else {
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        roleSelector.classList.add("hidden");
+        roleSection.innerHTML = "";
+      }
+    });
   </script>
+
+  <!-- Category Options (Hidden Dropdown Source) -->
+  <select id="category" style="display:none">
+    <option value="Plumber">Plumber</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Carpenter">Carpenter</option>
+    <option value="AC Repair">AC Repair</option>
+    <option value="Car Mechanic">Car Mechanic</option>
+    <option value="Painter">Painter</option>
+    <option value="Beautician">Beautician</option>
+    <option value="Yoga Instructor">Yoga Instructor</option>
+    <option value="Photographer">Photographer</option>
+    <!-- Add full list here or fetch dynamically later -->
+  </select>
 </body>
 </html>
