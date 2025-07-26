@@ -1,119 +1,144 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔧 Admin - All Service Requests</title>
+  <title>🛠️ Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: Arial;
-      background: #f2f2f2;
+      background: #f0f0f0;
+      margin: 0;
       padding: 10px;
     }
+
     .card {
       background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
       margin-bottom: 15px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       position: relative;
     }
+
     .led {
       width: 12px;
       height: 12px;
+      background-color: yellow;
       border-radius: 50%;
-      background: yellow;
       position: absolute;
-      top: 15px;
-      right: 15px;
+      top: 10px;
+      right: 10px;
       animation: blink 1s infinite;
     }
+
     @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0; }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.1; }
     }
+
     button {
       background-color: red;
       color: white;
       border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
+      padding: 6px 12px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
+    h2 {
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h2>🔧 Admin - All Service Requests</h2>
-  <div id="requests"></div>
+  <h2>🛠️ Admin - All Service Requests</h2>
+  <div id="requestsContainer"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <script>
     const firebaseConfig = {
-      databaseURL: "https://zarafix-default-rtdb.firebaseio.com/",
-      apiKey: "AIzaSyDYKFtPxxeCek20oipnB_YeUeUlJEYo5aA",
-      authDomain: "zarafix.firebaseapp.com",
-      projectId: "zarafix",
-      storageBucket: "zarafix.appspot.com",
-      messagingSenderId: "74034720063",
-      appId: "1:74034720063:web:8dd2b3c1908583b3a23e7d"
+      // 🔐 apka config yahan dalein
+      apiKey: "AIza...",
+      authDomain: "your-app.firebaseapp.com",
+      databaseURL: "https://your-app.firebaseio.com",
+      projectId: "your-app",
+      storageBucket: "your-app.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abc"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const requestsRef = ref(db, 'requests');
-    const requestsDiv = document.getElementById("requests");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    onValue(requestsRef, snapshot => {
-      requestsDiv.innerHTML = '';
-      if (!snapshot.exists()) {
-        requestsDiv.innerHTML = '<p>No service requests found.</p>';
-        return;
-      }
-      const requests = snapshot.val();
-      Object.keys(requests).forEach(userId => {
-        const userRequests = requests[userId];
-        Object.keys(userRequests).forEach(requestId => {
-          const r = userRequests[requestId];
+    function loadRequests() {
+      const container = document.getElementById('requestsContainer');
+      container.innerHTML = '';
+      db.ref("requests").once("value", snapshot => {
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>No service requests found.</p>";
+          return;
+        }
 
-          let acceptedHTML = "<p>✅ Accepted By:<br>Name: N/A<br>WhatsApp: N/A<br>Shop: N/A<br>Category: N/A</p>";
-          let led = '';
+        snapshot.forEach(userSnap => {
+          userSnap.forEach(reqSnap => {
+            const data = reqSnap.val();
+            const card = document.createElement("div");
+            card.className = "card";
 
-          if (r.acceptedBy) {
-            const acceptedList = Object.values(r.acceptedBy).map(poster => {
-              return `<p>✅ Accepted By:<br>
-              Name: ${poster.name}<br>
-              WhatsApp: <a href='https://wa.me/91${poster.whatsapp}' target='_blank'>${poster.whatsapp}</a><br>
-              Shop: ${poster.shop}<br>
-              Category: ${poster.category}</p>`;
-            }).join('<hr>');
-            acceptedHTML = acceptedList;
-            led = '<div class="led"></div>';
-          }
+            let acceptedHTML = "";
+            if (data.acceptedBy && typeof data.acceptedBy === 'object') {
+              const acceptedList = Object.values(data.acceptedBy);
+              if (acceptedList.length > 0) {
+                acceptedHTML = "<b>✅ Accepted By:</b><br>";
+                acceptedList.forEach(poster => {
+                  acceptedHTML += `
+                    Name: ${poster.name || "N/A"}<br>
+                    WhatsApp: ${poster.whatsapp || "N/A"}<br>
+                    Shop: ${poster.shop || "N/A"}<br>
+                    Category: ${poster.category || "N/A"}<br><br>
+                  `;
+                });
+              } else {
+                acceptedHTML = "<b>⏳ Wait for Accept</b>";
+              }
+            } else {
+              acceptedHTML = "<b>⏳ Wait for Accept</b>";
+            }
 
-          requestsDiv.innerHTML += `
-            <div class="card">
-              ${led}
-              <p>👤 <b>${r.name}</b></p>
-              <p>📞 ${r.whatsapp}</p>
-              <p>🔧 ${r.category}</p>
-              <p>📍 ${r.address}</p>
-              <p>❓ ${r.problem}</p>
-              ${acceptedHTML}
-              <button onclick="deleteRequest('${userId}', '${requestId}')">Delete</button>
-            </div>
-          `;
+            card.innerHTML = `
+              👤 ${data.name || ""}<br>
+              📞 ${data.whatsapp || ""}<br><br>
+              🛠️ ${data.category || ""}<br><br>
+              📍 ${data.address || ""}<br><br>
+              ❓ ${data.problem || ""}<br><br>
+              ${acceptedHTML}<br>
+              <button onclick="deleteRequest('${userSnap.key}', '${reqSnap.key}')">🗑️ Delete</button>
+            `;
+
+            // LED only if accepted
+            if (acceptedHTML.includes("Accepted By")) {
+              const led = document.createElement("div");
+              led.className = "led";
+              card.appendChild(led);
+            }
+
+            container.appendChild(card);
+          });
         });
       });
-    });
+    }
 
-    window.deleteRequest = function(userId, requestId) {
-      if (confirm("Are you sure to delete this request?")) {
-        const reqRef = ref(db, `requests/${userId}/${requestId}`);
-        remove(reqRef);
+    function deleteRequest(userId, requestId) {
+      if (confirm("Delete this request?")) {
+        firebase.database().ref(`requests/${userId}/${requestId}`).remove().then(() => {
+          loadRequests();
+        });
       }
     }
+
+    loadRequests();
   </script>
 </body>
 </html>
