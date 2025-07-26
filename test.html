@@ -1,97 +1,143 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🌟 ZaraFix Admin - User Requests</title>
+  <title>🛠️ Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom right, #e3f2fd, #ffffff);
-      padding: 20px;
-      margin: 0;
-    }
-    h2 {
-      text-align: center;
-      color: #0077b6;
-    }
+    body { font-family: Arial; background: #f9f9f9; padding: 10px; }
     .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
       padding: 20px;
-      margin: 20px auto;
-      max-width: 500px;
-      transition: transform 0.3s ease;
+      margin: 20px 0;
+      transition: 0.3s;
+      border-left: 6px solid #2196F3;
     }
-    .card:hover {
-      transform: translateY(-5px);
+    .card h3 { margin: 5px 0; }
+    .btn {
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
     }
-    .card h3 {
-      margin-top: 0;
-      color: #0077b6;
+    .btn:active {
+      transform: scale(0.97);
     }
-    .accepted-list {
-      background: #e3f2fd;
-      border-radius: 12px;
-      padding: 10px;
+    .led {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: gray;
+      display: inline-block;
+      margin-left: 10px;
+    }
+    .led.blink {
+      background-color: yellow;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { background-color: yellow; }
+      50% { background-color: transparent; }
+    }
+    .accepted-box {
       margin-top: 10px;
-    }
-    .accepted-list p {
-      margin: 4px 0;
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>🧾 All User Requests</h2>
-  <div id="requestList"></div>
+  <h2>🛠️ Admin - All Service Requests</h2>
+  <div id="requests"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script>
     const firebaseConfig = {
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const requestsDiv = document.getElementById('requests');
 
-    const requestList = document.getElementById("requestList");
+    function renderRequests() {
+      db.ref("requests").once('value', (snapshot) => {
+        requestsDiv.innerHTML = '';
+        const data = snapshot.val();
+        if (!data) {
+          requestsDiv.innerHTML = "<p>No service requests found.</p>";
+          return;
+        }
 
-    function renderRequestCard(userId, requestId, request) {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <h3>🔧 Category: ${request.category}</h3>
-        <p><strong>👤 Name:</strong> ${request.name}</p>
-        <p><strong>📍 Address:</strong> ${request.address}</p>
-        <p><strong>📞 WhatsApp:</strong> ${request.whatsapp}</p>
-        <p><strong>📝 Problem:</strong> ${request.problem}</p>
-        <p><strong>Status:</strong> ${request.status}</p>
-        <div class="accepted-list">
-          <strong>✅ Accepted By:</strong>
-          ${request.acceptedBy ? Object.values(request.acceptedBy).map((poster, index) => `
-            <p>🧑 ${poster.name} | 📱 <a href="https://wa.me/${poster.whatsapp}" target="_blank">${poster.whatsapp}</a></p>
-          `).join("") : "<p>❌ No one accepted yet</p>"}
-        </div>
-      `;
-      requestList.appendChild(card);
-    }
-
-    const requestsRef = ref(db, "requests");
-    onValue(requestsRef, (snapshot) => {
-      requestList.innerHTML = "";
-      const data = snapshot.val();
-      if (data) {
         Object.entries(data).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([requestId, request]) => {
-            renderRequestCard(userId, requestId, request);
+          Object.entries(userRequests).forEach(([reqId, req]) => {
+            const card = document.createElement('div');
+            card.className = "card";
+
+            let approved = req.status === "approved";
+            let acceptedBy = req.acceptedBy || {};
+
+            let acceptInfo = '';
+            if (Object.keys(acceptedBy).length > 0) {
+              acceptInfo += `<div class="accepted-box"><strong>✅ Accepted By:</strong>`;
+              Object.entries(acceptedBy).forEach(([uid, info]) => {
+                acceptInfo += `<p>Name: ${info.name}<br>
+                               WhatsApp: <a href="https://wa.me/${info.whatsapp}" target="_blank">${info.whatsapp}</a><br>
+                               </p>`;
+              });
+              acceptInfo += `</div>`;
+            } else {
+              acceptInfo += `<p>⏳ <strong>Wait for Accept</strong></p>`;
+            }
+
+            card.innerHTML = `
+              <h3>👤 ${req.name}</h3>
+              <p>📞 ${req.whatsapp}</p>
+              <p>🛠️ ${req.category}</p>
+              <p>📍 ${req.address}</p>
+              <p>❓ ${req.problem}</p>
+              ${acceptInfo}
+              <button class="btn" onclick="approveRequest('${userId}', '${reqId}', this)">Approve <span class="led ${approved ? 'blink' : ''}"></span></button>
+              <button class="btn" style="background:#f44336" onclick="deleteRequest('${userId}', '${reqId}')">🗑️ Delete</button>
+            `;
+
+            requestsDiv.appendChild(card);
           });
         });
-      } else {
-        requestList.innerHTML = "<p>No requests found.</p>";
+      });
+    }
+
+    function approveRequest(userId, reqId, btn) {
+      db.ref(`requests/${userId}/${reqId}`).update({
+        status: "approved"
+      }).then(() => {
+        const led = btn.querySelector('.led');
+        led.classList.add('blink');
+      });
+    }
+
+    function deleteRequest(userId, reqId) {
+      if (confirm("Delete this request?")) {
+        db.ref(`requests/${userId}/${reqId}`).remove().then(() => {
+          renderRequests();
+        });
       }
-    });
+    }
+
+    renderRequests();
   </script>
 </body>
 </html>
