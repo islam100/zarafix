@@ -1,300 +1,142 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - All in One</title>
+  <title>ZaraFix - Poster Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial;
+      background: #f2f2f2;
       margin: 0;
-      padding: 20px;
-      background: linear-gradient(to bottom, #f3f3f3, #ffffff);
-    }
-
-    h2 {
-      text-align: center;
-      font-size: 24px;
-    }
-
-    .dropdown {
-      width: 90%;
-      margin: 10px auto;
-      display: block;
       padding: 10px;
-      font-size: 16px;
-      border-radius: 12px;
     }
-
-    .btn3d {
-      background: linear-gradient(to bottom right, #4facfe, #00f2fe);
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      margin: 10px;
-      border-radius: 15px;
-      box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
-      font-size: 16px;
-      transition: all 0.3s;
-    }
-
-    .btn3d:hover {
-      transform: translateY(-2px);
-      box-shadow: 4px 6px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    .section {
-      display: none;
-      max-width: 600px;
-      margin: auto;
-      padding: 15px;
+    .card {
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 0 10px #ccc;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
-
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
+    .btn3d {
+      background: linear-gradient(to bottom, #4CAF50, #2e7d32);
+      color: white;
+      border: none;
+      padding: 10px 15px;
       border-radius: 10px;
-      border: 1px solid #ccc;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px #1b5e20;
     }
-
-    #logoutBtn {
-      float: right;
-      margin-right: 20px;
+    .wallet-led {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: red;
+      animation: blink 1s infinite;
+      margin-left: 8px;
+    }
+    @keyframes blink {
+      0% { background-color: red; }
+      50% { background-color: limegreen; }
+      100% { background-color: red; }
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ Welcome to ZaraFix</h2>
-  <button class="btn3d" onclick="loginWithGoogle()" id="loginBtn">Login with Google</button>
-  <button class="btn3d" onclick="logout()" id="logoutBtn" style="display:none;">Logout</button>
-
-  <select class="dropdown" id="pageSelect" onchange="toggleSections()">
-    <option value="">🔽 Select Page</option>
-    <option value="providerForm">🧰 Provider Form</option>
-    <option value="providerDash">📋 Provider Dashboard</option>
-    <option value="requestForm">📨 Service Request</option>
-    <option value="requestDash">📂 Request Dashboard</option>
-    <option value="adminDash">🛠️ Admin Dashboard</option>
-  </select>
-
-  <!-- Provider Form -->
-  <div id="providerForm" class="section">
-    <h3>Service Provider Registration</h3>
-    <label>Name</label><input id="pName">
-    <label>Address</label><input id="pAddress">
-    <label>Shop Name</label><input id="pShop">
-    <label>WhatsApp Number</label><input id="pWhatsApp">
-    <label>Category</label>
-    <select id="pCategory">
-      <option value="">Select Category</option>
-      <option value="AC Mechanic">AC Mechanic</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
-    <button class="btn3d" onclick="submitProvider()">Submit</button>
-  </div>
-
-  <!-- Provider Dashboard -->
-  <div id="providerDash" class="section">
-    <h3>Your Jobs</h3>
-    <div id="providerJobs"></div>
-  </div>
-
-  <!-- Request Form -->
-  <div id="requestForm" class="section">
-    <h3>Post a Repair Request</h3>
-    <label>Name</label><input id="rName">
-    <label>Address</label><input id="rAddress">
-    <label>WhatsApp</label><input id="rWhatsApp">
-    <label>Problem</label><input id="rProblem">
-    <label>Category</label>
-    <select id="rCategory">
-      <option value="">Select Category</option>
-      <option value="AC Mechanic">AC Mechanic</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
-    <button class="btn3d" onclick="submitRequest()">Submit Request</button>
-  </div>
-
-  <!-- Request Dashboard -->
-  <div id="requestDash" class="section">
-    <h3>Your Service Requests</h3>
-    <div id="requestList"></div>
-  </div>
-
-  <!-- Admin Dashboard -->
-  <div id="adminDash" class="section">
-    <h3>Admin Panel</h3>
-    <div id="adminContent"></div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <h2>🎉 Welcome to Your Poster Dashboard</h2>
+  <div id="walletDisplay">Wallet: ₹0 <span class="wallet-led"></span></div>
+  <div id="data"></div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
-
     const auth = firebase.auth();
     const db = firebase.database();
-
-    const adminUIDs = ["QT3LkEToHwaiORatoKfTx8QE45s2"];
-    let currentUser;
+    
+    let currentUser, posterData;
 
     auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-      } else {
-        currentUser = null;
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        pageSelect.value = "";
-        toggleSections();
-      }
+      if (!user) return location.href = "index.html";
+      currentUser = user;
+      db.ref("posters/" + user.uid).once("value", snap => {
+        if (!snap.exists()) return alert("You are not registered as service provider.");
+        posterData = snap.val();
+        showWallet();
+        loadJobs();
+      });
     });
 
-    function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
-
-    function logout() {
-      auth.signOut();
-    }
-
-    function toggleSections() {
-      const sectionIds = ["providerForm", "providerDash", "requestForm", "requestDash", "adminDash"];
-      sectionIds.forEach(id => document.getElementById(id).style.display = "none");
-
-      const selected = pageSelect.value;
-      if (!currentUser || (selected === "adminDash" && !adminUIDs.includes(currentUser.uid))) {
-        alert("Access denied. Please login with the correct account.");
-        return;
-      }
-      if (selected) {
-        document.getElementById(selected).style.display = "block";
-        if (selected === "providerDash") loadProviderJobs();
-        if (selected === "requestDash") loadRequestList();
-        if (selected === "adminDash") loadAdminPanel();
-      }
-    }
-
-    function submitProvider() {
-      if (!currentUser) return alert("Please login first");
-      const data = {
-        name: pName.value,
-        address: pAddress.value,
-        shop: pShop.value,
-        whatsapp: pWhatsApp.value,
-        category: pCategory.value,
-        wallet: 100
-      };
-      db.ref("posters/" + currentUser.uid).set(data).then(() => {
-        alert("Provider Registered!");
-        pName.value = pAddress.value = pShop.value = pWhatsApp.value = pCategory.value = "";
+    function showWallet() {
+      db.ref("posters/" + currentUser.uid + "/wallet").on("value", snap => {
+        document.getElementById("walletDisplay").innerHTML = 
+          `Wallet: ₹${snap.val()} <span class="wallet-led"></span>`;
       });
     }
 
-    function submitRequest() {
-      if (!currentUser) return alert("Please login first");
-      const data = {
-        name: rName.value,
-        address: rAddress.value,
-        whatsapp: rWhatsApp.value,
-        problem: rProblem.value,
-        category: rCategory.value,
-        timestamp: Date.now()
-      };
-      db.ref("requests/" + currentUser.uid).push(data).then(() => {
-        alert("Request Posted!");
-        rName.value = rAddress.value = rWhatsApp.value = rProblem.value = rCategory.value = "";
-      });
-    }
-
-    function loadProviderJobs() {
+    function loadJobs() {
       db.ref("requests").once("value", snap => {
         let html = "";
         snap.forEach(userSnap => {
-          userSnap.forEach(req => {
-            const d = req.val();
-            html += `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-              <b>${d.name}</b><br>${d.problem}<br>${d.category}<br><a href="https://wa.me/${d.whatsapp}" target="_blank">WhatsApp</a>
-            </div>`;
+          userSnap.forEach(jobSnap => {
+            const job = jobSnap.val();
+            const jobId = jobSnap.key;
+            if (job.category !== posterData.category) return;
+
+            const accepted = job.acceptedBy?.[currentUser.uid];
+            const acceptCount = job.acceptedBy ? Object.keys(job.acceptedBy).length : 0;
+
+            html += `<div class="card">
+              <b>Customer:</b> ${job.name}<br>
+              <b>Problem:</b> ${job.problem}<br>
+              <b>Address:</b> ${job.address}<br>
+              <b>Category:</b> ${job.category}<br>`;
+
+            if (accepted) {
+              html += `
+                <b>WhatsApp:</b> <a href="https://wa.me/${job.whatsapp}" target="_blank">${job.whatsapp}</a><br>
+                ${job.lat ? `<b>Location:</b> <a href="https://www.google.com/maps?q=${job.lat},${job.lng}" target="_blank">📍 View Map</a><br>` : ""}
+              `;
+            } else {
+              html += `<button class="btn3d" onclick="acceptJob('${userSnap.key}','${jobId}')">Accept Job (₹20)</button>`;
+            }
+
+            html += `<br><b>Accepted by:</b> ${acceptCount}</div>`;
           });
         });
-        providerJobs.innerHTML = html || "No requests.";
+        document.getElementById("data").innerHTML = html || "No matching jobs.";
       });
     }
 
-    function loadRequestList() {
-      db.ref("requests/" + currentUser.uid).once("value", snap => {
-        let html = "";
-        snap.forEach(req => {
-          const d = req.val();
-          html += `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-            <b>${d.name}</b><br>${d.problem}<br>${d.category}
-          </div>`;
-        });
-        requestList.innerHTML = html || "No requests.";
-      });
-    }
+    function acceptJob(userId, jobId) {
+      const walletRef = db.ref("posters/" + currentUser.uid + "/wallet");
+      walletRef.once("value", snap => {
+        let wallet = snap.val() || 0;
+        if (wallet < 20) return alert("Insufficient wallet balance.");
 
-    function loadAdminPanel() {
-      let html = "<h4>Service Providers</h4>";
-      db.ref("posters").once("value", snap => {
-        snap.forEach(p => {
-          const d = p.val();
-          html += `<div style="border:1px solid #ccc; margin:5px; padding:10px;">
-            <b>${d.name}</b> - ${d.category}<br>Wallet: ₹${d.wallet}<br>
-            <button class="btn3d" onclick="recharge('${p.key}')">+₹100</button>
-          </div>`;
+        walletRef.set(wallet - 20);
+        db.ref(`requests/${userId}/${jobId}/acceptedBy/${currentUser.uid}`).set({
+          name: posterData.name,
+          shop: posterData.shop,
+          address: posterData.address,
+          whatsapp: posterData.whatsapp,
+          category: posterData.category
+        }, () => {
+          alert("✅ Job accepted! WhatsApp and location unlocked.");
+          loadJobs();
         });
-
-        // Load recharge logs
-        db.ref("rechargeLogs").once("value", logSnap => {
-          html += "<h4>Recharge Logs</h4>";
-          logSnap.forEach(log => {
-            const l = log.val();
-            html += `<div style="font-size:14px; margin:5px;">
-              ✅ UID: ${l.uid} | ₹${l.amount} | ${l.timestamp}
-            </div>`;
-          });
-          adminContent.innerHTML = html;
-        });
-      });
-    }
-
-    function recharge(uid) {
-      const now = new Date().toLocaleString();
-      db.ref("posters/" + uid + "/wallet").transaction(w => (w || 0) + 100).then(() => {
-        alert("Recharge of ₹100 successful.");
-        db.ref("rechargeLogs").push({
-          uid: uid,
-          amount: 100,
-          timestamp: now,
-          byAdmin: currentUser ? currentUser.uid : "unknown"
-        });
-        loadAdminPanel();
       });
     }
   </script>
