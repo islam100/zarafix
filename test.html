@@ -1,130 +1,147 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
+  <title>💪 ZaraFix All-in-One Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin: 0; padding: 10px; background: #f4f4f4; }
-    .hidden { display: none; }
-    select, button { padding: 10px; font-size: 16px; border-radius: 10px; margin-bottom: 10px; }
-    .section { display: none; background: white; padding: 20px; margin-top: 10px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-    h2 { color: #333; }
+    body {
+      font-family: Arial;
+      background: linear-gradient(to bottom right, #e3f2fd, #ffffff);
+      margin: 0;
+      padding: 10px;
+      text-align: center;
+    }
+    select, button {
+      padding: 10px 15px;
+      margin: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 2px 2px 6px #aaa;
+      cursor: pointer;
+    }
+    .section {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
 
-<h2>🛠️ Welcome to ZaraFix</h2>
-<div id="adminLoginNotice" class="hidden">❌ Admin login kare</div>
-<button id="logoutBtn" class="hidden">Logout</button>
+<h2>💪 Welcome to ZaraFix</h2>
+<p><button onclick="logout()">Logout</button></p>
 
-<div id="adminControls" class="hidden">
-  <select id="adminSectionSelect">
-    <option value="">-- Select Section --</option>
-    <option value="providers">All Service Providers</option>
-    <option value="requests">All User Requests</option>
-    <option value="recharge">Recharge Approvals</option>
-  </select>
+<select id="panelSelect" onchange="switchPanel()">
+  <option value="">-- Select Panel --</option>
+  <option value="userForm">User: Post Request</option>
+  <option value="userDashboard">User: My Requests</option>
+  <option value="posterForm">Provider: Register</option>
+  <option value="posterDashboard">Provider: Job Dashboard</option>
+  <option value="adminPosters">Admin: All Posters</option>
+  <option value="adminRequests">Admin: All Requests</option>
+  <option value="adminRecharge">Admin: Recharge Approval</option>
+</select>
 
-  <div id="providersSection" class="section">
-    <h3>🧰 All Service Providers</h3>
-    <div id="providersList">Loading...</div>
-  </div>
-
-  <div id="requestsSection" class="section">
-    <h3>📋 All User Requests</h3>
-    <div id="requestsList">Loading...</div>
-  </div>
-
-  <div id="rechargeSection" class="section">
-    <h3>💰 Recharge Approvals</h3>
-    <div id="rechargeList">Loading...</div>
-  </div>
+<div id="userForm" class="section">
+  <h2>📅 Post a Service Request</h2>
+  <!-- Your user form code goes here -->
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<div id="userDashboard" class="section">
+  <h2>🔧 My Service Requests</h2>
+  <!-- Your user dashboard code goes here -->
+</div>
 
+<div id="posterForm" class="section">
+  <h2>🚪 Provider Registration</h2>
+  <input type="text" placeholder="Name"><br>
+  <input type="text" placeholder="Address"><br>
+  <input type="text" placeholder="Shop Name"><br>
+  <input type="text" placeholder="WhatsApp Number"><br>
+  <select>
+    <option>AC Mechanic</option>
+    <option>Electrician</option>
+    <option>Plumber</option>
+  </select><br>
+  <button>Submit</button>
+</div>
+
+<div id="posterDashboard" class="section">
+  <h2>📊 Provider Job Dashboard</h2>
+  <!-- Job list and wallet info here -->
+</div>
+
+<div id="adminPosters" class="section">
+  <h2>👤 Admin: All Service Providers</h2>
+  <!-- Admin poster view -->
+</div>
+
+<div id="adminRequests" class="section">
+  <h2>📄 Admin: All Service Requests</h2>
+  <!-- Admin request view -->
+</div>
+
+<div id="adminRecharge" class="section">
+  <h2>💳 Admin: Recharge Approvals</h2>
+  <!-- Recharge approval system -->
+</div>
+
+<script>
+let userUID = null;
+let isAdmin = false;
+
+function switchPanel() {
+  document.querySelectorAll('.section').forEach(div => div.style.display = 'none');
+  const selected = document.getElementById('panelSelect').value;
+  if (selected) {
+    document.getElementById(selected).style.display = 'block';
+  }
+}
+
+function logout() {
+  firebase.auth().signOut().then(() => location.reload());
+}
+
+function checkLogin() {
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+      userUID = user.uid;
+      firebase.database().ref("admins/" + user.uid).once('value', snap => {
+        isAdmin = snap.exists();
+        if (!isAdmin) {
+          document.querySelectorAll("option").forEach(opt => {
+            if (opt.value.startsWith("admin")) opt.style.display = "none";
+          });
+        }
+      });
+    } else {
+      window.location.href = "index.html";
+    }
+  });
+}
+
+checkLogin();
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
     authDomain: "zara-fix-2e35a.firebaseapp.com",
     projectId: "zara-fix-2e35a",
     storageBucket: "zara-fix-2e35a.appspot.com",
     messagingSenderId: "636550144008",
-    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
-    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
   };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-
-  const adminUIDs = {
-    "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": true // aapka admin UID yahan likha gaya hai
-  };
-
-  const logoutBtn = document.getElementById("logoutBtn");
-  const adminLoginNotice = document.getElementById("adminLoginNotice");
-  const adminControls = document.getElementById("adminControls");
-  const adminSectionSelect = document.getElementById("adminSectionSelect");
-
-  logoutBtn.onclick = () => signOut(auth);
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user && adminUIDs[user.uid]) {
-      adminLoginNotice.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      adminControls.classList.remove("hidden");
-    } else {
-      adminLoginNotice.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      adminControls.classList.add("hidden");
-    }
-  });
-
-  adminSectionSelect.onchange = () => {
-    document.querySelectorAll(".section").forEach(sec => sec.style.display = "none");
-    const selected = adminSectionSelect.value;
-    if (selected === "providers") loadProviders();
-    if (selected === "requests") loadRequests();
-    if (selected === "recharge") loadRecharges();
-  };
-
-  async function loadProviders() {
-    document.getElementById("providersSection").style.display = "block";
-    const snap = await get(ref(db, 'posters'));
-    const data = snap.exists() ? snap.val() : {};
-    const list = Object.values(data).map(p =>
-      `<div>🔧 ${p.name} - ${p.category} - Wallet: ₹${p.wallet || 0}</div>`
-    ).join('');
-    document.getElementById("providersList").innerHTML = list || "No providers found.";
-  }
-
-  async function loadRequests() {
-    document.getElementById("requestsSection").style.display = "block";
-    const snap = await get(ref(db, 'requests'));
-    const data = snap.exists() ? snap.val() : {};
-    let allRequests = [];
-    Object.values(data).forEach(userReqs => {
-      Object.values(userReqs).forEach(req => allRequests.push(req));
-    });
-    const list = allRequests.map(r =>
-      `<div>📍 ${r.name} - ${r.category} - ${r.address}</div>`
-    ).join('');
-    document.getElementById("requestsList").innerHTML = list || "No requests found.";
-  }
-
-  async function loadRecharges() {
-    document.getElementById("rechargeSection").style.display = "block";
-    const snap = await get(ref(db, 'recharges'));
-    const data = snap.exists() ? snap.val() : {};
-    const list = Object.entries(data).map(([uid, entry]) =>
-      `<div>📤 Recharge from ${entry.name || uid}<br>Screenshot: <a href="${entry.screenshot}" target="_blank">View</a></div>`
-    ).join('');
-    document.getElementById("rechargeList").innerHTML = list || "No recharges found.";
-  }
+  firebase.initializeApp(firebaseConfig);
 </script>
-
 </body>
 </html>
