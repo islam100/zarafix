@@ -1,144 +1,120 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Poster Dashboard</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 10px;
-    }
+    body { font-family: Arial; background: #e9f5ff; margin: 0; padding: 10px; }
+    .container { max-width: 1000px; margin: auto; padding: 20px; }
+    h2 { text-align: center; color: #0b5394; }
     .card {
       background: white;
-      margin: 10px 0;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
       padding: 15px;
-      border-radius: 15px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      margin: 15px 0;
+      transition: transform 0.2s;
     }
-    .btn3d {
-      background: linear-gradient(to bottom, #4CAF50, #2e7d32);
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 10px;
-      margin-top: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px #1b5e20;
+    .card:hover { transform: scale(1.02); }
+    .btn {
+      background: #0b5394; color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; cursor: pointer; margin-top: 10px;
     }
-    .wallet-led {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background-color: red;
-      animation: blink 1s infinite;
-      margin-left: 8px;
-    }
-    @keyframes blink {
-      0% { background-color: red; }
-      50% { background-color: limegreen; }
-      100% { background-color: red; }
-    }
+    .btn:hover { background: #073763; }
+    .section-title { font-size: 18px; margin-top: 30px; color: #073763; }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
   </style>
 </head>
 <body>
-  <h2>🎉 Welcome to Your Poster Dashboard</h2>
-  <div id="walletDisplay">Wallet: ₹0 <span class="wallet-led"></span></div>
-  <div id="data"></div>
+<div class="container">
+  <h2>📊 ZaraFix Admin Dashboard</h2>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-    
-    let currentUser, posterData;
+  <div id="admins"></div>
+  <div id="posters"></div>
+  <div id="requests"></div>
 
-    auth.onAuthStateChanged(user => {
-      if (!user) return location.href = "index.html";
-      currentUser = user;
-      db.ref("posters/" + user.uid).once("value", snap => {
-        if (!snap.exists()) return alert("You are not registered as service provider.");
-        posterData = snap.val();
-        showWallet();
-        loadJobs();
-      });
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase();
+const auth = getAuth();
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    const uid = user.uid;
+    onValue(ref(db, 'admins/' + uid), snap => {
+      if (!snap.exists()) {
+        document.body.innerHTML = '<h3 style="color:red">Access denied. Admins only.</h3>';
+        return;
+      }
+      loadDashboard();
     });
+  } else {
+    window.location.href = '/index.html';
+  }
+});
 
-    function showWallet() {
-      db.ref("posters/" + currentUser.uid + "/wallet").on("value", snap => {
-        document.getElementById("walletDisplay").innerHTML = 
-          `Wallet: ₹${snap.val()} <span class="wallet-led"></span>`;
-      });
+function loadDashboard() {
+  const postersRef = ref(db, 'posters');
+  const requestsRef = ref(db, 'requests');
+
+  onValue(postersRef, snap => {
+    const posters = snap.val();
+    let html = '<h3 class="section-title">👨‍💼 All Service Providers</h3>';
+    for (let uid in posters) {
+      const p = posters[uid];
+      html += `<div class="card">
+        <b>🏠 Shop:</b> ${p.shop || ''}<br>
+        <b>👤 Name:</b> ${p.name || ''}<br>
+        <b>🏡 Address:</b> ${p.address || ''}<br>
+        <b>🏫 Category:</b> ${p.category || ''}<br>
+        <b>📞 WhatsApp:</b> ${p.whatsapp || ''}<br>
+        <b>💳 Wallet:</b> ₹${p.wallet || 0}<br>
+        <button class="btn" onclick="recharge('${uid}')">💵 Recharge ₹100</button>
+      </div>`;
     }
+    document.getElementById('posters').innerHTML = html;
+  });
 
-    function loadJobs() {
-      db.ref("requests").once("value", snap => {
-        let html = "";
-        snap.forEach(userSnap => {
-          userSnap.forEach(jobSnap => {
-            const job = jobSnap.val();
-            const jobId = jobSnap.key;
-            if (job.category !== posterData.category) return;
-
-            const accepted = job.acceptedBy?.[currentUser.uid];
-            const acceptCount = job.acceptedBy ? Object.keys(job.acceptedBy).length : 0;
-
-            html += `<div class="card">
-              <b>Customer:</b> ${job.name}<br>
-              <b>Problem:</b> ${job.problem}<br>
-              <b>Address:</b> ${job.address}<br>
-              <b>Category:</b> ${job.category}<br>`;
-
-            if (accepted) {
-              html += `
-                <b>WhatsApp:</b> <a href="https://wa.me/${job.whatsapp}" target="_blank">${job.whatsapp}</a><br>
-                ${job.lat ? `<b>Location:</b> <a href="https://www.google.com/maps?q=${job.lat},${job.lng}" target="_blank">📍 View Map</a><br>` : ""}
-              `;
-            } else {
-              html += `<button class="btn3d" onclick="acceptJob('${userSnap.key}','${jobId}')">Accept Job (₹20)</button>`;
-            }
-
-            html += `<br><b>Accepted by:</b> ${acceptCount}</div>`;
-          });
-        });
-        document.getElementById("data").innerHTML = html || "No matching jobs.";
-      });
+  onValue(requestsRef, snap => {
+    const data = snap.val();
+    let html = '<h3 class="section-title">📝 Service Requests</h3>';
+    for (let userId in data) {
+      const userRequests = data[userId];
+      for (let reqId in userRequests) {
+        const r = userRequests[reqId];
+        html += `<div class="card">
+          <b>👤 Name:</b> ${r.name}<br>
+          <b>📞 WhatsApp:</b> ${r.whatsapp}<br>
+          <b>🏠 Address:</b> ${r.address}<br>
+          <b>🏫 Category:</b> ${r.category}<br>
+          <b>❓ Problem:</b> ${r.problem}<br>
+          <b>✅ Accepted By:</b> <pre>${JSON.stringify(r.acceptedBy || {}, null, 2)}</pre>
+        </div>`;
+      }
     }
+    document.getElementById('requests').innerHTML = html;
+  });
+}
 
-    function acceptJob(userId, jobId) {
-      const walletRef = db.ref("posters/" + currentUser.uid + "/wallet");
-      walletRef.once("value", snap => {
-        let wallet = snap.val() || 0;
-        if (wallet < 20) return alert("Insufficient wallet balance.");
-
-        walletRef.set(wallet - 20);
-        db.ref(`requests/${userId}/${jobId}/acceptedBy/${currentUser.uid}`).set({
-          name: posterData.name,
-          shop: posterData.shop,
-          address: posterData.address,
-          whatsapp: posterData.whatsapp,
-          category: posterData.category
-        }, () => {
-          alert("✅ Job accepted! WhatsApp and location unlocked.");
-          loadJobs();
-        });
-      });
-    }
-  </script>
+window.recharge = function(uid) {
+  update(ref(db, 'posters/' + uid), { wallet: 100 });
+  alert("Wallet recharged for UID: " + uid);
+};
+</script>
 </body>
 </html>
