@@ -157,19 +157,18 @@
     const db = firebase.database();
 
     const adminUIDs = ["QT3LkEToHwaiORatoKfTx8QE45s2"];
-
     let currentUser;
 
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
-        document.getElementById('loginBtn').style.display = "none";
-        document.getElementById('logoutBtn').style.display = "inline-block";
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
       } else {
         currentUser = null;
-        document.getElementById('loginBtn').style.display = "inline-block";
-        document.getElementById('logoutBtn').style.display = "none";
-        document.getElementById('pageSelect').value = "";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        pageSelect.value = "";
         toggleSections();
       }
     });
@@ -187,7 +186,7 @@
       const sectionIds = ["providerForm", "providerDash", "requestForm", "requestDash", "adminDash"];
       sectionIds.forEach(id => document.getElementById(id).style.display = "none");
 
-      const selected = document.getElementById("pageSelect").value;
+      const selected = pageSelect.value;
       if (!currentUser || (selected === "adminDash" && !adminUIDs.includes(currentUser.uid))) {
         alert("Access denied. Please login with the correct account.");
         return;
@@ -211,7 +210,8 @@
         wallet: 100
       };
       db.ref("posters/" + currentUser.uid).set(data).then(() => {
-        alert("Submitted!");
+        alert("Provider Registered!");
+        pName.value = pAddress.value = pShop.value = pWhatsApp.value = pCategory.value = "";
       });
     }
 
@@ -226,7 +226,8 @@
         timestamp: Date.now()
       };
       db.ref("requests/" + currentUser.uid).push(data).then(() => {
-        alert("Request posted!");
+        alert("Request Posted!");
+        rName.value = rAddress.value = rWhatsApp.value = rProblem.value = rCategory.value = "";
       });
     }
 
@@ -268,12 +269,33 @@
             <button class="btn3d" onclick="recharge('${p.key}')">+₹100</button>
           </div>`;
         });
-        adminContent.innerHTML = html;
+
+        // Load recharge logs
+        db.ref("rechargeLogs").once("value", logSnap => {
+          html += "<h4>Recharge Logs</h4>";
+          logSnap.forEach(log => {
+            const l = log.val();
+            html += `<div style="font-size:14px; margin:5px;">
+              ✅ UID: ${l.uid} | ₹${l.amount} | ${l.timestamp}
+            </div>`;
+          });
+          adminContent.innerHTML = html;
+        });
       });
     }
 
     function recharge(uid) {
-      db.ref("posters/" + uid + "/wallet").transaction(w => (w || 0) + 100);
+      const now = new Date().toLocaleString();
+      db.ref("posters/" + uid + "/wallet").transaction(w => (w || 0) + 100).then(() => {
+        alert("Recharge of ₹100 successful.");
+        db.ref("rechargeLogs").push({
+          uid: uid,
+          amount: 100,
+          timestamp: now,
+          byAdmin: currentUser ? currentUser.uid : "unknown"
+        });
+        loadAdminPanel();
+      });
     }
   </script>
 </body>
