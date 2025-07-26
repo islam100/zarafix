@@ -1,129 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔧 ZaraFix Admin Dashboard - Requests</title>
+  <title>✨ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #eef2f3;
-      margin: 0;
       padding: 20px;
     }
-    h2 {
+    h1 {
       text-align: center;
-      color: #333;
     }
     .card {
-      background: #fff;
+      background: white;
+      border-radius: 15px;
       padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      position: relative;
+      margin: 15px auto;
+      max-width: 600px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
-    .led {
-      width: 12px;
-      height: 12px;
-      background-color: green;
-      border-radius: 50%;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-    .accepted-box {
-      background: #f0f9ff;
-      border-left: 4px solid #2196f3;
+    .accepted {
+      background: #e0ffe0;
+      border-left: 5px solid green;
       padding: 10px;
       margin-top: 10px;
-      border-radius: 6px;
-    }
-    button {
-      background-color: #e53935;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background-color: #c62828;
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
-  <h2>🔧 ZaraFix Admin Dashboard - Requests</h2>
-  <div id="requestsContainer"></div>
+  <h1>🌟 ZaraFix Admin - User Requests</h1>
+  <div id="requestList"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const requestsRef = ref(db, 'requests');
+    const requestList = document.getElementById("requestList");
 
-    const container = document.getElementById('requestsContainer');
-
-    onValue(requestsRef, (snapshot) => {
-      container.innerHTML = '';
-      const requests = snapshot.val();
-      for (let userId in requests) {
-        for (let reqId in requests[userId]) {
-          const req = requests[userId][reqId];
-          const div = document.createElement('div');
-          div.className = 'card';
-
-          let html = `
-            <strong>🧾 ${req.name || 'Unnamed'}</strong><br>
-            📍 ${req.address || 'No address'}<br><br>
-            📱 WhatsApp: ${req.whatsapp || 'N/A'}<br>
+    firebase.database().ref("requests").once("value").then((snapshot) => {
+      snapshot.forEach((userSnap) => {
+        const userId = userSnap.key;
+        userSnap.forEach((reqSnap) => {
+          const req = reqSnap.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <h3>📄 ${req.name}</h3>
+            <p>📍 Address: ${req.address}</p>
+            <p>👤 Category: ${req.category}</p>
+            <p>📈 Problem: ${req.problem}</p>
+            <p>📞 WhatsApp: ${req.whatsapp}</p>
+            <p>⏰ Time: ${new Date(req.timestamp).toLocaleString()}</p>
           `;
 
-          if (req.acceptedBy && Object.keys(req.acceptedBy).length > 0) {
-            const firstKey = Object.keys(req.acceptedBy)[0];
-            const accepted = req.acceptedBy[firstKey];
-            html += `
-              <div class="accepted-box">
-                ✅ <strong>Accepted By:</strong><br>
-                👤 Name: ${accepted.name || 'N/A'}<br>
-                🏪 Shop: ${accepted.shop || 'N/A'}<br>
-                📍 Address: ${accepted.address || 'N/A'}<br>
-                📱 WhatsApp: ${accepted.whatsapp || 'N/A'}<br>
-                🆔 UID: ${firstKey}
-              </div>
-              <div class="led"></div>
-            `;
+          if (req.acceptedBy) {
+            Object.values(req.acceptedBy).forEach((poster) => {
+              const acceptedDiv = document.createElement("div");
+              acceptedDiv.className = "accepted";
+              acceptedDiv.innerHTML = `
+                <strong>✅ Accepted By:</strong><br>
+                👤 Name: ${poster.name}<br>
+                🏨 Shop: ${poster.shop}<br>
+                📍 Address: ${poster.address}<br>
+                📞 WhatsApp: ${poster.whatsapp}<br>
+                🔑 UID: ${poster.uid}<br>
+              `;
+              card.appendChild(acceptedDiv);
+            });
+          } else {
+            card.innerHTML += `<p style="color:red">No one accepted yet.</p>`;
           }
 
-          html += `<br><button onclick="deleteRequest('${userId}', '${reqId}')">❌ Delete</button>`;
-          div.innerHTML = html;
-          container.appendChild(div);
-        }
-      }
+          requestList.appendChild(card);
+        });
+      });
     });
-
-    window.deleteRequest = function(userId, reqId) {
-      if (confirm("Are you sure you want to delete this request?")) {
-        const reqRef = ref(db, `requests/${userId}/${reqId}`);
-        remove(reqRef);
-      }
-    };
   </script>
 </body>
 </html>
