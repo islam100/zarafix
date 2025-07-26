@@ -1,98 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ Admin - All Service Requests</title>
+  <title>🔧 Admin - All Service Requests</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: Arial;
+      background: #f2f2f2;
       padding: 10px;
-      margin: 0;
     }
     .card {
-      background: #fff;
+      background: white;
       padding: 15px;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
       border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      position: relative;
     }
-    h2 {
-      text-align: center;
-      color: #333;
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: yellow;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+    button {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ Admin - All Service Requests</h2>
-  <div id="requestsContainer"></div>
+  <h2>🔧 Admin - All Service Requests</h2>
+  <div id="requests"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyDHM-qMt5U_HvwNw1oDR1xrlVb2XRLE5Y4",
-      authDomain: "zarafix-84f87.firebaseapp.com",
-      databaseURL: "https://zarafix-84f87-default-rtdb.firebaseio.com",
-      projectId: "zarafix-84f87",
-      storageBucket: "zarafix-84f87.appspot.com",
-      messagingSenderId: "126753761775",
-      appId: "1:126753761775:web:7ee85e9ac2a273da99d178"
+      databaseURL: "https://zarafix-default-rtdb.firebaseio.com/",
+      apiKey: "AIzaSyDYKFtPxxeCek20oipnB_YeUeUlJEYo5aA",
+      authDomain: "zarafix.firebaseapp.com",
+      projectId: "zarafix",
+      storageBucket: "zarafix.appspot.com",
+      messagingSenderId: "74034720063",
+      appId: "1:74034720063:web:8dd2b3c1908583b3a23e7d"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const requestsRef = ref(db, 'requests');
+    const requestsDiv = document.getElementById("requests");
 
-    const requestsRef = ref(db, "requests");
-    const postersRef = ref(db, "posters");
-    const requestsContainer = document.getElementById("requestsContainer");
-
-    onValue(requestsRef, (snapshot) => {
-      requestsContainer.innerHTML = "";
-      const requestsData = snapshot.val();
-      if (requestsData) {
-        for (const userId in requestsData) {
-          const userRequests = requestsData[userId];
-          for (const requestId in userRequests) {
-            const request = userRequests[requestId];
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <strong>👤 ${request.name}</strong><br>
-              📞 ${request.whatsapp}<br>
-              🛠️ ${request.category}<br>
-              📍 ${request.address}<br>
-              ❓ ${request.problem}<br>
-              <div id="accept-${requestId}">✅ Accepted By: ⏳ Loading...</div>
-            `;
-            requestsContainer.appendChild(card);
-
-            // Load acceptedBy data
-            const acceptedBy = request.acceptedBy;
-            if (acceptedBy) {
-              onValue(postersRef, (postersSnap) => {
-                const posters = postersSnap.val();
-                let acceptedText = "";
-                for (const posterId in acceptedBy) {
-                  const poster = posters[posterId];
-                  acceptedText += poster ? `
-                    ✅ Accepted By:
-                    Name: ${poster.name || "N/A"}<br>
-                    WhatsApp: ${poster.whatsapp || "N/A"}<br>
-                    Shop: ${poster.shop || "N/A"}<br>
-                    Category: ${poster.category || "N/A"}<br>
-                  ` : "✅ Accepted By: N/A<br>";
-                }
-                document.getElementById(`accept-${requestId}`).innerHTML = acceptedText;
-              }, { onlyOnce: true });
-            } else {
-              document.getElementById(`accept-${requestId}`).innerText = "✅ Accepted By: N/A";
-            }
-          }
-        }
+    onValue(requestsRef, snapshot => {
+      requestsDiv.innerHTML = '';
+      if (!snapshot.exists()) {
+        requestsDiv.innerHTML = '<p>No service requests found.</p>';
+        return;
       }
+      const requests = snapshot.val();
+      Object.keys(requests).forEach(userId => {
+        const userRequests = requests[userId];
+        Object.keys(userRequests).forEach(requestId => {
+          const r = userRequests[requestId];
+
+          let acceptedHTML = "<p>✅ Accepted By:<br>Name: N/A<br>WhatsApp: N/A<br>Shop: N/A<br>Category: N/A</p>";
+          let led = '';
+
+          if (r.acceptedBy) {
+            const acceptedList = Object.values(r.acceptedBy).map(poster => {
+              return `<p>✅ Accepted By:<br>
+              Name: ${poster.name}<br>
+              WhatsApp: <a href='https://wa.me/91${poster.whatsapp}' target='_blank'>${poster.whatsapp}</a><br>
+              Shop: ${poster.shop}<br>
+              Category: ${poster.category}</p>`;
+            }).join('<hr>');
+            acceptedHTML = acceptedList;
+            led = '<div class="led"></div>';
+          }
+
+          requestsDiv.innerHTML += `
+            <div class="card">
+              ${led}
+              <p>👤 <b>${r.name}</b></p>
+              <p>📞 ${r.whatsapp}</p>
+              <p>🔧 ${r.category}</p>
+              <p>📍 ${r.address}</p>
+              <p>❓ ${r.problem}</p>
+              ${acceptedHTML}
+              <button onclick="deleteRequest('${userId}', '${requestId}')">Delete</button>
+            </div>
+          `;
+        });
+      });
     });
+
+    window.deleteRequest = function(userId, requestId) {
+      if (confirm("Are you sure to delete this request?")) {
+        const reqRef = ref(db, `requests/${userId}/${requestId}`);
+        remove(reqRef);
+      }
+    }
   </script>
 </body>
 </html>
