@@ -1,151 +1,167 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Admin Panel</title>
+  <title>🛠️ ZaraFix - All In One</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #e0f7fa;
+      font-family: 'Segoe UI', sans-serif;
       margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #f5f7fa, #c3cfe2);
+    }
+    .navbar {
+      background: #2c3e50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    .container {
       padding: 20px;
     }
-    h2 {
-      text-align: center;
+    .button {
+      background: linear-gradient(145deg, #ffffff, #e6e6e6);
+      border-radius: 12px;
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      border: none;
+      transition: all 0.3s ease;
+    }
+    .button:hover {
+      background: #3498db;
+      color: white;
+      transform: scale(1.05);
     }
     .card {
       background: white;
-      border-radius: 16px;
-      box-shadow: 0 6px 10px rgba(0,0,0,0.15);
-      padding: 16px;
-      margin-bottom: 16px;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .btn3d {
-      background: linear-gradient(to right, #2196f3, #21cbf3);
+    .card h4, .card p {
+      margin: 5px 0;
+    }
+    .card button {
+      margin-top: 10px;
+    }
+    .form-section, .dashboard-section, .admin-section {
+      display: none;
+    }
+    .visible {
+      display: block;
+    }
+    .whatsapp-button {
+      background: #25D366;
       color: white;
       border: none;
-      border-radius: 12px;
-      padding: 10px 16px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      transition: transform 0.1s ease-in-out;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin-top: 10px;
     }
-    .btn3d:active {
-      transform: scale(0.96);
-    }
-    .section {
-      margin-bottom: 30px;
+    .whatsapp-button:hover {
+      background: #1ebd5f;
+      transform: scale(1.05);
     }
   </style>
 </head>
 <body>
+  <div class="navbar">
+    🛠️ Welcome to ZaraFix - All In One Dashboard
+  </div>
+  <div class="container">
+    <button class="button" onclick="showSection('form')">Service Provider Form</button>
+    <button class="button" onclick="showSection('dashboard')">Provider Dashboard</button>
+    <button class="button" onclick="showSection('admin')">Admin Panel</button>
 
-<h2>🛠️ Admin Panel</h2>
+    <div class="form-section" id="form">
+      <!-- Service Provider Form -->
+      <div class="card">
+        <h4>Register as Service Provider</h4>
+        <input id="name" placeholder="Your Name"><br><br>
+        <input id="shop" placeholder="Shop Name"><br><br>
+        <input id="address" placeholder="Your Address"><br><br>
+        <select id="category">
+          <option value="">Select Category</option>
+          <option value="AC Mechanic">AC Mechanic</option>
+          <option value="Car Mechanic">Car Mechanic</option>
+          <option value="Electrician">Electrician</option>
+        </select><br><br>
+        <input id="whatsapp" placeholder="WhatsApp Number"><br><br>
+        <button class="button" onclick="submitProviderForm()">Submit</button>
+      </div>
+    </div>
 
-<div class="section" id="providers"></div>
-<div class="section" id="requests"></div>
-<div class="section" id="recharges"></div>
+    <div class="dashboard-section" id="dashboard">
+      <!-- Provider Dashboard -->
+      <div id="dashboardContent"></div>
+    </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    <div class="admin-section" id="admin">
+      <!-- Admin Panel -->
+      <div id="adminContent"></div>
+    </div>
+  </div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCP...",
-  authDomain: "zarafix.firebaseapp.com",
-  databaseURL: "https://zarafix-default-rtdb.firebaseio.com",
-  projectId: "zarafix",
-  storageBucket: "zarafix.appspot.com",
-  messagingSenderId: "259949319637",
-  appId: "1:259949319637:web:56..."
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-
-const adminUIDs = {
-  "QT3LkEToHwaiORatoKfTx8QE45s2": true
-};
-
-onAuthStateChanged(auth, user => {
-  if (user && adminUIDs[user.uid]) {
-    loadData();
-  } else {
-    alert("Access denied. Admins only.");
-    window.location.href = "index.html";
-  }
-});
-
-function loadData() {
-  const postersRef = ref(db, 'posters');
-  const requestsRef = ref(db, 'requests');
-  const rechargeRef = ref(db, 'recharges');
-
-  onValue(postersRef, snapshot => {
-    const posters = snapshot.val();
-    let html = "<h3>🔧 Service Providers</h3>";
-    for (let uid in posters) {
-      const p = posters[uid];
-      html += `
-        <div class="card">
-          <strong>${p.name || "N/A"} - ${p.category || "Unknown"}</strong><br>
-          Wallet: ₹${p.wallet || 0}
-          <br>
-          <button class="btn3d" onclick="recharge('${uid}', ${p.wallet || 0})" id="rbtn-${uid}">+₹100</button>
-        </div>
-      `;
+  <script>
+    function showSection(section) {
+      document.querySelector('.form-section').classList.remove('visible');
+      document.querySelector('.dashboard-section').classList.remove('visible');
+      document.querySelector('.admin-section').classList.remove('visible');
+      document.getElementById(section).classList.add('visible');
     }
-    document.getElementById("providers").innerHTML = html;
-  });
 
-  onValue(requestsRef, snapshot => {
-    const allRequests = snapshot.val();
-    let html = "<h3>📋 Service Requests</h3>";
-    for (let userId in allRequests) {
-      for (let rid in allRequests[userId]) {
-        const req = allRequests[userId][rid];
-        const accepted = req.acceptedBy ? Object.values(req.acceptedBy).map(a => `${a.name} (${a.category})`).join(", ") : "None";
-        html += `
-          <div class="card">
-            <strong>${req.name} - ${req.category}</strong><br>
-            Problem: ${req.problem}<br>
-            Accepted by: ${accepted}
-          </div>
-        `;
+    function submitProviderForm() {
+      const name = document.getElementById('name').value;
+      const shop = document.getElementById('shop').value;
+      const address = document.getElementById('address').value;
+      const category = document.getElementById('category').value;
+      const whatsapp = document.getElementById('whatsapp').value;
+
+      if (!name || !shop || !address || !category || !whatsapp) {
+        alert("All fields are required");
+        return;
       }
-    }
-    document.getElementById("requests").innerHTML = html;
-  });
 
-  onValue(rechargeRef, snapshot => {
-    const data = snapshot.val();
-    let html = "<h3>💰 Recharge Requests</h3>";
-    for (let uid in data) {
-      const r = data[uid];
-      html += `
+      alert("Request submitted for admin approval. Please wait.");
+      location.reload(); // Refresh the page to reset form
+    }
+
+    // Demo only: Populate dashboard & admin section
+    window.onload = () => {
+      document.getElementById("dashboardContent").innerHTML = `
         <div class="card">
-          <strong>User ID:</strong> ${uid}<br>
-          <img src="${r.screenshot}" width="100"><br>
-          Status: ${r.status ? "✅ Approved" : "⏳ Pending"}
+          <h4>Customer: Ajay Kumar</h4>
+          <p>Category: AC Mechanic</p>
+          <p>Address: Sector 22</p>
+          <button class="button" onclick="acceptJob('Ajay Kumar')">Accept</button>
+        </div>
+      `;
+
+      document.getElementById("adminContent").innerHTML = `
+        <div class="card">
+          <h4>Admin Panel</h4>
+          <p>islam khan khan - Car Mechanic</p>
+          <p>Wallet: ₹100 <button class="button" onclick="recharge('islam')">+₹100</button></p>
+
+          <p>nilofar khan - AC Mechanic</p>
+          <p>Wallet: ₹100 <button class="button" onclick="recharge('nilofar')">+₹100</button></p>
         </div>
       `;
     }
-    document.getElementById("recharges").innerHTML = html;
-  });
-}
 
-window.recharge = (uid, oldAmount) => {
-  const newAmount = oldAmount + 100;
-  const btn = document.getElementById("rbtn-" + uid);
-  btn.disabled = true;
-  btn.innerText = "✅ Done";
-  update(ref(db, "posters/" + uid), { wallet: newAmount });
-};
-</script>
+    function acceptJob(name) {
+      alert(`Accepted job for ${name}`);
+    }
 
+    function recharge(user) {
+      alert(`Recharge request for ${user} processed.`);
+    }
+  </script>
 </body>
 </html>
