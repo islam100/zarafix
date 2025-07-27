@@ -1,171 +1,177 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Zara Post System</title>
+  <title>🔧 Zara Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .section { display: none; }
-    .active { display: block; }
-    img { max-width: 150px; margin-top: 10px; }
-    button, select { padding: 10px; margin: 5px; }
-    .expired { border: 2px solid red; animation: blink 1s infinite; }
-    @keyframes blink {
-      0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 10px;
     }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(to right, #007bff, #00c6ff);
+      color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+      margin: 5px;
+    }
+    .card {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: white;
+    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <h2>🔧 Zara Post Panel</h2>
-
-  <div id="loginDiv">
-    <button onclick="loginWithGoogle()">Login with Google</button>
+  <h2>🔧 Zara Admin Panel</h2>
+  <button id="loginBtn" class="btn">Login with Google</button>
+  <div id="formSection" class="hidden">
+    <h3>📝 Submit Your Post</h3>
+    <input id="name" placeholder="Name"><br>
+    <input id="price" placeholder="Price"><br>
+    <input id="whatsapp" placeholder="WhatsApp Number"><br>
+    <input type="file" id="imageInput"><br>
+    <button id="submitBtn" class="btn">Submit</button>
+    <p id="submitMsg"></p>
   </div>
 
-  <div id="mainContent" style="display:none;">
-    <select onchange="showSection(this.value)">
-      <option value="view">🔍 View Posts</option>
-      <option value="post">📤 Post Item</option>
-      <option value="admin">🔧 Admin Panel</option>
-    </select>
-
-    <!-- 📤 POST SECTION -->
-    <div id="post" class="section">
-      <h3>📤 Post Your Item</h3>
-      <input placeholder="Name" id="name"><br>
-      <input placeholder="Price" id="price"><br>
-      <input placeholder="WhatsApp No." id="whatsapp"><br>
-      <input type="file" id="image"><br>
-      <button onclick="uploadImage()">Upload & Post</button>
-      <p id="uploadMsg"></p>
-    </div>
-
-    <!-- 🔍 VIEW SECTION -->
-    <div id="view" class="section">
-      <h3>🔍 Available Items</h3>
-      <div id="postList"></div>
-    </div>
-
-    <!-- 🔧 ADMIN SECTION -->
-    <div id="admin" class="section">
-      <h3>🔧 Admin Panel</h3>
-      <div id="adminPosts"></div>
-    </div>
+  <hr>
+  <div id="postsSection">
+    <h3>📃 View Posts</h3>
+    <div id="postsContainer"></div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <div id="adminPanel" class="hidden">
+    <h3>🛠 Admin Panel</h3>
+    <div id="adminPosts"></div>
+  </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      projectId: "zara-fix",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "539619279396",
+      appId: "1:539619279396:web:b076fc85831a79264a2385"
     };
-    firebase.initializeApp(firebaseConfig);
 
-    let currentUser = null;
-    const adminUID = "QT3LkEToHwaiORatoKfTx8QE45s2";
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider).then(res => {
-        currentUser = res.user;
-        document.getElementById("loginDiv").style.display = "none";
-        document.getElementById("mainContent").style.display = "block";
-        if (currentUser.uid !== adminUID) {
-          document.querySelector("option[value='admin']").style.display = "none";
-        }
-        fetchPosts();
-      });
-    }
+    const loginBtn = document.getElementById("loginBtn");
+    const formSection = document.getElementById("formSection");
+    const adminPanel = document.getElementById("adminPanel");
+    const postsContainer = document.getElementById("postsContainer");
+    const adminPosts = document.getElementById("adminPosts");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitMsg = document.getElementById("submitMsg");
 
-    function showSection(id) {
-      document.querySelectorAll(".section").forEach(div => div.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
+    const ADMIN_UID = "QT3LkEToHwaiORatoKfTx8QE45s2";
 
-    function uploadImage() {
-      const file = document.getElementById("image").files[0];
-      if (!file) return alert("Select image");
-      const reader = new FileReader();
-      reader.onloadend = function () {
-        const base64 = reader.result.split(',')[1];
-        fetch("https://api.imgbb.com/1/upload?key=1b3514b8e9df10d38d5fbbda6b450aa3", {
-          method: "POST",
-          body: new URLSearchParams({ image: base64 })
-        })
-        .then(res => res.json())
-        .then(data => {
-          const url = data.data.url;
-          postToDB(url);
+    loginBtn.onclick = () => {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .then(result => {
+          const user = result.user;
+          checkUser(user.uid);
         });
-      };
-      reader.readAsDataURL(file);
+    };
+
+    function checkUser(uid) {
+      formSection.classList.remove("hidden");
+      if (uid === ADMIN_UID) {
+        adminPanel.classList.remove("hidden");
+      }
     }
 
-    function postToDB(imgUrl) {
+    submitBtn.onclick = async () => {
       const name = document.getElementById("name").value;
       const price = document.getElementById("price").value;
       const whatsapp = document.getElementById("whatsapp").value;
-      const post = {
-        name, price, whatsapp, img: imgUrl,
-        uid: currentUser.uid,
-        timestamp: Date.now(),
-        approved: false
-      };
-      firebase.database().ref("posts").push(post).then(() => {
-        document.getElementById("uploadMsg").innerText = "Posted! Wait for approval.";
+      const imageFile = document.getElementById("imageInput").files[0];
+      if (!imageFile) return alert("Please select image");
+
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      const imgbbApiKey = "YOUR_IMGBB_API_KEY";
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+        method: "POST",
+        body: formData
       });
-    }
+      const data = await res.json();
+      const imageUrl = data.data.url;
 
-    function fetchPosts() {
-      firebase.database().ref("posts").on("value", snap => {
-        const data = snap.val() || {};
-        const postList = document.getElementById("postList");
-        const adminList = document.getElementById("adminPosts");
-        postList.innerHTML = ""; adminList.innerHTML = "";
-
-        Object.entries(data).forEach(([key, post]) => {
-          const daysOld = Math.floor((Date.now() - post.timestamp) / (1000 * 60 * 60 * 24));
-          const expired = daysOld >= 30;
-          const card = `
-            <div class="${expired ? 'expired' : ''}" style="border:1px solid #aaa; padding:10px; margin:10px;">
-              <img src="${post.img}"><br>
-              <b>${post.name}</b> - ₹${post.price}<br>
-              WhatsApp: <a href="https://wa.me/91${post.whatsapp}" target="_blank">${post.whatsapp}</a><br>
-              ${post.approved && !expired ? "" : "<i>Pending Approval</i>"}
-            </div>`;
-
-          if (post.approved && !expired) postList.innerHTML += card;
-
-          if (currentUser.uid === adminUID) {
-            adminList.innerHTML += `
-              ${card}
-              <button onclick="approvePost('${key}')">✅ Approve</button>
-              <button onclick="sendReminder('${post.whatsapp}')">📲 Send Reminder</button>
-              <hr>`;
-          }
-        });
+      push(ref(db, 'posts/'), {
+        name,
+        price,
+        whatsapp,
+        image: imageUrl,
+        approved: false,
+        createdAt: Date.now()
       });
-    }
 
-    function approvePost(id) {
-      firebase.database().ref("posts/" + id).update({
-        approved: true,
-        timestamp: Date.now()
+      document.getElementById("name").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("whatsapp").value = "";
+      document.getElementById("imageInput").value = "";
+      submitMsg.innerText = "✅ Submit ho gaya!";
+    };
+
+    onValue(ref(db, 'posts/'), snapshot => {
+      postsContainer.innerHTML = "";
+      adminPosts.innerHTML = "";
+      snapshot.forEach(child => {
+        const post = child.val();
+        const key = child.key;
+
+        const html = `
+          <div class="card">
+            <img src="${post.image}" width="100%" /><br>
+            <b>${post.name}</b> - ₹${post.price}<br>
+            <a href="https://wa.me/${post.whatsapp}" class="btn">WhatsApp</a>
+          </div>
+        `;
+
+        const adminHtml = `
+          <div class="card">
+            <img src="${post.image}" width="100%" /><br>
+            <b>${post.name}</b> - ₹${post.price}<br>
+            <a href="https://wa.me/${post.whatsapp}" class="btn">Chat</a>
+            <button class="btn" onclick="approvePost('${key}')">Approve</button>
+            <button class="btn" onclick="deletePost('${key}')">Delete</button>
+          </div>
+        `;
+
+        if (post.approved) {
+          postsContainer.innerHTML += html;
+        }
+        adminPosts.innerHTML += adminHtml;
       });
-    }
+    });
 
-    function sendReminder(phone) {
-      window.open(`https://wa.me/91${phone}?text=🔔 Please recharge your post on Zara Marketplace.`, '_blank');
-    }
+    window.approvePost = (key) => {
+      update(ref(db, 'posts/' + key), { approved: true });
+    };
+
+    window.deletePost = (key) => {
+      remove(ref(db, 'posts/' + key));
+    };
   </script>
 </body>
 </html>
