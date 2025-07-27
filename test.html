@@ -1,128 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>🛠️ Admin - All Service Requests</title>
+  <meta charset="UTF-8">
+  <title>All Services</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f2f2f2; padding: 10px; }
-    h2 { text-align: center; color: #333; }
-    .card {
-      background: #fff;
-      padding: 15px;
-      margin: 10px auto;
-      border-radius: 15px;
-      box-shadow: 0 0 10px #999;
-      max-width: 500px;
-      position: relative;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
     }
-    .blinking-led {
-      width: 15px;
-      height: 15px;
-      background: yellow;
-      border-radius: 50%;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      animation: blink 1s infinite;
+
+    /* Filter dropdown in corner */
+    .top-corner {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
     }
-    @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0; }
+
+    .service-filter {
+      padding: 6px;
+      font-size: 14px;
     }
-    .delete-btn {
-      background: red;
+
+    .service-button {
+      padding: 6px 10px;
+      margin-left: 5px;
+      font-size: 12px;
+      background: #007bff;
       color: white;
       border: none;
-      padding: 5px 12px;
-      border-radius: 8px;
+      border-radius: 4px;
       cursor: pointer;
-      float: right;
+    }
+
+    /* Card styling */
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 60px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      width: 220px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card h4 {
+      margin: 10px 0 5px;
+    }
+
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+      padding: 6px 10px;
+      font-size: 13px;
+      border: none;
+      border-radius: 5px;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    /* Form Styling */
+    .form-section {
+      margin-top: 30px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-section select,
+    .form-section input {
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .form-section button {
+      padding: 8px;
+      background: green;
+      color: white;
+      border: none;
+      width: 100%;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ Admin - All Service Requests</h2>
-  <div id="requestsContainer"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+  <!-- Top Filter -->
+  <div class="top-corner">
+    <label>All Services:</label>
+    <select class="service-filter" id="serviceSelect">
+      <option value="">--Select--</option>
+      <option value="https://example.com/service1">Service 1</option>
+      <option value="https://example.com/service2">Service 2</option>
+    </select>
+    <button class="service-button" onclick="openService()">Go</button>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DB_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  <!-- All Posted Cards -->
+  <div class="card-container" id="postContainer">
+    <!-- Cards will appear here -->
+  </div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const container = document.getElementById("requestsContainer");
+  <!-- Form Dropdown Section -->
+  <div class="form-section">
+    <h3>📝 Add New Service</h3>
+    <select id="formDropdown">
+      <option value="sell">Sell</option>
+    </select>
+    <input type="text" id="imgUrl" placeholder="Image URL (Imgbb)">
+    <input type="text" id="personName" placeholder="Your Name">
+    <input type="text" id="whatsappNo" placeholder="WhatsApp Number">
+    <button onclick="addPost()">Post</button>
+  </div>
 
-    onValue(ref(db, 'requests'), (snapshot) => {
-      container.innerHTML = "";
-      const data = snapshot.val();
-      if (!data) {
-        container.innerHTML = "<p>No service requests found.</p>";
+  <script>
+    function openService() {
+      const link = document.getElementById("serviceSelect").value;
+      if (link) {
+        window.open(link, "_blank");
+      }
+    }
+
+    const postContainer = document.getElementById("postContainer");
+
+    function addPost() {
+      const img = document.getElementById("imgUrl").value;
+      const name = document.getElementById("personName").value;
+      const whatsapp = document.getElementById("whatsappNo").value;
+
+      if (!img || !name || !whatsapp) {
+        alert("कृपया सभी जानकारी भरें");
         return;
       }
 
-      Object.keys(data).forEach(userId => {
-        Object.keys(data[userId]).forEach(reqId => {
-          const req = data[userId][reqId];
-          const div = document.createElement("div");
-          div.className = "card";
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${img}" alt="post image" />
+        <h4>${name}</h4>
+        <a class="whatsapp-btn" href="https://wa.me/${whatsapp}" target="_blank">WhatsApp</a>
+      `;
 
-          if (req.approved) {
-            const led = document.createElement("div");
-            led.className = "blinking-led";
-            div.appendChild(led);
-          }
+      postContainer.prepend(card);
 
-          div.innerHTML += `
-            <b>👤 ${req.name || ""}</b><br>
-            📞 ${req.whatsapp || ""}<br><br>
-            🛠️ ${req.category || ""}<br><br>
-            📍 ${req.address || ""}<br><br>
-            ❓ ${req.problem || ""}<br><br>
-          `;
-
-          if (req.acceptedBy) {
-            const posters = Object.values(req.acceptedBy);
-            if (posters.length > 0) {
-              div.innerHTML += `<b>✅ Accepted By:</b><br>`;
-              posters.forEach(poster => {
-                div.innerHTML += `
-                  Name: ${poster.name || 'N/A'}<br>
-                  WhatsApp: ${poster.whatsapp || 'N/A'}<br>
-                  Shop: ${poster.shop || 'N/A'}<br>
-                  Category: ${poster.category || 'N/A'}<br><br>
-                `;
-              });
-            } else {
-              div.innerHTML += `⏳ Wait for Accept<br>`;
-            }
-          } else {
-            div.innerHTML += `⏳ Wait for Accept<br>`;
-          }
-
-          const delBtn = document.createElement("button");
-          delBtn.className = "delete-btn";
-          delBtn.innerText = "🗑️ Delete";
-          delBtn.onclick = () => {
-            if (confirm("Delete this request?")) {
-              remove(ref(db, `requests/${userId}/${reqId}`));
-            }
-          };
-          div.appendChild(delBtn);
-
-          container.appendChild(div);
-        });
-      });
-    });
+      // Clear form
+      document.getElementById("imgUrl").value = '';
+      document.getElementById("personName").value = '';
+      document.getElementById("whatsappNo").value = '';
+    }
   </script>
 </body>
 </html>
