@@ -3,41 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Fix - Admin & Post System</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <title>🔧 Zara Admin Panel</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f3f3f3; }
-    h2 { color: #444; }
-    .form-box, .admin-box { background: white; padding: 20px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 2px 6px #ccc; }
-    input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 6px; border: 1px solid #ccc; }
-    .post { padding: 10px; border-bottom: 1px solid #ddd; }
-    .led { color: red; animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-    .wa-btn { background: green; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 5px; }
+    body { font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; }
+    header { background-color: #333; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; }
+    .container { padding: 1rem; }
+    .post-card { background: white; margin-bottom: 1rem; padding: 1rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
+    .led-blink { width: 10px; height: 10px; border-radius: 50%; background-color: red; position: absolute; top: 10px; right: 10px; animation: blink 1s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+    .approve-btn { background-color: green; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 5px; }
+    .send-whatsapp { background-color: #25D366; color: white; padding: 0.5rem; border: none; border-radius: 5px; margin-left: 1rem; cursor: pointer; }
   </style>
 </head>
 <body>
-
-  <div class="form-box">
-    <h2>📝 Post Form</h2>
-    <input id="name" placeholder="Name" />
-    <input id="price" placeholder="Price" type="number" />
-    <input id="whatsapp" placeholder="WhatsApp Number (91...)" />
-    <input id="imgurl" placeholder="Image URL (from imgbb)" />
-    <select id="category">
-      <option value="Mobile">Mobile</option>
-      <option value="Laptop">Laptop</option>
-      <option value="Other">Other</option>
-    </select>
-    <button onclick="submitPost()">Submit</button>
+  <header>🔧 Zara Admin Panel</header>
+  <div class="container" id="admin-panel">
+    <!-- Posts will be dynamically loaded here -->
   </div>
 
-  <div class="admin-box">
-    <h2>📋 Admin Panel</h2>
-    <div id="posts"></div>
-  </div>
-
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
@@ -50,60 +35,39 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function submitPost() {
-      const name = document.getElementById("name").value;
-      const price = document.getElementById("price").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const imgurl = document.getElementById("imgurl").value;
-      const category = document.getElementById("category").value;
-      const postId = Date.now();
-
-      db.ref("posts/" + postId).set({
-        name, price, whatsapp, imgurl, category,
-        timestamp: postId,
-        approved: false
-      });
-
-      alert("Post submitted. Please wait for approval.");
-    }
+    const adminPanel = document.getElementById('admin-panel');
 
     function loadPosts() {
-      const now = Date.now();
-      const day30 = 1000 * 60 * 60 * 24 * 30;
-      db.ref("posts").on("value", snap => {
-        const data = snap.val();
-        const postsDiv = document.getElementById("posts");
-        postsDiv.innerHTML = "";
-        for (let id in data) {
-          const post = data[id];
-          const isExpired = now - post.timestamp > day30;
+      db.ref('posts').once('value', snapshot => {
+        adminPanel.innerHTML = '';
+        snapshot.forEach(child => {
+          const post = child.val();
+          const postDate = new Date(post.timestamp || 0);
+          const now = new Date();
+          const daysOld = Math.floor((now - postDate) / (1000 * 60 * 60 * 24));
+          const expired = daysOld >= 30;
 
-          // Auto-set expired to false
-          if (isExpired && post.approved) {
-            db.ref("posts/" + id + "/approved").set(false);
-          }
-
-          const label = post.approved ?
-            (!isExpired ? "✅ Approved" : "⚠️ Expired") :
-            "<span class='led'>⏳ Pending</span>";
-
-          const waLink = `https://wa.me/${post.whatsapp}?text=Please+recharge+your+post.`;
-
-          postsDiv.innerHTML += `
-            <div class="post">
-              <b>${post.name}</b> - ₹${post.price} - ${post.category} <br>
-              <img src="${post.imgurl}" width="100" /><br>
-              ${label}<br>
-              <button onclick="approvePost('${id}')">Approve</button>
-              <a class="wa-btn" href="${waLink}" target="_blank">Recharge</a>
+          const div = document.createElement('div');
+          div.className = 'post-card';
+          div.innerHTML = `
+            <strong>Name:</strong> ${post.name || 'N/A'}<br>
+            <strong>Price:</strong> ₹${post.price || 'N/A'}<br>
+            <strong>WhatsApp:</strong> ${post.whatsapp || 'N/A'}<br>
+            <strong>Date:</strong> ${postDate.toLocaleDateString()}<br>
+            <img src="${post.image}" width="100%" style="margin-top:10px;"/>
+            ${expired ? '<div class="led-blink"></div>' : ''}
+            <div style="margin-top:10px;">
+              ${expired ? `<button class='approve-btn' onclick="approvePost('${child.key}')">Approve Again</button>
+              <a href='https://wa.me/${post.whatsapp}?text=Please%20recharge%20your%20post%20to%20keep%20it%20visible' target='_blank'><button class='send-whatsapp'>Send Reminder</button></a>` : '<span style="color:green">Active</span>'}
             </div>
           `;
-        }
+          adminPanel.appendChild(div);
+        });
       });
     }
 
-    function approvePost(id) {
-      db.ref("posts/" + id + "/approved").set(true);
+    function approvePost(postId) {
+      db.ref('posts/' + postId).update({ timestamp: Date.now() }).then(() => loadPosts());
     }
 
     loadPosts();
