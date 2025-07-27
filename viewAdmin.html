@@ -2,146 +2,111 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Panel - Zara</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
+  <title>Zara Fix - Admin & Post System</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .card {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 15px;
-      position: relative;
-    }
-
-    .card img {
-      width: 100px;
-      float: left;
-      margin-right: 10px;
-      border-radius: 6px;
-    }
-
-    .info {
-      overflow: hidden;
-    }
-
-    .btn {
-      margin-top: 10px;
-      padding: 6px 10px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .btn-recharge {
-      background: red;
-    }
-
-    .led-blink {
-      width: 12px;
-      height: 12px;
-      background: red;
-      border-radius: 50%;
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.2; }
-    }
+    body { font-family: sans-serif; padding: 20px; background: #f3f3f3; }
+    h2 { color: #444; }
+    .form-box, .admin-box { background: white; padding: 20px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 2px 6px #ccc; }
+    input, select, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 6px; border: 1px solid #ccc; }
+    .post { padding: 10px; border-bottom: 1px solid #ddd; }
+    .led { color: red; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .wa-btn { background: green; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 5px; }
   </style>
 </head>
 <body>
 
-  <h2>🔧 Zara Admin Panel</h2>
+  <div class="form-box">
+    <h2>📝 Post Form</h2>
+    <input id="name" placeholder="Name" />
+    <input id="price" placeholder="Price" type="number" />
+    <input id="whatsapp" placeholder="WhatsApp Number (91...)" />
+    <input id="imgurl" placeholder="Image URL (from imgbb)" />
+    <select id="category">
+      <option value="Mobile">Mobile</option>
+      <option value="Laptop">Laptop</option>
+      <option value="Other">Other</option>
+    </select>
+    <button onclick="submitPost()">Submit</button>
+  </div>
 
-  <div id="adminContainer"></div>
+  <div class="admin-box">
+    <h2>📋 Admin Panel</h2>
+    <div id="posts"></div>
+  </div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const container = document.getElementById("adminContainer");
 
-    const now = Date.now();
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    function submitPost() {
+      const name = document.getElementById("name").value;
+      const price = document.getElementById("price").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const imgurl = document.getElementById("imgurl").value;
+      const category = document.getElementById("category").value;
+      const postId = Date.now();
 
-    db.ref("approvedPosts").on("value", (snapshot) => {
-      container.innerHTML = "";
-      snapshot.forEach((child) => {
-        const post = child.val();
-        const postId = child.key;
-        const postedTime = post.timestamp || now;
-        const expired = (now - postedTime) > THIRTY_DAYS;
+      db.ref("posts/" + postId).set({
+        name, price, whatsapp, imgurl, category,
+        timestamp: postId,
+        approved: false
+      });
 
-        const card = document.createElement("div");
-        card.className = "card";
+      alert("Post submitted. Please wait for approval.");
+    }
 
-        if (expired) {
-          const led = document.createElement("div");
-          led.className = "led-blink";
-          card.appendChild(led);
+    function loadPosts() {
+      const now = Date.now();
+      const day30 = 1000 * 60 * 60 * 24 * 30;
+      db.ref("posts").on("value", snap => {
+        const data = snap.val();
+        const postsDiv = document.getElementById("posts");
+        postsDiv.innerHTML = "";
+        for (let id in data) {
+          const post = data[id];
+          const isExpired = now - post.timestamp > day30;
+
+          // Auto-set expired to false
+          if (isExpired && post.approved) {
+            db.ref("posts/" + id + "/approved").set(false);
+          }
+
+          const label = post.approved ?
+            (!isExpired ? "✅ Approved" : "⚠️ Expired") :
+            "<span class='led'>⏳ Pending</span>";
+
+          const waLink = `https://wa.me/${post.whatsapp}?text=Please+recharge+your+post.`;
+
+          postsDiv.innerHTML += `
+            <div class="post">
+              <b>${post.name}</b> - ₹${post.price} - ${post.category} <br>
+              <img src="${post.imgurl}" width="100" /><br>
+              ${label}<br>
+              <button onclick="approvePost('${id}')">Approve</button>
+              <a class="wa-btn" href="${waLink}" target="_blank">Recharge</a>
+            </div>
+          `;
         }
-
-        card.innerHTML += `
-          <img src="${post.image}" />
-          <div class="info">
-            <h4>${post.name} - ₹${post.price}</h4>
-            <p><strong>Posted:</strong> ${new Date(postedTime).toLocaleString()}</p>
-            <p><strong>WhatsApp:</strong> ${post.whatsapp}</p>
-            <button class="btn-recharge btn" onclick="sendReminder('${post.whatsapp}')">📲 Send Recharge Reminder</button>
-            ${expired ? `<button class="btn" onclick="moveToPending('${postId}', ${JSON.stringify(post).replace(/"/g, '&quot;')})">🔁 Re-Approve</button>` : ""}
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    });
-
-    function sendReminder(number) {
-      const msg = encodeURIComponent("Please recharge your Zara post. It has expired.");
-      const link = `https://wa.me/${number}?text=${msg}`;
-      window.open(link, '_blank');
-    }
-
-    function moveToPending(postId, post) {
-      post.timestamp = Date.now();
-      db.ref("approvedPosts/" + postId).remove().then(() => {
-        db.ref("pendingPosts/" + postId).set(post);
-        alert("Post moved to pending. Re-approval needed.");
       });
     }
+
+    function approvePost(id) {
+      db.ref("posts/" + id + "/approved").set(true);
+    }
+
+    loadPosts();
   </script>
-
 </body>
 </html>
