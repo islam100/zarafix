@@ -1,122 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Amazon Style View</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zara Admin Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 10px;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .product-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 15px;
-    }
-
-    .product-card {
-      background: white;
-      border-radius: 10px;
-      padding: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      transition: transform 0.2s ease;
-    }
-
-    .product-card:hover {
-      transform: scale(1.02);
-    }
-
-    .product-card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-
-    .product-name {
-      font-weight: bold;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-
-    .product-price {
-      color: green;
-      font-size: 15px;
-      margin: 5px 0;
-    }
-
-    .btn-group {
-      display: flex;
-      justify-content: center;
-      margin-top: 10px;
-    }
-
-    .btn-group a {
-      text-align: center;
-      padding: 8px 12px;
-      text-decoration: none;
-      font-size: 13px;
-      border-radius: 4px;
-      color: white;
-      background: #25D366;
-    }
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    h2 { color: #444; }
+    .post { border: 1px solid #ccc; border-radius: 10px; padding: 10px; margin-bottom: 15px; background: #fff; box-shadow: 2px 2px 5px #ccc; }
+    img { max-width: 200px; }
+    button { margin: 5px; padding: 6px 10px; border: none; border-radius: 6px; background: #2196f3; color: white; cursor: pointer; }
+    .pending { border: 2px solid red; }
   </style>
 </head>
 <body>
-
-  <h2>🛒 Zara Products Gallery</h2>
-
-  <div class="product-grid" id="productGrid">
-    <!-- Product Cards will appear here -->
-  </div>
+  <h2>🔧 Zara Admin Panel</h2>
+  <div id="postList">Loading posts...</div>
 
   <script>
-    const products = [
-      {
-        name: "Redmi Note 13",
-        price: "₹13,999",
-        image: "https://m.media-amazon.com/images/I/81BTRpKuunL._SL1500_.jpg",
-        whatsapp: "919999999999"
-      },
-      {
-        name: "Boat Headphones",
-        price: "₹999",
-        image: "https://m.media-amazon.com/images/I/61WyPKPRsCL._SL1500_.jpg",
-        whatsapp: "919888888888"
-      },
-      {
-        name: "Samsung Monitor",
-        price: "₹7,499",
-        image: "https://m.media-amazon.com/images/I/91pi34PiUPL._SL1500_.jpg",
-        whatsapp: "919777777777"
-      }
-    ];
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
 
-    const grid = document.getElementById("productGrid");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    products.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "product-card";
-      card.innerHTML = `
-        <img src="${p.image}" alt="${p.name}">
-        <div class="product-name">${p.name}</div>
-        <div class="product-price">${p.price}</div>
-        <div class="btn-group">
-          <a class="whatsapp-btn" href="https://wa.me/${p.whatsapp}?text=Hi%2C%20I'm%20interested%20in%20${encodeURIComponent(p.name)}" target="_blank">WhatsApp Seller</a>
-        </div>
-      `;
-      grid.appendChild(card);
-    });
+    function loadPosts() {
+      db.ref("posts").once("value", (snapshot) => {
+        const data = snapshot.val();
+        const container = document.getElementById("postList");
+        container.innerHTML = "";
+
+        for (let key in data) {
+          const post = data[key];
+          const now = Date.now();
+          const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+          const isExpired = now - post.timestamp > thirtyDays;
+          const statusText = isExpired ? "⛔ Pending - Recharge Needed" : "✅ Approved";
+          const borderClass = isExpired ? "pending" : "";
+
+          const postDiv = document.createElement("div");
+          postDiv.className = `post ${borderClass}`;
+          postDiv.innerHTML = `
+            <h3>${post.title}</h3>
+            <p><strong>User:</strong> ${post.user}</p>
+            <p><strong>Mobile:</strong> ${post.mobile}</p>
+            <p><strong>Status:</strong> ${statusText}</p>
+            <img src="${post.image}" alt="Image" />
+            <p>${post.description}</p>
+            <p><strong>Date:</strong> ${new Date(post.timestamp).toLocaleString()}</p>
+            <div>
+              <button onclick="approvePost('${key}')">Approve</button>
+              <button onclick="sendWhatsApp('${post.mobile}', '${post.title}')">Send Reminder</button>
+            </div>
+          `;
+          container.appendChild(postDiv);
+        }
+      });
+    }
+
+    function approvePost(key) {
+      db.ref("posts/" + key).update({
+        timestamp: Date.now(),
+        status: "approved"
+      }).then(() => {
+        alert("✅ Post Approved!");
+        loadPosts();
+      });
+    }
+
+    function sendWhatsApp(mobile, title) {
+      const msg = `⚠️ Dear User, your post "${title}" has expired. Please recharge to continue displaying.`;
+      const url = `https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+    }
+
+    loadPosts();
   </script>
-
 </body>
 </html>
