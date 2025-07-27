@@ -1,69 +1,99 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Service Provider Panel</title>
+  <title>🛠️ ZaraFix - Poster Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; background: #f0f8ff; padding: 10px; text-align: center; }
-    .btn {
-      padding: 10px 20px; margin: 10px; border: none;
-      border-radius: 12px; background: #007bff; color: white;
-      font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-      cursor: pointer; transition: 0.3s; font-size: 18px;
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 10px;
     }
-    .btn:hover { background: #0056b3; }
 
-    .card {
-      background: #fff; padding: 15px; margin: 10px auto;
-      border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      text-align: left; max-width: 500px;
+    .card, .form, .request {
+      background: white;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .button {
+      background: linear-gradient(to right, #4caf50, #81c784);
+      color: white;
+      padding: 12px;
+      border: none;
+      margin: 8px 4px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: scale(1.05);
     }
 
     .led {
-      width: 20px; height: 20px; border-radius: 50%;
-      display: inline-block; margin-top: 10px;
-    }
-
-    .blink {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      display: inline-block;
       animation: blink 1s infinite;
     }
 
     @keyframes blink {
-      50% { opacity: 0.1; }
+      50% { opacity: 0; }
+    }
+
+    @media(max-width: 600px) {
+      .form, .card, .request {
+        padding: 10px;
+      }
+      .button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>🛠️ ZaraFix - Service Provider Panel</h2>
-  <div id="loginDiv">
-    <button class="btn" onclick="googleLogin()">🔐 Login with Google</button>
+  <div class="card">
+    <h2>🛠️ ZaraFix - Service Provider Panel</h2>
+    <div>💰 Wallet: ₹<span id="wallet">--</span></div>
+    <div>Status: <span id="led" class="led" style="background:gray;"></span> <span id="statusText">Checking...</span></div>
   </div>
-  <div id="panel" style="display:none">
-    <div id="ledBox"></div>
-    <h3>📋 Matching Service Requests</h3>
-    <h4 id="wallet">💰 Wallet: ₹0</h4>
-    <div id="requestList"></div>
-  </div>
-  <div id="registerForm" style="display:none">
-    <h3>🔧 Register as Poster</h3>
-    <input id="name" placeholder="Name" /><br><br>
-    <input id="shop" placeholder="Shop Name" /><br><br>
-    <select id="category">
+
+  <div class="form" id="registrationForm" style="display:none;">
+    <h3>🔐 Register as Service Provider</h3>
+    <input placeholder="Name" id="regName"><br><br>
+    <input placeholder="Shop Name" id="regShop"><br><br>
+    <select id="regCategory">
       <option value="">Select Category</option>
       <option>AC Mechanic</option>
       <option>Car Mechanic</option>
-      <option>Plumber</option>
       <option>Electrician</option>
     </select><br><br>
-    <input id="whatsapp" placeholder="WhatsApp Number" /><br><br>
-    <button class="btn" onclick="submitRegister()">✅ Submit</button>
+    <input placeholder="WhatsApp Number" id="regWhatsapp"><br><br>
+    <button class="button" onclick="submitRegistration()">Submit Registration</button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
+  <div class="card" id="requestsCard" style="display:none;">
+    <h3>📋 Matching Service Requests</h3>
+    <div id="requests"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const app = initializeApp({
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
       databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -71,106 +101,110 @@
       storageBucket: "zara-fix-2e35a.appspot.com",
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    let currentUser = null;
-    let userId = null;
-    let acceptedWork = false;
-
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        userId = user.uid;
-        document.getElementById("loginDiv").style.display = "none";
-        checkIfRegistered();
-      }
     });
 
-    function googleLogin() {
-      firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    }
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-    function checkIfRegistered() {
-      db.ref("posters/" + userId).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          document.getElementById("registerForm").style.display = "none";
-          showPanel(snapshot.val());
-        } else {
-          document.getElementById("registerForm").style.display = "block";
+    onAuthStateChanged(auth, user => {
+      if (!user) return signInWithPopup(auth, provider);
+      const uid = user.uid;
+
+      get(ref(db, "posters/" + uid)).then(snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('registrationForm').style.display = 'block';
+          return;
         }
-      });
-    }
 
-    function submitRegister() {
-      const name = document.getElementById("name").value;
-      const shop = document.getElementById("shop").value;
-      const category = document.getElementById("category").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      if (!name || !shop || !category || !whatsapp) return alert("Fill all fields");
+        const data = snapshot.val();
+        document.getElementById("wallet").innerText = data.wallet || 0;
+        const cat = data.category;
+        document.getElementById("registrationForm").style.display = "none";
+        document.getElementById("requestsCard").style.display = "block";
 
-      db.ref("posters/" + userId).set({ name, shop, category, whatsapp, wallet: 100 });
-      document.getElementById("registerForm").style.display = "none";
-      showPanel({ name, shop, category, whatsapp, wallet: 100 });
-    }
-
-    function showPanel(poster) {
-      document.getElementById("panel").style.display = "block";
-      document.getElementById("wallet").innerText = "💰 Wallet: ₹" + poster.wallet;
-      db.ref("requests").once("value").then(snapshot => {
-        const list = document.getElementById("requestList");
-        list.innerHTML = "";
-        let matchFound = false;
-        snapshot.forEach(userSnap => {
-          userSnap.forEach(reqSnap => {
-            const req = reqSnap.val();
-            const reqKey = reqSnap.key;
-            if (req.category === poster.category) {
-              matchFound = true;
-              const card = document.createElement("div");
-              card.className = "card";
-              card.innerHTML = `
-                <b>Name:</b> ${req.name}<br>
-                <b>Problem:</b> ${req.problem}<br>
-                <b>Address:</b> ${req.address}<br>
-                <b>Status:</b> ${req.status}<br>
-                <button class="btn" onclick="acceptJob('${userSnap.key}', '${reqKey}')">✅ Accept</button>
-              `;
-              list.appendChild(card);
+        onValue(ref(db, "requests"), snap => {
+          const requests = snap.val();
+          let found = false, accepted = false;
+          let html = "";
+          for (let userId in requests) {
+            for (let key in requests[userId]) {
+              const r = requests[userId][key];
+              if (r.category === cat) {
+                found = true;
+                if (r.acceptedBy && r.acceptedBy[uid]) accepted = true;
+                html += `
+                  <div class="request">
+                    <b>${r.name}</b> (${r.address})<br>
+                    Issue: ${r.problem}<br>
+                    <button class="button" onclick="accept('${userId}', '${key}')">Accept</button>
+                  </div>`;
+              }
             }
+          }
 
-            if (req.acceptedBy && req.acceptedBy[userId]) {
-              acceptedWork = true;
+          if (!found) {
+            document.getElementById("statusText").innerText = "Waiting for work";
+            document.getElementById("led").style.background = "green";
+            document.getElementById("requests").innerHTML = "No matching work found.";
+          } else {
+            document.getElementById("statusText").innerText = accepted ? "Work Accepted" : "Work Found";
+            document.getElementById("led").style.background = accepted ? "blue" : "yellow";
+            document.getElementById("requests").innerHTML = html;
+          }
+        });
+      });
+
+      // Daily ₹3 deduction
+      const today = new Date().toDateString();
+      const stampRef = ref(db, "posters/" + uid + "/lastDeduct");
+      get(stampRef).then(snap => {
+        if (snap.val() !== today) {
+          const wRef = ref(db, "posters/" + uid);
+          get(wRef).then(snap => {
+            if (snap.exists()) {
+              const wallet = snap.val().wallet || 0;
+              if (wallet >= 3) {
+                update(wRef, {
+                  wallet: wallet - 3,
+                  lastDeduct: today
+                });
+              }
             }
           });
-        });
-
-        showLED(matchFound, acceptedWork);
-        if (!matchFound) {
-          list.innerHTML = "<p>⏳ Wait for work...</p>";
         }
       });
+    });
+
+    window.submitRegistration = function () {
+      const uid = auth.currentUser.uid;
+      const data = {
+        name: regName.value,
+        shop: regShop.value,
+        category: regCategory.value,
+        whatsapp: regWhatsapp.value,
+        wallet: 100
+      };
+      set(ref(db, "posters/" + uid), data).then(() => location.reload());
     }
 
-    function acceptJob(userKey, reqKey) {
-      db.ref(`requests/${userKey}/${reqKey}/acceptedBy/${userId}`).set({
-        name: currentUser.displayName,
-        whatsapp: db.ref("posters/" + userId + "/whatsapp"),
-        timestamp: Date.now()
+    window.accept = function (userId, key) {
+      const uid = auth.currentUser.uid;
+      get(ref(db, "posters/" + uid)).then(snap => {
+        const data = snap.val();
+        if (data.wallet < 20) {
+          alert("Not enough wallet balance to accept (₹20 needed).");
+          return;
+        }
+        update(ref(db, "requests/" + userId + "/" + key + "/acceptedBy/" + uid), {
+          name: data.name,
+          whatsapp: data.whatsapp,
+          timestamp: Date.now()
+        });
+        update(ref(db, "posters/" + uid), {
+          wallet: data.wallet - 20
+        });
       });
-      alert("Accepted ✅");
-    }
-
-    function showLED(matched, accepted) {
-      const box = document.getElementById("ledBox");
-      if (accepted) {
-        box.innerHTML = `<div class="led blink" style="background: blue;"></div> <b>Accepted Work</b>`;
-      } else if (matched) {
-        box.innerHTML = `<div class="led blink" style="background: yellow;"></div> <b>Work Available</b>`;
-      } else {
-        box.innerHTML = `<div class="led blink" style="background: green;"></div> <b>No Work Yet</b>`;
-      }
     }
   </script>
 </body>
