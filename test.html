@@ -1,88 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Zara Admin Panel</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - Upload Image</title>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    h2 { color: #444; }
-    .post { border: 1px solid #ccc; border-radius: 10px; padding: 10px; margin-bottom: 15px; background: #fff; box-shadow: 2px 2px 5px #ccc; }
-    img { max-width: 200px; }
-    button { margin: 5px; padding: 6px 10px; border: none; border-radius: 6px; background: #2196f3; color: white; cursor: pointer; }
-    .pending { border: 2px solid red; }
+    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+    .card { background: white; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+    img { max-width: 100%; margin-top: 10px; border-radius: 10px; }
+    button { padding: 10px 20px; background: green; color: white; border: none; cursor: pointer; border-radius: 5px; }
   </style>
 </head>
 <body>
-  <h2>🔧 Zara Admin Panel</h2>
-  <div id="postList">Loading posts...</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
+<div class="card">
+  <h2>📤 Admin Image Uploader</h2>
+  <input type="file" id="imageInput"><br><br>
+  <img id="preview" src="" alt="Preview" style="display:none;"><br>
+  <button onclick="uploadImage()">Upload to Firebase</button>
+</div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-    function loadPosts() {
-      db.ref("posts").once("value", (snapshot) => {
-        const data = snapshot.val();
-        const container = document.getElementById("postList");
-        container.innerHTML = "";
+<script>
+  // ✅ Firebase config — इसे अपने अकाउंट के हिसाब से बदलें
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "536032807993",
+    appId: "1:536032807993:web:9a3074712cbb93a3a7d946"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-        for (let key in data) {
-          const post = data[key];
-          const now = Date.now();
-          const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-          const isExpired = now - post.timestamp > thirtyDays;
-          const statusText = isExpired ? "⛔ Pending - Recharge Needed" : "✅ Approved";
-          const borderClass = isExpired ? "pending" : "";
+  const imageInput = document.getElementById("imageInput");
+  const preview = document.getElementById("preview");
+  let uploadedImageURL = "";
 
-          const postDiv = document.createElement("div");
-          postDiv.className = `post ${borderClass}`;
-          postDiv.innerHTML = `
-            <h3>${post.title}</h3>
-            <p><strong>User:</strong> ${post.user}</p>
-            <p><strong>Mobile:</strong> ${post.mobile}</p>
-            <p><strong>Status:</strong> ${statusText}</p>
-            <img src="${post.image}" alt="Image" />
-            <p>${post.description}</p>
-            <p><strong>Date:</strong> ${new Date(post.timestamp).toLocaleString()}</p>
-            <div>
-              <button onclick="approvePost('${key}')">Approve</button>
-              <button onclick="sendWhatsApp('${post.mobile}', '${post.title}')">Send Reminder</button>
-            </div>
-          `;
-          container.appendChild(postDiv);
-        }
+  imageInput.addEventListener("change", async () => {
+    const file = imageInput.files[0];
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=9241af9700e4690699c3eafc73cb2348`, {
+        method: "POST",
+        body: formData
       });
+
+      const data = await res.json();
+      if (data && data.data && data.data.url) {
+        uploadedImageURL = data.data.url;
+        preview.src = uploadedImageURL;
+        preview.style.display = "block";
+        alert("✅ Image uploaded to ImgBB!");
+      } else {
+        throw new Error("Upload failed. Try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ Image upload failed.");
+    }
+  });
+
+  function uploadImage() {
+    if (!uploadedImageURL) {
+      alert("⚠️ Please upload an image first.");
+      return;
     }
 
-    function approvePost(key) {
-      db.ref("posts/" + key).update({
-        timestamp: Date.now(),
-        status: "approved"
-      }).then(() => {
-        alert("✅ Post Approved!");
-        loadPosts();
-      });
-    }
+    const ref = db.ref("adminUploads/");
+    const newEntry = ref.push();
+    newEntry.set({
+      imageURL: uploadedImageURL,
+      timestamp: new Date().toISOString()
+    }).then(() => {
+      alert("✅ Image URL saved to Firebase!");
+      imageInput.value = "";
+      preview.src = "";
+      preview.style.display = "none";
+    }).catch(err => {
+      console.error(err);
+      alert("❌ Failed to save to Firebase.");
+    });
+  }
+</script>
 
-    function sendWhatsApp(mobile, title) {
-      const msg = `⚠️ Dear User, your post "${title}" has expired. Please recharge to continue displaying.`;
-      const url = `https://wa.me/91${mobile}?text=${encodeURIComponent(msg)}`;
-      window.open(url, '_blank');
-    }
-
-    loadPosts();
-  </script>
 </body>
 </html>
