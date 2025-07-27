@@ -4,173 +4,174 @@
   <title>ZaraFix - Poster Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; margin:0; background:#f9f9f9; text-align:center; }
-    .hidden { display: none; }
-    .btn {
-      padding: 12px 24px; margin: 10px;
-      border: none; border-radius: 12px;
-      background: linear-gradient(to right, #00c6ff, #0072ff);
-      color: white; font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-      transition: transform 0.2s ease;
-    }
-    .btn:hover { transform: scale(1.05); }
+    body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 10px; margin: 0; }
     .card {
-      background: white; padding: 20px; margin: 10px auto;
-      max-width: 400px; border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      text-align: left;
+      background: white; border-radius: 20px; padding: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2); margin-bottom: 20px;
+    }
+    button {
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      border: none; padding: 12px 20px; color: white;
+      border-radius: 12px; font-weight: bold; cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-top: 10px;
     }
     input, select {
-      width: 90%; padding: 10px; margin: 10px 0;
-      border: 1px solid #ccc; border-radius: 8px;
+      width: 100%; padding: 10px; margin: 8px 0;
+      border-radius: 10px; border: 1px solid #ccc;
     }
+    .hidden { display: none; }
+    .wallet { font-weight: bold; color: green; }
   </style>
 </head>
 <body>
 
-  <h2>🧰 ZaraFix - Service Provider Panel</h2>
+<div id="content">
+  <center><h2>🛠️ ZaraFix - Service Provider</h2></center>
 
-  <div id="loginSection">
-    <button class="btn" onclick="googleLogin()">Login with Google</button>
-  </div>
-
-  <div id="registrationSection" class="hidden">
-    <h3>Register as Service Provider</h3>
-    <input id="name" placeholder="Your Name" />
-    <input id="shop" placeholder="Shop Name" />
+  <!-- Registration Form -->
+  <div id="registrationForm" class="card hidden">
+    <h3>📋 Register as Service Provider</h3>
+    <input type="text" id="name" placeholder="Your Name">
+    <input type="text" id="shop" placeholder="Shop Name">
     <select id="category">
       <option value="">Select Category</option>
       <option>AC Mechanic</option>
+      <option>Car Mechanic</option>
       <option>Electrician</option>
       <option>Plumber</option>
-      <option>Car Mechanic</option>
-      <option>Mobile Repair</option>
-      <option>Painter</option>
     </select>
-    <input id="whatsapp" placeholder="WhatsApp Number" />
-    <button class="btn" onclick="submitRegistration()">Submit Registration</button>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+    <button onclick="submitRegistration()">Submit</button>
   </div>
 
-  <div id="approvalSection" class="hidden">
-    <p>⏳ Waiting for Admin Approval...</p>
-  </div>
-
-  <div id="dashboardSection" class="hidden">
+  <!-- Dashboard -->
+  <div id="dashboard" class="card hidden">
+    <div id="walletInfo"></div>
     <h3>📋 Matching Service Requests</h3>
-    <p id="walletBalance"></p>
     <div id="requestsList"></div>
   </div>
+</div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getDatabase, ref, set, get, child, onValue, update
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
+  };
 
-    let currentUser = null;
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const db = getDatabase();
 
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        currentUser = user;
-        document.getElementById("loginSection").style.display = "none";
-        checkPosterRegistration(user.uid);
+  let currentUser;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("loginBtn")?.remove();
+
+      const posterRef = ref(db, 'posters/' + user.uid);
+      const snapshot = await get(posterRef);
+
+      if (snapshot.exists()) {
+        showDashboard(snapshot.val());
       } else {
-        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("registrationForm").classList.remove("hidden");
       }
+    } else {
+      const btn = document.createElement("button");
+      btn.id = "loginBtn";
+      btn.innerText = "🔐 Login with Google";
+      btn.onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+      document.getElementById("content").prepend(btn);
+    }
+  });
+
+  async function submitRegistration() {
+    const name = document.getElementById("name").value.trim();
+    const shop = document.getElementById("shop").value.trim();
+    const category = document.getElementById("category").value;
+    const whatsapp = document.getElementById("whatsapp").value.trim();
+
+    if (!name || !shop || !category || !whatsapp) return alert("All fields required!");
+
+    const userRef = ref(db, 'posters/' + currentUser.uid);
+    await set(userRef, {
+      name, shop, category, whatsapp, wallet: 100
     });
 
-    function googleLogin() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
+    document.getElementById("registrationForm").classList.add("hidden");
+    showDashboard({ name, shop, category, whatsapp, wallet: 100 });
+  }
 
-    async function checkPosterRegistration(uid) {
-      const snap = await db.ref("posters/" + uid).get();
-      if (!snap.exists()) {
-        document.getElementById("registrationSection").classList.remove("hidden");
-      } else {
-        const poster = snap.val();
-        if (poster.approved === true) {
-          showDashboard(poster);
-        } else {
-          document.getElementById("approvalSection").classList.remove("hidden");
-        }
-      }
-    }
+  function showDashboard(userData) {
+    document.getElementById("dashboard").classList.remove("hidden");
+    document.getElementById("walletInfo").innerHTML = `💰 Wallet: ₹<span class="wallet">${userData.wallet}</span>`;
+    loadMatchingRequests(userData.category);
+  }
 
-    async function submitRegistration() {
-      const name = document.getElementById("name").value.trim();
-      const shop = document.getElementById("shop").value.trim();
-      const category = document.getElementById("category").value;
-      const whatsapp = document.getElementById("whatsapp").value.trim();
-      if (!name || !shop || !category || !whatsapp) return alert("Fill all fields");
+  function loadMatchingRequests(category) {
+    const reqRef = ref(db, 'requests/');
+    onValue(reqRef, (snap) => {
+      const container = document.getElementById("requestsList");
+      container.innerHTML = "";
+      const data = snap.val();
+      if (!data) return container.innerHTML = "❌ No requests found.";
 
-      await db.ref("posters/" + currentUser.uid).set({
-        name, shop, category, whatsapp, wallet: 100, approved: false
-      });
-
-      document.getElementById("registrationSection").classList.add("hidden");
-      document.getElementById("approvalSection").classList.remove("hidden");
-    }
-
-    async function showDashboard(poster) {
-      document.getElementById("dashboardSection").classList.remove("hidden");
-      document.getElementById("walletBalance").innerText = "💰 Wallet: ₹" + poster.wallet;
-      const allRequestsSnap = await db.ref("requests").get();
-      const list = document.getElementById("requestsList");
-      list.innerHTML = '';
-
-      allRequestsSnap.forEach(userSnap => {
-        const userId = userSnap.key;
-        const requests = userSnap.val();
-        for (const reqId in requests) {
-          const req = requests[reqId];
-          if (req.category === poster.category) {
+      for (const userId in data) {
+        for (const reqId in data[userId]) {
+          const req = data[userId][reqId];
+          if (req.category === category) {
+            const accepted = req.acceptedBy && req.acceptedBy[currentUser.uid];
             const card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
-              <b>${req.name}</b> - ${req.problem}<br>
-              📍 ${req.address}<br>
-              📞 ${req.whatsapp}<br>
-              <button class="btn" onclick="acceptRequest('${userId}', '${reqId}')">Accept</button>
+              <b>🧑 Name:</b> ${req.name}<br>
+              <b>📍 Address:</b> ${req.address}<br>
+              <b>⚙️ Problem:</b> ${req.problem}<br>
+              <b>📞 WhatsApp:</b> ${accepted ? `<a href="https://wa.me/${req.whatsapp}" target="_blank">${req.whatsapp}</a>` : "Hidden"}<br>
+              ${accepted ? "✅ Accepted" : `<button onclick="acceptRequest('${userId}', '${reqId}')">Accept</button>`}
             `;
-            list.appendChild(card);
+            container.appendChild(card);
           }
         }
-      });
-    }
+      }
+    });
+  }
 
-    async function acceptRequest(userId, reqId) {
-      const posterSnap = await db.ref("posters/" + currentUser.uid).get();
-      const poster = posterSnap.val();
-      if (poster.wallet < 20) return alert("Low balance. Please recharge.");
+  async function acceptRequest(userId, reqId) {
+    const ref1 = ref(db, `requests/${userId}/${reqId}/acceptedBy/${currentUser.uid}`);
+    const posterSnap = await get(ref(db, 'posters/' + currentUser.uid));
+    const wallet = posterSnap.val().wallet || 0;
 
-      const timestamp = Date.now();
-      await db.ref(`requests/${userId}/${reqId}/acceptedBy/${currentUser.uid}`).set({
-        name: poster.name,
-        whatsapp: poster.whatsapp,
-        timestamp
-      });
+    if (wallet < 20) return alert("❌ Not enough balance. Please recharge.");
 
-      await db.ref("posters/" + currentUser.uid + "/wallet").set(poster.wallet - 20);
-      alert("Accepted! ₹20 deducted.");
-      location.reload();
-    }
-  </script>
+    // Deduct ₹20
+    await update(ref(db, 'posters/' + currentUser.uid), {
+      wallet: wallet - 20
+    });
+
+    // Save acceptance
+    await set(ref1, {
+      name: posterSnap.val().name,
+      whatsapp: posterSnap.val().whatsapp,
+      timestamp: Date.now()
+    });
+  }
+</script>
 
 </body>
 </html>
