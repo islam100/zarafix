@@ -1,138 +1,190 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Zara Post Panel</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <title>Zara Post System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
-    h2 { color: #444; }
-    input, textarea { padding: 10px; margin: 5px; width: 100%; }
-    button {
-      padding: 10px 20px;
-      margin: 10px 0;
-      background: linear-gradient(#4CAF50, #2E7D32);
-      color: white; border: none;
-      border-radius: 8px;
-      box-shadow: 0 5px #1B5E20;
-    }
-    button:active { box-shadow: 0 2px #1B5E20; transform: translateY(3px); }
-    .admin-panel { display: none; background: #fff; padding: 10px; margin-top: 20px; }
-    .success { color: green; font-weight: bold; }
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    .card { border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); padding: 15px; background: white; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; margin-top: 10px; background: #007bff; color: white; border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 4px 0 #0056b3; }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #0056b3; }
+    .hide { display: none; }
+    input, textarea { padding: 10px; width: 100%; margin-top: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
+    .admin-section { border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
+    .whatsapp-btn { background: green; margin-top: 10px; }
   </style>
 </head>
 <body>
+  <h2>📸 Zara Customer Post</h2>
 
-<h2>📝 Post Your Ad</h2>
-<input type="text" id="name" placeholder="Product Name" required>
-<input type="text" id="price" placeholder="Price (₹)" required>
-<input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-<input type="file" id="imageInput" accept="image/*">
-<button onclick="submitPost()">📤 Submit Post</button>
-<div id="msg" class="success"></div>
+  <button id="loginBtn" class="btn">Login with Google</button>
+  <button id="logoutBtn" class="btn hide">Logout</button>
 
-<h2>🔐 Login as Admin</h2>
-<button onclick="googleLogin()">Login with Google</button>
+  <div id="formSection" class="hide">
+    <input type="text" id="custName" placeholder="Name" />
+    <input type="text" id="price" placeholder="Price" />
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" />
+    <input type="file" id="imgInput" accept="image/*" />
+    <img id="previewImg" class="hide"/>
+    <button class="btn" onclick="submitPost()">Post</button>
+    <p id="submitMsg"></p>
+  </div>
 
-<div id="adminPanel" class="admin-panel">
-  <h2>🔧 Zara Admin Panel</h2>
-  <div id="postList"></div>
-</div>
+  <div id="postsSection"></div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-    authDomain: "zara-fix-2e35a.firebaseapp.com",
-    projectId: "zara-fix-2e35a",
-    storageBucket: "zara-fix-2e35a.appspot.com",
-    messagingSenderId: "636550144008",
-    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
-    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const auth = firebase.auth();
-  const adminUID = "QT3LkEToHwaiORatoKfTx8QE45s2"; // Your Admin UID
+  <div id="adminPanel" class="hide admin-section">
+    <h3>🔧 Zara Admin Panel</h3>
+    <input type="text" id="filterName" placeholder="Search by Name" />
+    <button class="btn" onclick="filterPosts()">Filter</button>
+    <div id="adminPosts"></div>
+  </div>
 
-  function submitPost() {
-    const name = document.getElementById('name').value;
-    const price = document.getElementById('price').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const imageFile = document.getElementById('imageInput').files[0];
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    if (!name || !price || !whatsapp || !imageFile) {
-      alert("सभी फ़ील्ड भरें और एक इमेज चुनें!");
-      return;
-    }
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "726155188433",
+      appId: "1:726155188433:web:f8b7898eaf52c0c5dd4d3a"
+    };
 
-    const formData = new FormData();
-    formData.append("image", imageFile);
-    fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
-      method: "POST",
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      const imageUrl = data.data.url;
-      const postData = {
-        name,
-        price,
-        whatsapp,
-        imageUrl,
-        approved: false,
-        timestamp: Date.now()
-      };
-      const newPostKey = db.ref().child("posts").push().key;
-      db.ref("posts/" + newPostKey).set(postData, () => {
-        document.getElementById('msg').innerText = "✅ Submit हो गया!";
-        document.getElementById('name').value = "";
-        document.getElementById('price').value = "";
-        document.getElementById('whatsapp').value = "";
-        document.getElementById('imageInput').value = "";
-      });
-    })
-    .catch(err => {
-      alert("Image upload fail: " + err);
-    });
-  }
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
 
-  function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result => {
-      if (result.user.uid === adminUID) {
-        document.getElementById("adminPanel").style.display = "block";
-        loadPosts();
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const formSection = document.getElementById('formSection');
+    const adminPanel = document.getElementById('adminPanel');
+
+    let currentUser;
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.classList.add('hide');
+        logoutBtn.classList.remove('hide');
+        formSection.classList.remove('hide');
+        if (user.uid === "QT3LkEToHwaiORatoKfTx8QE45s2") {
+          adminPanel.classList.remove('hide');
+        }
       } else {
-        alert("आप Admin नहीं हैं!");
+        currentUser = null;
+        loginBtn.classList.remove('hide');
+        logoutBtn.classList.add('hide');
+        formSection.classList.add('hide');
+        adminPanel.classList.add('hide');
       }
     });
-  }
 
-  function loadPosts() {
-    const postList = document.getElementById("postList");
-    postList.innerHTML = "";
-    db.ref("posts").once("value", snapshot => {
-      snapshot.forEach(child => {
-        const post = child.val();
-        const key = child.key;
-        const card = document.createElement("div");
-        card.innerHTML = `
-          <img src="${post.imageUrl}" width="100">
-          <p><strong>${post.name}</strong> - ₹${post.price}</p>
-          <p>WhatsApp: <a href="https://wa.me/91${post.whatsapp}" target="_blank">${post.whatsapp}</a></p>
-          <p>Status: ${post.approved ? "✅ Approved" : "❌ Pending"}</p>
-          ${!post.approved ? `<button onclick="approve('${key}')">✔ Approve</button>` : ""}
-        `;
-        postList.appendChild(card);
+    let imageUrl = "";
+    const imgInput = document.getElementById('imgInput');
+    const previewImg = document.getElementById('previewImg');
+
+    imgInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("https://api.imgbb.com/1/upload?key=9241af9700e4690699c3eafc73cb2348", {
+        method: "POST",
+        body: formData
       });
-    });
-  }
+      const data = await res.json();
+      if (data.success) {
+        imageUrl = data.data.url;
+        previewImg.src = imageUrl;
+        previewImg.classList.remove("hide");
+      } else {
+        alert("Image upload failed!");
+      }
+    };
 
-  function approve(postId) {
-    db.ref("posts/" + postId + "/approved").set(true, loadPosts);
-  }
-</script>
+    window.submitPost = () => {
+      const name = document.getElementById('custName').value;
+      const price = document.getElementById('price').value;
+      const whatsapp = document.getElementById('whatsapp').value;
 
+      if (!name || !price || !whatsapp || !imageUrl) {
+        alert("Fill all fields and upload image!");
+        return;
+      }
+
+      const postRef = push(ref(db, "posts/"));
+      set(postRef, {
+        name, price, whatsapp, image: imageUrl, status: "pending"
+      }).then(() => {
+        document.getElementById("submitMsg").innerText = "✅ Submit हो गया, Approval का इंतज़ार करें";
+        document.getElementById("custName").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("whatsapp").value = "";
+        previewImg.src = "";
+        previewImg.classList.add("hide");
+        imageUrl = "";
+      });
+    };
+
+    const postsSection = document.getElementById('postsSection');
+    const adminPosts = document.getElementById('adminPosts');
+
+    function loadPosts() {
+      onValue(ref(db, "posts/"), snapshot => {
+        postsSection.innerHTML = "";
+        adminPosts.innerHTML = "";
+
+        snapshot.forEach(child => {
+          const post = child.val();
+          const key = child.key;
+
+          if (post.status === "approved") {
+            postsSection.innerHTML += `
+              <div class="card">
+                <h4>${post.name}</h4>
+                <img src="${post.image}" />
+                <p>Price: ₹${post.price}</p>
+                <button class="btn whatsapp-btn" onclick="location.href='https://wa.me/${post.whatsapp}'">WhatsApp</button>
+              </div>
+            `;
+          }
+
+          if (currentUser?.uid === "QT3LkEToHwaiORatoKfTx8QE45s2") {
+            adminPosts.innerHTML += `
+              <div class="card">
+                <h4>${post.name}</h4>
+                <img src="${post.image}" />
+                <p>Price: ₹${post.price}</p>
+                <p>WhatsApp: ${post.whatsapp}</p>
+                <button class="btn" onclick="approvePost('${key}')">✅ Approve</button>
+                <button class="btn" style="background:red" onclick="deletePost('${key}')">❌ Reject</button>
+              </div>
+            `;
+          }
+        });
+      });
+    }
+
+    window.approvePost = (key) => update(ref(db, "posts/" + key), { status: "approved" });
+    window.deletePost = (key) => remove(ref(db, "posts/" + key));
+    window.filterPosts = () => {
+      const name = document.getElementById("filterName").value.toLowerCase();
+      const all = document.querySelectorAll("#adminPosts .card");
+      all.forEach(card => {
+        card.style.display = card.innerText.toLowerCase().includes(name) ? "block" : "none";
+      });
+    };
+
+    loadPosts();
+  </script>
 </body>
 </html>
