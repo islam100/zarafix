@@ -1,92 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Poster Registration</title>
+  <title>ZaraFix - Poster Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      background: #e3f2fd;
+      margin: 0; padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
       padding: 20px;
-      text-align: center;
     }
-
-    h2 {
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    input, select {
-      display: block;
-      width: 90%;
-      max-width: 400px;
-      margin: 10px auto;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      font-size: 16px;
-    }
-
     .btn-3d {
-      background: linear-gradient(to right, #42a5f5, #1e88e5);
+      background: linear-gradient(145deg, #6ec6ff, #2196f3);
       border: none;
       color: white;
-      padding: 12px 30px;
-      font-size: 18px;
-      margin-top: 20px;
+      padding: 15px;
+      font-size: 16px;
+      width: 100%;
+      margin: 10px 0;
       border-radius: 12px;
       box-shadow: 0 6px #1565c0;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
     }
-
     .btn-3d:active {
-      box-shadow: 0 2px #1565c0;
       transform: translateY(4px);
+      box-shadow: 0 2px #1565c0;
     }
-
-    @media (max-width: 480px) {
-      input, select, .btn-3d {
-        font-size: 16px;
-      }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      margin-top: 10px;
+    }
+    label { display: block; margin-top: 10px; }
+    input, select {
+      width: 100%; padding: 10px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    #loginBtn { display: none; }
+    @media(max-width: 600px){
+      .btn-3d { font-size: 14px; }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>🛠️ ZaraFix - Poster Panel</h2>
+    <button id="loginBtn" class="btn-3d">🔐 Login with Google</button>
+    <button id="formBtn" class="btn-3d" style="display:none;">📋 Registration Form</button>
+    <button id="dashboardBtn" class="btn-3d" style="display:none;">🧰 Dashboard</button>
 
-  <h2>📋 Poster Registration - ZaraFix</h2>
+    <div id="formSection" class="card" style="display:none;">
+      <h3>📋 Poster Registration</h3>
+      <label>Name</label><input id="name" type="text">
+      <label>Shop Name</label><input id="shop" type="text">
+      <label>WhatsApp</label><input id="whatsapp" type="text">
+      <label>Category</label>
+      <select id="category">
+        <option value="">Select Category</option>
+        <option>AC Mechanic</option>
+        <option>Electrician</option>
+        <option>Plumber</option>
+        <option>Car Mechanic</option>
+        <option>Carpenter</option>
+        <option>Refrigerator Repair</option>
+      </select>
+      <button class="btn-3d" onclick="submitPoster()">🚀 Submit</button>
+    </div>
 
-  <input id="name" placeholder="Your Name">
-  <input id="shop" placeholder="Shop Name">
+    <div id="waitSection" class="card" style="display:none;">
+      <h3>🕒 Wait for Admin Approval</h3>
+      <p>We are verifying your registration. Please wait...</p>
+    </div>
 
-  <select id="category">
-    <option value="">-- Select Category --</option>
-    <option value="AC Mechanic">AC Mechanic</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Carpenter">Carpenter</option>
-    <option value="Car Mechanic">Car Mechanic</option>
-    <option value="Painter">Painter</option>
-  </select>
-
-  <input id="whatsapp" placeholder="WhatsApp Number">
-
-  <button class="btn-3d" onclick="registerPoster()">🚀 Submit</button>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <div id="dashboard" class="card" style="display:none;">
+      <h3>👋 Welcome to Your Poster Dashboard</h3>
+      <div id="posterInfo"></div>
+    </div>
+  </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
       projectId: "zara-fix-2e35a",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
       storageBucket: "zara-fix-2e35a.appspot.com",
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
@@ -95,36 +105,84 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
+    const provider = new GoogleAuthProvider();
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        signInWithPopup(auth, new GoogleAuthProvider());
+    let currentUser;
+
+    document.getElementById("loginBtn").onclick = () => {
+      signInWithPopup(auth, provider);
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("formBtn").style.display = "inline-block";
+        document.getElementById("dashboardBtn").style.display = "inline-block";
+
+        const posterSnap = await get(ref(db, "posters/" + user.uid));
+        const isApproved = posterSnap.exists();
+
+        if (isApproved) {
+          showDashboard(posterSnap.val());
+        } else {
+          showWaitSection();
+        }
+      } else {
+        document.getElementById("loginBtn").style.display = "inline-block";
       }
     });
 
-    window.registerPoster = async () => {
-      const user = auth.currentUser;
-      if (!user) return alert("Please wait, logging in...");
+    document.getElementById("formBtn").onclick = () => {
+      toggleView("formSection");
+    };
 
-      const name = document.getElementById("name").value.trim();
-      const shop = document.getElementById("shop").value.trim();
+    document.getElementById("dashboardBtn").onclick = async () => {
+      const snap = await get(ref(db, "posters/" + currentUser.uid));
+      if (snap.exists()) {
+        showDashboard(snap.val());
+      }
+    };
+
+    function toggleView(sectionId) {
+      document.getElementById("formSection").style.display = "none";
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("waitSection").style.display = "none";
+      document.getElementById(sectionId).style.display = "block";
+    }
+
+    function showWaitSection() {
+      toggleView("waitSection");
+    }
+
+    function showDashboard(data) {
+      toggleView("dashboard");
+      document.getElementById("posterInfo").innerHTML = `
+        <p><b>Name:</b> ${data.name}</p>
+        <p><b>Shop:</b> ${data.shop}</p>
+        <p><b>Category:</b> ${data.category}</p>
+        <p><b>WhatsApp:</b> ${data.whatsapp}</p>
+        <p><b>Wallet:</b> ₹${data.wallet || 0}</p>
+      `;
+    }
+
+    function submitPoster() {
+      const name = document.getElementById("name").value;
+      const shop = document.getElementById("shop").value;
+      const whatsapp = document.getElementById("whatsapp").value;
       const category = document.getElementById("category").value;
-      const whatsapp = document.getElementById("whatsapp").value.trim();
 
-      if (!name || !shop || !category || !whatsapp) {
-        return alert("Please fill all fields.");
+      if (!name || !shop || !whatsapp || !category) {
+        alert("Please fill all fields.");
+        return;
       }
 
-      const posterData = {
-        name,
-        shop,
-        category,
-        whatsapp,
-        wallet: 100
-      };
-
-      await set(ref(db, "posters/" + user.uid), posterData);
-      alert("✅ Registration Successful!");
+      set(ref(db, "posters/" + currentUser.uid), {
+        name, shop, whatsapp, category, wallet: 100
+      }).then(() => {
+        alert("Submitted! Wait for admin approval.");
+        toggleView("waitSection");
+      });
     }
   </script>
 </body>
