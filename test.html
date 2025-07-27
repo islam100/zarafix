@@ -1,24 +1,88 @@
-<!-- ✅ ZaraFix Poster Registration Form (no wallet check) -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Poster Registration - ZaraFix</title>
+  <title>🛠️ ZaraFix - Poster Registration</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      padding: 20px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    input, select {
+      display: block;
+      width: 90%;
+      max-width: 400px;
+      margin: 10px auto;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+
+    .btn-3d {
+      background: linear-gradient(to right, #42a5f5, #1e88e5);
+      border: none;
+      color: white;
+      padding: 12px 30px;
+      font-size: 18px;
+      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px #1565c0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-3d:active {
+      box-shadow: 0 2px #1565c0;
+      transform: translateY(4px);
+    }
+
+    @media (max-width: 480px) {
+      input, select, .btn-3d {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📋 Poster Registration - ZaraFix</h2>
+
+  <input id="name" placeholder="Your Name">
+  <input id="shop" placeholder="Shop Name">
+
+  <select id="category">
+    <option value="">-- Select Category --</option>
+    <option value="AC Mechanic">AC Mechanic</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Carpenter">Carpenter</option>
+    <option value="Car Mechanic">Car Mechanic</option>
+    <option value="Painter">Painter</option>
+  </select>
+
+  <input id="whatsapp" placeholder="WhatsApp Number">
+
+  <button class="btn-3d" onclick="registerPoster()">🚀 Submit</button>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-</head>
-<body>
-  <h2>📝 Poster Registration</h2>
-  <div>
-    <input id="name" placeholder="Name"><br>
-    <input id="shop" placeholder="Shop Name"><br>
-    <input id="category" placeholder="Category"><br>
-    <input id="whatsapp" placeholder="WhatsApp"><br>
-    <button onclick="registerPoster()">Register</button>
-  </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -27,25 +91,40 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
 
-    auth.onAuthStateChanged(user => {
-      if (!user) auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signInWithPopup(auth, new GoogleAuthProvider());
+      }
     });
 
-    function registerPoster() {
+    window.registerPoster = async () => {
       const user = auth.currentUser;
-      if (!user) return alert("Login required");
-      const poster = {
-        name: name.value,
-        shop: shop.value,
-        category: category.value,
-        whatsapp: whatsapp.value,
+      if (!user) return alert("Please wait, logging in...");
+
+      const name = document.getElementById("name").value.trim();
+      const shop = document.getElementById("shop").value.trim();
+      const category = document.getElementById("category").value;
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+
+      if (!name || !shop || !category || !whatsapp) {
+        return alert("Please fill all fields.");
+      }
+
+      const posterData = {
+        name,
+        shop,
+        category,
+        whatsapp,
         wallet: 100
       };
-      db.ref("posters/" + user.uid).set(poster).then(() => alert("Registered!"));
+
+      await set(ref(db, "posters/" + user.uid), posterData);
+      alert("✅ Registration Successful!");
     }
   </script>
 </body>
