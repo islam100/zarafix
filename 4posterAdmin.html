@@ -1,112 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 ZaraFix - Posters</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <title>📋 Posters</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f5f5f5;
-    }
-    .container {
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-      padding: 16px;
-      transition: 0.3s;
-    }
-    .card:hover {
-      transform: scale(1.01);
-    }
-    .inner-card {
-      background: #e7f1ff;
-      border-radius: 12px;
+      font-family: sans-serif;
+      background: #f0f0f0;
       padding: 10px;
-      margin-top: 10px;
     }
-    .btn {
-      background: linear-gradient(145deg, #1e90ff, #0077cc);
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 12px;
-      margin-top: 10px;
-      cursor: pointer;
-      box-shadow: 3px 3px 8px #aaa;
-      font-weight: bold;
-      transition: 0.2s;
+    .poster-card {
+      background: white;
+      padding: 12px;
+      margin: 10px auto;
+      max-width: 350px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
-    .btn:hover {
-      box-shadow: inset 2px 2px 6px rgba(0,0,0,0.2);
-      transform: scale(0.98);
+    h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .info {
+      font-size: 14px;
+      margin: 5px 0;
     }
     .wallet {
       font-weight: bold;
       color: green;
+      margin: 5px 0;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 14px;
+      margin: 5px 4px 0 0;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 4px 0 #aaa;
+    }
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+    }
+    .recharge-btn {
+      background: #007BFF;
+      color: white;
+    }
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #888;
     }
   </style>
 </head>
 <body>
-  <div class="container" id="posterList">📋 Loading posters...</div>
+  <h2>📋 Posters</h2>
+  <div id="posterList"></div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcd"
+      messagingSenderId: "225660763398",
+      appId: "1:225660763398:web:94dcf0d9a53d77a7c21b68"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    const posterList = document.getElementById("posterList");
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    function loadPosters() {
-      db.ref("posters").once("value", (snapshot) => {
-        const posters = snapshot.val();
-        posterList.innerHTML = "";
-        for (let uid in posters) {
-          const data = posters[uid];
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div><strong>👤 ${data.name}</strong></div>
-            <div class="inner-card">
-              🏠 Address: ${data.shop || "N/A"}<br>
-              🛠️ Category: ${data.category || "N/A"}<br>
-              💰 Wallet: <span class="wallet">₹${data.wallet || 0}</span><br>
-              <a href="https://wa.me/91${data.whatsapp}" target="_blank">📲 WhatsApp</a><br>
-              <button class="btn" onclick="recharge('${uid}', ${data.wallet || 0}, this)">Recharge ₹100</button>
-            </div>
-          `;
-          posterList.appendChild(card);
-        }
+    const posterList = document.getElementById('posterList');
+    const postersRef = ref(db, 'posters');
+
+    onValue(postersRef, (snapshot) => {
+      const posters = snapshot.val();
+      posterList.innerHTML = '';
+
+      for (const uid in posters) {
+        const p = posters[uid];
+        const card = document.createElement('div');
+        card.className = 'poster-card';
+        card.innerHTML = `
+          <h3>${p.name || '❓ Unknown'}</h3>
+          <div class="info">Shop: ${p.shop || 'N/A'}</div>
+          <div class="info">Category: ${p.category || 'N/A'}</div>
+          <div class="info">Address: ${p.address || 'N/A'}</div>
+          <div class="wallet">Wallet: ₹${p.wallet || 0}</div>
+          <button class="btn whatsapp-btn" onclick="window.open('https://wa.me/${p.whatsapp}', '_blank')">📲 WhatsApp</button>
+          <button class="btn recharge-btn" onclick="recharge('${uid}')">Recharge ₹100</button>
+        `;
+        posterList.appendChild(card);
+      }
+    });
+
+    window.recharge = function(uid) {
+      const rechargeRef = ref(db, 'recharge/' + uid);
+      const data = {
+        amount: 100,
+        screenshot: "https://i.ibb.co/sample.png",
+        timestamp: Date.now(),
+        status: "pending"
+      };
+      update(rechargeRef, data).then(() => {
+        alert("Recharge request sent!");
       });
-    }
-
-    function recharge(uid, currentBalance, button) {
-      const newBalance = currentBalance + 100;
-      button.disabled = true;
-      button.innerText = "Processing...";
-      db.ref(`posters/${uid}/wallet`).set(newBalance).then(() => {
-        loadPosters();
-      });
-    }
-
-    loadPosters();
+    };
   </script>
 </body>
 </html>
