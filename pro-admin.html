@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Provider Dashboard - ZaraFix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: #f2f2f2;
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    #loginDiv, #logoutDiv {
+      text-align: center;
+      margin: 20px;
+    }
+    .poster-card {
+      background: #fff;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .approve { background: green; color: white; }
+    .reject { background: red; color: white; }
+    .led {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      margin-left: 10px;
+    }
+    .led.green { background: green; }
+    .led.blink-yellow {
+      background: yellow;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginDiv">
+  <button class="btn approve" onclick="login()">🔐 Login with Google</button>
+</div>
+
+<div id="logoutDiv" style="display:none;">
+  <button class="btn reject" onclick="logout()">🚪 Logout</button>
+  <h2>📋 Approved Requests</h2>
+  <div id="posters"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyD-EXAMPLE",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "YOUR-SENDER-ID",
+    appId: "YOUR-APP-ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  }
+
+  function logout() {
+    auth.signOut();
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      const uid = user.uid;
+      db.ref("admins/" + uid).once("value", snap => {
+        if (snap.exists()) {
+          document.getElementById("loginDiv").style.display = "none";
+          document.getElementById("logoutDiv").style.display = "block";
+          loadPosters();
+        } else {
+          alert("❌ Access Denied. Admins Only.");
+          logout();
+        }
+      });
+    } else {
+      document.getElementById("loginDiv").style.display = "block";
+      document.getElementById("logoutDiv").style.display = "none";
+    }
+  });
+
+  function loadPosters() {
+    const postersDiv = document.getElementById("posters");
+    postersDiv.innerHTML = "";
+
+    db.ref("posters").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const data = child.val();
+        const id = child.key;
+        const isApproved = data.approved === true;
+
+        const div = document.createElement("div");
+        div.className = "poster-card";
+        div.innerHTML = `
+          <h3>${data.name || "No Name"}</h3>
+          <p><strong>Address:</strong> ${data.address || "N/A"}</p>
+          <p><strong>Wallet:</strong> ₹${data.wallet || "0"}</p>
+          <div>
+            ${!isApproved ? `
+              <button class="btn approve" onclick="approvePoster('${id}')">✅ Approve</button>
+              <button class="btn reject" onclick="rejectPoster('${id}')">❌ Reject</button>
+              <span class="led green"></span>
+            ` : `
+              <span class="led blink-yellow"></span> Approved
+            `}
+          </div>
+        `;
+        postersDiv.appendChild(div);
+      });
+    });
+  }
+
+  function approvePoster(id) {
+    db.ref("posters/" + id + "/approved").set(true).then(() => loadPosters());
+  }
+
+  function rejectPoster(id) {
+    db.ref("posters/" + id).remove().then(() => loadPosters());
+  }
+</script>
+</body>
+</html>
