@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🛠️ Poster Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .poster-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+      transition: background 0.3s;
+      position: relative;
+    }
+
+    .poster-card.blink {
+      background: #fffacd;
+      animation: blink 1s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% { background-color: #fffacd; }
+      100% { background-color: #f0e68c; }
+    }
+
+    .mini-card {
+      background: #f0f0f0;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #e6e6e6, #ffffff);
+      box-shadow: 5px 5px 10px #c1c1c1, -5px -5px 10px #ffffff;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+    }
+
+    .whatsapp-btn {
+      background-color: #25D366;
+      color: white;
+    }
+
+    .recharge-btn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    @media screen and (max-width: 600px) {
+      .poster-card {
+        font-size: 14px;
+      }
+
+      button {
+        margin-top: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="poster-list">Loading posters...</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "946157470939",
+    appId: "1:946157470939:web:9ff7ed77f6fcb87e7f1f8a"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2";
+  const postersRef = db.ref("posters");
+  const requestsRef = db.ref("requests");
+  const rechargeRef = db.ref("recharge");
+
+  function loadPosters() {
+    postersRef.once("value", snapshot => {
+      const posters = snapshot.val();
+      const container = document.getElementById("poster-list");
+      container.innerHTML = "";
+
+      for (const uid in posters) {
+        const poster = posters[uid];
+
+        // check accepted
+        let accepted = false;
+        let address = "N/A";
+        for (const userId in requestsRef) {
+          for (const reqId in requestsRef[userId]) {
+            const request = requestsRef[userId][reqId];
+            if (
+              request.acceptedBy &&
+              request.acceptedBy[uid]
+            ) {
+              accepted = true;
+              address = request.address || "N/A";
+            }
+          }
+        }
+
+        const card = document.createElement("div");
+        card.className = "poster-card" + (accepted ? " blink" : "");
+
+        card.innerHTML = `
+          <h3>📋 ${poster.name}</h3>
+          <div class="mini-card">🏪 Shop: ${poster.shop || "N/A"}</div>
+          <div class="mini-card">🔧 Category: ${poster.category || "N/A"}</div>
+          <div class="mini-card">📍 Address: ${address}</div>
+          <div class="mini-card">💰 Wallet: ₹<span id="wallet-${uid}">${poster.wallet || 0}</span></div>
+          <div style="margin-top:10px;">
+            ${accepted ? `
+              <a class="whatsapp-btn" href="https://wa.me/${poster.whatsapp}" target="_blank">
+                📲 WhatsApp
+              </a>
+            ` : `
+              <button onclick="approve('${uid}')">✅ Approve</button>
+            `}
+            <button class="recharge-btn" onclick="recharge('${uid}')">💳 Recharge ₹100</button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      }
+    });
+  }
+
+  function approve(uid) {
+    const acceptPath = db.ref(`requests/user123/request1/acceptedBy/${uid}`);
+    acceptPath.set({
+      name: "Zara Poster",
+      whatsapp: "9876543210",
+      timestamp: Date.now()
+    }).then(() => {
+      alert("Approved!");
+      loadPosters();
+    });
+  }
+
+  function recharge(uid) {
+    const rechargePath = rechargeRef.child(uid);
+    rechargePath.set({
+      amount: 100,
+      timestamp: Date.now(),
+      status: "approved"
+    });
+
+    // Update wallet directly (simulated logic)
+    const walletPath = db.ref("posters/" + uid + "/wallet");
+    walletPath.transaction(current => (current || 0) + 100)
+    .then(() => {
+      document.getElementById(`wallet-${uid}`).innerText = parseInt(document.getElementById(`wallet-${uid}`).innerText) + 100;
+    });
+  }
+
+  loadPosters();
+</script>
+</body>
+</html>
+
