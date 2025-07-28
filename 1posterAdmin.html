@@ -1,134 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🛠️ ZaraFix - Service Cards</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Service Requests</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
     .card {
-      width: 260px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 16px;
+      width: 300px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      margin: 20px;
+      padding: 15px;
+      background: #fff;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+      transition: 0.3s;
       position: relative;
-      transition: all 0.3s ease;
-      overflow: hidden;
     }
-
-    .card h3 {
-      margin: 4px 0;
-      font-size: 18px;
-    }
-
-    .card p {
-      margin: 2px 0;
-      font-size: 14px;
-      color: #444;
-    }
-
-    .approve-btn, .whatsapp-btn {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .approve-btn {
-      background: #007bff;
-      color: white;
-    }
-
-    .whatsapp-btn {
-      background: #25D366;
-      color: white;
-      margin-left: 10px;
-      text-decoration: none;
-    }
-
-    .approved {
-      border: 3px solid yellow;
+    .card.approved {
+      border-color: yellow;
       animation: blink 1s infinite;
     }
-
     @keyframes blink {
-      0%, 100% { border-color: yellow; }
-      50% { border-color: transparent; }
+      50% { box-shadow: 0 0 10px yellow; }
+    }
+    .btn {
+      padding: 6px 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+    }
+    .approve-btn {
+      background-color: green;
+    }
+    .whatsapp-btn {
+      background-color: #25D366;
     }
   </style>
 </head>
 <body>
 
-<div id="cards-container"></div>
+<div id="requests-container"></div>
 
-<script type="module">
-  // ✅ Firebase import
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
     authDomain: "zara-fix.firebaseapp.com",
     databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
     projectId: "zara-fix",
     storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "151322902158",
-    appId: "1:151322902158:web:69f370f8363ae91e58f3d4"
+    messagingSenderId: "your-sender-id",
+    appId: "your-app-id"
   };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const container = document.getElementById('cards-container');
+  const adminId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2";
 
-  // ✅ Fetch all requests
-  const requestsRef = ref(db, 'requests/');
-  onValue(requestsRef, (snapshot) => {
-    container.innerHTML = ''; // Clear first
-    const data = snapshot.val();
-    for (const userId in data) {
-      for (const reqId in data[userId]) {
-        const req = data[userId][reqId];
-        const card = document.createElement('div');
-        card.className = 'card';
-        if (req.status === 'approved') card.classList.add('approved');
+  db.ref("requests").once("value", (snapshot) => {
+    const container = document.getElementById("requests-container");
+    const posters = {};
 
-        card.innerHTML = `
-          <h3>🧑‍🔧 Name: ${req.name || 'N/A'}</h3>
-          <p>🔧 Category: ${req.category || 'N/A'}</p>
-          <p>📍 Address: ${req.address || 'N/A'}</p>
-          <p>🏪 Shop: ${req.shop || 'N/A'}</p>
-          <p>📱 Contact: ${req.contact || 'N/A'}</p>
-          <p>💼 Status: ${req.status || 'N/A'}</p>
-          ${req.status !== 'approved' ? `<button class="approve-btn" data-user="${userId}" data-req="${reqId}">Approve</button>` : ''}
-          ${req.status === 'approved' ? `<a class="whatsapp-btn" href="https://wa.me/${req.contact}" target="_blank">WhatsApp</a>` : ''}
-        `;
+    // First load posters
+    db.ref("posters").once("value", (posterSnap) => {
+      posterSnap.forEach(p => {
+        posters[p.key] = p.val();
+      });
 
-        container.appendChild(card);
-      }
-    }
+      snapshot.forEach(user => {
+        const userId = user.key;
+        const requests = user.val();
+        for (let reqId in requests) {
+          const req = requests[reqId];
+          const accepted = req.acceptedBy && req.acceptedBy[adminId];
+          const posterData = posters[adminId] || {};
+          
+          const card = document.createElement("div");
+          card.className = "card" + (req.status === "approved" ? " approved" : "");
 
-    // ✅ Approve button click
-    document.querySelectorAll('.approve-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const userId = btn.dataset.user;
-        const reqId = btn.dataset.req;
-        const updateRef = ref(db, `requests/${userId}/${reqId}`);
-        update(updateRef, { status: 'approved' });
+          card.innerHTML = `
+            🧑‍🔧 Name: ${req.name || "N/A"}<br>
+            🔧 Category: ${req.category || "N/A"}<br><br>
+            📍 Address: ${req.address || "N/A"}<br><br>
+            🏪 Shop: ${posterData.shop || "N/A"}<br><br>
+            📱 Contact: ${req.whatsapp || "N/A"}<br><br>
+            💼 Status: ${req.status || "pending"}<br>
+          `;
+
+          if (req.status !== "approved") {
+            const approveBtn = document.createElement("button");
+            approveBtn.className = "btn approve-btn";
+            approveBtn.textContent = "Approve";
+            approveBtn.onclick = () => {
+              db.ref(`requests/${userId}/${reqId}/status`).set("approved");
+              location.reload();
+            };
+            card.appendChild(approveBtn);
+          }
+
+          if (req.status === "approved" && req.whatsapp) {
+            const waBtn = document.createElement("a");
+            waBtn.className = "btn whatsapp-btn";
+            waBtn.textContent = "WhatsApp";
+            waBtn.href = `https://wa.me/${req.whatsapp}`;
+            waBtn.target = "_blank";
+            card.appendChild(waBtn);
+          }
+
+          container.appendChild(card);
+        }
       });
     });
   });
 </script>
+
 </body>
 </html>
