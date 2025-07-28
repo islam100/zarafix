@@ -1,70 +1,129 @@
-<div id="cardsContainer"></div>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Service Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+      margin-bottom: 15px;
+      max-width: 350px;
+    }
+    .card p {
+      margin: 5px 0;
+    }
+    .btn {
+      padding: 8px 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+    }
+    .approve-btn {
+      background: green;
+    }
+    .whatsapp-btn {
+      background: #25D366;
+    }
+  </style>
+</head>
+<body>
 
-<script>
-  const currentAdminUid = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // आपकी UID
+  <h2>📋 Service Requests</h2>
+  <div id="requestsContainer"></div>
 
-  const requests = {
-    "user123": {
-      "request1": {
-        "name": "Sameer Islam Khn",
-        "category": "Electrician",
-        "address": "vasai palghar maharashtra 401203",
-        "timestamp": 1753219796000,
-        "status": "approved",
-        "whatsapp": "9112170192",
-        "acceptedBy": {
-          "wjbEIAEF5jWgJKb2LlfWoIv4EqO2": {
-            "name": "Zara Poster",
-            "whatsapp": "9876543210",
-            "shop": "FixIt Shop",
-            "timestamp": 1753220000000
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const requestsContainer = document.getElementById('requestsContainer');
+
+    async function loadRequests() {
+      const requestsSnap = await db.ref("requests").once("value");
+      const postersSnap = await db.ref("posters").once("value");
+      const posters = postersSnap.val() || {};
+
+      requestsContainer.innerHTML = "";
+
+      const requests = requestsSnap.val();
+      for (const userId in requests) {
+        for (const reqId in requests[userId]) {
+          const req = requests[userId][reqId];
+
+          // Get approver ID if approved
+          const approverId = req.acceptedBy ? Object.keys(req.acceptedBy)[0] : null;
+          const poster = approverId && posters[approverId] ? posters[approverId] : null;
+
+          const name = req.name || "N/A";
+          const category = req.category || "N/A";
+          const address = req.address || "N/A";
+          const shop = poster ? poster.shop : "N/A";
+          const contact = poster ? poster.whatsapp : "N/A";
+          const status = req.status || "pending";
+
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            🧑‍🔧 <b>Name:</b> ${name}<br>
+            🔧 <b>Category:</b> ${category}<br><br>
+            📍 <b>Address:</b> ${address}<br><br>
+            🏪 <b>Shop:</b> ${shop}<br><br>
+            📱 <b>Contact:</b> ${contact}<br><br>
+            💼 <b>Status:</b> ${status}<br>
+          `;
+
+          if (status === "pending") {
+            const approveBtn = document.createElement("button");
+            approveBtn.className = "btn approve-btn";
+            approveBtn.innerText = "Approve";
+            approveBtn.onclick = async () => {
+              const adminId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // example admin
+              const time = Date.now();
+              await db.ref(`requests/${userId}/${reqId}/acceptedBy/${adminId}`).set({
+                name: poster.name || "Admin",
+                whatsapp: poster.whatsapp || "",
+                timestamp: time
+              });
+              await db.ref(`requests/${userId}/${reqId}/status`).set("approved");
+              loadRequests();
+            };
+            card.appendChild(approveBtn);
           }
+
+          if (status === "approved" && contact !== "N/A") {
+            const whatsappBtn = document.createElement("a");
+            whatsappBtn.href = `https://wa.me/${contact}`;
+            whatsappBtn.target = "_blank";
+            whatsappBtn.innerHTML = `<button class="btn whatsapp-btn">WhatsApp</button>`;
+            card.appendChild(whatsappBtn);
+          }
+
+          requestsContainer.appendChild(card);
         }
       }
     }
-  };
 
-  const container = document.getElementById('cardsContainer');
-
-  Object.keys(requests).forEach(userId => {
-    Object.entries(requests[userId]).forEach(([reqId, req]) => {
-      const isApproved = req.status === 'approved';
-      const acceptedData = req.acceptedBy?.[currentAdminUid] || {};
-
-      const card = document.createElement('div');
-      card.style = `
-        background: #fff;
-        padding: 10px;
-        margin: 10px;
-        border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        font-family: sans-serif;
-        max-width: 300px;
-      `;
-
-      const shop = isApproved ? (acceptedData.shop || 'N/A') : 'N/A';
-      const contact = isApproved ? (acceptedData.whatsapp || 'N/A') : 'N/A';
-
-      card.innerHTML = `
-        <p>🧑‍🔧 <b>Name:</b> ${req.name}</p>
-        <p>🔧 <b>Category:</b> ${req.category}</p>
-        <p>📍 <b>Address:</b> ${req.address}</p>
-        <p>🏪 <b>Shop:</b> ${shop}</p>
-        <p>📱 <b>Contact:</b> ${contact}</p>
-        <p>💼 <b>Status:</b> ${req.status}</p>
-        <div id="actionBtns">
-          ${isApproved
-            ? `<a href="https://wa.me/${contact}" target="_blank" style="color: green;">WhatsApp</a>`
-            : `<button onclick="approveRequest('${userId}', '${reqId}')">Approve</button>`}
-        </div>
-      `;
-
-      container.appendChild(card);
-    });
-  });
-
-  function approveRequest(userId, reqId) {
-    // 🔧 Replace this with Firebase update logic
-    alert(`Approving request ${reqId} of ${userId}`);
-  }
-</script>
+    loadRequests();
+  </script>
+</body>
+</html>
