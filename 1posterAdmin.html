@@ -1,137 +1,142 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔧 ZaraFix - Service Requests</title>
+  <title>📋 Zara Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: sans-serif;
       background: #f0f0f0;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 2px 2px 5px #ccc;
-      margin: 10px 0;
       padding: 10px;
+    }
+
+    .poster-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 8px #ccc;
+      padding: 12px;
+      margin: 10px auto;
+      max-width: 350px;
       position: relative;
-      transition: box-shadow 0.3s;
+      transition: 0.3s;
     }
 
-    .card.blink-approved {
-      animation: blinkBorder 1s infinite;
+    .poster-card.approved {
+      box-shadow: 0 0 15px 4px yellow;
+      animation: blink 1s infinite;
     }
 
-    @keyframes blinkBorder {
-      0% { box-shadow: 0 0 5px 3px yellow; }
-      50% { box-shadow: 0 0 10px 5px transparent; }
-      100% { box-shadow: 0 0 5px 3px yellow; }
+    @keyframes blink {
+      0% { box-shadow: 0 0 10px yellow; }
+      50% { box-shadow: 0 0 20px yellow; }
+      100% { box-shadow: 0 0 10px yellow; }
     }
 
-    .card h3 {
+    .poster-card h3 {
       margin: 0 0 5px;
+      font-size: 18px;
+      color: #333;
     }
 
-    .btn-3d {
-      background: #4CAF50;
+    .poster-card p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px 5px 0 0;
       border: none;
-      color: white;
-      padding: 10px 20px;
-      margin-top: 10px;
-      text-align: center;
-      font-weight: bold;
       border-radius: 10px;
-      box-shadow: 0 5px #2d6a34;
+      background: linear-gradient(to bottom, #4CAF50, #388E3C);
+      color: white;
       cursor: pointer;
-      transition: 0.2s;
+      font-weight: bold;
+      box-shadow: 0 4px #2e7d32;
+      transition: all 0.3s ease;
     }
 
-    .btn-3d:active {
-      box-shadow: 0 2px #2d6a34;
-      transform: translateY(3px);
+    button:hover {
+      background: linear-gradient(to bottom, #45A049, #2E7D32);
     }
 
-    @media (max-width: 600px) {
-      .card {
-        font-size: 14px;
-        padding: 8px;
-      }
-
-      .btn-3d {
-        padding: 8px 15px;
-      }
+    button:active {
+      box-shadow: 0 2px #1B5E20;
+      transform: translateY(2px);
     }
   </style>
 </head>
 <body>
+  <h2>📋 Posters</h2>
+  <div id="posterContainer"></div>
 
-  <div id="requestContainer"></div>
-
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+    // ✅ Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "925235258156",
-      appId: "1:925235258156:web:f118ac390d6a30e78c8183"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const requestContainer = document.getElementById("requestContainer");
+    const posterRef = ref(db, "posters/");
 
-    const posterUid = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // Current poster UID
+    const container = document.getElementById("posterContainer");
 
-    const requestsRef = ref(db, "requests");
-    const postersRef = ref(db, "posters/" + posterUid);
-    const rechargeRef = ref(db, "recharge/" + posterUid);
-
-    const posterSnap = await get(postersRef);
-    const poster = posterSnap.exists() ? posterSnap.val() : {};
-
-    const rechargeSnap = await get(rechargeRef);
-    const rechargeApproved = rechargeSnap.exists() && rechargeSnap.val().status === "approved";
-
-    const snapshot = await get(requestsRef);
-    if (snapshot.exists()) {
+    onValue(posterRef, (snapshot) => {
+      container.innerHTML = '';
       const data = snapshot.val();
-      Object.keys(data).forEach(userId => {
-        Object.keys(data[userId]).forEach(requestId => {
-          const req = data[userId][requestId];
-          const acceptedBy = req.acceptedBy || {};
-          if (acceptedBy[posterUid]) {
-            const card = document.createElement("div");
-            card.className = "card";
-            if (rechargeApproved) {
-              card.classList.add("blink-approved");
-            }
+      for (let key in data) {
+        const poster = data[key];
+        const card = document.createElement("div");
+        card.className = "poster-card";
+        if (poster.status === "approved") card.classList.add("approved");
 
-            card.innerHTML = `
-              <h3>नाम: ${req.name}</h3>
-              <p>समस्या: ${req.problem}</p>
-              <p>श्रेणी: ${req.category}</p>
-              <p>पता: ${req.address}</p>
-              <p>दुकान: ${poster.shop || 'N/A'}</p>
-              <p>WhatsApp: ${req.whatsapp}</p>
-              <button class="btn-3d" onclick="window.location.href='https://wa.me/${req.whatsapp}'">WhatsApp</button>
-            `;
+        card.innerHTML = `
+          <h3>${poster.name || 'No Name'}</h3>
+          <p><strong>Shop:</strong> ${poster.shop || 'N/A'}</p>
+          <p><strong>Category:</strong> ${poster.category || 'N/A'}</p>
+          <p><strong>Address:</strong> ${poster.address || 'N/A'}</p>
+          <p><strong>Wallet:</strong> ₹${poster.wallet || 0}</p>
+        `;
 
-            requestContainer.appendChild(card);
-          }
-        });
-      });
-    } else {
-      requestContainer.innerHTML = "<p>कोई अनुरोध नहीं मिला।</p>";
-    }
+        if (poster.status !== "approved") {
+          const approveBtn = document.createElement("button");
+          approveBtn.textContent = "✅ Approve";
+          approveBtn.onclick = () => {
+            update(ref(db, "posters/" + key), { status: "approved" });
+          };
+          card.appendChild(approveBtn);
+        } else {
+          const whatsappBtn = document.createElement("button");
+          whatsappBtn.textContent = "📲 WhatsApp";
+          whatsappBtn.onclick = () => {
+            window.open(`https://wa.me/${poster.phone || ''}`, "_blank");
+          };
+          card.appendChild(whatsappBtn);
+        }
+
+        const rechargeBtn = document.createElement("button");
+        rechargeBtn.textContent = "💰 Recharge ₹100";
+        rechargeBtn.onclick = () => {
+          const newAmount = (poster.wallet || 0) + 100;
+          update(ref(db, "posters/" + key), { wallet: newAmount });
+        };
+        card.appendChild(rechargeBtn);
+
+        container.appendChild(card);
+      }
+    });
   </script>
-
 </body>
 </html>
