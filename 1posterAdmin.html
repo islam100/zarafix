@@ -1,157 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Poster Panel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛠️ ZaraFix - Posters</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #e0e0e0;
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
       margin: 0;
-      padding: 10px;
+      padding: 20px;
     }
     .poster-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      width: 320px;
+      margin: 10px auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       padding: 10px;
-      margin-bottom: 15px;
-      transition: border 0.3s ease-in-out;
-      border: 3px solid transparent;
       position: relative;
+      transition: border 0.3s ease;
     }
     .poster-card.approved {
+      animation: blink 1s infinite;
       border: 3px solid yellow;
-      animation: blinkBorder 1s infinite;
     }
-    @keyframes blinkBorder {
+    @keyframes blink {
       0% { border-color: yellow; }
-      50% { border-color: transparent; }
+      50% { border-color: #fff; }
       100% { border-color: yellow; }
     }
-    .poster-inner {
-      border-radius: 8px;
-      padding: 5px;
-      background: #f9f9f9;
+    .poster-header {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .poster-detail {
+      margin: 5px 0;
+      font-size: 14px;
     }
     .btn {
       display: inline-block;
-      margin-top: 10px;
-      padding: 8px 14px;
-      background: linear-gradient(145deg, #f0f0f0, #dcdcdc);
-      border-radius: 10px;
-      box-shadow: 5px 5px 10px #bebebe, -5px -5px 10px #ffffff;
-      border: none;
+      margin: 5px 3px;
+      padding: 6px 12px;
+      font-size: 14px;
       font-weight: bold;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      transition: 0.3s;
+      background: linear-gradient(145deg, #ffe600, #fffaa0);
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
-    .btn:hover {
-      transform: scale(1.05);
-    }
-    .whatsapp-btn {
-      background-color: #25D366;
+    .btn-recharge {
+      background: linear-gradient(145deg, #4CAF50, #81C784);
       color: white;
     }
-    .category {
-      font-size: 0.9em;
-      color: #666;
+    .btn-approve {
+      background: linear-gradient(145deg, #2196F3, #64B5F6);
+      color: white;
     }
-    @media screen and (max-width: 600px) {
-      .poster-card {
-        padding: 8px;
-      }
-      .btn {
-        font-size: 14px;
-      }
+    .btn-hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h2>📋 Posters</h2>
-  <div id="poster-list"></div>
+
+  <div id="posters"></div>
 
   <script>
     const posters = [
       {
-        id: 1,
-        name: "Rahul",
+        name: "Sameer Khan",
         address: "Sopara",
-        wallet: 120,
-        approved: true,
-        phone: "917378342192",
+        wallet: 194,
+        shop: "Star Mobile",
         category: "Electronics",
-        shop: "Rahul Electronics"
+        approved: true,
+        phone: "917378342192"
       },
       {
-        id: 2,
-        name: "Fatima",
-        address: "Nala",
-        wallet: 80,
+        name: "Amit Verma",
+        address: "Vasai",
+        wallet: 97,
+        shop: "Tech Point",
+        category: "Repair",
         approved: false,
-        phone: "917378342192",
-        category: "Grocery",
-        shop: "Fatima Store"
+        phone: "918273645501"
       }
     ];
 
-    function renderPosters() {
-      const list = document.getElementById('poster-list');
-      list.innerHTML = '';
-      posters.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'poster-card' + (p.approved ? ' approved' : '');
+    const postersDiv = document.getElementById("posters");
 
-        const inner = document.createElement('div');
-        inner.className = 'poster-inner';
+    posters.forEach((poster, index) => {
+      const card = document.createElement("div");
+      card.className = `poster-card ${poster.approved ? 'approved' : ''}`;
 
-        inner.innerHTML = `
-          <b>${p.name}</b> <br>
-          Shop: ${p.shop}<br>
-          Address: ${p.address} <br>
-          Category: <span class="category">${p.category}</span><br>
-          Wallet: ₹${p.wallet}<br>
+      card.innerHTML = `
+        <div class="poster-header">📋 ${poster.name}</div>
+        <div class="poster-detail">🏪 Shop: ${poster.shop}</div>
+        <div class="poster-detail">📍 Address: ${poster.address}</div>
+        <div class="poster-detail">🗂️ Category: ${poster.category}</div>
+        <div class="poster-detail">💰 Wallet: ₹${poster.wallet}</div>
+        <button class="btn btn-recharge" onclick="recharge(${index}, 100)">+₹100 Recharge</button>
+        <button class="btn btn-approve ${poster.approved ? 'btn-hidden' : ''}" onclick="approve(${index})">✅ Approve</button>
+        ${poster.approved ? `<a class="btn" href='https://wa.me/${poster.phone}' target='_blank'>📲 WhatsApp</a>` : ''}
+      `;
+
+      postersDiv.appendChild(card);
+    });
+
+    function recharge(index, amount) {
+      posters[index].wallet += amount;
+      updateUI();
+    }
+
+    function approve(index) {
+      posters[index].approved = true;
+      updateUI();
+    }
+
+    function updateUI() {
+      postersDiv.innerHTML = "";
+      posters.forEach((poster, index) => {
+        const card = document.createElement("div");
+        card.className = `poster-card ${poster.approved ? 'approved' : ''}`;
+
+        card.innerHTML = `
+          <div class="poster-header">📋 ${poster.name}</div>
+          <div class="poster-detail">🏪 Shop: ${poster.shop}</div>
+          <div class="poster-detail">📍 Address: ${poster.address}</div>
+          <div class="poster-detail">🗂️ Category: ${poster.category}</div>
+          <div class="poster-detail">💰 Wallet: ₹${poster.wallet}</div>
+          <button class="btn btn-recharge" onclick="recharge(${index}, 100)">+₹100 Recharge</button>
+          <button class="btn btn-approve ${poster.approved ? 'btn-hidden' : ''}" onclick="approve(${index})">✅ Approve</button>
+          ${poster.approved ? `<a class="btn" href='https://wa.me/${poster.phone}' target='_blank'>📲 WhatsApp</a>` : ''}
         `;
 
-        if (!p.approved) {
-          const approveBtn = document.createElement('button');
-          approveBtn.className = 'btn';
-          approveBtn.innerText = 'Approve';
-          approveBtn.onclick = () => approvePoster(p.id);
-          inner.appendChild(approveBtn);
-        } else {
-          const waBtn = document.createElement('a');
-          waBtn.className = 'btn whatsapp-btn';
-          waBtn.href = `https://wa.me/${p.phone}`;
-          waBtn.innerText = '📲 WhatsApp';
-          waBtn.target = '_blank';
-          inner.appendChild(waBtn);
-        }
-
-        const rechargeBtn = document.createElement('button');
-        rechargeBtn.className = 'btn';
-        rechargeBtn.innerText = 'Recharge ₹100';
-        rechargeBtn.onclick = () => rechargeWallet(p.id);
-        inner.appendChild(rechargeBtn);
-
-        card.appendChild(inner);
-        list.appendChild(card);
+        postersDiv.appendChild(card);
       });
     }
-
-    function approvePoster(id) {
-      const p = posters.find(x => x.id === id);
-      if (p) p.approved = true;
-      renderPosters();
-    }
-
-    function rechargeWallet(id) {
-      const p = posters.find(x => x.id === id);
-      if (p) p.wallet += 100;
-      renderPosters();
-    }
-
-    renderPosters();
   </script>
 </body>
 </html>
