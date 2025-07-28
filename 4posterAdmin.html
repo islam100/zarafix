@@ -1,117 +1,135 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 Posters</title>
+  <title>📋 ZaraFix - Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f0f0;
+      background: #f8f9fa;
+      margin: 0;
       padding: 10px;
     }
-    .poster-card {
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .card {
       background: white;
-      padding: 12px;
-      margin: 10px auto;
-      max-width: 350px;
       border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 10px;
+      margin: 10px auto;
+      max-width: 300px;
+      text-align: center;
+      transition: transform 0.2s;
     }
-    h3 {
-      margin: 0;
-      font-size: 18px;
+
+    .card:hover {
+      transform: scale(1.02);
     }
-    .info {
-      font-size: 14px;
-      margin: 5px 0;
-    }
-    .wallet {
-      font-weight: bold;
-      color: green;
-      margin: 5px 0;
-    }
+
     .btn {
-      display: inline-block;
-      padding: 10px 14px;
-      margin: 5px 4px 0 0;
+      margin-top: 8px;
+      padding: 8px 14px;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4CAF50, #2e7d32);
+      color: white;
       font-weight: bold;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
       cursor: pointer;
-      transition: 0.3s;
-      box-shadow: 0 4px 0 #aaa;
     }
-    .whatsapp-btn {
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .whatsapp {
+      margin-top: 5px;
+      display: inline-block;
       background: #25D366;
       color: white;
+      padding: 5px 12px;
+      border-radius: 8px;
+      text-decoration: none;
     }
-    .recharge-btn {
-      background: #007BFF;
-      color: white;
+
+    .wallet {
+      font-weight: bold;
+      margin-top: 5px;
+      color: #333;
     }
-    .btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #888;
+
+    .small {
+      font-size: 14px;
+      color: gray;
     }
   </style>
 </head>
 <body>
-  <h2>📋 Posters</h2>
+  <h2>📋 Posters Panel</h2>
   <div id="posterList"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-    const firebaseConfig = {
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const app = firebase.initializeApp({
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "225660763398",
-      appId: "1:225660763398:web:94dcf0d9a53d77a7c21b68"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const posterList = document.getElementById('posterList');
-    const postersRef = ref(db, 'posters');
-
-    onValue(postersRef, (snapshot) => {
-      const posters = snapshot.val();
-      posterList.innerHTML = '';
-
-      for (const uid in posters) {
-        const p = posters[uid];
-        const card = document.createElement('div');
-        card.className = 'poster-card';
-        card.innerHTML = `
-          <h3>${p.name || '❓ Unknown'}</h3>
-          <div class="info">Shop: ${p.shop || 'N/A'}</div>
-          <div class="info">Category: ${p.category || 'N/A'}</div>
-          <div class="info">Address: ${p.address || 'N/A'}</div>
-          <div class="wallet">Wallet: ₹${p.wallet || 0}</div>
-          <button class="btn whatsapp-btn" onclick="window.open('https://wa.me/${p.whatsapp}', '_blank')">📲 WhatsApp</button>
-          <button class="btn recharge-btn" onclick="recharge('${uid}')">Recharge ₹100</button>
-        `;
-        posterList.appendChild(card);
-      }
+      messagingSenderId: "361363993899",
+      appId: "1:361363993899:web:702cb65db7d1c4e32134d6"
     });
 
-    window.recharge = function(uid) {
-      const rechargeRef = ref(db, 'recharge/' + uid);
-      const data = {
-        amount: 100,
-        screenshot: "https://i.ibb.co/sample.png",
-        timestamp: Date.now(),
+    const db = firebase.database();
+    const posterList = document.getElementById('posterList');
+
+    function loadPosters() {
+      db.ref('posters').once('value', snapshot => {
+        posterList.innerHTML = "";
+        snapshot.forEach(child => {
+          const id = child.key;
+          const data = child.val();
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div><b>${data.name}</b></div>
+            <div class="small">Shop: ${data.shop || "N/A"}</div>
+            <div class="small">Category: ${data.category || "N/A"}</div>
+            <div class="wallet">Wallet: ₹${data.wallet || 0}</div>
+            <a class="whatsapp" href="https://wa.me/${data.whatsapp}" target="_blank">📲 WhatsApp</a><br>
+            <button class="btn" onclick="recharge('${id}', ${data.wallet || 0})">Recharge ₹100</button>
+          `;
+          posterList.appendChild(card);
+        });
+      });
+    }
+
+    function recharge(id, currentWallet) {
+      const amount = 100;
+      const timestamp = Date.now();
+      const rechargeData = {
+        amount: amount,
+        timestamp: timestamp,
         status: "pending"
       };
-      update(rechargeRef, data).then(() => {
-        alert("Recharge request sent!");
-      });
-    };
+
+      db.ref("recharge/" + id).set(rechargeData)
+        .then(() => {
+          alert("Recharge request sent!");
+        })
+        .catch(error => {
+          alert("Error: " + error.message);
+        });
+    }
+
+    loadPosters();
   </script>
 </body>
 </html>
