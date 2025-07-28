@@ -1,106 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Worker Cards</title>
+  <title>ZaraFix - Approved Posters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
     .card {
-      background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-left: 6px solid green;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      max-width: 300px;
+      background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 350px;
     }
-    .approved {
-      animation: blink 1s infinite;
-      border-color: gold;
-    }
-    @keyframes blink {
-      50% { border-color: yellow; }
-    }
-    button {
-      padding: 6px 12px;
-      border: none;
-      background: green;
-      color: white;
-      border-radius: 4px;
+    .btn {
+      background: #28a745; color: white; border: none;
+      padding: 8px 12px; border-radius: 6px; margin: 5px 5px 0 0;
       cursor: pointer;
-      margin-right: 8px;
     }
+    .btn.whatsapp { background: #25D366; }
+    .wallet { font-weight: bold; color: #333; margin-top: 8px; }
   </style>
 </head>
 <body>
 
-<div id="cardContainer"></div>
+  <h2>✅ Approved Posters</h2>
+  <div id="posterList"></div>
 
-<!-- Firebase CDN -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-    authDomain: "zara-fix.firebaseapp.com",
-    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-    projectId: "zara-fix",
-    storageBucket: "zara-fix.appspot.com",
-    messagingSenderId: "305380405847",
-    appId: "1:305380405847:web:b50ea5ad3e2dc7e1dc65f5"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
 
-  const cardContainer = document.getElementById('cardContainer');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const posterList = document.getElementById("posterList");
 
-  function renderCard(uid, worker) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    if (worker.status === 'approved') card.classList.add('approved');
+    onValue(ref(db, 'posters'), snapshot => {
+      posterList.innerHTML = "";
+      const data = snapshot.val();
+      if (!data) return;
 
-    const walletAmount = worker.wallet || 0;
+      Object.entries(data).forEach(([uid, poster]) => {
+        if (poster.status !== "approved") return;
 
-    card.innerHTML = `
-      <div>🧑‍🔧 <strong>${worker.name}</strong></div>
-      <div>🏪 Shop: ${worker.shop || 'N/A'}</div>
-      <div>🔧 Category: ${worker.category || 'N/A'}</div>
-      <div>📍 Address: ${worker.address || 'N/A'}</div>
-      <div>📱 Contact: ${worker.contact || 'N/A'}</div>
-      <div>💼 Status: ${worker.status || 'N/A'}</div>
-      <div>💰 Wallet: ₹<span id="wallet-${uid}">${walletAmount}</span></div>
-      <br>
-      ${worker.status === 'approved' ? `
-        <button onclick="recharge('${uid}')">Recharge ₹100</button>
-        <a href="https://wa.me/${worker.contact}" target="_blank">
-          <button style="background: #25D366;">WhatsApp</button>
-        </a>
-      ` : ''}
-    `;
-    cardContainer.appendChild(card);
-  }
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          🧑‍🔧 Name: ${poster.name || "N/A"}<br>
+          🔧 Category: ${poster.category || "N/A"}<br><br>
+          📍 Address: ${poster.address || "N/A"}<br>
+          🏪 Shop: ${poster.shop || "N/A"}<br>
+          📱 Contact: ${poster.contact || "N/A"}<br><br>
+          <span class="wallet">Wallet: ₹${poster.wallet || 0}</span><br>
+          <button class="btn rechargeBtn">Recharge ₹100</button>
+          <a class="btn whatsapp" href="https://wa.me/${poster.contact || ''}" target="_blank">WhatsApp</a>
+        `;
 
-  function recharge(uid) {
-    const walletSpan = document.getElementById('wallet-' + uid);
-    const current = parseInt(walletSpan.innerText);
-    const updated = current + 100;
+        // Recharge Button functionality
+        card.querySelector(".rechargeBtn").addEventListener("click", () => {
+          const currentWallet = poster.wallet || 0;
+          const newAmount = currentWallet + 100;
 
-    db.ref('requests/' + uid).update({ wallet: updated }).then(() => {
-      walletSpan.innerText = updated;
-      alert("Recharge successful!");
-    }).catch(err => {
-      alert("Recharge failed: " + err.message);
+          update(ref(db, `posters/${uid}`), { wallet: newAmount }).then(() => {
+            card.querySelector(".wallet").innerText = `Wallet: ₹${newAmount}`;
+            alert("Recharge successful: ₹100 added!");
+          }).catch(err => {
+            alert("Recharge failed: " + err.message);
+          });
+        });
+
+        posterList.appendChild(card);
+      });
     });
-  }
-
-  db.ref('requests').once('value').then(snapshot => {
-    cardContainer.innerHTML = '';
-    snapshot.forEach(child => {
-      renderCard(child.key, child.val());
-    });
-  });
-</script>
+  </script>
 
 </body>
 </html>
