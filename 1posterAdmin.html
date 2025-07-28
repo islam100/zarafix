@@ -2,8 +2,10 @@
 <html>
 <head>
   <title>Service Requests</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       font-family: sans-serif;
@@ -13,34 +15,24 @@
     .card {
       background: white;
       padding: 15px;
+      margin: 10px 0;
       border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-      margin-bottom: 15px;
-      max-width: 350px;
-    }
-    .card p {
-      margin: 5px 0;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
     .btn {
-      padding: 8px 12px;
-      margin-top: 10px;
+      padding: 6px 12px;
+      background: green;
+      color: white;
       border: none;
       border-radius: 5px;
+      margin-top: 5px;
       cursor: pointer;
-      color: white;
-    }
-    .approve-btn {
-      background: green;
-    }
-    .whatsapp-btn {
-      background: #25D366;
     }
   </style>
 </head>
 <body>
-
   <h2>📋 Service Requests</h2>
-  <div id="requestsContainer"></div>
+  <div id="requestList"></div>
 
   <script>
     const firebaseConfig = {
@@ -49,81 +41,73 @@
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcdef123456"
+      messagingSenderId: "197493108430",
+      appId: "1:197493108430:web:234132ba9b52e4a9b5d2cc"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const requestsContainer = document.getElementById('requestsContainer');
+    const requestList = document.getElementById("requestList");
 
-    async function loadRequests() {
-      const requestsSnap = await db.ref("requests").once("value");
-      const postersSnap = await db.ref("posters").once("value");
-      const posters = postersSnap.val() || {};
+    db.ref("requests").once("value", snapshot => {
+      const requests = snapshot.val();
 
-      requestsContainer.innerHTML = "";
+      for (let userId in requests) {
+        for (let reqId in requests[userId]) {
+          const request = requests[userId][reqId];
+          const acceptedBy = request.acceptedBy || {};
+          let posterUid = Object.keys(acceptedBy)[0];
+          
+          if (posterUid) {
+            db.ref(`posters/${posterUid}`).once("value", posterSnap => {
+              const poster = posterSnap.val() || {};
 
-      const requests = requestsSnap.val();
-      for (const userId in requests) {
-        for (const reqId in requests[userId]) {
-          const req = requests[userId][reqId];
+              const name = request.name || "N/A";
+              const category = request.category || "N/A";
+              const address = request.address || "N/A";
+              const status = request.status || "N/A";
+              const whatsapp = acceptedBy[posterUid]?.whatsapp || poster.whatsapp || "N/A";
+              const shop = poster.shop || "N/A";
 
-          // Get approver ID if approved
-          const approverId = req.acceptedBy ? Object.keys(req.acceptedBy)[0] : null;
-          const poster = approverId && posters[approverId] ? posters[approverId] : null;
+              const card = document.createElement("div");
+              card.className = "card";
+              card.innerHTML = `
+                🧑‍🔧 Name: ${name}<br>
+                🔧 Category: ${category}<br><br>
+                📍 Address: ${address}<br><br>
+                🏪 Shop: ${shop}<br><br>
+                📱 Contact: ${whatsapp}<br><br>
+                💼 Status: ${status}<br><br>
+              `;
 
-          const name = req.name || "N/A";
-          const category = req.category || "N/A";
-          const address = req.address || "N/A";
-          const shop = poster ? poster.shop : "N/A";
-          const contact = poster ? poster.whatsapp : "N/A";
-          const status = req.status || "pending";
+              if (status === "pending") {
+                const approveBtn = document.createElement("button");
+                approveBtn.className = "btn";
+                approveBtn.textContent = "Approve";
+                approveBtn.onclick = () => {
+                  const updates = {};
+                  updates[`requests/${userId}/${reqId}/status`] = "approved";
+                  db.ref().update(updates);
+                  alert("Approved!");
+                  location.reload();
+                };
+                card.appendChild(approveBtn);
+              } else {
+                const waBtn = document.createElement("a");
+                waBtn.href = `https://wa.me/${whatsapp}`;
+                waBtn.textContent = "WhatsApp";
+                waBtn.className = "btn";
+                waBtn.target = "_blank";
+                card.appendChild(waBtn);
+              }
 
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            🧑‍🔧 <b>Name:</b> ${name}<br>
-            🔧 <b>Category:</b> ${category}<br><br>
-            📍 <b>Address:</b> ${address}<br><br>
-            🏪 <b>Shop:</b> ${shop}<br><br>
-            📱 <b>Contact:</b> ${contact}<br><br>
-            💼 <b>Status:</b> ${status}<br>
-          `;
-
-          if (status === "pending") {
-            const approveBtn = document.createElement("button");
-            approveBtn.className = "btn approve-btn";
-            approveBtn.innerText = "Approve";
-            approveBtn.onclick = async () => {
-              const adminId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // example admin
-              const time = Date.now();
-              await db.ref(`requests/${userId}/${reqId}/acceptedBy/${adminId}`).set({
-                name: poster.name || "Admin",
-                whatsapp: poster.whatsapp || "",
-                timestamp: time
-              });
-              await db.ref(`requests/${userId}/${reqId}/status`).set("approved");
-              loadRequests();
-            };
-            card.appendChild(approveBtn);
+              requestList.appendChild(card);
+            });
           }
-
-          if (status === "approved" && contact !== "N/A") {
-            const whatsappBtn = document.createElement("a");
-            whatsappBtn.href = `https://wa.me/${contact}`;
-            whatsappBtn.target = "_blank";
-            whatsappBtn.innerHTML = `<button class="btn whatsapp-btn">WhatsApp</button>`;
-            card.appendChild(whatsappBtn);
-          }
-
-          requestsContainer.appendChild(card);
         }
       }
-    }
-
-    loadRequests();
+    });
   </script>
 </body>
 </html>
