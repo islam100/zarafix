@@ -1,66 +1,151 @@
-<div id="posterCards"></div>
-
-<script>
-const userId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // current logged-in user
-const db = firebase.database();
-
-function renderPosterCard(requestData, acceptedInfo, posterInfo) {
-  const { name, address = "No address", category, whatsapp, status } = requestData;
-  const wallet = posterInfo?.wallet || 0;
-  const shop = posterInfo?.shop || "No shop";
-
-  const isApproved = acceptedInfo && acceptedInfo[userId];
-
-  const card = document.createElement('div');
-  card.style = `
-    border: 2px solid #ccc;
-    border-left: 8px solid ${isApproved ? 'yellow' : '#ccc'};
-    border-radius: 12px;
-    padding: 16px;
-    margin: 12px 0;
-    background: #fff;
-    box-shadow: 2px 2px 6px #ddd;
-  `;
-
-  card.innerHTML = `
-    <h3>📋 ${name}</h3>
-    <p><b>Category:</b> ${category}</p>
-    <p><b>Shop:</b> ${shop}</p>
-    <p><b>Address:</b> ${address}</p>
-    <p><b>Wallet:</b> ₹${wallet}</p>
-    ${isApproved
-      ? `<a href="https://wa.me/${whatsapp}" target="_blank">
-           <button style="padding: 10px 16px; background: green; color: #fff; border-radius: 8px;">📲 WhatsApp</button>
-         </a>`
-      : `<button onclick="approveRequest('${name}')" style="padding: 10px 16px; background: blue; color: #fff; border-radius: 8px;">✅ Approve</button>`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📋 Posters</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; background: #f8f8f8; margin: 0; padding: 20px; }
+    .card {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      position: relative;
     }
-  `;
+    .led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+    }
+    .led.green { background: green; }
+    .led.yellow {
+      background: yellow;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+    .btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .approve-btn { background: #2196F3; color: white; }
+    .whatsapp-btn { background: #25D366; color: white; }
+  </style>
+</head>
+<body>
 
-  document.getElementById("posterCards").appendChild(card);
-}
+<h2>📋 Posters</h2>
+<div id="postersContainer"></div>
 
-function loadPosters() {
-  db.ref("requests").once("value", (snap) => {
-    const requests = snap.val();
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    get,
+    set,
+    onValue
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    for (let uid in requests) {
-      for (let reqId in requests[uid]) {
-        const req = requests[uid][reqId];
-        const accepted = req.acceptedBy || {};
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "291808444596",
+    appId: "1:291808444596:web:2d57e3d4b88e63fa49d7d2"
+  };
 
-        db.ref(`posters/${userId}`).once("value", (posterSnap) => {
-          const posterData = posterSnap.val();
-          renderPosterCard(req, accepted, posterData);
-        });
-      }
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  const postersContainer = document.getElementById("postersContainer");
+
+  function createPosterCard(uid, data, acceptedRequests) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const isApproved = acceptedRequests.has(uid);
+
+    const led = document.createElement("div");
+    led.className = "led " + (isApproved ? "yellow" : "green");
+    card.appendChild(led);
+
+    card.innerHTML += `<strong>🧑‍🔧 ${data.name}</strong><br>
+      🏪 Shop: ${data.shop || "N/A"}<br>
+      🛠️ Category: ${data.category || "N/A"}<br>
+      📍 Address: ${acceptedRequests.get(uid)?.address || "N/A"}<br>
+      💰 Wallet: ₹${data.wallet || 0}<br>`;
+
+    if (!isApproved) {
+      const approveBtn = document.createElement("button");
+      approveBtn.className = "btn approve-btn";
+      approveBtn.textContent = "Approve";
+      approveBtn.onclick = () => {
+        alert("Approved (simulate)");
+        // Here, you'd write to Firebase to mark it approved
+        approveBtn.remove();
+      };
+      card.appendChild(approveBtn);
+    } else {
+      const waBtn = document.createElement("a");
+      waBtn.className = "btn whatsapp-btn";
+      waBtn.href = `https://wa.me/${data.whatsapp}`;
+      waBtn.textContent = "📲 WhatsApp";
+      waBtn.target = "_blank";
+      card.appendChild(waBtn);
+    }
+
+    postersContainer.appendChild(card);
+  }
+
+  async function fetchData() {
+    const postersSnap = await get(ref(db, "posters"));
+    const requestsSnap = await get(ref(db, "requests"));
+    const posters = postersSnap.val() || {};
+    const requests = requestsSnap.val() || {};
+
+    const approvedMap = new Map();
+
+    Object.values(requests).forEach(user =>
+      Object.values(user).forEach(req => {
+        if (req.acceptedBy) {
+          Object.entries(req.acceptedBy).forEach(([uid, val]) => {
+            approvedMap.set(uid, {
+              address: req.address || "N/A",
+              requestCategory: req.category || "N/A"
+            });
+          });
+        }
+      })
+    );
+
+    postersContainer.innerHTML = "";
+    Object.entries(posters).forEach(([uid, data]) => {
+      createPosterCard(uid, data, approvedMap);
+    });
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      fetchData();
+    } else {
+      alert("Login required");
     }
   });
-}
-
-function approveRequest(name) {
-  alert("Approving: " + name);
-  // approval logic here (Firebase update)
-}
-
-loadPosters();
 </script>
+
+</body>
+</html>
