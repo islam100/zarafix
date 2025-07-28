@@ -1,142 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>📋 Zara Posters</title>
+  <title>Poster Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f0f0;
+      background: #e0e0e0;
+      margin: 0;
       padding: 10px;
     }
-
     .poster-card {
-      background: #fff;
+      background: white;
       border-radius: 12px;
-      box-shadow: 0 0 8px #ccc;
-      padding: 12px;
-      margin: 10px auto;
-      max-width: 350px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 10px;
+      margin-bottom: 15px;
+      transition: border 0.3s ease-in-out;
+      border: 3px solid transparent;
       position: relative;
+    }
+    .poster-card.approved {
+      border: 3px solid yellow;
+      animation: blinkBorder 1s infinite;
+    }
+    @keyframes blinkBorder {
+      0% { border-color: yellow; }
+      50% { border-color: transparent; }
+      100% { border-color: yellow; }
+    }
+    .poster-inner {
+      border-radius: 8px;
+      padding: 5px;
+      background: #f9f9f9;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 14px;
+      background: linear-gradient(145deg, #f0f0f0, #dcdcdc);
+      border-radius: 10px;
+      box-shadow: 5px 5px 10px #bebebe, -5px -5px 10px #ffffff;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
       transition: 0.3s;
     }
-
-    .poster-card.approved {
-      box-shadow: 0 0 15px 4px yellow;
-      animation: blink 1s infinite;
+    .btn:hover {
+      transform: scale(1.05);
     }
-
-    @keyframes blink {
-      0% { box-shadow: 0 0 10px yellow; }
-      50% { box-shadow: 0 0 20px yellow; }
-      100% { box-shadow: 0 0 10px yellow; }
-    }
-
-    .poster-card h3 {
-      margin: 0 0 5px;
-      font-size: 18px;
-      color: #333;
-    }
-
-    .poster-card p {
-      margin: 4px 0;
-      font-size: 14px;
-    }
-
-    button {
-      padding: 8px 12px;
-      margin: 5px 5px 0 0;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(to bottom, #4CAF50, #388E3C);
+    .whatsapp-btn {
+      background-color: #25D366;
       color: white;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 4px #2e7d32;
-      transition: all 0.3s ease;
     }
-
-    button:hover {
-      background: linear-gradient(to bottom, #45A049, #2E7D32);
+    .category {
+      font-size: 0.9em;
+      color: #666;
     }
-
-    button:active {
-      box-shadow: 0 2px #1B5E20;
-      transform: translateY(2px);
+    @media screen and (max-width: 600px) {
+      .poster-card {
+        padding: 8px;
+      }
+      .btn {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
   <h2>📋 Posters</h2>
-  <div id="posterContainer"></div>
+  <div id="poster-list"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  <script type="module">
-    // ✅ Firebase Config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DB_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  <script>
+    const posters = [
+      {
+        id: 1,
+        name: "Rahul",
+        address: "Sopara",
+        wallet: 120,
+        approved: true,
+        phone: "917378342192",
+        category: "Electronics",
+        shop: "Rahul Electronics"
+      },
+      {
+        id: 2,
+        name: "Fatima",
+        address: "Nala",
+        wallet: 80,
+        approved: false,
+        phone: "917378342192",
+        category: "Grocery",
+        shop: "Fatima Store"
+      }
+    ];
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    function renderPosters() {
+      const list = document.getElementById('poster-list');
+      list.innerHTML = '';
+      posters.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'poster-card' + (p.approved ? ' approved' : '');
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const posterRef = ref(db, "posters/");
+        const inner = document.createElement('div');
+        inner.className = 'poster-inner';
 
-    const container = document.getElementById("posterContainer");
-
-    onValue(posterRef, (snapshot) => {
-      container.innerHTML = '';
-      const data = snapshot.val();
-      for (let key in data) {
-        const poster = data[key];
-        const card = document.createElement("div");
-        card.className = "poster-card";
-        if (poster.status === "approved") card.classList.add("approved");
-
-        card.innerHTML = `
-          <h3>${poster.name || 'No Name'}</h3>
-          <p><strong>Shop:</strong> ${poster.shop || 'N/A'}</p>
-          <p><strong>Category:</strong> ${poster.category || 'N/A'}</p>
-          <p><strong>Address:</strong> ${poster.address || 'N/A'}</p>
-          <p><strong>Wallet:</strong> ₹${poster.wallet || 0}</p>
+        inner.innerHTML = `
+          <b>${p.name}</b> <br>
+          Shop: ${p.shop}<br>
+          Address: ${p.address} <br>
+          Category: <span class="category">${p.category}</span><br>
+          Wallet: ₹${p.wallet}<br>
         `;
 
-        if (poster.status !== "approved") {
-          const approveBtn = document.createElement("button");
-          approveBtn.textContent = "✅ Approve";
-          approveBtn.onclick = () => {
-            update(ref(db, "posters/" + key), { status: "approved" });
-          };
-          card.appendChild(approveBtn);
+        if (!p.approved) {
+          const approveBtn = document.createElement('button');
+          approveBtn.className = 'btn';
+          approveBtn.innerText = 'Approve';
+          approveBtn.onclick = () => approvePoster(p.id);
+          inner.appendChild(approveBtn);
         } else {
-          const whatsappBtn = document.createElement("button");
-          whatsappBtn.textContent = "📲 WhatsApp";
-          whatsappBtn.onclick = () => {
-            window.open(`https://wa.me/${poster.phone || ''}`, "_blank");
-          };
-          card.appendChild(whatsappBtn);
+          const waBtn = document.createElement('a');
+          waBtn.className = 'btn whatsapp-btn';
+          waBtn.href = `https://wa.me/${p.phone}`;
+          waBtn.innerText = '📲 WhatsApp';
+          waBtn.target = '_blank';
+          inner.appendChild(waBtn);
         }
 
-        const rechargeBtn = document.createElement("button");
-        rechargeBtn.textContent = "💰 Recharge ₹100";
-        rechargeBtn.onclick = () => {
-          const newAmount = (poster.wallet || 0) + 100;
-          update(ref(db, "posters/" + key), { wallet: newAmount });
-        };
-        card.appendChild(rechargeBtn);
+        const rechargeBtn = document.createElement('button');
+        rechargeBtn.className = 'btn';
+        rechargeBtn.innerText = 'Recharge ₹100';
+        rechargeBtn.onclick = () => rechargeWallet(p.id);
+        inner.appendChild(rechargeBtn);
 
-        container.appendChild(card);
-      }
-    });
+        card.appendChild(inner);
+        list.appendChild(card);
+      });
+    }
+
+    function approvePoster(id) {
+      const p = posters.find(x => x.id === id);
+      if (p) p.approved = true;
+      renderPosters();
+    }
+
+    function rechargeWallet(id) {
+      const p = posters.find(x => x.id === id);
+      if (p) p.wallet += 100;
+      renderPosters();
+    }
+
+    renderPosters();
   </script>
 </body>
 </html>
