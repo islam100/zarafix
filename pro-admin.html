@@ -1,124 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Poster Panel</title>
+  <title>📋 Poster Cards</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      margin: 20px;
+      font-family: sans-serif;
+      background: #f3f3f3;
+      padding: 10px;
     }
-    .poster-card {
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
+    .card {
+      background: #fff;
       margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 2px 2px 8px #aaa;
       position: relative;
     }
     .led {
-      width: 15px;
-      height: 15px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
+      background: gray;
       position: absolute;
-      top: 20px;
-      right: 20px;
-    }
-    .led.green { background-color: green; }
-    .led.blink {
-      background-color: yellow;
+      top: 10px;
+      right: 10px;
       animation: blink 1s infinite;
     }
+    .led.approved {
+      background: yellow;
+    }
     @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.2; }
-      100% { opacity: 1; }
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
     }
-    .btn {
-      margin: 10px 5px 0 0;
-      padding: 10px 14px;
+    button {
+      padding: 6px 12px;
+      margin-top: 10px;
       border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      border-radius: 6px;
+      background-color: #4caf50;
+      color: white;
       font-weight: bold;
+      cursor: pointer;
     }
-    .approve-btn { background: #28a745; color: white; }
-    .whatsapp-btn { background: #25d366; color: white; }
+    button.whatsapp {
+      background-color: #25D366;
+    }
   </style>
 </head>
 <body>
-
   <h2>📋 Posters</h2>
   <div id="posterList"></div>
 
   <script>
+    // 🔐 Firebase Config
     const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-
-
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "929249947945",
+      appId: "1:929249947945:web:89d67dba1b1982ebd4b1cf"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function renderPoster(id, data) {
-      const card = document.createElement("div");
-      card.className = "poster-card";
+    const posterList = document.getElementById('posterList');
 
-      // LED color
-      const led = document.createElement("div");
-      led.className = "led";
-      if (data.approved) {
-        led.classList.add("blink");
-      } else {
-        led.classList.add("green");
-      }
-      card.appendChild(led);
+    function loadPosters() {
+      db.ref("posters").once("value", snapshot => {
+        posterList.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const key = child.key;
+          const name = data.name || "No Name";
+          const shop = data.shop || "No Shop";
+          const address = data.address || "No Address";
+          const whatsapp = data.whatsapp || "";
+          const wallet = data.wallet || 0;
 
-      // Details
-      card.innerHTML += `
-        <h3>${data.shopName}</h3>
-        <p><strong>Address:</strong> ${data.address}</p>
-        <p><strong>Wallet:</strong> ₹${data.wallet}</p>
-      `;
+          const card = document.createElement("div");
+          card.className = "card";
 
-      // Buttons
-      if (!data.approved) {
-        const approveBtn = document.createElement("button");
-        approveBtn.innerText = "✅ Approve";
-        approveBtn.className = "btn approve-btn";
-        approveBtn.onclick = () => {
-          db.ref("posters/" + id).update({ approved: true });
-        };
-        card.appendChild(approveBtn);
-      } else {
-        const whatsappBtn = document.createElement("button");
-        whatsappBtn.innerText = "📲 WhatsApp";
-        whatsappBtn.className = "btn whatsapp-btn";
-        whatsappBtn.onclick = () => {
-          const msg = `आपका पोस्ट अप्रूव हो गया है: ${data.shopName}`;
-          window.open(`https://wa.me/${data.phone}?text=${encodeURIComponent(msg)}`, "_blank");
-        };
-        card.appendChild(whatsappBtn);
-      }
+          const led = document.createElement("div");
+          led.className = "led";
 
-      document.getElementById("posterList").appendChild(card);
+          const content = `
+            <h3>${name}</h3>
+            <p><b>Shop:</b> ${shop}</p>
+            <p><b>Address:</b> ${address}</p>
+            <p><b>Wallet:</b> ₹${wallet}</p>
+          `;
+
+          card.innerHTML = content;
+
+          // 🔍 Check if approved
+          db.ref("approved/" + key).once("value", snap => {
+            const isApproved = snap.exists();
+
+            if (isApproved) {
+              led.classList.add("approved");
+
+              const whatsappBtn = document.createElement("button");
+              whatsappBtn.textContent = "📲 WhatsApp";
+              whatsappBtn.className = "whatsapp";
+              whatsappBtn.onclick = () => {
+                if (whatsapp) {
+                  window.open(`https://wa.me/91${whatsapp}`, "_blank");
+                } else {
+                  alert("WhatsApp number not available");
+                }
+              };
+              card.appendChild(whatsappBtn);
+            } else {
+              const approveBtn = document.createElement("button");
+              approveBtn.textContent = "✅ Approve";
+              approveBtn.onclick = () => {
+                db.ref("approved/" + key).set(true).then(() => {
+                  alert("Approved!");
+                  loadPosters();
+                });
+              };
+              card.appendChild(approveBtn);
+            }
+            card.appendChild(led);
+          });
+
+          posterList.appendChild(card);
+        });
+      });
     }
 
-    db.ref("posters").on("value", (snapshot) => {
-      const container = document.getElementById("posterList");
-      container.innerHTML = "";
-      snapshot.forEach(child => {
-        renderPoster(child.key, child.val());
-      });
-    });
+    loadPosters();
   </script>
 </body>
 </html>
