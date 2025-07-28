@@ -1,144 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🛠️ ZaraFix - Posters</title>
+  <title>Poster View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f3f3f3;
       margin: 0;
-      padding: 20px;
+      font-family: sans-serif;
+      background: #f9f9f9;
     }
-    .poster-card {
-      width: 320px;
-      margin: 10px auto;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    .card {
+      border: 3px solid #ccc;
+      border-radius: 12px;
       padding: 10px;
+      margin: 10px;
+      width: 280px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       position: relative;
-      transition: border 0.3s ease;
     }
-    .poster-card.approved {
-      animation: blink 1s infinite;
+    .blink {
+      animation: blinkBorder 1s infinite;
       border: 3px solid yellow;
     }
-    @keyframes blink {
+    @keyframes blinkBorder {
       0% { border-color: yellow; }
-      50% { border-color: #fff; }
+      50% { border-color: transparent; }
       100% { border-color: yellow; }
     }
-    .poster-header {
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .poster-detail {
-      margin: 5px 0;
-      font-size: 14px;
-    }
     .btn {
-      display: inline-block;
-      margin: 5px 3px;
-      padding: 6px 12px;
-      font-size: 14px;
-      font-weight: bold;
+      padding: 5px 10px;
+      margin: 5px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
       cursor: pointer;
-      background: linear-gradient(145deg, #ffe600, #fffaa0);
-      box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
-    .btn-recharge {
-      background: linear-gradient(145deg, #4CAF50, #81C784);
-      color: white;
-    }
-    .btn-approve {
-      background: linear-gradient(145deg, #2196F3, #64B5F6);
-      color: white;
-    }
-    .btn-hidden {
-      display: none;
+    .btn:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
+  <h2 style="text-align:center;">🔧 Poster Panel</h2>
+  <div id="posterContainer"></div>
 
-  <div id="posters"></div>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script>
-    const posters = [
-      {
-        name: "Sameer Khan",
-        address: "Sopara",
-        wallet: 194,
-        shop: "Star Mobile",
-        category: "Electronics",
-        approved: true,
-        phone: "917378342192"
-      },
-      {
-        name: "Amit Verma",
-        address: "Vasai",
-        wallet: 97,
-        shop: "Tech Point",
-        category: "Repair",
-        approved: false,
-        phone: "918273645501"
-      }
-    ];
+    const firebaseConfig = {
+      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+      authDomain: "zara-fix.firebaseapp.com",
+      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+      projectId: "zara-fix",
+      storageBucket: "zara-fix.appspot.com",
+      messagingSenderId: "139394395417",
+      appId: "1:139394395417:web:e5c9d0d3b20c5d6a1e3aa1"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-    const postersDiv = document.getElementById("posters");
+    const db = firebase.database();
 
-    posters.forEach((poster, index) => {
-      const card = document.createElement("div");
-      card.className = `poster-card ${poster.approved ? 'approved' : ''}`;
+    function loadPosters() {
+      db.ref('requests').once('value', snap => {
+        const container = document.getElementById('posterContainer');
+        container.innerHTML = '';
 
-      card.innerHTML = `
-        <div class="poster-header">📋 ${poster.name}</div>
-        <div class="poster-detail">🏪 Shop: ${poster.shop}</div>
-        <div class="poster-detail">📍 Address: ${poster.address}</div>
-        <div class="poster-detail">🗂️ Category: ${poster.category}</div>
-        <div class="poster-detail">💰 Wallet: ₹${poster.wallet}</div>
-        <button class="btn btn-recharge" onclick="recharge(${index}, 100)">+₹100 Recharge</button>
-        <button class="btn btn-approve ${poster.approved ? 'btn-hidden' : ''}" onclick="approve(${index})">✅ Approve</button>
-        ${poster.approved ? `<a class="btn" href='https://wa.me/${poster.phone}' target='_blank'>📲 WhatsApp</a>` : ''}
-      `;
+        Object.entries(snap.val() || {}).forEach(([userId, userRequests]) => {
+          Object.entries(userRequests).forEach(([reqId, req]) => {
+            const accepted = req.acceptedBy && req.acceptedBy["wjbEIAEF5jWgJKb2LlfWoIv4EqO2"];
+            const isBlink = accepted ? 'blink' : '';
 
-      postersDiv.appendChild(card);
-    });
-
-    function recharge(index, amount) {
-      posters[index].wallet += amount;
-      updateUI();
-    }
-
-    function approve(index) {
-      posters[index].approved = true;
-      updateUI();
-    }
-
-    function updateUI() {
-      postersDiv.innerHTML = "";
-      posters.forEach((poster, index) => {
-        const card = document.createElement("div");
-        card.className = `poster-card ${poster.approved ? 'approved' : ''}`;
-
-        card.innerHTML = `
-          <div class="poster-header">📋 ${poster.name}</div>
-          <div class="poster-detail">🏪 Shop: ${poster.shop}</div>
-          <div class="poster-detail">📍 Address: ${poster.address}</div>
-          <div class="poster-detail">🗂️ Category: ${poster.category}</div>
-          <div class="poster-detail">💰 Wallet: ₹${poster.wallet}</div>
-          <button class="btn btn-recharge" onclick="recharge(${index}, 100)">+₹100 Recharge</button>
-          <button class="btn btn-approve ${poster.approved ? 'btn-hidden' : ''}" onclick="approve(${index})">✅ Approve</button>
-          ${poster.approved ? `<a class="btn" href='https://wa.me/${poster.phone}' target='_blank'>📲 WhatsApp</a>` : ''}
-        `;
-
-        postersDiv.appendChild(card);
+            const card = document.createElement('div');
+            card.className = `card ${isBlink}`;
+            card.innerHTML = `
+              <strong>🧑‍🔧 Name:</strong> ${req.name}<br>
+              <strong>🔧 Category:</strong> ${req.category}<br>
+              <strong>📍 Address:</strong> ${req.address}<br>
+              <strong>📱 Contact:</strong> ${req.whatsapp}<br>
+              <strong>🏪 Shop:</strong> FixIt Shop<br>
+              <strong>💼 Status:</strong> ${req.status}<br><br>
+              <button class="btn" onclick="approve('${userId}','${reqId}')">Approve</button>
+              <button class="btn" onclick="whatsapp('${req.whatsapp}')">WhatsApp</button>
+            `;
+            container.appendChild(card);
+          });
+        });
       });
     }
+
+    function approve(userId, reqId) {
+      const approvedData = {
+        name: "Zara Poster",
+        whatsapp: "9876543210",
+        timestamp: Date.now()
+      };
+      db.ref(`requests/${userId}/${reqId}/acceptedBy/wjbEIAEF5jWgJKb2LlfWoIv4EqO2`).set(approvedData).then(() => {
+        db.ref(`requests/${userId}/${reqId}/status`).set('approved');
+        loadPosters();
+      });
+    }
+
+    function whatsapp(phone) {
+      window.open(`https://wa.me/${phone}`, '_blank');
+    }
+
+    window.onload = loadPosters;
   </script>
 </body>
 </html>
