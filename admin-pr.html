@@ -1,170 +1,43 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>🛠️ ZaraFix - Admin Provider Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    .card {
-      background: white;
-      margin: 10px auto;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      max-width: 500px;
-      position: relative;
-    }
-    button {
-      padding: 8px 14px;
-      margin: 5px 5px 0 0;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-    .approved-label {
-      color: green;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    .led-blink {
-      width: 12px; height: 12px;
-      background: green;
-      border-radius: 50%;
-      position: absolute;
-      top: 10px; right: 10px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0% { opacity: 0.2; }
-      50% { opacity: 1; }
-      100% { opacity: 0.2; }
-    }
-  </style>
-</head>
-<body>
-  <h2>🛠️ ZaraFix - Admin Dashboard</h2>
-  <div id="posterList">Loading...</div>
+// 🔐 Login with Google
+function login() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).catch(error => {
+    console.error("Login Error:", error);
+    alert("Login failed");
+  });
+}
 
-  <script>
-    // 🔐 Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-    firebase.initializeApp(firebaseConfig);
+// 🚪 Logout
+function logout() {
+  firebase.auth().signOut().then(() => {
+    alert("Logged out");
+    location.reload();
+  });
+}
 
-    // 🧠 Admin Check
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        const uid = user.uid;
-        firebase.database().ref(`admins/${uid}`).once("value")
-          .then(snapshot => {
-            if (snapshot.val() === true) {
-              loadPosters();
-            } else {
-              alert("Access Denied. Admins Only.");
-              window.location.href = "index.html";
-            }
-          });
-      } else {
-        alert("Please login first.");
-        window.location.href = "index.html";
-      }
-    });
+// 🔁 Show/Hide login/logout buttons
+firebase.auth().onAuthStateChanged(user => {
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-    // 📦 Load Posters
-    function loadPosters() {
-      const list = document.getElementById('posterList');
-      firebase.database().ref("posters").once("value", snapshot => {
-        list.innerHTML = "";
-        if (!snapshot.exists()) {
-          list.innerHTML = "<p>No posters found.</p>";
-          return;
+  if (user) {
+    // Logged in: hide login, show logout
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+
+    // Admin check (same logic as earlier)
+    firebase.database().ref(`admins/${user.uid}`).once("value")
+      .then(snapshot => {
+        if (snapshot.val() === true) {
+          loadPosters();
+        } else {
+          alert("Access Denied. Admins Only.");
+          window.location.href = "index.html";
         }
-
-        snapshot.forEach(child => {
-          const uid = child.key;
-          const poster = child.val();
-
-          const card = document.createElement("div");
-          card.className = "card";
-
-          if (!poster.approved) {
-            const led = document.createElement("div");
-            led.className = "led-blink";
-            card.appendChild(led);
-          }
-
-          card.innerHTML += `
-            <h3>👨‍🔧 ${poster.name || "Unnamed"}</h3>
-            <p><b>Shop:</b> ${poster.shop || "N/A"}</p>
-            <p><b>Category:</b> ${poster.category || "N/A"}</p>
-            <p><b>WhatsApp:</b> ${poster.whatsapp || "N/A"}</p>
-            <p><b>Wallet:</b> ₹${poster.wallet || 0}</p>
-            <p id="approvedLabel-${uid}" class="approved-label" style="display:${poster.approved ? 'block' : 'none'};">✔️ Approved</p>
-            <button id="approveBtn-${uid}" onclick="approvePoster('${uid}')" ${poster.approved ? 'disabled' : ''}>✅ Approve</button>
-            <button id="rechargeBtn-${uid}" onclick="rechargeWallet('${uid}')">💸 Recharge ₹100</button>
-          `;
-
-          list.appendChild(card);
-        });
       });
-    }
-
-    // ✅ Approve Poster
-    function approvePoster(uid) {
-      const btn = document.getElementById(`approveBtn-${uid}`);
-      btn.disabled = true;
-      btn.innerText = "Approving...";
-      firebase.database().ref(`posters/${uid}`).update({ approved: true }).then(() => {
-        btn.innerText = "Approved";
-        document.getElementById(`approvedLabel-${uid}`).style.display = "block";
-      });
-    }
-
-    // 💸 Recharge Wallet
-    function rechargeWallet(uid) {
-      const btn = document.getElementById(`rechargeBtn-${uid}`);
-      btn.disabled = true;
-      btn.innerHTML = "⏳ Recharging...";
-      
-      const userRef = firebase.database().ref(`posters/${uid}`);
-      userRef.once('value').then(snapshot => {
-        const currentWallet = snapshot.val().wallet || 0;
-        const newBalance = currentWallet + 100;
-
-        userRef.update({ wallet: newBalance }).then(() => {
-          btn.innerHTML = "✅ ₹100 Recharged";
-          setTimeout(() => {
-            btn.innerHTML = "💸 Recharge ₹100";
-            btn.disabled = false;
-          }, 2000);
-        });
-      });
-    }
-  </script>
-</body>
-</html>
+  } else {
+    // Not logged in: show login, hide logout
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+  }
+});
