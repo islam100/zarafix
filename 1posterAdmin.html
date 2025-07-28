@@ -1,38 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Poster View</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Poster Requests</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      margin: 0;
       font-family: sans-serif;
-      background: #f9f9f9;
+      background: #f8f8f8;
+      padding: 20px;
     }
     .card {
-      border: 3px solid #ccc;
-      border-radius: 12px;
-      padding: 10px;
-      margin: 10px;
+      background: white;
+      padding: 10px 15px;
+      margin: 10px auto;
+      border-radius: 10px;
+      box-shadow: 0 0 5px #ccc;
       width: 280px;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      position: relative;
-    }
-    .blink {
-      animation: blinkBorder 1s infinite;
-      border: 3px solid yellow;
-    }
-    @keyframes blinkBorder {
-      0% { border-color: yellow; }
-      50% { border-color: transparent; }
-      100% { border-color: yellow; }
     }
     .btn {
       padding: 5px 10px;
-      margin: 5px;
+      margin: 5px 3px 0 0;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
       background: #007bff;
       color: white;
       cursor: pointer;
@@ -40,74 +30,99 @@
     .btn:hover {
       background: #0056b3;
     }
+    .blink {
+      border: 2px dashed red;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { border-color: red; }
+      50% { border-color: transparent; }
+      100% { border-color: red; }
+    }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">🔧 Poster Panel</h2>
+
+  <h2>🛠️ Pending Service Requests</h2>
   <div id="posterContainer"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script>
+    // 🔧 Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
       authDomain: "zara-fix.firebaseapp.com",
       databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
       projectId: "zara-fix",
       storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "139394395417",
-      appId: "1:139394395417:web:e5c9d0d3b20c5d6a1e3aa1"
+      messagingSenderId: "388581306490",
+      appId: "1:388581306490:web:c9a6a1b179b49700f2c235"
     };
+
+    // ✅ Initialize
     firebase.initializeApp(firebaseConfig);
 
-    const db = firebase.database();
+    const adminUid = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // 👈 Your Admin UID
 
     function loadPosters() {
-      db.ref('requests').once('value', snap => {
-        const container = document.getElementById('posterContainer');
-        container.innerHTML = '';
+      const requestsRef = firebase.database().ref('requests');
+      const postersRef = firebase.database().ref('posters');
 
-        Object.entries(snap.val() || {}).forEach(([userId, userRequests]) => {
-          Object.entries(userRequests).forEach(([reqId, req]) => {
-            const accepted = req.acceptedBy && req.acceptedBy["wjbEIAEF5jWgJKb2LlfWoIv4EqO2"];
-            const isBlink = accepted ? 'blink' : '';
+      requestsRef.once('value').then(requestSnap => {
+        postersRef.once('value').then(posterSnap => {
+          const postersData = posterSnap.val() || {};
+          const requestsData = requestSnap.val() || {};
+          const container = document.getElementById('posterContainer');
+          container.innerHTML = '';
 
-            const card = document.createElement('div');
-            card.className = `card ${isBlink}`;
-            card.innerHTML = `
-              <strong>🧑‍🔧 Name:</strong> ${req.name}<br>
-              <strong>🔧 Category:</strong> ${req.category}<br>
-              <strong>📍 Address:</strong> ${req.address}<br>
-              <strong>📱 Contact:</strong> ${req.whatsapp}<br>
-              <strong>🏪 Shop:</strong> FixIt Shop<br>
-              <strong>💼 Status:</strong> ${req.status}<br><br>
-              <button class="btn" onclick="approve('${userId}','${reqId}')">Approve</button>
-              <button class="btn" onclick="whatsapp('${req.whatsapp}')">WhatsApp</button>
-            `;
-            container.appendChild(card);
+          Object.entries(requestsData).forEach(([userId, userRequests]) => {
+            Object.entries(userRequests).forEach(([reqId, req]) => {
+              const accepted = req.acceptedBy && req.acceptedBy[adminUid];
+              const isBlink = accepted ? 'blink' : '';
+
+              // Try to find posterId from acceptedBy (or fallback)
+              let posterId = Object.keys(postersData).find(pid => {
+                return postersData[pid].uid === userId;
+              }) || 'unknown';
+
+              const poster = postersData[posterId] || {};
+
+              const card = document.createElement('div');
+              card.className = `card ${isBlink}`;
+              card.innerHTML = `
+                <strong>🧑‍🔧 Name:</strong> ${req.name || 'N/A'}<br>
+                <strong>🔧 Category:</strong> ${req.category || 'N/A'}<br>
+                <strong>📍 Address:</strong> ${req.address || 'N/A'}<br>
+                <strong>📱 Contact:</strong> ${req.whatsapp || 'N/A'}<br>
+                <strong>🏪 Shop:</strong> ${poster.shop || 'Unknown Shop'}<br>
+                <strong>💼 Status:</strong> ${req.status || 'N/A'}<br><br>
+                <button class="btn" onclick="approve('${userId}','${reqId}')">Approve</button>
+                <button class="btn" onclick="whatsapp('${req.whatsapp}')">WhatsApp</button>
+              `;
+              container.appendChild(card);
+            });
           });
         });
       });
     }
 
     function approve(userId, reqId) {
-      const approvedData = {
-        name: "Zara Poster",
-        whatsapp: "9876543210",
-        timestamp: Date.now()
-      };
-      db.ref(`requests/${userId}/${reqId}/acceptedBy/wjbEIAEF5jWgJKb2LlfWoIv4EqO2`).set(approvedData).then(() => {
-        db.ref(`requests/${userId}/${reqId}/status`).set('approved');
+      const path = `requests/${userId}/${reqId}/acceptedBy/${adminUid}`;
+      firebase.database().ref(path).set(true).then(() => {
+        alert("✅ Approved successfully.");
         loadPosters();
       });
     }
 
-    function whatsapp(phone) {
-      window.open(`https://wa.me/${phone}`, '_blank');
+    function whatsapp(number) {
+      if (number) {
+        window.open(`https://wa.me/91${number}`, '_blank');
+      } else {
+        alert("📵 No WhatsApp number available.");
+      }
     }
 
     window.onload = loadPosters;
   </script>
+
 </body>
 </html>
