@@ -1,0 +1,66 @@
+<div id="posterCards"></div>
+
+<script>
+const userId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // current logged-in user
+const db = firebase.database();
+
+function renderPosterCard(requestData, acceptedInfo, posterInfo) {
+  const { name, address = "No address", category, whatsapp, status } = requestData;
+  const wallet = posterInfo?.wallet || 0;
+  const shop = posterInfo?.shop || "No shop";
+
+  const isApproved = acceptedInfo && acceptedInfo[userId];
+
+  const card = document.createElement('div');
+  card.style = `
+    border: 2px solid #ccc;
+    border-left: 8px solid ${isApproved ? 'yellow' : '#ccc'};
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    background: #fff;
+    box-shadow: 2px 2px 6px #ddd;
+  `;
+
+  card.innerHTML = `
+    <h3>📋 ${name}</h3>
+    <p><b>Category:</b> ${category}</p>
+    <p><b>Shop:</b> ${shop}</p>
+    <p><b>Address:</b> ${address}</p>
+    <p><b>Wallet:</b> ₹${wallet}</p>
+    ${isApproved
+      ? `<a href="https://wa.me/${whatsapp}" target="_blank">
+           <button style="padding: 10px 16px; background: green; color: #fff; border-radius: 8px;">📲 WhatsApp</button>
+         </a>`
+      : `<button onclick="approveRequest('${name}')" style="padding: 10px 16px; background: blue; color: #fff; border-radius: 8px;">✅ Approve</button>`
+    }
+  `;
+
+  document.getElementById("posterCards").appendChild(card);
+}
+
+function loadPosters() {
+  db.ref("requests").once("value", (snap) => {
+    const requests = snap.val();
+
+    for (let uid in requests) {
+      for (let reqId in requests[uid]) {
+        const req = requests[uid][reqId];
+        const accepted = req.acceptedBy || {};
+
+        db.ref(`posters/${userId}`).once("value", (posterSnap) => {
+          const posterData = posterSnap.val();
+          renderPosterCard(req, accepted, posterData);
+        });
+      }
+    }
+  });
+}
+
+function approveRequest(name) {
+  alert("Approving: " + name);
+  // approval logic here (Firebase update)
+}
+
+loadPosters();
+</script>
