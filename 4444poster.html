@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Service Provider Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial; margin: 0; padding: 10px; background: #eaeaea; }
+    .container { max-width: 600px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
+    h2 { text-align: center; }
+    .led { width: 20px; height: 20px; border-radius: 50%; margin: 10px auto; background: gray; }
+    .job-card {
+      border: 1px solid #ddd; border-radius: 15px;
+      padding: 15px; margin: 15px 0; background: #fdfdfd;
+      box-shadow: 4px 4px 10px rgba(0,0,0,0.1);
+    }
+    .btn-3d {
+      background: linear-gradient(to bottom, #ffcc00, #e6b800);
+      border: none;
+      color: black;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px #999;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .btn-3d:active {
+      box-shadow: 0 2px #666;
+      transform: translateY(3px);
+    }
+    .whatsapp-btn {
+      background: green;
+      color: white;
+      border: none;
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 10px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    @media (max-width: 600px) {
+      .job-card, .btn-3d, .whatsapp-btn { width: 100%; font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Poster Dashboard</h2>
+  <div class="led" id="led"></div>
+  <div id="walletStatus"></div>
+  <div id="jobList"></div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_DOMAIN",
+    databaseURL: "YOUR_DB_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_SENDER",
+    appId: "YOUR_APP"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let userId, posterCategory, wallet = 0;
+  const led = document.getElementById("led");
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    } else {
+      userId = user.uid;
+      db.ref("posters/" + userId).once("value", snap => {
+        const data = snap.val();
+        if (data) {
+          posterCategory = data.category;
+          wallet = data.wallet || 0;
+          document.getElementById("walletStatus").innerText = "Wallet: ₹" + wallet;
+          loadJobs();
+        }
+      });
+    }
+  });
+
+  function loadJobs() {
+    db.ref("requests").once("value", snap => {
+      const jobList = document.getElementById("jobList");
+      jobList.innerHTML = "";
+      let jobFound = false;
+
+      snap.forEach(userSnap => {
+        const userId1 = userSnap.key;
+        userSnap.forEach(jobSnap => {
+          const job = jobSnap.val();
+          const jobKey = jobSnap.key;
+
+          if (job.category.toLowerCase() === posterCategory.toLowerCase()) {
+            jobFound = true;
+            const accepted = job.acceptedBy && job.acceptedBy[userId];
+            const card = document.createElement("div");
+            card.className = "job-card";
+            card.innerHTML = `
+              <b>${job.name}</b><br>
+              📍 ${job.address}<br>
+              🛠️ ${job.problem}<br>
+              <br>
+              ${accepted ? '<div class="whatsapp-btn"><a style="color:white" target="_blank" href="https://wa.me/' + job.whatsapp + '">Contact on WhatsApp</a></div>' :
+              '<button class="btn-3d" onclick="acceptJob(\'' + userId1 + '\', \'' + jobKey + '\', \'' + job.whatsapp + '\')">Accept</button>'}
+            `;
+            jobList.appendChild(card);
+          }
+        });
+      });
+
+      // LED logic
+      if (jobFound) {
+        let isYellow = true;
+        const blink = setInterval(() => {
+          led.style.background = isYellow ? "yellow" : "gray";
+          isYellow = !isYellow;
+        }, 500);
+        window.ledBlinker = blink;
+      }
+    });
+  }
+
+  function acceptJob(userKey, jobKey, customerWhatsapp) {
+    if (wallet < 20) {
+      alert("Wallet low. Please recharge.");
+      return;
+    }
+    db.ref("requests/" + userKey + "/" + jobKey + "/acceptedBy/" + userId).set({
+      name: "Poster",
+      whatsapp: customerWhatsapp,
+      timestamp: Date.now()
+    }).then(() => {
+      const newWallet = wallet - 20;
+      db.ref("posters/" + userId + "/wallet").set(newWallet);
+      wallet = newWallet;
+      document.getElementById("walletStatus").innerText = "Wallet: ₹" + wallet;
+
+      // Stop LED blinking & make green
+      if (window.ledBlinker) clearInterval(window.ledBlinker);
+      led.style.background = "green";
+      loadJobs();
+    });
+  }
+</script>
+</body>
+</html>
