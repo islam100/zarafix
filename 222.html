@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZaraFix - Poster Area</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f4f4f4; margin:0; padding:20px; text-align:center; }
+    .card, .form-group, button { margin: 10px auto; padding: 15px; border-radius: 12px; max-width: 400px; box-shadow: 0 0 10px rgba(0,0,0,0.1); background: white; }
+    .btn { background: linear-gradient(to right, #4caf50, #81c784); color:white; font-size:16px; border:none; cursor:pointer; }
+    #dashboard { display:none; }
+    #registrationForm { display:none; }
+  </style>
+</head>
+<body>
+
+  <h2>🧰 ZaraFix - Poster Panel</h2>
+  <div id="userInfo"></div>
+  <button onclick="logout()" class="btn">🚪 Logout</button>
+
+  <div id="registrationForm">
+    <h3>Register as Service Provider</h3>
+    <div class="form-group"><input type="text" id="name" placeholder="Your Name" required></div>
+    <div class="form-group"><input type="text" id="shop" placeholder="Shop Name" required></div>
+    <div class="form-group"><input type="text" id="whatsapp" placeholder="WhatsApp Number" required></div>
+    <div class="form-group">
+      <select id="category">
+        <option value="">Select Category</option>
+        <option>Electrician</option>
+        <option>Plumber</option>
+        <option>AC Mechanic</option>
+        <option>Car Mechanic</option>
+      </select>
+    </div>
+    <button onclick="submitForm()" class="btn">Submit</button>
+  </div>
+
+  <div id="dashboard">
+    <h3>🎉 Welcome to Your Poster Dashboard</h3>
+    <p>Your registration has been approved.</p>
+    <!-- Show your dashboard content here -->
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUser;
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("userInfo").innerHTML = `👤 ${user.displayName} (${user.email})`;
+        checkApproval(user.uid);
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider);
+      }
+    });
+
+    function checkApproval(uid) {
+      db.ref("posters/" + uid).once("value").then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          if (data.approved) {
+            document.getElementById("dashboard").style.display = "block";
+          } else {
+            alert("🕒 Your registration is under review. Please wait for admin approval.");
+            document.getElementById("registrationForm").style.display = "none";
+          }
+        } else {
+          // New user, show form
+          document.getElementById("registrationForm").style.display = "block";
+        }
+      });
+    }
+
+    function submitForm() {
+      const name = document.getElementById("name").value.trim();
+      const shop = document.getElementById("shop").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+      const category = document.getElementById("category").value;
+
+      if (!name || !shop || !whatsapp || !category) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const posterData = {
+        name,
+        shop,
+        whatsapp,
+        category,
+        approved: false
+      };
+
+      db.ref("posters/" + currentUser.uid).set(posterData).then(() => {
+        alert("✅ Submitted! Please wait for admin approval.");
+        document.getElementById("registrationForm").style.display = "none";
+      });
+    }
+
+    function logout() {
+      auth.signOut().then(() => location.reload());
+    }
+  </script>
+</body>
+</html>
+
