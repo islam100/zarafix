@@ -47,33 +47,49 @@
       font-weight: bold;
       color: green;
     }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
+
+  <h2>➕ Register New Provider</h2>
+  <div class="card">
+    <input id="name" placeholder="Name" />
+    <input id="shop" placeholder="Shop Name" />
+    <input id="category" placeholder="Category (e.g. AC Mechanic)" />
+    <input id="address" placeholder="Address" />
+    <input id="whatsapp" placeholder="WhatsApp Number" />
+    <button class="btn" id="registerBtn">Register</button>
+  </div>
 
   <h2>📋 Posters</h2>
   <div id="posterList"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-   const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const postersRef = ref(db, "posters");
-    const requestsRef = ref(db, "requests");
 
-    const currentAdminId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // Replace with actual login ID
+    const currentAdminId = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2";
 
     function createCard(uid, poster) {
       const card = document.createElement("div");
@@ -108,7 +124,7 @@
           }
         });
 
-        // Approve Button Event
+        // Approve button
         card.querySelector(".approveBtn").addEventListener("click", () => {
           const requestPath = `requests/user123/request1/acceptedBy/${uid}`;
           const payload = {
@@ -119,27 +135,19 @@
           update(ref(db, requestPath), payload);
         });
 
-       // Recharge Button (Instant Wallet Update)
-card.querySelector(".rechargeBtn").addEventListener("click", () => {
-  const walletEl = card.querySelector(".wallet");
-  const currentWallet = poster.wallet || 0;
-  const newAmount = currentWallet + 100;
-
-  // Firebase में wallet update करो
-  update(ref(db, `posters/${uid}`), {
-    wallet: newAmount
-  })
-  .then(() => {
-    // UI भी अपडेट करो
-    walletEl.innerText = `Wallet: ₹${newAmount}`;
-    poster.wallet = newAmount; // Local object update ताकि double recharge पे सही चले
-    alert("Recharge successful: ₹100 added to wallet!");
-  })
-  .catch((error) => {
-    alert("Recharge failed: " + error.message);
-  });
-});
-
+        // Recharge button
+        card.querySelector(".rechargeBtn").addEventListener("click", () => {
+          const walletEl = card.querySelector(".wallet");
+          const currentWallet = poster.wallet || 0;
+          const newAmount = currentWallet + 100;
+          update(ref(db, `posters/${uid}`), { wallet: newAmount })
+            .then(() => {
+              walletEl.innerText = `Wallet: ₹${newAmount}`;
+              poster.wallet = newAmount;
+              alert("Recharge successful: ₹100 added to wallet!");
+            })
+            .catch(error => alert("Recharge failed: " + error.message));
+        });
 
         list.appendChild(card);
       }
@@ -149,7 +157,37 @@ card.querySelector(".rechargeBtn").addEventListener("click", () => {
       const data = snapshot.val();
       if (data) renderPosters(data);
     });
+
+    // Register New Provider
+    document.getElementById("registerBtn").addEventListener("click", () => {
+      const name = document.getElementById("name").value.trim();
+      const shop = document.getElementById("shop").value.trim();
+      const category = document.getElementById("category").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+
+      if (!name || !shop || !category || !address || !whatsapp) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const newPoster = {
+        name,
+        shop,
+        category,
+        address,
+        whatsapp,
+        wallet: 0
+      };
+
+      push(postersRef, newPoster)
+        .then(() => {
+          alert("New provider registered successfully!");
+          // Optional: Clear form
+          ["name", "shop", "category", "address", "whatsapp"].forEach(id => document.getElementById(id).value = "");
+        })
+        .catch(err => alert("Error: " + err.message));
+    });
   </script>
 </body>
 </html>
-
