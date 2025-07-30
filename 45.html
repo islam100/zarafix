@@ -1,129 +1,172 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZaraFix - Poster Registration & Dashboard</title>
+  <title>ZaraFix - Poster Form</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #eef; padding: 20px; text-align: center; }
-    .form-box, .dashboard-box { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; display: none; }
-    input, select, button { padding: 10px; margin: 10px; width: 90%; border-radius: 8px; border: 1px solid #ccc; }
+    body { font-family: Arial; padding: 20px; text-align: center; background: #f0f0f0; }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      max-width: 500px;
+      margin: auto;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 12px 20px;
+      background: #00bcd4;
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 12px;
+      margin-top: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #0097a7; }
     .led {
-      width: 15px;
-      height: 15px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      background: yellow;
-      margin: 10px auto;
+      margin: auto;
+      margin-top: 10px;
+    }
+    .led-blink {
+      background-color: yellow;
       animation: blink 1s infinite;
     }
-    @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0; }
+    .led-green {
+      background-color: green;
     }
-    .approved-message { color: green; font-weight: bold; }
-    .logout-btn { background: #f44336; color: white; border: none; width: auto; padding: 10px 20px; }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .logout {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: red;
+    }
   </style>
 </head>
 <body>
+  <div class="card" id="content">
+    <h2>🔧 Poster Dashboard</h2>
+    <div id="status"></div>
+    <div id="led" class="led"></div>
 
-<h2>ZaraFix - Poster Area</h2>
+    <div id="formArea" style="display:none;">
+      <input type="text" id="name" placeholder="Your Name">
+      <input type="text" id="shop" placeholder="Shop Name">
+      <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+      <select id="category">
+        <option value="">Select Category</option>
+        <option>AC Mechanic</option>
+        <option>Car Mechanic</option>
+        <option>Electrician</option>
+        <option>Plumber</option>
+      </select>
+      <input type="text" id="address" placeholder="Address">
+      <button onclick="submitPoster()">Submit Form</button>
+    </div>
 
-<div id="formBox" class="form-box">
-  <h3>Register as Service Provider</h3>
-  <input type="text" id="name" placeholder="Your Name" required>
-  <input type="text" id="shop" placeholder="Shop Name" required>
-  <input type="text" id="address" placeholder="Address" required>
-  <select id="category">
-    <option value="">-- Select Category --</option>
-    <option>AC Mechanic</option>
-    <option>Electrician</option>
-    <option>Car Mechanic</option>
-    <option>Plumber</option>
-    <option>Mobile Repair</option>
-  </select>
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-  <button onclick="submitForm()">Submit</button>
-</div>
+    <div id="dashboard" style="display:none;">
+      <p>🎉 You are approved!</p>
+      <p>Dashboard content here...</p>
+    </div>
+  </div>
 
-<div id="dashboardBox" class="dashboard-box">
-  <h3>🎉 Welcome to Your Poster Dashboard</h3>
-  <div class="approved-message" id="approvedText"></div>
-  <div class="led" id="led"></div>
-  <button class="logout-btn" onclick="logout()">Logout</button>
-</div>
+  <button class="logout" onclick="logout()">Logout</button>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR-API-KEY",
+      authDomain: "YOUR-PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR-PROJECT.firebaseio.com",
+      projectId: "YOUR-PROJECT-ID",
+      storageBucket: "YOUR-PROJECT.appspot.com",
+      messagingSenderId: "SENDER-ID",
+      appId: "APP-ID"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-  const auth = firebase.auth();
-  const db = firebase.database();
+    const auth = firebase.auth();
+    const db = firebase.database();
+    let currentUser;
 
-  // 🔐 Check login
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      const uid = user.uid;
-      db.ref("posters/" + uid).once("value", snapshot => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          if (data.approved) {
-            // Show approved dashboard
-            document.getElementById("dashboardBox").style.display = "block";
-            document.getElementById("approvedText").innerText = "✅ You are approved!";
-            document.getElementById("led").style.display = "block";
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        checkApproval(user.uid);
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    function checkApproval(uid) {
+      db.ref("posters/" + uid).once("value", snap => {
+        if (snap.exists()) {
+          const data = snap.val();
+          if (data.approved === true) {
+            document.getElementById("status").innerText = "✅ You are Approved!";
+            document.getElementById("led").className = "led led-green";
+            document.getElementById("dashboard").style.display = "block";
           } else {
-            alert("🕒 Awaiting admin approval.");
+            document.getElementById("status").innerText = "🟡 Pending Approval...";
+            document.getElementById("led").className = "led led-blink";
+            document.getElementById("formArea").style.display = "none";
           }
         } else {
-          // Show registration form
-          document.getElementById("formBox").style.display = "block";
+          document.getElementById("formArea").style.display = "block";
+          document.getElementById("status").innerText = "✍️ Please fill form below.";
+          document.getElementById("led").className = "led led-blink";
         }
       });
-    } else {
-      // Not logged in, redirect to login
-      window.location.href = "login.html";
     }
-  });
 
-  // 📤 Submit form
-  function submitForm() {
-    const user = auth.currentUser;
-    if (!user) return;
-    const uid = user.uid;
+    function submitPoster() {
+      const name = document.getElementById("name").value;
+      const shop = document.getElementById("shop").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const category = document.getElementById("category").value;
+      const address = document.getElementById("address").value;
 
-    const data = {
-      name: document.getElementById("name").value,
-      shop: document.getElementById("shop").value,
-      address: document.getElementById("address").value,
-      category: document.getElementById("category").value,
-      whatsapp: document.getElementById("whatsapp").value,
-      approved: false,
-      wallet: 100
-    };
+      if (!name || !shop || !whatsapp || !category || !address) {
+        alert("Please fill all fields.");
+        return;
+      }
 
-    db.ref("posters/" + uid).set(data).then(() => {
-      alert("✅ Form submitted. Awaiting approval.");
-      window.location.reload();
-    });
-  }
+      db.ref("posters/" + currentUser.uid).set({
+        name, shop, whatsapp, category, address,
+        approved: false,
+        wallet: 0
+      }).then(() => {
+        alert("Form submitted! Waiting for admin approval.");
+        document.getElementById("formArea").style.display = "none";
+        document.getElementById("status").innerText = "🟡 Pending Approval...";
+        document.getElementById("led").className = "led led-blink";
+      });
+    }
 
-  function logout() {
-    auth.signOut().then(() => {
-      window.location.href = "login.html";
-    });
-  }
-</script>
-
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+  </script>
 </body>
 </html>
