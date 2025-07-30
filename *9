@@ -1,125 +1,138 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Accepted Posters</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #f1f1f1;
-    }
-    h2 {
-      text-align: center;
-    }
-    .poster-card {
+    body { font-family: Arial; margin: 0; padding: 0; background: #f4f4f4; }
+    h2 { text-align: center; background: #6200ea; color: white; padding: 10px; margin: 0; }
+    select { margin: 10px; padding: 10px; font-size: 16px; }
+    .card {
       background: white;
-      border-radius: 10px;
+      margin: 10px;
       padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    .poster-card h3 {
-      margin-top: 0;
+    .led {
+      height: 15px;
+      width: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 10px;
     }
-    .btn {
-      padding: 8px 16px;
-      margin: 5px 5px 0 0;
-      border: none;
-      border-radius: 5px;
+    .led.green { background-color: #00c853; }
+    .led.yellow {
+      background-color: #ffeb3b;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    button {
+      padding: 6px 12px;
+      background: #d32f2f;
       color: white;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
+      margin-top: 5px;
     }
-    .btn-whatsapp {
-      background-color: #25D366;
-    }
-    .btn-reject {
-      background-color: #e74c3c;
-    }
+    button.approve { background: #388e3c; }
   </style>
 </head>
 <body>
-  <h2>Accepted Posters</h2>
-  <div id="postersList">Loading...</div>
+  <h2>🔧 ZaraFix Admin Dashboard</h2>
+  <div style="text-align:center">
+    <select id="viewType">
+      <option value="provider">📋 Providers</option>
+      <option value="request">🧾 Requests</option>
+      <option value="recharge">💰 Recharge</option>
+    </select>
+  </div>
+  <div id="output"></div>
 
-  <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, get, remove, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "814395398183",
-      appId: "1:814395398183:web:98c861eb8d0db05d72eb4b"
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-
     const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    const db = getDatabase(app);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get("userId");
-    const requestId = urlParams.get("requestId");
+    const viewType = document.getElementById("viewType");
+    const output = document.getElementById("output");
 
-    const postersList = document.getElementById("postersList");
+    viewType.addEventListener("change", loadData);
+    window.onload = loadData;
 
-    if (!userId || !requestId) {
-      postersList.innerText = "❌ Missing userId or requestId in URL.";
-    } else {
-      const requestRef = ref(database, `requests/${userId}/${requestId}`);
-      const postersRef = ref(database, 'posters');
-
-      Promise.all([
-        get(requestRef),
-        get(postersRef)
-      ]).then(([requestSnap, postersSnap]) => {
-        if (!requestSnap.exists()) {
-          postersList.innerText = "❌ Request not found.";
-          return;
-        }
-
-        const requestData = requestSnap.val();
-        const acceptedBy = requestData.acceptedBy || {};
-        const postersData = postersSnap.val() || {};
-
-        postersList.innerHTML = "";
-
-        Object.keys(acceptedBy).forEach(posterId => {
-          const poster = postersData[posterId];
-          if (poster) {
-            const card = document.createElement("div");
-            card.className = "poster-card";
-            card.innerHTML = `
-              <h3>${poster.name || 'Unknown'}</h3>
-              <p><strong>Phone:</strong> ${poster.whatsapp || 'N/A'}</p>
-              <a class="btn btn-whatsapp" href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a>
-              <button class="btn btn-reject">Reject</button>
-            `;
-            const rejectBtn = card.querySelector(".btn-reject");
-            rejectBtn.addEventListener("click", () => {
-              if (confirm("Are you sure you want to reject this poster?")) {
-                const rejectPath = `requests/${userId}/${requestId}/acceptedBy/${posterId}`;
-                remove(ref(database, rejectPath)).then(() => {
-                  alert("Poster rejected.");
-                  card.remove();
-                }).catch((err) => {
-                  alert("Error rejecting: " + err.message);
-                });
-              }
-            });
-            postersList.appendChild(card);
-          }
+    function loadData() {
+      const type = viewType.value;
+      output.innerHTML = "";
+      if (type === "provider") {
+        const refData = ref(db, 'posters');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const approved = data.approved;
+            const led = approved ? '<span class="led green"></span>' : '<span class="led yellow"></span>';
+            const btn = approved ? '✅ Approved' : `<button class='approve' onclick="approvePoster('${child.key}')">Approve</button>`;
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Shop: ${data.shop}<br>Category: ${data.category}<br>WhatsApp: ${data.whatsapp}<br>${btn}<br><button onclick="deletePoster('${child.key}')">❌ Delete</button></div>`;
+          });
         });
+      } else if (type === "request") {
+        const refData = ref(db, 'requests');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(user => {
+            user.forEach(child => {
+              const data = child.val();
+              const pending = !data.acceptedBy || Object.keys(data.acceptedBy).length === 0;
+              const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+              output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>${data.problem}<br>${data.address}<br>WhatsApp: ${data.whatsapp}<br><button onclick="deleteRequest('${user.key}', '${child.key}')">❌ Delete</button></div>`;
+            });
+          });
+        });
+      } else if (type === "recharge") {
+        const refData = ref(db, 'recharges');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const pending = !data.approved;
+            const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+            const btn = pending ? `<button class='approve' onclick="approveRecharge('${child.key}')">Approve</button>` : '✅ Approved';
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Screenshot: <a href="${data.screenshot}" target="_blank">View</a><br>${btn}<br><button onclick="deleteRecharge('${child.key}')">❌ Delete</button></div>`;
+          });
+        });
+      }
+    }
 
-        if (postersList.innerHTML.trim() === "") {
-          postersList.innerText = "✅ No accepted posters yet.";
-        }
-      }).catch(err => {
-        postersList.innerText = "⚠️ Error loading data: " + err.message;
-      });
+    window.approvePoster = (id) => {
+      update(ref(db, 'posters/' + id), { approved: true });
+      alert("Poster Approved");
+    }
+    window.deletePoster = (id) => {
+      if (confirm("Delete this poster?")) remove(ref(db, 'posters/' + id));
+    }
+    window.deleteRequest = (uid, rid) => {
+      if (confirm("Delete this request?")) remove(ref(db, `requests/${uid}/${rid}`));
+    }
+    window.approveRecharge = (id) => {
+      update(ref(db, 'recharges/' + id), { approved: true });
+      alert("Recharge Approved");
+    }
+    window.deleteRecharge = (id) => {
+      if (confirm("Delete this recharge request?")) remove(ref(db, 'recharges/' + id));
     }
   </script>
 </body>
