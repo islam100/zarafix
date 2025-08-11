@@ -1,182 +1,96 @@
-<!doctype html>
-<html lang="hi">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Zara Property — Single Page (Firebase + imgbb)</title>
-
-<!-- Firebase SDK (v8 compat) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<style>
-  :root{
-    --accent:#0077cc;
-    --accent-dark:#005f9e;
-    --card-bg:#fff;
-    --muted:#666;
-  }
-  *{box-sizing:border-box}
-  body{ margin:0; font-family: Inter, system-ui, Arial; background: linear-gradient(180deg,#eaf7ff,#f7fdff); color:#111; -webkit-font-smoothing:antialiased; }
-  header{ position:sticky; top:0; z-index:60; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; gap:10px; background: rgba(255,255,255,0.88); backdrop-filter: blur(6px); box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-  .brand{ display:flex; gap:12px; align-items:center; }
-  .logo{ font-weight:900; font-size:20px; background: linear-gradient(90deg,#ff6a00,#00d4ff,#9b59ff); -webkit-background-clip:text; background-clip:text; color:transparent; padding:6px 10px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
-  .top-actions{ display:flex; gap:10px; align-items:center; }
-
-  /* 3D small post button */
-  .post-btn {
-    background: linear-gradient(145deg,#00b09b,#96c93d);
-    color:#fff; border:none; padding:8px 12px; border-radius:10px;
-    box-shadow: 0 6px 0 #0b6f46, 0 12px 18px rgba(0,0,0,0.12);
-    font-weight:800; cursor:pointer; transition:transform .12s, box-shadow .12s;
-  }
-  .post-btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 #0b6f46; }
-
-  .auth-btn {
-    background:transparent; color:var(--accent); border:1px solid rgba(0,0,0,0.06);
-    padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer;
-  }
-
-  main{ padding:18px; max-width:1100px; margin:0 auto; }
-
-  .hero{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-  .search-box{ flex:1; min-width:220px; background: rgba(255,255,255,0.92); padding:10px; border-radius:12px; display:flex; gap:8px; align-items:center; box-shadow: 0 6px 12px rgba(3,37,65,0.04); }
-  .search-box input, .search-box select{ border:none; outline:none; padding:8px 10px; border-radius:8px; font-size:15px; background:transparent; }
-  .search-box input{ flex:1; color:#111; }
-
-  .grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:12px; }
-  .card{ background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(10,20,30,0.06); display:flex; flex-direction:column; transition:transform .14s ease, box-shadow .14s; }
-  .card:hover{ transform:translateY(-6px); box-shadow:0 12px 30px rgba(10,20,30,0.08); }
-  .card img{ width:100%; height:160px; object-fit:cover; display:block; background:#eee; }
-  .card-body{ padding:12px; display:flex; flex-direction:column; gap:6px; }
-  .title{ font-weight:800; font-size:16px; color:#111; }
-  .price{ color:var(--accent); font-weight:800; margin-top:6px; }
-  .meta{ color:var(--muted); font-size:13px; }
-  .card-actions{ margin-top:auto; display:flex; gap:8px; align-items:center; }
-
-  /* modal */
-  .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:120; background: rgba(0,0,0,0.45); padding:20px; }
-  .modal.open{ display:flex; }
-  .modal-card{ width:100%; max-width:900px; max-height:90vh; overflow:auto; background:#fff; border-radius:12px; padding:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); }
-  .modal .img{ width:100%; height:360px; object-fit:cover; border-radius:8px; }
-  .modal .close{ position:absolute; top:14px; right:18px; background:transparent; border:none; font-size:20px; color:white; cursor:pointer; }
-
-  .upload-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:130; background:rgba(0,0,0,0.45); padding:20px; }
-  .upload-modal.open{ display:flex; }
-  .upload-card{ width:100%; max-width:540px; background:white; padding:16px; border-radius:12px; box-shadow:0 18px 40px rgba(0,0,0,0.25); }
-
-  label{ display:block; font-weight:600; margin-top:10px; margin-bottom:6px; color:#222; }
-  input[type="text"], input[type="number"], textarea, select{ width:100%; padding:10px; border-radius:8px; border:1px solid #e8eef5; }
-  textarea{ min-height:90px; resize:vertical; }
-
-  .small{ font-size:13px; color:var(--muted); margin-top:6px; }
-
-  .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111; color:#fff; padding:10px 14px; border-radius:10px; display:none; z-index:200; }
-  .toast.show{ display:block; animation:pop .3s ease; }
-  @keyframes pop{ from{transform:translate(-50%,10px); opacity:0} to{transform:translate(-50%,0); opacity:1} }
-
-  @media (max-width:640px){
-    .modal .img{ height:220px; }
-    .logo{ font-size:18px; }
-    .post-btn{ padding:7px 10px; font-size:13px; }
-  }
-</style>
+  <title>Property Listing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .top-bar {
+      background: #fff;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-3d {
+      background: linear-gradient(145deg, #4CAF50, #45a049);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 2px 2px 5px #aaa;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-3d:active {
+      transform: translateY(2px);
+      box-shadow: 1px 1px 3px #aaa;
+    }
+    .form-container {
+      display: none;
+      background: #fff;
+      padding: 15px;
+      margin: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .form-container input, .form-container textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .property-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+    .property-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .property-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .property-card .info {
+      padding: 10px;
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <div class="logo">Zara Property</div>
-    <div class="small" style="margin-left:6px">— Buy • Rent • Sell</div>
-  </div>
-
-  <div class="top-actions">
-    <!-- Post button (3D look) - shown only after login (toggled in JS) -->
-    <button id="postBtn" class="post-btn" style="display:none" title="Post Property">Post Property</button>
-
-    <!-- Auth button -->
-    <button id="authBtn" class="auth-btn" title="Google Sign-in">Google Login</button>
-  </div>
-</header>
-
-<main>
-  <section class="hero">
-    <div class="search-box" role="search" aria-label="Search properties">
-      <input id="q" placeholder="Search by title or city..." />
-      <select id="filterType">
-        <option value="">All types</option>
-        <option value="sale">Buy</option>
-        <option value="rent">Rent</option>
-      </select>
-      <select id="sortBy">
-        <option value="new">Newest</option>
-        <option value="low">Price: Low → High</option>
-        <option value="high">Price: High → Low</option>
-      </select>
-      <button id="searchBtn" class="btn" style="padding:8px 10px">Search</button>
-    </div>
-  </section>
-
-  <section id="listings">
-    <div class="grid" id="grid"></div>
-  </section>
-</main>
-
-<!-- Detail modal -->
-<div id="modal" class="modal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true">
-    <button id="closeModal" class="close" aria-label="Close">✕</button>
-    <img id="modalImg" class="img" src="" alt="">
-    <h2 id="modalTitle"></h2>
-    <div id="modalPrice" class="price"></div>
-    <div id="modalDesc" class="small"></div>
-  </div>
+<div class="top-bar">
+  <button class="btn-3d" onclick="toggleForm()">+ Post Property</button>
 </div>
 
-<!-- Upload modal -->
-<div id="uploadModal" class="upload-modal" aria-hidden="true">
-  <div class="upload-card">
-    <h3>Post Property</h3>
-    <div class="small">(Images uploaded via imgbb)</div>
-
-    <label>Title</label>
-    <input id="p_title" type="text" placeholder="3BHK sea-view / Spacious 2BHK..." />
-
-    <label>City</label>
-    <input id="p_city" type="text" placeholder="e.g. Mumbai" />
-
-    <label>Type</label>
-    <select id="p_type">
-      <option value="sale">Buy</option>
-      <option value="rent">Rent</option>
-    </select>
-
-    <label>Price (number)</label>
-    <input id="p_price" type="number" placeholder="e.g. 8500000" />
-
-    <label>Description</label>
-    <textarea id="p_desc" placeholder="Short description..."></textarea>
-
-    <label>Image</label>
-    <input id="p_image" type="file" accept="image/*" />
-
-    <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
-      <button id="cancelUpload" class="btn ghost">Cancel</button>
-      <button id="submitProperty" class="btn secondary">Upload & Post</button>
-    </div>
-
-    <p id="uploadStatus" class="small" aria-live="polite"></p>
-  </div>
+<div class="form-container" id="propertyForm">
+  <input type="text" id="title" placeholder="Property Title" required>
+  <textarea id="description" placeholder="Description"></textarea>
+  <input type="number" id="price" placeholder="Price">
+  <input type="file" id="image" accept="image/*">
+  <button class="btn-3d" onclick="postProperty()">Submit</button>
 </div>
 
-<div id="toast" class="toast"></div>
+<div class="property-grid" id="propertyList"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ============================
-  Firebase config (you gave)
-  ============================ */
-const firebaseConfig = {
+  // Firebase Config
+  const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
   databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
@@ -186,178 +100,67 @@ const firebaseConfig = {
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 
-/* ============================
-  Put your imgbb API key here
-  Get it from https://api.imgbb.com/
-  ============================ */
-const IMGBB_KEY = "PUT_YOUR_IMGBB_KEY_HERE";
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-/* ============================
-  Initialize Firebase
-  ============================ */
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+  const imgbbAPI = "YOUR_IMGBB_API_KEY"; // यहां अपना ImageBB API key डालें
 
-/* UI refs */
-const authBtn = document.getElementById('authBtn');
-const postBtn = document.getElementById('postBtn');
-const uploadModal = document.getElementById('uploadModal');
-const cancelUpload = document.getElementById('cancelUpload');
-const submitProperty = document.getElementById('submitProperty');
-const uploadStatus = document.getElementById('uploadStatus');
-
-const grid = document.getElementById('grid');
-const qInput = document.getElementById('q');
-const filterType = document.getElementById('filterType');
-const sortBy = document.getElementById('sortBy');
-const searchBtn = document.getElementById('searchBtn');
-
-const modal = document.getElementById('modal');
-const closeModal = document.getElementById('closeModal');
-const modalImg = document.getElementById('modalImg');
-const modalTitle = document.getElementById('modalTitle');
-const modalPrice = document.getElementById('modalPrice');
-const modalDesc = document.getElementById('modalDesc');
-const toastEl = document.getElementById('toast');
-
-let properties = []; // cached list (newest first)
-const propsRef = db.ref('properties');
-
-/* helper */
-function toast(msg, ms=2200){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), ms); }
-function numberWithCommas(x){ return x?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") || x; }
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
-
-/* ========== Auth ========== */
-const provider = new firebase.auth.GoogleAuthProvider();
-auth.onAuthStateChanged(user=>{
-  if(user){
-    authBtn.textContent = 'Logout';
-    authBtn.classList.remove('auth-btn'); authBtn.classList.add('btn');
-    postBtn.style.display = 'inline-block';
-  } else {
-    authBtn.textContent = 'Google Login';
-    authBtn.classList.remove('btn'); authBtn.classList.add('auth-btn');
-    postBtn.style.display = 'none';
+  function toggleForm() {
+    document.getElementById('propertyForm').style.display =
+      document.getElementById('propertyForm').style.display === "block" ? "none" : "block";
   }
-});
-authBtn.addEventListener('click', ()=>{
-  if(auth.currentUser){ auth.signOut().then(()=> toast('Logged out')); }
-  else { auth.signInWithPopup(provider).then(res=> toast('Welcome, '+(res.user.displayName||''))).catch(e=> toast('Login failed')); }
-});
 
-/* ========== render grid ========== */
-function renderCard(p, idx){
-  const el = document.createElement('article');
-  el.className = 'card';
-  el.innerHTML = `
-    <img loading="lazy" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.title)}" />
-    <div class="card-body">
-      <div class="title">${escapeHtml(p.title)}</div>
-      <div class="price">₹ ${numberWithCommas(p.price)}</div>
-      <div class="meta">${escapeHtml(p.city)} • ${p.type.toUpperCase()}</div>
-      <div class="card-actions">
-        <button class="btn ghost" data-idx="${idx}" onclick="openDetail(${idx})">View</button>
-        <button class="btn" data-idx="${idx}" onclick="contactOwner(${idx})">Contact</button>
-      </div>
-    </div>
-  `;
-  return el;
-}
-function renderGrid(items){
-  grid.innerHTML = '';
-  if(!items.length){ grid.innerHTML = '<div style="padding:20px; color:#555">No properties yet. Login and Post one!</div>'; return; }
-  items.forEach((p, idx)=> grid.appendChild(renderCard(p, idx)));
-}
+  async function postProperty() {
+    let title = document.getElementById("title").value;
+    let description = document.getElementById("description").value;
+    let price = document.getElementById("price").value;
+    let imageFile = document.getElementById("image").files[0];
 
-/* ========== Firebase realtime listeners ========== */
-propsRef.off();
-propsRef.on('child_added', snap=>{
-  const v = snap.val(); properties.unshift({ id: snap.key, ...v }); applyFiltersAndRender();
-});
-propsRef.on('child_changed', snap=>{
-  const v = snap.val(); const i = properties.findIndex(x=> x.id===snap.key); if(i>=0){ properties[i] = { id: snap.key, ...v }; applyFiltersAndRender(); }
-});
-propsRef.on('child_removed', snap=>{
-  properties = properties.filter(x=> x.id!==snap.key); applyFiltersAndRender();
-});
+    if (!title || !imageFile) {
+      alert("Title और Image जरूरी है!");
+      return;
+    }
 
-/* initial load (once) */
-propsRef.once('value').then(snapshot=>{
-  const arr = [];
-  snapshot.forEach(child=> arr.push({ id: child.key, ...child.val() }));
-  arr.sort((a,b)=> (b.postedAt||0)-(a.postedAt||0));
-  properties = arr; applyFiltersAndRender();
-}).catch(e=> console.error(e));
+    // Image upload to ImageBB
+    let formData = new FormData();
+    formData.append("image", imageFile);
 
-/* ========== modal & contact ========== */
-window.openDetail = function(i){
-  const p = properties[i]; if(!p) return;
-  modalImg.src = p.image; modalTitle.textContent = p.title + ' — ' + p.city;
-  modalPrice.textContent = '₹ ' + numberWithCommas(p.price) + (p.type==='rent' ? ' /month' : '');
-  modalDesc.textContent = p.description || '';
-  modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
-}
-closeModal.addEventListener('click', ()=>{ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); });
-modal.addEventListener('click', e=>{ if(e.target===modal) closeModal.click(); });
+    let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPI}`, {
+      method: "POST",
+      body: formData
+    });
+    let imgData = await res.json();
+    let imageUrl = imgData.data.url;
 
-window.contactOwner = function(i){
-  const p = properties[i]; if(!p) return; toast(`Contact owner: ${p.postedBy || '—'}`, 2500);
-}
+    let property = {
+      title, description, price, imageUrl
+    };
 
-/* ========== search/filter/sort ========== */
-function applyFiltersAndRender(){
-  let q = (qInput.value||'').toLowerCase().trim();
-  let type = filterType.value;
-  let arr = properties.filter(p=>{
-    if(type && p.type !== type) return false;
-    if(q){ return (p.title||'').toLowerCase().includes(q) || (p.city||'').toLowerCase().includes(q); }
-    return true;
+    db.ref("properties").push(property);
+    alert("Property Posted Successfully!");
+    document.getElementById("propertyForm").reset();
+    toggleForm();
+  }
+
+  // Show properties
+  db.ref("properties").on("value", snapshot => {
+    let list = document.getElementById("propertyList");
+    list.innerHTML = "";
+    snapshot.forEach(data => {
+      let p = data.val();
+      list.innerHTML += `
+        <div class="property-card">
+          <img src="${p.imageUrl}" alt="">
+          <div class="info">
+            <h3>${p.title}</h3>
+            <p>${p.description || ""}</p>
+            <strong>₹${p.price || "N/A"}</strong>
+          </div>
+        </div>
+      `;
+    });
   });
-  if(sortBy.value==='low') arr.sort((a,b)=>a.price-b.price);
-  else if(sortBy.value==='high') arr.sort((a,b)=>b.price-a.price);
-  else arr.sort((a,b)=>(b.postedAt||0)-(a.postedAt||0));
-  renderGrid(arr);
-}
-searchBtn.addEventListener('click', applyFiltersAndRender);
-qInput.addEventListener('keydown', e=>{ if(e.key==='Enter') applyFiltersAndRender(); });
-
-/* ========== Upload flow (imgbb -> firebase) ========== */
-function openUpload(){ uploadModal.classList.add('open'); uploadModal.setAttribute('aria-hidden','false'); uploadStatus.textContent=''; }
-postBtn.addEventListener('click', ()=> openUpload());
-cancelUpload.addEventListener('click', ()=>{ uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); });
-
-submitProperty.addEventListener('click', async ()=>{
-  const title = document.getElementById('p_title').value.trim();
-  const city = document.getElementById('p_city').value.trim();
-  const type = document.getElementById('p_type').value;
-  const price = Number(document.getElementById('p_price').value || 0);
-  const desc = document.getElementById('p_desc').value.trim();
-  const file = document.getElementById('p_image').files[0];
-
-  if(!title || !city || !price || !file){ uploadStatus.textContent = 'Please fill title, city, price and choose image.'; return; }
-  if(IMGBB_KEY === "PUT_YOUR_IMGBB_KEY_HERE"){ uploadStatus.textContent = 'Add your IMGBB key in code (IMGBB_KEY).'; return; }
-
-  uploadStatus.textContent = 'Uploading image to imgbb...'; submitProperty.disabled = true;
-  try{
-    const form = new FormData(); form.append('image', file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_KEY)}`, { method:'POST', body: form });
-    const json = await res.json(); if(!json || !json.data || !json.data.url) throw new Error('Image upload failed');
-    const imageUrl = json.data.url;
-    const user = auth.currentUser;
-    const prop = { title, city, type, price, description: desc, image: imageUrl, postedBy: user?user.displayName:'Guest', ownerUid: user?user.uid:null, postedAt: Date.now() };
-
-    // save to Firebase Realtime Database
-    await propsRef.push(prop);
-
-    uploadStatus.textContent = 'Posted!'; toast('Property posted');
-    setTimeout(()=>{ uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); document.getElementById('p_title').value=''; document.getElementById('p_city').value=''; document.getElementById('p_price').value=''; document.getElementById('p_desc').value=''; document.getElementById('p_image').value=''; submitProperty.disabled = false; }, 800);
-
-  }catch(err){ console.error(err); uploadStatus.textContent = 'Upload failed: ' + (err.message||err); submitProperty.disabled = false; }
-});
-
-/* Done */
 </script>
+
 </body>
 </html>
