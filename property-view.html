@@ -3,136 +3,84 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Zara Property — Single Page</title>
-<!-- Firebase (v8 compat) -->
+<title>Zara Property — Single Page (Firebase + imgbb)</title>
+
+<!-- Firebase SDK (v8 compat) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <style>
   :root{
     --accent:#0077cc;
     --accent-dark:#005f9e;
-    --card-bg: #fff;
-    --glass: rgba(255,255,255,0.85);
+    --card-bg:#fff;
     --muted:#666;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; font-family:Inter,system-ui,Segoe UI,Arial;
-    background: linear-gradient(180deg,#e6f7ff,#f7fdff);
-    color:#111;
-    -webkit-font-smoothing:antialiased;
+  body{ margin:0; font-family: Inter, system-ui, Arial; background: linear-gradient(180deg,#eaf7ff,#f7fdff); color:#111; -webkit-font-smoothing:antialiased; }
+  header{ position:sticky; top:0; z-index:60; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; gap:10px; background: rgba(255,255,255,0.88); backdrop-filter: blur(6px); box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+  .brand{ display:flex; gap:12px; align-items:center; }
+  .logo{ font-weight:900; font-size:20px; background: linear-gradient(90deg,#ff6a00,#00d4ff,#9b59ff); -webkit-background-clip:text; background-clip:text; color:transparent; padding:6px 10px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+  .top-actions{ display:flex; gap:10px; align-items:center; }
+
+  /* 3D small post button */
+  .post-btn {
+    background: linear-gradient(145deg,#00b09b,#96c93d);
+    color:#fff; border:none; padding:8px 12px; border-radius:10px;
+    box-shadow: 0 6px 0 #0b6f46, 0 12px 18px rgba(0,0,0,0.12);
+    font-weight:800; cursor:pointer; transition:transform .12s, box-shadow .12s;
+  }
+  .post-btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 #0b6f46; }
+
+  .auth-btn {
+    background:transparent; color:var(--accent); border:1px solid rgba(0,0,0,0.06);
+    padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer;
   }
 
-  /* header */
-  header{
-    position:sticky; top:0; z-index:60;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 16px; gap:10px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
-    backdrop-filter: blur(6px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .brand{
-    display:flex; align-items:center; gap:12px;
-  }
-  .logo {
-    font-weight:800; font-size:20px;
-    background: linear-gradient(90deg,#ff6a00,#fddb92,#00d4ff,#9b59ff);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow: 0 6px 10px rgba(0,0,0,0.08);
-    padding:6px 10px; border-radius:8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  }
-  .top-actions { display:flex; gap:10px; align-items:center; }
-
-  .btn {
-    background:var(--accent);
-    color:white; border:none; padding:8px 12px; border-radius:8px;
-    font-weight:700; cursor:pointer; box-shadow: 0 6px 0 var(--accent-dark);
-    transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
-    text-decoration:none;
-  }
-  .btn.secondary{ background:#28a745; box-shadow: 0 6px 0 #147031; }
-  .btn.ghost{
-    background:transparent; color:var(--accent); box-shadow:none; font-weight:700;
-    padding:6px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.06);
-  }
-  .btn:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,0.2); }
-
-  /* main layout */
   main{ padding:18px; max-width:1100px; margin:0 auto; }
 
-  .hero{
-    display:flex; gap:16px; align-items:center; flex-wrap:wrap;
-    margin-bottom:16px;
-  }
-  .search-box{
-    flex:1; min-width:260px;
-    background:var(--glass); padding:12px; border-radius:12px; display:flex; gap:8px;
-    box-shadow: 0 6px 12px rgba(3,37,65,0.04);
-  }
-  .search-box input, .search-box select{
-    border: none; outline:none; padding:8px 10px; border-radius:8px; font-size:15px;
-  }
-  .search-box input{ flex:1; background:transparent; color:#111; }
+  .hero{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .search-box{ flex:1; min-width:220px; background: rgba(255,255,255,0.92); padding:10px; border-radius:12px; display:flex; gap:8px; align-items:center; box-shadow: 0 6px 12px rgba(3,37,65,0.04); }
+  .search-box input, .search-box select{ border:none; outline:none; padding:8px 10px; border-radius:8px; font-size:15px; background:transparent; }
+  .search-box input{ flex:1; color:#111; }
 
-  /* posts grid */
-  .grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
-    gap:14px;
-    margin-top:12px;
-  }
-  .card{
-    background:var(--card-bg); border-radius:12px; overflow:hidden;
-    box-shadow: 0 6px 18px rgba(10,20,30,0.06); display:flex; flex-direction:column;
-    transition: transform .14s ease, box-shadow .14s;
-  }
-  .card:hover{ transform: translateY(-6px); box-shadow: 0 12px 30px rgba(10,20,30,0.08); }
-  .card img{ width:100%; height:160px; object-fit:cover; display:block; }
-  .card-body{ padding:12px; display:flex; gap:8px; flex-direction:column; }
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:12px; }
+  .card{ background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(10,20,30,0.06); display:flex; flex-direction:column; transition:transform .14s ease, box-shadow .14s; }
+  .card:hover{ transform:translateY(-6px); box-shadow:0 12px 30px rgba(10,20,30,0.08); }
+  .card img{ width:100%; height:160px; object-fit:cover; display:block; background:#eee; }
+  .card-body{ padding:12px; display:flex; flex-direction:column; gap:6px; }
   .title{ font-weight:800; font-size:16px; color:#111; }
   .price{ color:var(--accent); font-weight:800; margin-top:6px; }
-  .meta{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .meta{ color:var(--muted); font-size:13px; }
   .card-actions{ margin-top:auto; display:flex; gap:8px; align-items:center; }
 
-  /* detail modal (slide-up) */
-  .modal{
-    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-    z-index:120; background: rgba(0,0,0,0.45);
-    padding:20px;
-  }
+  /* modal */
+  .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:120; background: rgba(0,0,0,0.45); padding:20px; }
   .modal.open{ display:flex; }
-  .modal-card{
-    width:100%; max-width:900px; max-height:90vh; overflow:auto;
-    background:white; border-radius:12px; padding:16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  }
+  .modal-card{ width:100%; max-width:900px; max-height:90vh; overflow:auto; background:#fff; border-radius:12px; padding:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); }
   .modal .img{ width:100%; height:360px; object-fit:cover; border-radius:8px; }
-  .modal .close{ position:absolute; top:14px; right:18px; background:transparent; border:none; font-size:18px; color:white; }
+  .modal .close{ position:absolute; top:14px; right:18px; background:transparent; border:none; font-size:20px; color:white; cursor:pointer; }
 
-  /* upload modal */
   .upload-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:130; background:rgba(0,0,0,0.45); padding:20px; }
   .upload-modal.open{ display:flex; }
-  .upload-card{ width:100%; max-width:520px; background:white; padding:16px; border-radius:12px; box-shadow: 0 18px 40px rgba(0,0,0,0.25); }
+  .upload-card{ width:100%; max-width:540px; background:white; padding:16px; border-radius:12px; box-shadow:0 18px 40px rgba(0,0,0,0.25); }
 
   label{ display:block; font-weight:600; margin-top:10px; margin-bottom:6px; color:#222; }
-  input[type="text"], input[type="number"], textarea, select {
-    width:100%; padding:10px; border-radius:8px; border:1px solid #e8eef5;
-  }
+  input[type="text"], input[type="number"], textarea, select{ width:100%; padding:10px; border-radius:8px; border:1px solid #e8eef5; }
   textarea{ min-height:90px; resize:vertical; }
 
-  .small { font-size:13px; color:var(--muted); margin-top:6px; }
+  .small{ font-size:13px; color:var(--muted); margin-top:6px; }
 
-  /* responsive tweaks */
+  .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111; color:#fff; padding:10px 14px; border-radius:10px; display:none; z-index:200; }
+  .toast.show{ display:block; animation:pop .3s ease; }
+  @keyframes pop{ from{transform:translate(-50%,10px); opacity:0} to{transform:translate(-50%,0); opacity:1} }
+
   @media (max-width:640px){
     .modal .img{ height:220px; }
-    .logo { font-size:18px; }
+    .logo{ font-size:18px; }
+    .post-btn{ padding:7px 10px; font-size:13px; }
   }
-
-  /* tiny toast */
-  .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111;color:#fff;padding:10px 14px;border-radius:10px; display:none; z-index:200; }
-  .toast.show{ display:block; animation:pop .3s ease;}
-  @keyframes pop{ from{transform:translate(-50%,10px); opacity:0} to{transform:translate(-50%,0); opacity:1} }
 </style>
 </head>
 <body>
@@ -144,11 +92,11 @@
   </div>
 
   <div class="top-actions">
-    <!-- Upload button visible only when logged in (we'll toggle via JS) -->
-    <button id="uploadBtn" class="btn secondary" style="display:none" title="Post Property">Post Property</button>
+    <!-- Post button (3D look) - shown only after login (toggled in JS) -->
+    <button id="postBtn" class="post-btn" style="display:none" title="Post Property">Post Property</button>
 
-    <!-- Login/logout -->
-    <button id="authBtn" class="btn ghost" title="Google Sign-in">Google Login</button>
+    <!-- Auth button -->
+    <button id="authBtn" class="auth-btn" title="Google Sign-in">Google Login</button>
   </div>
 </header>
 
@@ -170,7 +118,6 @@
     </div>
   </section>
 
-  <!-- listings -->
   <section id="listings">
     <div class="grid" id="grid"></div>
   </section>
@@ -227,29 +174,34 @@
 
 <script>
 /* ============================
-  CONFIG - replace if you have different keys
+  Firebase config (you gave)
   ============================ */
 const firebaseConfig = {
-  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-  authDomain: "zara-fix.firebaseapp.com",
-  projectId: "zara-fix",
-  // if you want DB save in firebase, add databaseURL or firestore config here
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 
-// imgbb API key (you provided earlier). If you have your own, replace here.
-const IMGBB_KEY = "9666667be1a890e44490c3dff1f1a120";
+/* ============================
+  Put your imgbb API key here
+  Get it from https://api.imgbb.com/
+  ============================ */
+const IMGBB_KEY = "PUT_YOUR_IMGBB_KEY_HERE";
 
 /* ============================
-  Initialize Firebase Auth
+  Initialize Firebase
   ============================ */
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.database();
 
-/* ============================
-  Helpers & UI refs
-  ============================ */
+/* UI refs */
 const authBtn = document.getElementById('authBtn');
-const uploadBtn = document.getElementById('uploadBtn');
+const postBtn = document.getElementById('postBtn');
 const uploadModal = document.getElementById('uploadModal');
 const cancelUpload = document.getElementById('cancelUpload');
 const submitProperty = document.getElementById('submitProperty');
@@ -269,149 +221,114 @@ const modalPrice = document.getElementById('modalPrice');
 const modalDesc = document.getElementById('modalDesc');
 const toastEl = document.getElementById('toast');
 
-/* ============================
-  Data store: localStorage key
-  If you want to use Firebase DB instead, replace these functions
-  ============================ */
-const STORE_KEY = 'zara_props_v1';
+let properties = []; // cached list (newest first)
+const propsRef = db.ref('properties');
 
-function loadLocal(){
-  try{
-    return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-  }catch(e){
-    return [];
+/* helper */
+function toast(msg, ms=2200){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), ms); }
+function numberWithCommas(x){ return x?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") || x; }
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+/* ========== Auth ========== */
+const provider = new firebase.auth.GoogleAuthProvider();
+auth.onAuthStateChanged(user=>{
+  if(user){
+    authBtn.textContent = 'Logout';
+    authBtn.classList.remove('auth-btn'); authBtn.classList.add('btn');
+    postBtn.style.display = 'inline-block';
+  } else {
+    authBtn.textContent = 'Google Login';
+    authBtn.classList.remove('btn'); authBtn.classList.add('auth-btn');
+    postBtn.style.display = 'none';
   }
-}
-function saveLocal(arr){
-  localStorage.setItem(STORE_KEY, JSON.stringify(arr));
-}
+});
+authBtn.addEventListener('click', ()=>{
+  if(auth.currentUser){ auth.signOut().then(()=> toast('Logged out')); }
+  else { auth.signInWithPopup(provider).then(res=> toast('Welcome, '+(res.user.displayName||''))).catch(e=> toast('Login failed')); }
+});
 
-/* ============================
-  Render listings
-  ============================ */
-let properties = loadLocal();
-
+/* ========== render grid ========== */
+function renderCard(p, idx){
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.innerHTML = `
+    <img loading="lazy" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.title)}" />
+    <div class="card-body">
+      <div class="title">${escapeHtml(p.title)}</div>
+      <div class="price">₹ ${numberWithCommas(p.price)}</div>
+      <div class="meta">${escapeHtml(p.city)} • ${p.type.toUpperCase()}</div>
+      <div class="card-actions">
+        <button class="btn ghost" data-idx="${idx}" onclick="openDetail(${idx})">View</button>
+        <button class="btn" data-idx="${idx}" onclick="contactOwner(${idx})">Contact</button>
+      </div>
+    </div>
+  `;
+  return el;
+}
 function renderGrid(items){
   grid.innerHTML = '';
-  if(!items.length){
-    grid.innerHTML = '<div style="padding:20px; color:#555">No properties yet. Login and Post one!</div>';
-    return;
-  }
-  items.forEach((p, idx) => {
-    const el = document.createElement('article');
-    el.className = 'card';
-    el.innerHTML = `
-      <img loading="lazy" src="${p.image}" alt="${escapeHtml(p.title)}" />
-      <div class="card-body">
-        <div class="title">${escapeHtml(p.title)}</div>
-        <div class="price">₹ ${numberWithCommas(p.price)}</div>
-        <div class="meta">${escapeHtml(p.city)} • ${p.type.toUpperCase()}</div>
-        <div class="card-actions">
-          <button class="btn ghost" data-idx="${idx}" onclick="openDetail(${idx})">View</button>
-          <button class="btn" data-idx="${idx}" onclick="contactOwner(${idx})">Contact</button>
-        </div>
-      </div>
-    `;
-    grid.appendChild(el);
-  });
+  if(!items.length){ grid.innerHTML = '<div style="padding:20px; color:#555">No properties yet. Login and Post one!</div>'; return; }
+  items.forEach((p, idx)=> grid.appendChild(renderCard(p, idx)));
 }
 
-/* ============================
-  Helpers
-  ============================ */
-function escapeHtml(s){
-  if(!s) return '';
-  return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
-}
-function numberWithCommas(x){ return x?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") || x; }
+/* ========== Firebase realtime listeners ========== */
+propsRef.off();
+propsRef.on('child_added', snap=>{
+  const v = snap.val(); properties.unshift({ id: snap.key, ...v }); applyFiltersAndRender();
+});
+propsRef.on('child_changed', snap=>{
+  const v = snap.val(); const i = properties.findIndex(x=> x.id===snap.key); if(i>=0){ properties[i] = { id: snap.key, ...v }; applyFiltersAndRender(); }
+});
+propsRef.on('child_removed', snap=>{
+  properties = properties.filter(x=> x.id!==snap.key); applyFiltersAndRender();
+});
 
-function toast(msg, ms=2500){
-  toastEl.textContent = msg; toastEl.classList.add('show');
-  setTimeout(()=> toastEl.classList.remove('show'), ms);
-}
+/* initial load (once) */
+propsRef.once('value').then(snapshot=>{
+  const arr = [];
+  snapshot.forEach(child=> arr.push({ id: child.key, ...child.val() }));
+  arr.sort((a,b)=> (b.postedAt||0)-(a.postedAt||0));
+  properties = arr; applyFiltersAndRender();
+}).catch(e=> console.error(e));
 
-/* ============================
-  Detail view & contact
-  ============================ */
+/* ========== modal & contact ========== */
 window.openDetail = function(i){
-  const p = properties[i];
-  if(!p) return;
-  modalImg.src = p.image;
-  modalTitle.textContent = p.title + ' — ' + p.city;
+  const p = properties[i]; if(!p) return;
+  modalImg.src = p.image; modalTitle.textContent = p.title + ' — ' + p.city;
   modalPrice.textContent = '₹ ' + numberWithCommas(p.price) + (p.type==='rent' ? ' /month' : '');
-  modalDesc.textContent = p.desc || '';
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
+  modalDesc.textContent = p.description || '';
+  modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
 }
 closeModal.addEventListener('click', ()=>{ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); });
-modal.addEventListener('click', (e)=>{ if(e.target===modal) { closeModal.click(); } });
+modal.addEventListener('click', e=>{ if(e.target===modal) closeModal.click(); });
 
 window.contactOwner = function(i){
-  const p = properties[i];
-  if(!p) return;
-  // Replace with real contact flow if you want
-  toast(`Contact info not set. Owner: ${escapeHtml(p.ownerName||'—')}`, 3000);
+  const p = properties[i]; if(!p) return; toast(`Contact owner: ${p.postedBy || '—'}`, 2500);
 }
 
-/* ============================
-  Search / Filter
-  ============================ */
-function applyFilters(){
-  let q = (qInput.value || '').toLowerCase().trim();
+/* ========== search/filter/sort ========== */
+function applyFiltersAndRender(){
+  let q = (qInput.value||'').toLowerCase().trim();
   let type = filterType.value;
   let arr = properties.filter(p=>{
     if(type && p.type !== type) return false;
-    if(q){
-      return (p.title||'').toLowerCase().includes(q) || (p.city||'').toLowerCase().includes(q);
-    }
+    if(q){ return (p.title||'').toLowerCase().includes(q) || (p.city||'').toLowerCase().includes(q); }
     return true;
   });
   if(sortBy.value==='low') arr.sort((a,b)=>a.price-b.price);
   else if(sortBy.value==='high') arr.sort((a,b)=>b.price-a.price);
-  else arr.sort((a,b)=> (b.postedAt||0) - (a.postedAt||0));
+  else arr.sort((a,b)=>(b.postedAt||0)-(a.postedAt||0));
   renderGrid(arr);
 }
-searchBtn.addEventListener('click', applyFilters);
+searchBtn.addEventListener('click', applyFiltersAndRender);
+qInput.addEventListener('keydown', e=>{ if(e.key==='Enter') applyFiltersAndRender(); });
 
-/* ============================
-  Auth handling (Google)
-  ============================ */
-const provider = new firebase.auth.GoogleAuthProvider();
-
-auth.onAuthStateChanged(user=>{
-  if(user){
-    authBtn.textContent = 'Logout';
-    authBtn.classList.remove('ghost'); authBtn.classList.add('btn');
-    uploadBtn.style.display = 'inline-block';
-    uploadBtn.disabled = false;
-    uploadBtn.onclick = ()=> openUpload();
-  } else {
-    authBtn.textContent = 'Google Login';
-    authBtn.classList.remove('btn'); authBtn.classList.add('ghost');
-    uploadBtn.style.display = 'none';
-  }
-});
-
-authBtn.addEventListener('click', ()=>{
-  if(auth.currentUser){
-    auth.signOut().then(()=> toast('Logged out')).catch(e=> toast('Logout failed'));
-  } else {
-    auth.signInWithPopup(provider).then(res=>{
-      toast('Welcome, ' + (res.user.displayName||''));
-    }).catch(err=> toast('Login failed: '+err.message));
-  }
-});
-
-/* ============================
-  Upload flow (imgbb) + save to localStorage
-  ============================ */
-
+/* ========== Upload flow (imgbb -> firebase) ========== */
 function openUpload(){ uploadModal.classList.add('open'); uploadModal.setAttribute('aria-hidden','false'); uploadStatus.textContent=''; }
-
-cancelUpload.addEventListener('click', ()=> { uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); });
+postBtn.addEventListener('click', ()=> openUpload());
+cancelUpload.addEventListener('click', ()=>{ uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); });
 
 submitProperty.addEventListener('click', async ()=>{
-  // validate
   const title = document.getElementById('p_title').value.trim();
   const city = document.getElementById('p_city').value.trim();
   const type = document.getElementById('p_type').value;
@@ -419,71 +336,28 @@ submitProperty.addEventListener('click', async ()=>{
   const desc = document.getElementById('p_desc').value.trim();
   const file = document.getElementById('p_image').files[0];
 
-  if(!title || !city || !price || !file){
-    uploadStatus.textContent = 'Please fill title, city, price and choose image.';
-    return;
-  }
-  uploadStatus.textContent = 'Uploading image to imgbb...';
-  submitProperty.disabled = true;
+  if(!title || !city || !price || !file){ uploadStatus.textContent = 'Please fill title, city, price and choose image.'; return; }
+  if(IMGBB_KEY === "PUT_YOUR_IMGBB_KEY_HERE"){ uploadStatus.textContent = 'Add your IMGBB key in code (IMGBB_KEY).'; return; }
 
+  uploadStatus.textContent = 'Uploading image to imgbb...'; submitProperty.disabled = true;
   try{
-    const form = new FormData();
-    form.append('image', file);
-    // imgbb upload
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_KEY)}`, {
-      method:'POST', body: form
-    });
-    const json = await res.json();
-    if(!json || !json.data || !json.data.url){
-      throw new Error('Image upload failed');
-    }
+    const form = new FormData(); form.append('image', file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_KEY)}`, { method:'POST', body: form });
+    const json = await res.json(); if(!json || !json.data || !json.data.url) throw new Error('Image upload failed');
     const imageUrl = json.data.url;
+    const user = auth.currentUser;
+    const prop = { title, city, type, price, description: desc, image: imageUrl, postedBy: user?user.displayName:'Guest', ownerUid: user?user.uid:null, postedAt: Date.now() };
 
-    // create property object
-    const prop = {
-      title, city, type, price, desc, image: imageUrl,
-      ownerUid: auth.currentUser ? auth.currentUser.uid : null,
-      ownerName: auth.currentUser ? auth.currentUser.displayName : 'Guest',
-      postedAt: Date.now()
-    };
+    // save to Firebase Realtime Database
+    await propsRef.push(prop);
 
-    // save to localStorage (you can replace this with Firebase DB save)
-    properties.unshift(prop);
-    saveLocal(properties);
+    uploadStatus.textContent = 'Posted!'; toast('Property posted');
+    setTimeout(()=>{ uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); document.getElementById('p_title').value=''; document.getElementById('p_city').value=''; document.getElementById('p_price').value=''; document.getElementById('p_desc').value=''; document.getElementById('p_image').value=''; submitProperty.disabled = false; }, 800);
 
-    // re-render & close modal
-    applyFilters();
-    uploadStatus.textContent = 'Posted!';
-    toast('Property posted');
-    setTimeout(()=>{
-      uploadModal.classList.remove('open');
-      uploadModal.setAttribute('aria-hidden','true');
-      document.getElementById('p_title').value=''; document.getElementById('p_city').value=''; document.getElementById('p_price').value=''; document.getElementById('p_desc').value=''; document.getElementById('p_image').value='';
-      submitProperty.disabled = false;
-    },700);
-
-    // OPTIONAL: save to Firebase Realtime DB (uncomment & configure DB rules)
-    /*
-    firebase.database().ref('properties').push(prop).then(()=> {
-        // saved
-    }).catch(err=> console.error(err));
-    */
-
-  }catch(err){
-    console.error(err);
-    uploadStatus.textContent = 'Upload failed: ' + (err.message||err);
-    submitProperty.disabled = false;
-  }
+  }catch(err){ console.error(err); uploadStatus.textContent = 'Upload failed: ' + (err.message||err); submitProperty.disabled = false; }
 });
 
-/* ============================
-  Init: render existing props
-  ============================ */
-renderGrid(properties);
-
-/* Accessibility small: allow Enter to search */
-qInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') applyFilters(); });
-
+/* Done */
 </script>
 </body>
 </html>
