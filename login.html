@@ -3,98 +3,299 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Fix - Login</title>
+<title>Zara Fix - Poster View with Login</title>
 <style>
-  body {
-    display: flex; justify-content: center; align-items: center;
-    height: 100vh; margin: 0; background: linear-gradient(to bottom, #87ceeb, #e0f7ff);
+  /* Background with moving clouds */
+  body, html {
+    margin: 0; padding: 0; height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #87ceeb 0%, #e0f7ff 80%);
+    overflow-x: hidden;
+    position: relative;
   }
-  .login-container {
-    background: white;
-    padding: 30px 40px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url('https://i.ibb.co/2sWjDvk/clouds.png') repeat-x;
+    opacity: 0.3;
+    animation: moveClouds 60s linear infinite;
+    z-index: 0;
+  }
+  @keyframes moveClouds {
+    0% {background-position-x: 0;}
+    100% {background-position-x: 10000px;}
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    padding: 20px 15px 80px 15px;
+    box-sizing: border-box;
+  }
+
+  /* Logo */
+  .logo {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #ff3c00;
+    text-shadow:
+      2px 2px 0 #ffea00,
+      4px 4px 0 #00f7ff,
+      6px 6px 8px rgba(0,0,0,0.35);
+    user-select: none;
+    margin-bottom: 25px;
     text-align: center;
-    width: 300px;
   }
-  .login-btn {
-    background-color: #4285F4;
+
+  /* Google Login Button top-right */
+  #googleLoginBtn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: #4285F4;
     color: white;
     font-weight: 700;
-    padding: 12px 20px;
-    border: none;
+    padding: 8px 14px;
+    font-size: 13px;
     border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
     cursor: pointer;
-    font-size: 1rem;
-    box-shadow: 0 3px 0 #3367d6;
-    transition: all 0.3s ease;
+    user-select: none;
+    transition: transform 0.15s ease;
+    z-index: 20;
+    border: none;
+    outline: none;
   }
-  .login-btn:hover {
-    background-color: #3367d6;
-    box-shadow: 0 1px 0 #254a8d;
+  #googleLoginBtn:hover {
+    transform: scale(1.1);
   }
-  .error-msg {
-    color: red;
-    margin-top: 15px;
-    display: none;
+
+  /* Buttons container */
+  .button-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 480px;
+    margin: 0 auto 35px auto;
   }
-  .loading-msg {
-    margin-top: 15px;
-    font-weight: 600;
-    color: #333;
-    display: none;
+
+  .line {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* 3D Buttons */
+  .btn-3d {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 14px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    box-shadow:
+      0 5px 0 #444,
+      0 9px 15px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease;
+    min-width: 120px;
+    text-align: center;
+    user-select: none;
+  }
+  .btn-3d:hover {
+    transform: translateY(3px);
+    box-shadow:
+      0 2px 0 #444,
+      0 5px 8px rgba(0,0,0,0.15);
+  }
+
+  /* Button Colors */
+  .green { background: linear-gradient(to right, #4caf50, #2e7d32); }
+  .blue { background: linear-gradient(to right, #2196f3, #0d47a1); }
+  .red { background: linear-gradient(to right, #f44336, #b71c1c); }
+  .purple { background: linear-gradient(to right, #9c27b0, #6a1b9a); }
+  .orange { background: linear-gradient(to right, #ff9800, #e65100); }
+  .teal { background: linear-gradient(to right, #009688, #004d40); }
+
+  /* Poster Card (Firebase poster slider) */
+  #posterCard {
+    max-width: 360px;
+    margin: 0 auto 50px auto;
+    background: white;
+    padding: 20px 25px;
+    border-radius: 18px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    text-align: left;
+    font-size: 16px;
+  }
+  .field {
+    margin-bottom: 10px;
+  }
+
+  /* Scrolling text at bottom */
+  .scrolling-text {
+    position: fixed;
+    bottom: 15px;
+    width: 100%;
+    background: rgba(255 255 255 / 0.85);
+    color: #222;
+    font-weight: 700;
+    padding: 8px 0;
+    box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    user-select: none;
+    z-index: 15;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .scrolling-text span {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scroll-left 18s linear infinite;
+  }
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
+  /* Responsive */
+  @media(max-width: 520px) {
+    .btn-3d {
+      min-width: 90px;
+      font-size: 13px;
+      padding: 10px 16px;
+    }
+    #posterCard {
+      max-width: 90%;
+      padding: 15px 20px;
+      font-size: 14px;
+    }
   }
 </style>
 </head>
 <body>
 
-<div class="login-container" role="main">
-  <h2>Login to Zara Fix</h2>
-  <button id="loginBtn" class="login-btn" aria-label="Login with Google">Login with Google</button>
-  <div id="loadingMsg" class="loading-msg" role="alert" aria-live="polite">Loading...</div>
-  <div id="errorMsg" class="error-msg" role="alert"></div>
+<div class="container">
+
+  <div class="logo" aria-label="Zara Fix Logo">Zara Fix</div>
+
+  <!-- Google Login Button -->
+  <button id="googleLoginBtn">Google Login</button>
+
+  <!-- Buttons: 3 lines with 2 buttons each -->
+  <div class="button-grid">
+    <div class="line">
+      <button class="btn-3d green" onclick="location.href='https://zarafix.vercel.app/recharge.html'">Recharge Request</button>
+      <button class="btn-3d blue" onclick="location.href='https://zarafix.vercel.app/requestbottun.html'">Service Request</button>
+    </div>
+    <div class="line">
+      <button class="btn-3d red" onclick="location.href='https://zarafix.vercel.app/2poster.html'">Service Provider</button>
+      <button class="btn-3d purple" onclick="location.href='https://zararealstate.blogspot.com/'">Real Estate</button>
+    </div>
+    <div class="line">
+      <button class="btn-3d orange" onclick="location.href='admin-dashboard.html'">Admin Dashboard</button>
+      <button class="btn-3d teal" onclick="location.href='#'">Extra Button</button>
+    </div>
+  </div>
+
+  <!-- Poster slider card from your original code -->
+  <div id="posterCard"><p>Loading posters...</p></div>
+
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+<!-- Scrolling text -->
+<div class="scrolling-text" aria-live="polite">
+  <span>यहाँ आपका स्क्रोलिंग संदेश आएगा • Zara Fix में आपका स्वागत है • नई अपडेट्स देखें • जल्दी ही नया फीचर आ रहा है •</span>
+</div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+  // Firebase Config
   const firebaseConfig = {
-    apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
-    authDomain: "zara-life-care.firebaseapp.com",
-    projectId: "zara-life-care",
-    storageBucket: "zara-life-care.appspot.com",
-    messagingSenderId: "307306937129",
-    appId: "1:307306937129:web:a949207fe64fe87dd3d538"
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "476473209200",
+    appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
   };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const loginBtn = document.getElementById('loginBtn');
-  const loadingMsg = document.getElementById('loadingMsg');
-  const errorMsg = document.getElementById('errorMsg');
+  let posters = [];
+  let current = 0;
 
-  loginBtn.addEventListener('click', () => {
-    errorMsg.style.display = 'none';
-    loadingMsg.style.display = 'block';
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider)
-      .then(() => {
-        // Redirect to main page on successful login
-        window.location.href = 'index.html';
-      })
-      .catch((error) => {
-        loadingMsg.style.display = 'none';
-        errorMsg.textContent = `Login failed: ${error.message}`;
-        errorMsg.style.display = 'block';
-      });
+  function showPoster(i) {
+    const container = document.getElementById("posterCard");
+    if (!posters.length) {
+      container.innerHTML = "<p>No poster data found.</p>";
+      return;
+    }
+    const p = posters[i];
+    container.innerHTML = `
+      <div class="field"><b>Shop:</b> ${p.shop || "N/A"}</div>
+      <div class="field"><b>Name:</b> ${p.name || "N/A"}</div>
+      <div class="field"><b>Address:</b> ${p.address || "N/A"}</div>
+    `;
+  }
+
+  // Load posters from Firebase
+  db.ref("posters").once("value").then(snapshot => {
+    snapshot.forEach(child => {
+      posters.push(child.val());
+    });
+    if (posters.length) {
+      showPoster(current);
+      setInterval(() => {
+        current = (current + 1) % posters.length;
+        showPoster(current);
+      }, 4000);
+    } else {
+      document.getElementById("posterCard").innerHTML = "<p>No posters found.</p>";
+    }
   });
 
-  // If already logged in, redirect to index.html automatically
-  onAuthStateChanged(auth, (user) => {
+  // Google Login button functionality
+  const loginBtn = document.getElementById('googleLoginBtn');
+
+  loginBtn.addEventListener('click', () => {
+    if (auth.currentUser) {
+      // Logout
+      auth.signOut()
+      .then(() => {
+        alert("Logged out successfully!");
+        loginBtn.textContent = "Google Login";
+      })
+      .catch(err => {
+        alert("Logout failed: " + err.message);
+      });
+    } else {
+      // Login
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+      .then(result => {
+        alert("Login successful! Welcome, " + result.user.displayName);
+        loginBtn.textContent = "Logout";
+      })
+      .catch(error => {
+        alert("Login failed: " + error.message);
+      });
+    }
+  });
+
+  // Update button text based on auth state on page load & changes
+  auth.onAuthStateChanged(user => {
     if (user) {
-      window.location.href = 'index.html';
+      loginBtn.textContent = "Logout";
+    } else {
+      loginBtn.textContent = "Google Login";
     }
   });
 </script>
