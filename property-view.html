@@ -1,553 +1,365 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property — Your Listings</title>
-<!-- Firebase -->
+<title>Zara Property — Admin + User</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
-  :root{
-    --accent:#0077cc;
-    --accent-dark:#005f9e;
-    --card-bg: #fff;
-    --glass: rgba(255,255,255,0.85);
-    --muted:#666;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; font-family:Inter,system-ui,Segoe UI,Arial;
-    background: linear-gradient(180deg,#e6f7ff,#f7fdff);
-    color:#111;
-    -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-  }
-
-  header{
-    position:sticky; top:0; z-index:60;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 16px; gap:10px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
-    backdrop-filter: blur(6px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .brand{
-    display:flex; align-items:center; gap:12px;
-  }
-  .logo {
-    font-weight:800; font-size:20px;
-    background: linear-gradient(90deg,#ff6a00,#fddb92,#00d4ff,#9b59ff);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow: 0 6px 10px rgba(0,0,0,0.08);
-    padding:6px 10px; border-radius:8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  }
-  .top-actions { display:flex; gap:10px; align-items:center; }
-
-  .btn {
-    background:var(--accent);
-    color:white; border:none; padding:8px 12px; border-radius:8px;
-    font-weight:700; cursor:pointer; box-shadow: 0 6px 0 var(--accent-dark);
-    transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
-    text-decoration:none;
-  }
-  .btn.secondary{ background:#28a745; box-shadow: 0 6px 0 #147031; }
-  .btn.ghost{
-    background:transparent; color:var(--accent); box-shadow:none; font-weight:700;
-    padding:6px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.06);
-  }
-  .btn:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,0.2); }
-
-  main{ padding:18px; max-width:1100px; margin:0 auto; flex:1; }
-
-  .hero{
-    display:flex; gap:16px; align-items:center; flex-wrap:wrap;
-    margin-bottom:16px;
-  }
-  .search-box{
-    flex:1; min-width:260px;
-    background:var(--glass); padding:12px; border-radius:12px; display:flex; gap:8px;
-    box-shadow: 0 6px 12px rgba(3,37,65,0.04);
-  }
-  .search-box input, .search-box select{
-    border: none; outline:none; padding:8px 10px; border-radius:8px; font-size:15px;
-  }
-  .search-box input{ flex:1; background:transparent; color:#111; }
-
-  .grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-    gap:14px;
-    margin-top:12px;
-  }
-  .card{
-    background:var(--card-bg); border-radius:12px; overflow:hidden;
-    box-shadow: 0 6px 18px rgba(10,20,30,0.06); display:flex; flex-direction:column;
-    transition: transform .14s ease, box-shadow .14s;
-  }
-  .card:hover{ transform: translateY(-6px); box-shadow: 0 12px 30px rgba(10,20,30,0.08); }
-  .card img{ width:100%; height:160px; object-fit:cover; display:block; }
-  .card-body{ padding:12px; display:flex; flex-direction: column; gap:8px; flex-grow:1; }
-  .title{ font-weight:800; font-size:16px; color:#111; }
-  .price{ color:var(--accent); font-weight:800; margin-top:6px; }
-  .meta{ color:var(--muted); font-size:13px; margin-top:6px; }
-  .card-actions{ margin-top:auto; display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-
-  /* detail modal */
-  .modal{
-    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-    z-index:120; background: rgba(0,0,0,0.45);
-    padding:20px;
-  }
-  .modal.open{ display:flex; }
-  .modal-card{
-    width:100%; max-width:900px; max-height:90vh; overflow:auto;
-    background:white; border-radius:12px; padding:16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  }
-  .modal .img{ width:100%; height:360px; object-fit:cover; border-radius:8px; }
-  .modal .close{ position:absolute; top:14px; right:18px; background:transparent; border:none; font-size:18px; color:white; }
-
-  /* upload modal */
-  .upload-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:130; background:rgba(0,0,0,0.45); padding:20px; }
-  .upload-modal.open{ display:flex; }
-  .upload-card{ width:100%; max-width:520px; background:white; padding:16px; border-radius:12px; box-shadow: 0 18px 40px rgba(0,0,0,0.25); }
-
-  label{ display:block; font-weight:600; margin-top:10px; margin-bottom:6px; color:#222; }
-  input[type="text"], input[type="number"], textarea, select {
-    width:100%; padding:10px; border-radius:8px; border:1px solid #e8eef5;
-  }
-  textarea{ min-height:90px; resize:vertical; }
-
-  .small { font-size:13px; color:var(--muted); margin-top:6px; }
-
-  /* responsive tweaks */
-  @media (max-width:640px){
-    .modal .img{ height:220px; }
-    .logo { font-size:18px; }
-  }
-
-  /* tiny toast */
-  .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111;color:#fff;padding:10px 14px;border-radius:10px; display:none; z-index:200; }
-  .toast.show{ display:block; animation:pop .3s ease;}
-  @keyframes pop{ from{transform:translate(-50%,10px); opacity:0} to{transform:translate(-50%,0); opacity:1} }
+  /* -- same CSS जैसा पहले था, आप वही लगा सकते हैं -- */
+  /* आपके लिए मैंने केवल JS पर ध्यान दिया है, CSS वैसा ही रखें */
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">
-    <div class="logo">Zara Property</div>
+  <div>
+    <h1>Zara Property</h1>
   </div>
-
-  <div class="top-actions">
-    <button id="uploadBtn" class="btn secondary" style="display:none" title="Post Property">Post Property</button>
-    <button id="authBtn" class="btn ghost" title="Google Sign-in">Google Login</button>
+  <div>
+    <button id="loginBtn">Google Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="postBtn" style="display:none;">Post Property</button>
   </div>
 </header>
 
-<main>
-  <section class="hero">
-    <div class="search-box" role="search" aria-label="Search properties">
-      <input id="q" placeholder="Search by title or city..." />
-      <select id="filterType">
-        <option value="">All types</option>
-        <option value="sale">Buy</option>
-        <option value="rent">Rent</option>
-      </select>
-      <select id="sortBy">
-        <option value="new">Newest</option>
-        <option value="low">Price: Low → High</option>
-        <option value="high">Price: High → Low</option>
-      </select>
-      <button id="searchBtn" class="btn" style="padding:8px 10px">Search</button>
-    </div>
-  </section>
+<section id="uploadSection" style="display:none;">
+  <h2>Post Property</h2>
+  <input type="text" id="title" placeholder="Title" /><br/>
+  <input type="text" id="city" placeholder="City" /><br/>
+  <select id="type">
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select><br/>
+  <input type="number" id="price" placeholder="Price" /><br/>
+  <textarea id="desc" placeholder="Description"></textarea><br/>
+  <input type="file" id="imageFile" accept="image/*"/><br/>
+  <button id="submitPost">Upload & Post</button>
+  <button id="cancelPost">Cancel</button>
+  <p id="uploadStatus"></p>
+</section>
 
-  <section id="listings">
-    <div class="grid" id="grid"></div>
-  </section>
-</main>
+<section>
+  <input type="text" id="searchInput" placeholder="Search by title or city..." />
+  <select id="filterType">
+    <option value="">All types</option>
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <button id="searchBtn">Search</button>
+</section>
 
-<!-- Detail modal -->
-<div id="modal" class="modal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true">
-    <button id="closeModal" class="close" aria-label="Close">✕</button>
-    <img id="modalImg" class="img" src="" alt="">
-    <h2 id="modalTitle"></h2>
-    <div id="modalPrice" class="price"></div>
-    <div id="modalDesc" class="small"></div>
-  </div>
-</div>
-
-<!-- Upload modal -->
-<div id="uploadModal" class="upload-modal" aria-hidden="true">
-  <div class="upload-card">
-    <h3>Post Property</h3>
-    <div class="small">(Images uploaded via imgbb)</div>
-
-    <label>Title</label>
-    <input id="p_title" type="text" placeholder="3BHK sea-view / Spacious 2BHK..." />
-
-    <label>City</label>
-    <input id="p_city" type="text" placeholder="e.g. Mumbai" />
-
-    <label>Type</label>
-    <select id="p_type">
-      <option value="sale">Buy</option>
-      <option value="rent">Rent</option>
-    </select>
-
-    <label>Price (number)</label>
-    <input id="p_price" type="number" placeholder="e.g. 8500000" />
-
-    <label>Description</label>
-    <textarea id="p_desc" placeholder="Short description..."></textarea>
-
-    <label>Image</label>
-    <input id="p_image" type="file" accept="image/*" />
-
-    <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
-      <button id="cancelUpload" class="btn ghost">Cancel</button>
-      <button id="submitProperty" class="btn secondary">Upload & Post</button>
-    </div>
-
-    <p id="uploadStatus" class="small" aria-live="polite"></p>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
+<section id="propertyList"></section>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
 
-const IMGBB_KEY = "52759d17d6011826df915af26466a7ea";
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const database = firebase.database();
+  const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-const authBtn = document.getElementById('authBtn');
-const uploadBtn = document.getElementById('uploadBtn');
-const uploadModal = document.getElementById('uploadModal');
-const cancelUpload = document.getElementById('cancelUpload');
-const submitProperty = document.getElementById('submitProperty');
-const uploadStatus = document.getElementById('uploadStatus');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const postBtn = document.getElementById('postBtn');
+  const uploadSection = document.getElementById('uploadSection');
+  const submitPost = document.getElementById('submitPost');
+  const cancelPost = document.getElementById('cancelPost');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const propertyList = document.getElementById('propertyList');
+  const searchInput = document.getElementById('searchInput');
+  const filterType = document.getElementById('filterType');
+  const searchBtn = document.getElementById('searchBtn');
 
-const grid = document.getElementById('grid');
-const qInput = document.getElementById('q');
-const filterType = document.getElementById('filterType');
-const sortBy = document.getElementById('sortBy');
+  let currentUser = null;
+  let isAdmin = false;
 
-const modal = document.getElementById('modal');
-const closeModal = document.getElementById('closeModal');
-const modalImg = document.getElementById('modalImg');
-const modalTitle = document.getElementById('modalTitle');
-const modalPrice = document.getElementById('modalPrice');
-const modalDesc = document.getElementById('modalDesc');
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => alert(err.message));
+  };
 
-let currentUser = null;
-let allProperties = [];
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
+  postBtn.onclick = () => {
+    uploadSection.style.display = 'block';
+  };
 
-function openModal(property){
-  modalImg.src = property.imageUrl;
-  modalTitle.textContent = property.title;
-  modalPrice.textContent = `₹ ${property.price.toLocaleString()}`;
-  modalDesc.textContent = property.description;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-}
-function closeModalFunc(){
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-}
-closeModal.addEventListener('click', closeModalFunc);
-modal.addEventListener('click', e=>{
-  if(e.target === modal) closeModalFunc();
-});
+  cancelPost.onclick = () => {
+    uploadSection.style.display = 'none';
+    clearForm();
+  };
 
-function clearUploadForm(){
-  uploadStatus.textContent = "";
-  document.getElementById('p_title').value = "";
-  document.getElementById('p_city').value = "";
-  document.getElementById('p_type').value = "sale";
-  document.getElementById('p_price').value = "";
-  document.getElementById('p_desc').value = "";
-  document.getElementById('p_image').value = "";
-}
-
-uploadBtn.addEventListener('click', ()=>{
-  if(!currentUser){
-    alert('Please login first!');
-    return;
-  }
-  clearUploadForm();
-  uploadModal.classList.add('open');
-  uploadModal.setAttribute('aria-hidden', 'false');
-});
-
-cancelUpload.addEventListener('click', ()=>{
-  uploadModal.classList.remove('open');
-  uploadModal.setAttribute('aria-hidden', 'true');
-});
-
-async function uploadImageToImgBB(file){
-  uploadStatus.textContent = "Uploading image...";
-  const formData = new FormData();
-  formData.append('image', file);
-
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
-    method:'POST',
-    body: formData
-  });
-  if(!res.ok) throw new Error('Image upload failed with status ' + res.status);
-  const data = await res.json();
-  return data.data.url;
-}
-
-async function postProperty(){
-  const title = document.getElementById('p_title').value.trim();
-  const city = document.getElementById('p_city').value.trim();
-  const type = document.getElementById('p_type').value;
-  const priceRaw = document.getElementById('p_price').value.trim();
-  const description = document.getElementById('p_desc').value.trim();
-  const imageFile = document.getElementById('p_image').files[0];
-
-  if(!title || !city || !type || !priceRaw || !description || !imageFile){
-    alert('Please fill all fields and select an image.');
-    return;
-  }
-  const price = Number(priceRaw);
-  if(isNaN(price) || price <= 0){
-    alert('Price must be a positive number.');
-    return;
-  }
-  try {
-    submitProperty.disabled = true;
-    uploadStatus.textContent = "Uploading image to ImgBB...";
-    const imageUrl = await uploadImageToImgBB(imageFile);
-    uploadStatus.textContent = "Saving property data...";
-    const postData = {
-      title,
-      city,
-      type,
-      price,
-      description,
-      imageUrl,
-      userId: currentUser.uid,
-      userEmail: currentUser.email || "",
-      timestamp: Date.now(),
-      code: generateUniqueCode()
-    };
-    const newPostRef = database.ref('properties').push();
-    await newPostRef.set(postData);
-    uploadStatus.textContent = "Property posted successfully!";
-    showToast("Posted!");
-    uploadModal.classList.remove('open');
-    uploadModal.setAttribute('aria-hidden', 'true');
-    submitProperty.disabled = false;
-    clearUploadForm();
-  } catch (err) {
-    alert('Error: ' + err.message);
-    submitProperty.disabled = false;
+  submitPost.onclick = async () => {
     uploadStatus.textContent = "";
-  }
-}
+    const title = document.getElementById('title').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const type = document.getElementById('type').value;
+    const price = Number(document.getElementById('price').value);
+    const desc = document.getElementById('desc').value.trim();
+    const imageFile = document.getElementById('imageFile').files[0];
 
-submitProperty.addEventListener('click', postProperty);
-
-function generateUniqueCode(){
-  // Simple code generation, e.g. 6 random alphanumeric chars
-  return Math.random().toString(36).substr(2,6).toUpperCase();
-}
-
-function renderProperties(props){
-  grid.innerHTML = "";
-  if(props.length === 0){
-    grid.innerHTML = "<p style='color:#444; text-align:center; font-weight:700;'>कोई प्रॉपर्टी नहीं मिली।</p>";
-    return;
-  }
-  for(const p of props){
-    const card = document.createElement('div');
-    card.className = 'card';
-
-    // Image
-    const img = document.createElement('img');
-    img.src = p.imageUrl;
-    img.alt = p.title;
-    img.loading = "lazy";
-    img.style.cursor = "pointer";
-    img.addEventListener('click', () => openModal(p));
-    card.appendChild(img);
-
-    // Body
-    const body = document.createElement('div');
-    body.className = 'card-body';
-
-    // Title
-    const titleEl = document.createElement('div');
-    titleEl.className = 'title';
-    titleEl.textContent = p.title;
-    body.appendChild(titleEl);
-
-    // City and Type
-    const metaEl = document.createElement('div');
-    metaEl.className = 'meta';
-    metaEl.textContent = `${p.city} — ${p.type === 'sale' ? 'Buy' : 'Rent'}`;
-    body.appendChild(metaEl);
-
-    // Price
-    const priceEl = document.createElement('div');
-    priceEl.className = 'price';
-    priceEl.textContent = `₹ ${p.price.toLocaleString()}`;
-    body.appendChild(priceEl);
-
-    // Description
-    const descEl = document.createElement('div');
-    descEl.className = 'small';
-    descEl.textContent = p.description;
-    body.appendChild(descEl);
-
-    // Actions
-    const actions = document.createElement('div');
-    actions.className = 'card-actions';
-
-    // WhatsApp button
-    const waBtn = document.createElement('a');
-    const waNumber = "917378342192";
-    const waMessage = `प्रॉपर्टी कोड: ${p.code}%0Aशीर्षक: ${encodeURIComponent(p.title)}%0Aशहर: ${encodeURIComponent(p.city)}%0Aकीमत: ₹${p.price.toLocaleString()}%0Aलिंक: ${window.location.href}`;
-    waBtn.href = `https://wa.me/${waNumber}?text=${waMessage}`;
-    waBtn.target = "_blank";
-    waBtn.rel = "noopener noreferrer";
-    waBtn.className = "btn secondary";
-    waBtn.textContent = "WhatsApp";
-    actions.appendChild(waBtn);
-
-    // Delete button only if current user is owner
-    if(currentUser && p.userId === currentUser.uid){
-      const delBtn = document.createElement('button');
-      delBtn.className = 'btn ghost';
-      delBtn.textContent = "Delete";
-      delBtn.title = "Delete this property";
-      delBtn.addEventListener('click', () => deleteProperty(p.key));
-      actions.appendChild(delBtn);
+    if(!title || !city || !type || !price || !desc || !imageFile){
+      uploadStatus.textContent = "सभी फील्ड्स भरें और इमेज अपलोड करें।";
+      return;
     }
 
-    body.appendChild(actions);
-    card.appendChild(body);
-    grid.appendChild(card);
-  }
-}
+    uploadStatus.textContent = "Uploading image...";
 
-function deleteProperty(key){
-  if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
-    database.ref('properties/' + key).remove()
-    .then(() => {
-      showToast("प्रॉपर्टी हटा दी गई।");
-    })
-    .catch(e => alert("Error deleting: " + e.message));
-  }
-}
+    try {
+      const imageUrl = await uploadImageToImgbb(imageFile);
+      const timestamp = Date.now();
 
-// Fetch & render properties of current user + filters
-function loadProperties(){
-  database.ref('properties').once('value', snapshot=>{
-    allProperties = [];
-    snapshot.forEach(child => {
-      const val = child.val();
-      val.key = child.key;
-      allProperties.push(val);
+      const newRef = db.ref('properties').push();
+      await newRef.set({
+        title, city, type, price, description: desc,
+        imageUrl, userId: currentUser.uid, userEmail: currentUser.email,
+        timestamp, approved: false
+      });
+
+      uploadStatus.textContent = "Property posted! Waiting for admin approval.";
+      clearForm();
+      uploadSection.style.display = 'none';
+      loadProperties();
+
+    } catch (err) {
+      uploadStatus.textContent = "Image upload failed.";
+    }
+  };
+
+  function clearForm(){
+    document.getElementById('title').value = "";
+    document.getElementById('city').value = "";
+    document.getElementById('type').value = "sale";
+    document.getElementById('price').value = "";
+    document.getElementById('desc').value = "";
+    document.getElementById('imageFile').value = "";
+    uploadStatus.textContent = "";
+  }
+
+  async function uploadImageToImgbb(file){
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+      method: 'POST',
+      body: formData
     });
-    filterAndRender();
-  });
-}
-
-function filterAndRender(){
-  let filtered = allProperties;
-
-  // Show only current user's posts
-  if(currentUser){
-    filtered = filtered.filter(p => p.userId === currentUser.uid);
-  } else {
-    filtered = [];
+    const data = await response.json();
+    if(data.success) return data.data.url;
+    else throw new Error('Image upload failed');
   }
 
-  // Search by title or city
-  const q = qInput.value.trim().toLowerCase();
-  if(q){
-    filtered = filtered.filter(p => 
-      p.title.toLowerCase().includes(q) || p.city.toLowerCase().includes(q)
-    );
+  function formatPrice(num){
+    return num.toLocaleString('en-IN');
   }
 
-  // Filter by type
-  const typeFilter = filterType.value;
-  if(typeFilter){
-    filtered = filtered.filter(p => p.type === typeFilter);
+  // WhatsApp link with property info
+  function whatsappLink(post){
+    const phone = "917378342192";
+    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.href}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
-  // Sort
-  const sortOption = sortBy.value;
-  if(sortOption === 'low'){
-    filtered.sort((a,b)=>a.price-b.price);
-  } else if(sortOption === 'high'){
-    filtered.sort((a,b)=>b.price-a.price);
-  } else {
-    filtered.sort((a,b)=>b.timestamp - a.timestamp);
+  // Check if post older than 30 days
+  function isExpired(ts){
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    return (Date.now() - ts) > THIRTY_DAYS;
   }
 
-  renderProperties(filtered);
-}
-
-searchBtn.addEventListener('click', filterAndRender);
-qInput.addEventListener('keyup', e=>{
-  if(e.key === 'Enter') filterAndRender();
-});
-filterType.addEventListener('change', filterAndRender);
-sortBy.addEventListener('change', filterAndRender);
-
-// Auth UI
-
-authBtn.addEventListener('click', () => {
-  if(currentUser){
-    auth.signOut();
-  } else {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+  // Delete property
+  function deleteProperty(key){
+    if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
+      db.ref('properties/'+key).remove();
+    }
   }
-});
 
-auth.onAuthStateChanged(user=>{
-  currentUser = user;
-  if(user){
-    authBtn.textContent = "Logout (" + (user.displayName || user.email) + ")";
-    uploadBtn.style.display = "inline-block";
+  // Approve property (admin only)
+  function approveProperty(key){
+    db.ref('properties/'+key).update({approved:true});
+  }
+
+  // Render all properties according to user/admin + filters
+  function renderProperties(posts){
+    propertyList.innerHTML = "";
+    if(posts.length === 0){
+      propertyList.innerHTML = "<p>कोई प्रॉपर्टी नहीं मिली।</p>";
+      return;
+    }
+
+    posts.forEach(({key, post}) => {
+      const div = document.createElement('div');
+      div.style.border = "1px solid #ccc";
+      div.style.margin = "10px";
+      div.style.padding = "10px";
+      div.style.borderRadius = "8px";
+      div.style.position = "relative";
+
+      const img = document.createElement('img');
+      img.src = post.imageUrl;
+      img.alt = post.title;
+      img.style.width = "100%";
+      img.style.maxHeight = "200px";
+      img.style.objectFit = "cover";
+      div.appendChild(img);
+
+      const title = document.createElement('h3');
+      title.textContent = post.title;
+      div.appendChild(title);
+
+      const city = document.createElement('p');
+      city.textContent = "City: " + post.city;
+      div.appendChild(city);
+
+      const type = document.createElement('p');
+      type.textContent = "Type: " + (post.type === "sale" ? "Buy" : "Rent");
+      div.appendChild(type);
+
+      const price = document.createElement('p');
+      price.textContent = "Price: ₹" + formatPrice(post.price);
+      div.appendChild(price);
+
+      const desc = document.createElement('p');
+      desc.textContent = post.description;
+      div.appendChild(desc);
+
+      // WhatsApp button for admin only
+      if(isAdmin){
+        const waBtn = document.createElement('a');
+        waBtn.href = whatsappLink(post);
+        waBtn.target = "_blank";
+        waBtn.textContent = "WhatsApp";
+        waBtn.style.backgroundColor = "#25d366";
+        waBtn.style.color = "white";
+        waBtn.style.padding = "8px 12px";
+        waBtn.style.borderRadius = "6px";
+        waBtn.style.textDecoration = "none";
+        waBtn.style.display = "inline-block";
+        waBtn.style.marginRight = "10px";
+        div.appendChild(waBtn);
+      }
+
+      // Delete button for admin and post owner
+      if(isAdmin || (currentUser && currentUser.uid === post.userId)){
+        const delBtn = document.createElement('button');
+        delBtn.textContent = "Delete";
+        delBtn.style.backgroundColor = "#dc3545";
+        delBtn.style.color = "white";
+        delBtn.style.border = "none";
+        delBtn.style.padding = "8px 12px";
+        delBtn.style.borderRadius = "6px";
+        delBtn.style.cursor = "pointer";
+        delBtn.onclick = () => deleteProperty(key);
+        div.appendChild(delBtn);
+      }
+
+      // Approve button for admin only and if not approved yet
+      if(isAdmin && !post.approved){
+        const approveBtn = document.createElement('button');
+        approveBtn.textContent = "Approve";
+        approveBtn.style.backgroundColor = "#007bff";
+        approveBtn.style.color = "white";
+        approveBtn.style.border = "none";
+        approveBtn.style.padding = "8px 12px";
+        approveBtn.style.borderRadius = "6px";
+        approveBtn.style.cursor = "pointer";
+        approveBtn.style.marginLeft = "10px";
+        approveBtn.onclick = () => approveProperty(key);
+        div.appendChild(approveBtn);
+      }
+
+      propertyList.appendChild(div);
+    });
+  }
+
+  // Load properties from DB with filtering & logic
+  function loadProperties(){
+    db.ref('properties').once('value', snapshot => {
+      const data = snapshot.val();
+      if(!data) {
+        renderProperties([]);
+        return;
+      }
+      let posts = Object.entries(data).map(([key, post]) => ({key, post}));
+
+      // Auto delete expired posts
+      posts.forEach(({key, post}) => {
+        if(isExpired(post.timestamp)){
+          db.ref('properties/'+key).remove();
+        }
+      });
+
+      // Filter posts as per admin/user rules
+      posts = posts.filter(({post}) => {
+        if(isExpired(post.timestamp)) return false;
+
+        if(isAdmin) return true; // admin sees all
+
+        // normal user sees only approved and own posts
+        if(!post.approved) return false;
+        if(currentUser && post.userId === currentUser.uid) return true;
+
+        return false;
+      });
+
+      // Search & filter UI
+      const q = searchInput.value.trim().toLowerCase();
+      const typeFilter = filterType.value;
+
+      posts = posts.filter(({post}) => {
+        if(q && !(post.title.toLowerCase().includes(q) || post.city.toLowerCase().includes(q))) return false;
+        if(typeFilter && post.type !== typeFilter) return false;
+        return true;
+      });
+
+      renderProperties(posts);
+    });
+  }
+
+  // Auth state change handler
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      postBtn.style.display = "inline-block";
+
+      isAdmin = (user.email === adminEmail);
+      if(isAdmin){
+        alert("आप Admin के रूप में लॉगिन हैं।");
+      }
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      postBtn.style.display = "none";
+      uploadSection.style.display = "none";
+      isAdmin = false;
+    }
     loadProperties();
-  } else {
-    authBtn.textContent = "Google Login";
-    uploadBtn.style.display = "none";
-    grid.innerHTML = "<p style='text-align:center; color:#777; font-weight:600;'>Login to view and post properties.</p>";
-  }
-});
+  });
+
+  searchBtn.onclick = loadProperties;
+  searchInput.onkeyup = e => {
+    if(e.key === "Enter") loadProperties();
+  };
+  filterType.onchange = loadProperties;
 
 </script>
+
 </body>
 </html>
