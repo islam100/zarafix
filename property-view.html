@@ -1,105 +1,489 @@
 <!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zara Property — Single Page</title>
+<!-- Firebase (v8 compat) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<style>
+  :root{
+    --accent:#0077cc;
+    --accent-dark:#005f9e;
+    --card-bg: #fff;
+    --glass: rgba(255,255,255,0.85);
+    --muted:#666;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,system-ui,Segoe UI,Arial;
+    background: linear-gradient(180deg,#e6f7ff,#f7fdff);
+    color:#111;
+    -webkit-font-smoothing:antialiased;
+  }
 
-  
-  Continuous Scroll with 3D Buttons
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      font-family: 'Segoe UI', sans-serif;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+  /* header */
+  header{
+    position:sticky; top:0; z-index:60;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; gap:10px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+  }
+  .logo {
+    font-weight:800; font-size:20px;
+    background: linear-gradient(90deg,#ff6a00,#fddb92,#00d4ff,#9b59ff);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow: 0 6px 10px rgba(0,0,0,0.08);
+    padding:6px 10px; border-radius:8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+  .top-actions { display:flex; gap:10px; align-items:center; }
 
-    .scroll-container {
-      width: 100%;
-      overflow: hidden;
-      white-space: nowrap;
-      box-sizing: border-box;
-      margin-top: 50px;
-      position: relative;
-    }
+  .btn {
+    background:var(--accent);
+    color:white; border:none; padding:8px 12px; border-radius:8px;
+    font-weight:700; cursor:pointer; box-shadow: 0 6px 0 var(--accent-dark);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+    text-decoration:none;
+  }
+  .btn.secondary{ background:#28a745; box-shadow: 0 6px 0 #147031; }
+  .btn.ghost{
+    background:transparent; color:var(--accent); box-shadow:none; font-weight:700;
+    padding:6px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.06);
+  }
+  .btn:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,0.2); }
 
-    .scroll-content {
-      display: inline-block;
-      white-space: nowrap;
-      animation: scroll-left 5s linear infinite;
-    }
+  /* main layout */
+  main{ padding:18px; max-width:1100px; margin:0 auto; }
 
-    .scroll-text {
-      display: inline-block;
-      padding-right: 50px;
-      font-size: 24px;
-      font-weight: bold;
-      color: #fff;
-      text-shadow: 2px 2px 5px #00f, -2px -2px 5px #0ff;
-    }
+  .hero{
+    display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .search-box{
+    flex:1; min-width:260px;
+    background:var(--glass); padding:12px; border-radius:12px; display:flex; gap:8px;
+    box-shadow: 0 6px 12px rgba(3,37,65,0.04);
+  }
+  .search-box input, .search-box select{
+    border: none; outline:none; padding:8px 10px; border-radius:8px; font-size:15px;
+  }
+  .search-box input{ flex:1; background:transparent; color:#111; }
 
-    @keyframes scroll-left {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
+  /* posts grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+    gap:14px;
+    margin-top:12px;
+  }
+  .card{
+    background:var(--card-bg); border-radius:12px; overflow:hidden;
+    box-shadow: 0 6px 18px rgba(10,20,30,0.06); display:flex; flex-direction:column;
+    transition: transform .14s ease, box-shadow .14s;
+  }
+  .card:hover{ transform: translateY(-6px); box-shadow: 0 12px 30px rgba(10,20,30,0.08); }
+  .card img{ width:100%; height:160px; object-fit:cover; display:block; }
+  .card-body{ padding:12px; display:flex; gap:8px; flex-direction:column; }
+  .title{ font-weight:800; font-size:16px; color:#111; }
+  .price{ color:var(--accent); font-weight:800; margin-top:6px; }
+  .meta{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .card-actions{ margin-top:auto; display:flex; gap:8px; align-items:center; }
 
-    .button-container {
-      margin-top: 30px;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
+  /* detail modal (slide-up) */
+  .modal{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    z-index:120; background: rgba(0,0,0,0.45);
+    padding:20px;
+  }
+  .modal.open{ display:flex; }
+  .modal-card{
+    width:100%; max-width:900px; max-height:90vh; overflow:auto;
+    background:white; border-radius:12px; padding:16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .modal .img{ width:100%; height:360px; object-fit:cover; border-radius:8px; }
+  .modal .close{ position:absolute; top:14px; right:18px; background:transparent; border:none; font-size:18px; color:white; }
 
-    .btn-3d {
-      padding: 12px 24px;
-      font-size: 16px;
-      font-weight: bold;
-      color: white;
-      background: linear-gradient(145deg, #1e90ff, #0044cc);
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 5px 0 #002a80, 0 10px 20px rgba(0,0,0,0.4);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-decoration: none;
-    }
+  /* upload modal */
+  .upload-modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:130; background:rgba(0,0,0,0.45); padding:20px; }
+  .upload-modal.open{ display:flex; }
+  .upload-card{ width:100%; max-width:520px; background:white; padding:16px; border-radius:12px; box-shadow: 0 18px 40px rgba(0,0,0,0.25); }
 
-    .btn-3d:active {
-      transform: translateY(4px);
-      box-shadow: 0 2px 0 #002a80;
-    }
+  label{ display:block; font-weight:600; margin-top:10px; margin-bottom:6px; color:#222; }
+  input[type="text"], input[type="number"], textarea, select {
+    width:100%; padding:10px; border-radius:8px; border:1px solid #e8eef5;
+  }
+  textarea{ min-height:90px; resize:vertical; }
 
-    .btn-alt {
-      background: linear-gradient(145deg, #28a745, #006400);
-      box-shadow: 0 5px 0 #004d00, 0 10px 20px rgba(0,0,0,0.4);
-    }
+  .small { font-size:13px; color:var(--muted); margin-top:6px; }
 
-    @media (max-width: 600px) {
-      .scroll-text { font-size: 18px; }
-      .btn-3d { font-size: 14px; padding: 10px 20px; }
-    }
-  </style>
+  /* responsive tweaks */
+  @media (max-width:640px){
+    .modal .img{ height:220px; }
+    .logo { font-size:18px; }
+  }
 
+  /* tiny toast */
+  .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#111;color:#fff;padding:10px 14px;border-radius:10px; display:none; z-index:200; }
+  .toast.show{ display:block; animation:pop .3s ease;}
+  @keyframes pop{ from{transform:translate(-50%,10px); opacity:0} to{transform:translate(-50%,0); opacity:1} }
+</style>
+</head>
+<body>
 
+<header>
+  <div class="brand">
+    <div class="logo">Zara Property</div>
+    <div class="small" style="margin-left:6px">— Buy • Rent • Sell</div>
+  </div>
 
-  <!-- Continuous Scroll Text -->
-  <div class="scroll-container">
-    <div class="scroll-content">
-      <span class="scroll-text">Ghar.Online पर आपकी पसंद का घर मिलेगा</span>
-      <span class="scroll-text">किराए पर घर देना हो या लेना हो या घर खरीदना हो या बेचना Ghar.Online है</span>
+  <div class="top-actions">
+    <!-- Upload button visible only when logged in (we'll toggle via JS) -->
+    <button id="uploadBtn" class="btn secondary" style="display:none" title="Post Property">Post Property</button>
+
+    <!-- Login/logout -->
+    <button id="authBtn" class="btn ghost" title="Google Sign-in">Google Login</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="search-box" role="search" aria-label="Search properties">
+      <input id="q" placeholder="Search by title or city..." />
+      <select id="filterType">
+        <option value="">All types</option>
+        <option value="sale">Buy</option>
+        <option value="rent">Rent</option>
+      </select>
+      <select id="sortBy">
+        <option value="new">Newest</option>
+        <option value="low">Price: Low → High</option>
+        <option value="high">Price: High → Low</option>
+      </select>
+      <button id="searchBtn" class="btn" style="padding:8px 10px">Search</button>
     </div>
+  </section>
+
+  <!-- listings -->
+  <section id="listings">
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<!-- Detail modal -->
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <button id="closeModal" class="close" aria-label="Close">✕</button>
+    <img id="modalImg" class="img" src="" alt="">
+    <h2 id="modalTitle"></h2>
+    <div id="modalPrice" class="price"></div>
+    <div id="modalDesc" class="small"></div>
   </div>
+</div>
 
-  <!-- Centered Buttons -->
-  <div class="button-container">
-    <a href="https://zararealstate.blogspot.com/p/property-slider-body-margin-0-font_1.html?m=1" class="btn-3d">घर देखें 📢</a>
-    <a href="https://forms.gle/C5qt3dRkU9suKUMA6" class="btn-3d btn-alt">
+<!-- Upload modal -->
+<div id="uploadModal" class="upload-modal" aria-hidden="true">
+  <div class="upload-card">
+    <h3>Post Property</h3>
+    <div class="small">(Images uploaded via imgbb)</div>
 
-अपनी जरूरत बताए 
+    <label>Title</label>
+    <input id="p_title" type="text" placeholder="3BHK sea-view / Spacious 2BHK..." />
 
+    <label>City</label>
+    <input id="p_city" type="text" placeholder="e.g. Mumbai" />
 
-</a>
+    <label>Type</label>
+    <select id="p_type">
+      <option value="sale">Buy</option>
+      <option value="rent">Rent</option>
+    </select>
+
+    <label>Price (number)</label>
+    <input id="p_price" type="number" placeholder="e.g. 8500000" />
+
+    <label>Description</label>
+    <textarea id="p_desc" placeholder="Short description..."></textarea>
+
+    <label>Image</label>
+    <input id="p_image" type="file" accept="image/*" />
+
+    <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
+      <button id="cancelUpload" class="btn ghost">Cancel</button>
+      <button id="submitProperty" class="btn secondary">Upload & Post</button>
+    </div>
+
+    <p id="uploadStatus" class="small" aria-live="polite"></p>
   </div>
+</div>
 
+<div id="toast" class="toast"></div>
 
-</!doctype>
+<script>
+/* ============================
+  CONFIG - replace if you have different keys
+  ============================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+  authDomain: "zara-fix.firebaseapp.com",
+  projectId: "zara-fix",
+  // if you want DB save in firebase, add databaseURL or firestore config here
+};
+
+// imgbb API key (you provided earlier). If you have your own, replace here.
+const IMGBB_KEY = "9666667be1a890e44490c3dff1f1a120";
+
+/* ============================
+  Initialize Firebase Auth
+  ============================ */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+/* ============================
+  Helpers & UI refs
+  ============================ */
+const authBtn = document.getElementById('authBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const uploadModal = document.getElementById('uploadModal');
+const cancelUpload = document.getElementById('cancelUpload');
+const submitProperty = document.getElementById('submitProperty');
+const uploadStatus = document.getElementById('uploadStatus');
+
+const grid = document.getElementById('grid');
+const qInput = document.getElementById('q');
+const filterType = document.getElementById('filterType');
+const sortBy = document.getElementById('sortBy');
+const searchBtn = document.getElementById('searchBtn');
+
+const modal = document.getElementById('modal');
+const closeModal = document.getElementById('closeModal');
+const modalImg = document.getElementById('modalImg');
+const modalTitle = document.getElementById('modalTitle');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const toastEl = document.getElementById('toast');
+
+/* ============================
+  Data store: localStorage key
+  If you want to use Firebase DB instead, replace these functions
+  ============================ */
+const STORE_KEY = 'zara_props_v1';
+
+function loadLocal(){
+  try{
+    return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+  }catch(e){
+    return [];
+  }
+}
+function saveLocal(arr){
+  localStorage.setItem(STORE_KEY, JSON.stringify(arr));
+}
+
+/* ============================
+  Render listings
+  ============================ */
+let properties = loadLocal();
+
+function renderGrid(items){
+  grid.innerHTML = '';
+  if(!items.length){
+    grid.innerHTML = '<div style="padding:20px; color:#555">No properties yet. Login and Post one!</div>';
+    return;
+  }
+  items.forEach((p, idx) => {
+    const el = document.createElement('article');
+    el.className = 'card';
+    el.innerHTML = `
+      <img loading="lazy" src="${p.image}" alt="${escapeHtml(p.title)}" />
+      <div class="card-body">
+        <div class="title">${escapeHtml(p.title)}</div>
+        <div class="price">₹ ${numberWithCommas(p.price)}</div>
+        <div class="meta">${escapeHtml(p.city)} • ${p.type.toUpperCase()}</div>
+        <div class="card-actions">
+          <button class="btn ghost" data-idx="${idx}" onclick="openDetail(${idx})">View</button>
+          <button class="btn" data-idx="${idx}" onclick="contactOwner(${idx})">Contact</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(el);
+  });
+}
+
+/* ============================
+  Helpers
+  ============================ */
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+}
+function numberWithCommas(x){ return x?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") || x; }
+
+function toast(msg, ms=2500){
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  setTimeout(()=> toastEl.classList.remove('show'), ms);
+}
+
+/* ============================
+  Detail view & contact
+  ============================ */
+window.openDetail = function(i){
+  const p = properties[i];
+  if(!p) return;
+  modalImg.src = p.image;
+  modalTitle.textContent = p.title + ' — ' + p.city;
+  modalPrice.textContent = '₹ ' + numberWithCommas(p.price) + (p.type==='rent' ? ' /month' : '');
+  modalDesc.textContent = p.desc || '';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+}
+closeModal.addEventListener('click', ()=>{ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); });
+modal.addEventListener('click', (e)=>{ if(e.target===modal) { closeModal.click(); } });
+
+window.contactOwner = function(i){
+  const p = properties[i];
+  if(!p) return;
+  // Replace with real contact flow if you want
+  toast(`Contact info not set. Owner: ${escapeHtml(p.ownerName||'—')}`, 3000);
+}
+
+/* ============================
+  Search / Filter
+  ============================ */
+function applyFilters(){
+  let q = (qInput.value || '').toLowerCase().trim();
+  let type = filterType.value;
+  let arr = properties.filter(p=>{
+    if(type && p.type !== type) return false;
+    if(q){
+      return (p.title||'').toLowerCase().includes(q) || (p.city||'').toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sortBy.value==='low') arr.sort((a,b)=>a.price-b.price);
+  else if(sortBy.value==='high') arr.sort((a,b)=>b.price-a.price);
+  else arr.sort((a,b)=> (b.postedAt||0) - (a.postedAt||0));
+  renderGrid(arr);
+}
+searchBtn.addEventListener('click', applyFilters);
+
+/* ============================
+  Auth handling (Google)
+  ============================ */
+const provider = new firebase.auth.GoogleAuthProvider();
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    authBtn.textContent = 'Logout';
+    authBtn.classList.remove('ghost'); authBtn.classList.add('btn');
+    uploadBtn.style.display = 'inline-block';
+    uploadBtn.disabled = false;
+    uploadBtn.onclick = ()=> openUpload();
+  } else {
+    authBtn.textContent = 'Google Login';
+    authBtn.classList.remove('btn'); authBtn.classList.add('ghost');
+    uploadBtn.style.display = 'none';
+  }
+});
+
+authBtn.addEventListener('click', ()=>{
+  if(auth.currentUser){
+    auth.signOut().then(()=> toast('Logged out')).catch(e=> toast('Logout failed'));
+  } else {
+    auth.signInWithPopup(provider).then(res=>{
+      toast('Welcome, ' + (res.user.displayName||''));
+    }).catch(err=> toast('Login failed: '+err.message));
+  }
+});
+
+/* ============================
+  Upload flow (imgbb) + save to localStorage
+  ============================ */
+
+function openUpload(){ uploadModal.classList.add('open'); uploadModal.setAttribute('aria-hidden','false'); uploadStatus.textContent=''; }
+
+cancelUpload.addEventListener('click', ()=> { uploadModal.classList.remove('open'); uploadModal.setAttribute('aria-hidden','true'); });
+
+submitProperty.addEventListener('click', async ()=>{
+  // validate
+  const title = document.getElementById('p_title').value.trim();
+  const city = document.getElementById('p_city').value.trim();
+  const type = document.getElementById('p_type').value;
+  const price = Number(document.getElementById('p_price').value || 0);
+  const desc = document.getElementById('p_desc').value.trim();
+  const file = document.getElementById('p_image').files[0];
+
+  if(!title || !city || !price || !file){
+    uploadStatus.textContent = 'Please fill title, city, price and choose image.';
+    return;
+  }
+  uploadStatus.textContent = 'Uploading image to imgbb...';
+  submitProperty.disabled = true;
+
+  try{
+    const form = new FormData();
+    form.append('image', file);
+    // imgbb upload
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_KEY)}`, {
+      method:'POST', body: form
+    });
+    const json = await res.json();
+    if(!json || !json.data || !json.data.url){
+      throw new Error('Image upload failed');
+    }
+    const imageUrl = json.data.url;
+
+    // create property object
+    const prop = {
+      title, city, type, price, desc, image: imageUrl,
+      ownerUid: auth.currentUser ? auth.currentUser.uid : null,
+      ownerName: auth.currentUser ? auth.currentUser.displayName : 'Guest',
+      postedAt: Date.now()
+    };
+
+    // save to localStorage (you can replace this with Firebase DB save)
+    properties.unshift(prop);
+    saveLocal(properties);
+
+    // re-render & close modal
+    applyFilters();
+    uploadStatus.textContent = 'Posted!';
+    toast('Property posted');
+    setTimeout(()=>{
+      uploadModal.classList.remove('open');
+      uploadModal.setAttribute('aria-hidden','true');
+      document.getElementById('p_title').value=''; document.getElementById('p_city').value=''; document.getElementById('p_price').value=''; document.getElementById('p_desc').value=''; document.getElementById('p_image').value='';
+      submitProperty.disabled = false;
+    },700);
+
+    // OPTIONAL: save to Firebase Realtime DB (uncomment & configure DB rules)
+    /*
+    firebase.database().ref('properties').push(prop).then(()=> {
+        // saved
+    }).catch(err=> console.error(err));
+    */
+
+  }catch(err){
+    console.error(err);
+    uploadStatus.textContent = 'Upload failed: ' + (err.message||err);
+    submitProperty.disabled = false;
+  }
+});
+
+/* ============================
+  Init: render existing props
+  ============================ */
+renderGrid(properties);
+
+/* Accessibility small: allow Enter to search */
+qInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') applyFilters(); });
+
+</script>
+</body>
+</html>
