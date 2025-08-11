@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Zara Fix - Poster View with Login</title>
 <style>
-  /* Background with moving clouds */
   body, html {
     margin: 0; padding: 0; height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -33,6 +32,7 @@
     min-height: 100vh;
     padding: 20px 15px 80px 15px;
     box-sizing: border-box;
+    text-align: center;
   }
 
   /* Logo */
@@ -46,7 +46,6 @@
       6px 6px 8px rgba(0,0,0,0.35);
     user-select: none;
     margin-bottom: 25px;
-    text-align: center;
   }
 
   /* Google Login Button top-right */
@@ -104,11 +103,17 @@
     text-align: center;
     user-select: none;
   }
-  .btn-3d:hover {
+  .btn-3d:hover:not(:disabled) {
     transform: translateY(3px);
     box-shadow:
       0 2px 0 #444,
       0 5px 8px rgba(0,0,0,0.15);
+  }
+  .btn-3d:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none !important;
   }
 
   /* Button Colors */
@@ -119,7 +124,7 @@
   .orange { background: linear-gradient(to right, #ff9800, #e65100); }
   .teal { background: linear-gradient(to right, #009688, #004d40); }
 
-  /* Poster Card (Firebase poster slider) */
+  /* Poster Card */
   #posterCard {
     max-width: 360px;
     margin: 0 auto 50px auto;
@@ -262,40 +267,49 @@
     }
   });
 
-  // Google Login button functionality
+  // Login button & buttons enable/disable handling
   const loginBtn = document.getElementById('googleLoginBtn');
+  const allMainButtons = document.querySelectorAll('.btn-3d');
+
+  function setButtonsEnabled(enabled) {
+    allMainButtons.forEach(btn => {
+      btn.disabled = !enabled;
+      btn.style.opacity = enabled ? '1' : '0.5';
+      btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    });
+  }
+
+  // Disable buttons initially until login
+  setButtonsEnabled(false);
 
   loginBtn.addEventListener('click', () => {
     if (auth.currentUser) {
-      // Logout
       auth.signOut()
       .then(() => {
         alert("Logged out successfully!");
         loginBtn.textContent = "Google Login";
+        setButtonsEnabled(false);
       })
-      .catch(err => {
-        alert("Logout failed: " + err.message);
-      });
+      .catch(err => alert("Logout failed: " + err.message));
     } else {
-      // Login
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider)
       .then(result => {
         alert("Login successful! Welcome, " + result.user.displayName);
         loginBtn.textContent = "Logout";
+        setButtonsEnabled(true);
       })
-      .catch(error => {
-        alert("Login failed: " + error.message);
-      });
+      .catch(error => alert("Login failed: " + error.message));
     }
   });
 
-  // Update button text based on auth state on page load & changes
   auth.onAuthStateChanged(user => {
     if (user) {
       loginBtn.textContent = "Logout";
+      setButtonsEnabled(true);
     } else {
       loginBtn.textContent = "Google Login";
+      setButtonsEnabled(false);
     }
   });
 </script>
