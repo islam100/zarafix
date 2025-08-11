@@ -11,29 +11,16 @@
     background: linear-gradient(to bottom, #87ceeb 0%, #e0f7ff 80%);
     overflow-x: hidden;
     position: relative;
-  }
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: url('https://i.ibb.co/2sWjDvk/clouds.png') repeat-x;
-    opacity: 0.3;
-    animation: moveClouds 60s linear infinite;
-    z-index: 0;
-  }
-  @keyframes moveClouds {
-    0% {background-position-x: 0;}
-    100% {background-position-x: 10000px;}
-  }
-  .container {
-    position: relative;
-    z-index: 10;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 10px 15px;
-    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .container {
+    margin-top: 60px;
+    width: 100%;
+    max-width: 450px;
+    padding: 0 15px;
   }
   .logo {
     font-size: 3rem;
@@ -44,6 +31,7 @@
       4px 4px 0 #00f7ff,
       6px 6px 5px rgba(0,0,0,0.3);
     user-select: none;
+    text-align: center;
   }
   .top-right-login {
     position: fixed;
@@ -58,8 +46,11 @@
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     cursor: pointer;
     user-select: none;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.3s ease;
     z-index: 20;
+  }
+  .top-right-login.logged-in {
+    background-color: #d93025;
   }
   .top-right-login:hover {
     transform: scale(1.1);
@@ -106,6 +97,7 @@
   .bottom-buttons {
     display: flex;
     justify-content: space-around;
+    margin-top: 30px;
     margin-bottom: 15px;
     gap: 10px;
   }
@@ -134,6 +126,7 @@
     z-index: 15;
     overflow: hidden;
     white-space: nowrap;
+    text-align: center;
   }
   .scrolling-text span {
     display: inline-block;
@@ -143,6 +136,13 @@
   @keyframes scroll-left {
     0% { transform: translateX(0); }
     100% { transform: translateX(-100%); }
+  }
+  .message {
+    margin-top: 20px;
+    font-weight: 600;
+    color: #222;
+    text-align: center;
+    min-height: 24px;
   }
   @media(max-width: 480px) {
     .logo {
@@ -161,10 +161,12 @@
 </head>
 <body>
 
-<div class="container">
+<div class="container" role="main">
   <div class="logo" aria-label="Zara Fix Logo">Zara Fix</div>
 
-  <button id="googleLoginBtn" class="top-right-login">Google Login</button>
+  <button id="googleLoginBtn" class="top-right-login" aria-label="Google Login Button">Google Login</button>
+
+  <div class="message" id="message" aria-live="polite"></div>
 
   <div class="center-buttons" aria-label="Main navigation buttons">
     <div class="line">
@@ -211,18 +213,49 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
-  // Google Login Button
   const loginBtn = document.getElementById('googleLoginBtn');
+  const messageEl = document.getElementById('message');
+
+  // Update UI based on auth state
+  auth.onAuthStateChanged(user => {
+    if(user){
+      loginBtn.textContent = 'Logout';
+      loginBtn.classList.add('logged-in');
+      messageEl.textContent = `Hello, ${user.displayName}! You are logged in.`;
+    } else {
+      loginBtn.textContent = 'Google Login';
+      loginBtn.classList.remove('logged-in');
+      messageEl.textContent = 'Please login to continue.';
+    }
+  });
+
   loginBtn.addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(result => {
-        alert('Login successful! Welcome, ' + result.user.displayName);
-        // You can redirect or update UI here
-      })
-      .catch(error => {
-        alert('Login failed: ' + error.message);
+    if(auth.currentUser){
+      // Logout
+      auth.signOut().then(() => {
+        messageEl.textContent = 'Logged out successfully!';
+        loginBtn.textContent = 'Google Login';
+        loginBtn.classList.remove('logged-in');
+        // Optionally reload page or redirect
+        // location.reload();
+      }).catch(error => {
+        messageEl.textContent = 'Logout failed: ' + error.message;
       });
+    } else {
+      // Login
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(result => {
+          messageEl.textContent = `Login successful! Welcome, ${result.user.displayName}`;
+          loginBtn.textContent = 'Logout';
+          loginBtn.classList.add('logged-in');
+          // Optionally redirect to dashboard
+          // location.href = '/dashboard.html';
+        })
+        .catch(error => {
+          messageEl.textContent = 'Login failed: ' + error.message;
+        });
+    }
   });
 </script>
 
