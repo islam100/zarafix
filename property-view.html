@@ -1,164 +1,599 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <title>Property Listing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 0;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zara Property - Single Page</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+  :root {
+    --accent: #0077cc;
+    --accent-dark: #005f9e;
+    --card-bg: #fff;
+    --muted: #666;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; font-family: Arial, sans-serif;
+    background: linear-gradient(180deg, #e6f7ff, #f7fdff);
+    color: #111;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .brand {
+    font-weight: 900;
+    font-size: 24px;
+    background: linear-gradient(90deg, #ff6a00, #fddb92, #00d4ff, #9b59ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    user-select: none;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 10px 16px;
+    box-shadow: 0 5px 0 var(--accent-dark);
+    background: var(--accent);
+    color: white;
+    transition: all 0.12s ease;
+  }
+  button:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 var(--accent-dark);
+  }
+  button.ghost {
+    background: transparent;
+    box-shadow: none;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  button.secondary {
+    background: #28a745;
+    box-shadow: 0 5px 0 #147031;
+  }
+  .top-actions {
+    display: flex; gap: 12px; align-items: center;
+  }
+  main {
+    flex-grow: 1;
+    max-width: 1100px;
+    margin: 20px auto 40px;
+    width: 95%;
+  }
+  .search-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .search-box input,
+  .search-box select {
+    flex: 1 1 200px;
+    padding: 10px 12px;
+    font-size: 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  .search-box button {
+    flex: 0 0 100px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(10,20,30,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 30px rgba(10,20,30,0.15);
+  }
+  .card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+  }
+  .card-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-grow: 1;
+  }
+  .title {
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .price {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .meta {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .actions {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .actions button, .actions a {
+    flex: 1;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 8px 0;
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+  }
+  .actions button.delete {
+    background: #e74c3c;
+    box-shadow: 0 5px 0 #992d22;
+    color: white;
+  }
+  .actions a.whatsapp {
+    background: #25D366;
+    box-shadow: 0 5px 0 #128C7E;
+    color: white;
+  }
+  .actions button.delete:active {
+    box-shadow: 0 2px 0 #992d22;
+  }
+  .actions a.whatsapp:active {
+    box-shadow: 0 2px 0 #128C7E;
+  }
+  /* Upload modal styles */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 120;
+  }
+  .modal.open {
+    display: flex;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 480px;
+    width: 100%;
+    padding: 20px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.25);
+  }
+  .modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .modal-content label {
+    display: block;
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 6px;
+  }
+  .modal-content input[type="text"],
+  .modal-content input[type="number"],
+  .modal-content textarea,
+  .modal-content select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+  }
+  .modal-content textarea {
+    min-height: 80px;
+    resize: vertical;
+  }
+  .modal-actions {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  .upload-status {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--muted);
+    min-height: 20px;
+  }
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    background: #111;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 150;
+  }
+  .toast.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* Responsive */
+  @media (max-width: 720px) {
+    .search-box input, .search-box select {
+      flex: 1 1 100%;
     }
-    .top-bar {
-      background: #fff;
-      padding: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      display: flex;
-      justify-content: flex-end;
+    .actions button, .actions a {
+      font-size: 12px;
+      padding: 6px 0;
     }
-    .btn-3d {
-      background: linear-gradient(145deg, #4CAF50, #45a049);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
-      box-shadow: 2px 2px 5px #aaa;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn-3d:active {
-      transform: translateY(2px);
-      box-shadow: 1px 1px 3px #aaa;
-    }
-    .form-container {
-      display: none;
-      background: #fff;
-      padding: 15px;
-      margin: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    .form-container input, .form-container textarea {
-      width: 100%;
-      padding: 8px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    .property-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 15px;
-      padding: 15px;
-    }
-    .property-card {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    .property-card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-    }
-    .property-card .info {
-      padding: 10px;
-    }
-  </style>
+  }
+</style>
+
 </head>
 <body>
 
-<div class="top-bar">
-  <button class="btn-3d" onclick="toggleForm()">+ Post Property</button>
+<header>
+  <div class="brand">Zara Property</div>
+  <div class="top-actions">
+    <button id="uploadBtn" class="secondary" style="display:none" title="Post Property">Post Property</button>
+    <button id="authBtn" class="ghost" title="Google Sign-in">Google Login</button>
+  </div>
+</header>
+
+<main>
+  <section class="search-box" role="search" aria-label="Search properties">
+    <input id="searchInput" type="search" placeholder="Search by title or city..." aria-label="Search properties" />
+    <select id="filterType" aria-label="Filter by type">
+      <option value="">All types</option>
+      <option value="sale">Buy</option>
+      <option value="rent">Rent</option>
+    </select>
+    <select id="sortBy" aria-label="Sort by">
+      <option value="new">Newest</option>
+      <option value="low">Price: Low → High</option>
+      <option value="high">Price: High → Low</option>
+    </select>
+    <button id="searchBtn" aria-label="Search properties">Search</button>
+  </section>
+
+  <section id="listings">
+    <div class="grid" id="propertyGrid"></div>
+  </section>
+</main>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <h3>Post Property</h3>
+
+    <label for="p_title">Title</label>
+    <input id="p_title" type="text" placeholder="3BHK sea-view / Spacious 2BHK..." />
+
+    <label for="p_city">City</label>
+    <input id="p_city" type="text" placeholder="e.g. Mumbai" />
+
+    <label for="p_type">Type</label>
+    <select id="p_type">
+      <option value="sale">Buy</option>
+      <option value="rent">Rent</option>
+    </select>
+
+    <label for="p_price">Price (number)</label>
+    <input id="p_price" type="number" placeholder="e.g. 8500000" />
+
+    <label for="p_desc">Description</label>
+    <textarea id="p_desc" placeholder="Short description..."></textarea>
+
+    <label for="p_image">Image</label>
+    <input id="p_image" type="file" accept="image/*" />
+
+    <div class="modal-actions">
+      <button id="cancelUpload" class="ghost">Cancel</button>
+      <button id="submitProperty" class="secondary">Upload & Post</button>
+    </div>
+
+    <p id="uploadStatus" class="upload-status" aria-live="polite"></p>
+  </div>
 </div>
 
-<div class="form-container" id="propertyForm">
-  <input type="text" id="title" placeholder="Property Title" required>
-  <textarea id="description" placeholder="Description"></textarea>
-  <input type="number" id="price" placeholder="Price">
-  <input type="file" id="image" accept="image/*">
-  <button class="btn-3d" onclick="postProperty()">Submit</button>
-</div>
-
-<div class="property-grid" id="propertyList"></div>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<div id="toast" class="toast"></div>
 
 <script>
-  // Firebase Config
+  // Firebase config
   const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
 
   firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const db = firebase.database();
 
-  const imgbbAPI = "YOUR_IMGBB_API_KEY"; // यहां अपना ImageBB API key डालें
+  // UI elements
+  const authBtn = document.getElementById('authBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadModal = document.getElementById('uploadModal');
+  const cancelUpload = document.getElementById('cancelUpload');
+  const submitProperty = document.getElementById('submitProperty');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const propertyGrid = document.getElementById('propertyGrid');
+  const searchInput = document.getElementById('searchInput');
+  const filterType = document.getElementById('filterType');
+  const sortBy = document.getElementById('sortBy');
+  const searchBtn = document.getElementById('searchBtn');
+  const toast = document.getElementById('toast');
 
-  function toggleForm() {
-    document.getElementById('propertyForm').style.display =
-      document.getElementById('propertyForm').style.display === "block" ? "none" : "block";
+  let currentUser = null;
+  let properties = {}; // to store all properties fetched
+
+  // Show toast message
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
   }
 
-  async function postProperty() {
-    let title = document.getElementById("title").value;
-    let description = document.getElementById("description").value;
-    let price = document.getElementById("price").value;
-    let imageFile = document.getElementById("image").files[0];
+  // Google Sign-in/out
+  authBtn.addEventListener('click', () => {
+    if (!currentUser) {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e => {
+        showToast("Login error: " + e.message);
+      });
+    } else {
+      auth.signOut();
+    }
+  });
 
-    if (!title || !imageFile) {
-      alert("Title और Image जरूरी है!");
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+      authBtn.textContent = 'Logout';
+      uploadBtn.style.display = 'inline-block';
+      showToast(`Welcome, ${user.displayName}`);
+    } else {
+      authBtn.textContent = 'Google Login';
+      uploadBtn.style.display = 'none';
+      showToast('Logged out');
+    }
+    renderProperties();
+  });
+
+  // Open Upload Modal
+  uploadBtn.addEventListener('click', () => {
+    uploadModal.classList.add('open');
+    clearUploadForm();
+  });
+  cancelUpload.addEventListener('click', () => {
+    uploadModal.classList.remove('open');
+    clearUploadForm();
+  });
+
+  // Clear form inputs
+  function clearUploadForm() {
+    uploadStatus.textContent = '';
+    document.getElementById('p_title').value = '';
+    document.getElementById('p_city').value = '';
+    document.getElementById('p_type').value = 'sale';
+    document.getElementById('p_price').value = '';
+    document.getElementById('p_desc').value = '';
+    document.getElementById('p_image').value = '';
+  }
+
+  // Upload image to ImgBB
+  async function uploadImageToImgBB(file) {
+    const apiKey = "YOUR_IMGBB_API_KEY_HERE"; // <-- अपने ImgBB API key डालें यहाँ
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Image upload failed');
+    const data = await res.json();
+    return data.data.url;
+  }
+
+  // Submit new property
+  submitProperty.addEventListener('click', async () => {
+    if (!currentUser) {
+      showToast('Please login first');
+      return;
+    }
+    // Get form data
+    const title = document.getElementById('p_title').value.trim();
+    const city = document.getElementById('p_city').value.trim();
+    const type = document.getElementById('p_type').value;
+    const price = parseInt(document.getElementById('p_price').value);
+    const desc = document.getElementById('p_desc').value.trim();
+    const imageFile = document.getElementById('p_image').files[0];
+
+    if (!title || !city || !type || isNaN(price) || !desc || !imageFile) {
+      uploadStatus.textContent = 'सभी फ़ील्ड सही भरें और फोटो अपलोड करें।';
       return;
     }
 
-    // Image upload to ImageBB
-    let formData = new FormData();
-    formData.append("image", imageFile);
+    uploadStatus.textContent = 'Uploading image...';
+    try {
+      const imageUrl = await uploadImageToImgBB(imageFile);
+      uploadStatus.textContent = 'Saving property...';
 
-    let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPI}`, {
-      method: "POST",
-      body: formData
-    });
-    let imgData = await res.json();
-    let imageUrl = imgData.data.url;
+      const postId = db.ref().child('properties').push().key;
+      const postData = {
+        id: postId,
+        title,
+        city,
+        type,
+        price,
+        desc,
+        imageUrl,
+        userId: currentUser.uid,
+        userName: currentUser.displayName,
+        userEmail: currentUser.email,
+        timestamp: Date.now()
+      };
+      await db.ref('properties/' + postId).set(postData);
 
-    let property = {
-      title, description, price, imageUrl
-    };
+      uploadStatus.textContent = 'Property posted successfully!';
+      uploadModal.classList.remove('open');
+      clearUploadForm();
+      showToast('Property posted!');
+      fetchAndRenderProperties();
+    } catch (e) {
+      uploadStatus.textContent = 'Error: ' + e.message;
+    }
+  });
 
-    db.ref("properties").push(property);
-    alert("Property Posted Successfully!");
-    document.getElementById("propertyForm").reset();
-    toggleForm();
+  // Fetch all properties from Firebase DB
+  async function fetchProperties() {
+    const snapshot = await db.ref('properties').once('value');
+    properties = snapshot.val() || {};
   }
 
-  // Show properties
-  db.ref("properties").on("value", snapshot => {
-    let list = document.getElementById("propertyList");
-    list.innerHTML = "";
-    snapshot.forEach(data => {
-      let p = data.val();
-      list.innerHTML += `
-        <div class="property-card">
-          <img src="${p.imageUrl}" alt="">
-          <div class="info">
-            <h3>${p.title}</h3>
-            <p>${p.description || ""}</p>
-            <strong>₹${p.price || "N/A"}</strong>
+  // Delete property by current user only
+  async function deleteProperty(id) {
+    if (!currentUser) {
+      showToast('Please login first');
+      return;
+    }
+    if (!properties[id]) {
+      showToast('Property not found');
+      return;
+    }
+    if (properties[id].userId !== currentUser.uid) {
+      showToast('You can only delete your own posts');
+      return;
+    }
+    if (!confirm('क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?')) return;
+
+    await db.ref('properties/' + id).remove();
+    showToast('Property deleted');
+    fetchAndRenderProperties();
+  }
+
+  // Render properties on page with search, filter, sort
+  function renderProperties() {
+    const searchText = searchInput.value.toLowerCase();
+    const filter = filterType.value;
+    const sort = sortBy.value;
+
+    // Filter properties to array
+    let propsArr = Object.values(properties);
+
+    // Search filter on title and city
+    if (searchText) {
+      propsArr = propsArr.filter(p =>
+        p.title.toLowerCase().includes(searchText) ||
+        p.city.toLowerCase().includes(searchText)
+      );
+    }
+    // Filter by type if selected
+    if (filter) {
+      propsArr = propsArr.filter(p => p.type === filter);
+    }
+
+    // Sort
+    if (sort === 'new') {
+      propsArr.sort((a,b) => b.timestamp - a.timestamp);
+    } else if (sort === 'low') {
+      propsArr.sort((a,b) => a.price - b.price);
+    } else if (sort === 'high') {
+      propsArr.sort((a,b) => b.price - a.price);
+    }
+
+    // Build HTML
+    propertyGrid.innerHTML = propsArr.map(p => {
+      // WhatsApp message with dynamic property id
+      const waNumber = '917378342192';
+      const waText = encodeURIComponent(
+        `नमस्ते, मैं आपकी प्रॉपर्टी के बारे में पूछना चाहता हूँ:\nTitle: ${p.title}\nCity: ${p.city}\nLink: https://yourdomain.com/property/${p.id}`
+      );
+      const waLink = `https://wa.me/${waNumber}?text=${waText}`;
+
+      // Show delete button only if current user owns this post
+      const canDelete = currentUser && currentUser.uid === p.userId;
+
+      return `
+        <article class="card" aria-label="Property: ${p.title}">
+          <img src="${p.imageUrl}" alt="Image of ${p.title}" loading="lazy" />
+          <div class="card-body">
+            <div class="title">${p.title}</div>
+            <div class="price">₹${p.price.toLocaleString('en-IN')}</div>
+            <div class="meta">${p.city} — ${p.type === 'sale' ? 'Buy' : 'Rent'}</div>
+            <p style="margin-top: 6px; font-size:14px; color:#555;">${p.desc}</p>
+            <div class="actions">
+              <a href="${waLink}" target="_blank" rel="noopener" class="whatsapp" aria-label="WhatsApp to Admin about ${p.title}">WhatsApp Admin</a>
+              ${canDelete ? `<button class="delete" data-id="${p.id}" aria-label="Delete your property ${p.title}">Delete</button>` : ''}
+            </div>
           </div>
-        </div>
+        </article>
       `;
+    }).join('');
+
+    // Attach delete handlers
+    document.querySelectorAll('button.delete').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const id = e.target.getAttribute('data-id');
+        deleteProperty(id);
+      });
     });
+  }
+
+  // Fetch and render properties
+  async function fetchAndRenderProperties() {
+    await fetchProperties();
+    renderProperties();
+  }
+
+  // Initial fetch
+  fetchAndRenderProperties();
+
+  // Search/filter/sort button
+  searchBtn.addEventListener('click', () => {
+    renderProperties();
+  });
+
+  // Also update listing on Enter key in search input
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') renderProperties();
   });
 </script>
 
