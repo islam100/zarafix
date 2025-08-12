@@ -1,230 +1,315 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property — Admin + User</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property Portal</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<style>
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin:0; padding:0; background:#f7f7f7; color:#333;
-  }
-  header {
-    background:#2c3e50; color:#ecf0f1; padding:10px 20px;
-    display:flex; justify-content: space-between; align-items:center;
-  }
-  header h1 { margin:0; font-size:1.5rem; }
-  #loginBtn, #logoutBtn, #postBtn, #adminPanelBtn {
-    background:#3498db; border:none; color:#fff; padding:10px 16px; border-radius:10px;
-    cursor:pointer; font-weight:600; box-shadow: 0 4px 8px rgba(52,152,219,0.4);
-    transition: transform 0.15s ease-in-out;
-  }
-  #loginBtn:hover, #logoutBtn:hover, #postBtn:hover, #adminPanelBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 12px rgba(52,152,219,0.6);
-  }
-  #uploadSection {
-    background:#fff; margin: 20px auto; max-width: 600px; padding:20px; border-radius:15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); display:none;
-  }
-  #uploadSection input, #uploadSection select, #uploadSection textarea {
-    width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc;
-    font-size: 1rem;
-    box-sizing: border-box;
-  }
-  #uploadSection button {
-    margin-top:10px;
-  }
-  section.search-filter {
-    max-width: 900px; margin: 20px auto;
-    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center;
-  }
-  section.search-filter input, section.search-filter select {
-    padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;
-    flex-grow: 1; min-width: 180px;
-  }
-  section.search-filter button {
-    background:#27ae60; border:none; color:#fff; padding: 10px 18px; border-radius: 10px;
-    cursor:pointer; font-weight:600; box-shadow: 0 4px 8px rgba(39,174,96,0.4);
-    transition: transform 0.15s ease-in-out;
-  }
-  section.search-filter button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 12px rgba(39,174,96,0.6);
-  }
-  #propertyList {
-    max-width: 900px; margin: 20px auto; display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-  .property-card {
-    background:#fff; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    overflow: hidden; cursor: pointer; position: relative;
-    display: flex; flex-direction: column;
-    transition: transform 0.3s ease;
-  }
-  .property-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-  }
-  .property-card img {
-    width: 100%; height: 180px; object-fit: cover;
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
-  }
-  .property-info {
-    padding: 15px;
-    flex-grow: 1;
-  }
-  .property-info h3 {
-    margin: 0 0 10px 0;
-    font-size: 1.3rem;
-    color: #2c3e50;
-  }
-  .property-info p {
-    margin: 5px 0;
-    font-size: 0.95rem;
-    color: #555;
-  }
-  .property-actions {
-    padding: 15px;
-    display: flex;
-    justify-content: flex-start;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .btn-3d {
-    background: linear-gradient(145deg, #3498db, #2980b9);
-    box-shadow: 5px 5px 10px #256d98, -5px -5px 10px #3fa1f5;
-    border: none;
-    color: white;
-    padding: 8px 14px;
-    font-weight: 600;
-    border-radius: 10px;
-    cursor: pointer;
-    user-select: none;
-    transition: transform 0.15s ease;
-  }
-  .btn-3d:hover {
-    transform: translateY(-3px);
-    box-shadow: 8px 8px 15px #256d98, -8px -8px 15px #3fa1f5;
-  }
-  /* Modal styles */
-  #modalOverlay {
-    position: fixed;
-    top:0; left:0; right:0; bottom:0;
-    background: rgba(0,0,0,0.7);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  #modalContent {
-    background:#fff;
-    max-width: 90vw;
-    max-height: 90vh;
-    padding: 20px;
-    border-radius: 15px;
-    overflow-y: auto;
-    position: relative;
-  }
-  #modalContent img {
-    width: 100%;
-    max-height: 400px;
-    object-fit: contain;
-    margin-bottom: 15px;
-    border-radius: 10px;
-  }
-  #modalCloseBtn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background:#e74c3c;
-    border:none;
-    color:#fff;
-    font-weight: bold;
-    font-size: 1.2rem;
-    border-radius: 50%;
-    width: 35px;
-    height: 35px;
-    cursor: pointer;
-  }
-  @media(max-width: 600px){
-    header {
-      flex-direction: column;
-      gap: 10px;
+  <style>
+    /* Reset */
+    * {
+      box-sizing: border-box;
     }
-    section.search-filter {
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0; padding: 0;
+      background: #f5f6fa;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
       flex-direction: column;
+    }
+
+    header {
+      background: #2f3640;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    header .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button, a.btn {
+      cursor: pointer;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(145deg, #6a5acd, #836fff);
+      color: white;
+      font-weight: 600;
+      box-shadow:
+        3px 3px 5px #574fcf,
+        -3px -3px 5px #9ea4ff;
+      transition: all 0.2s ease;
+      user-select: none;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover, a.btn:hover {
+      box-shadow:
+        inset 3px 3px 5px #574fcf,
+        inset -3px -3px 5px #9ea4ff;
+      background: linear-gradient(145deg, #836fff, #6a5acd);
+    }
+
+    main {
+      flex: 1;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    #uploadSection {
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow:
+        6px 6px 12px #babecc,
+        -6px -6px 12px #ffffff;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    #uploadSection input[type=text],
+    #uploadSection input[type=number],
+    #uploadSection select,
+    #uploadSection textarea {
+      width: 100%;
+      padding: 10px 8px;
+      margin: 6px 0 15px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    #uploadSection textarea {
+      min-height: 80px;
+    }
+
+    #uploadStatus {
+      color: #d9534f;
+      font-weight: 600;
+      min-height: 24px;
+    }
+
+    /* Search & Filter */
+    #searchSection {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    #searchSection input[type=text] {
+      flex-grow: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    #searchSection select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      font-family: inherit;
+      min-width: 110px;
+    }
+    #searchSection button {
+      flex-shrink: 0;
+      padding: 10px 18px;
+    }
+
+    /* Property Cards Grid */
+    #propertyList {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 15px;
     }
-    #propertyList {
-      grid-template-columns: 1fr;
-      max-width: 95vw;
-      margin: 20px auto;
-    }
-  }
-</style>
 
+    .property-card {
+      background: #f0f0ff;
+      border-radius: 15px;
+      box-shadow:
+        6px 6px 12px #babecc,
+        -6px -6px 12px #ffffff;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .property-card:hover {
+      transform: scale(1.03);
+      box-shadow:
+        8px 8px 16px #a3a8c0,
+        -8px -8px 16px #ffffff;
+      z-index: 1;
+    }
+
+    .property-card.expanded {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 90vw;
+      max-width: 650px;
+      max-height: 90vh;
+      transform: translate(-50%, -50%);
+      overflow-y: auto;
+      background: white;
+      box-shadow:
+        0 0 30px rgba(0,0,0,0.4);
+      z-index: 9999;
+      border-radius: 20px;
+      cursor: default;
+      padding: 20px;
+      flex-direction: column;
+    }
+
+    .property-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-top-left-radius: 15px;
+      border-top-right-radius: 15px;
+      user-select: none;
+    }
+
+    .property-content {
+      padding: 12px 15px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .property-content h3 {
+      margin: 0 0 6px 0;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #4a4a70;
+    }
+    .property-content p {
+      margin: 3px 0;
+      color: #444;
+      flex-grow: 1;
+    }
+
+    /* Buttons container */
+    .card-buttons {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .card-buttons button,
+    .card-buttons a {
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      user-select: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      box-shadow:
+        3px 3px 6px #aaa,
+        -3px -3px 6px #fff;
+      background: #6a5acd;
+      color: white;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-buttons button:hover,
+    .card-buttons a:hover {
+      box-shadow:
+        inset 3px 3px 6px #6a5acd,
+        inset -3px -3px 6px #8f7fff;
+      background: #836fff;
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+      }
+      #searchSection {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
 
 <header>
-  <h1>Zara Property</h1>
-  <div>
-    <button id="loginBtn" class="btn-3d">Google Login</button>
-    <button id="logoutBtn" class="btn-3d" style="display:none;">Logout</button>
-    <button id="postBtn" class="btn-3d" style="display:none;">Post Property</button>
-    <button id="adminPanelBtn" class="btn-3d" style="display:none;">Admin Panel</button>
+  <h1>Zara Property Portal</h1>
+  <div class="btn-group">
+    <button id="loginBtn">Google Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="postBtn" style="display:none;">Post Property</button>
   </div>
 </header>
 
-<section id="uploadSection">
-  <h2>Post Property</h2>
-  <input type="text" id="title" placeholder="Title (जैसे 2 BHK)" required />
-  <input type="text" id="city" placeholder="City (जैसे Mumbai)" required />
-  <select id="type">
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <input type="number" id="price" placeholder="Price (₹)" required />
-  <textarea id="desc" placeholder="Description" rows="4" required></textarea>
-  <input type="file" id="imageFiles" accept="image/*" multiple required />
-  <button id="submitPost" class="btn-3d">Upload & Post</button>
-  <button id="cancelPost" class="btn-3d" style="background:#e74c3c; box-shadow: 5px 5px 10px #c0392b, -5px -5px 10px #e74c3c;">Cancel</button>
-  <p id="uploadStatus" style="color:red;"></p>
-</section>
+<main>
 
-<section class="search-filter" style="max-width:900px; margin: 0 auto 20px auto;">
-  <input type="text" id="searchInput" placeholder="Search by title or city..." />
-  <select id="filterType">
-    <option value="">All types</option>
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <button id="searchBtn" class="btn-3d">Search</button>
-</section>
+  <!-- Property Upload Form -->
+  <section id="uploadSection">
+    <h2>नई प्रॉपर्टी पोस्ट करें</h2>
+    <input type="text" id="title" placeholder="शीर्षक (जैसे 2BHK फ्लैट)" />
+    <input type="text" id="city" placeholder="शहर (जैसे मुंबई)" />
+    <select id="type">
+      <option value="sale">खरीदें (Buy)</option>
+      <option value="rent">किराये पर (Rent)</option>
+    </select>
+    <input type="number" id="price" placeholder="कीमत (₹ में)" />
+    <textarea id="desc" placeholder="विवरण लिखें"></textarea>
+    <input type="file" id="imageFile" accept="image/*" multiple />
+    <p id="uploadStatus"></p>
+    <div style="margin-top:10px;">
+      <button id="submitPost">अपलोड और पोस्ट करें</button>
+      <button id="cancelPost">रद्द करें</button>
+    </div>
+  </section>
 
-<section id="propertyList"></section>
+  <!-- Search & Filter -->
+  <section id="searchSection">
+    <input type="text" id="searchInput" placeholder="शीर्षक या शहर से खोजें..." />
+    <select id="filterType">
+      <option value="">सभी प्रकार</option>
+      <option value="sale">खरीदें (Buy)</option>
+      <option value="rent">किराये पर (Rent)</option>
+    </select>
+    <button id="searchBtn">खोजें</button>
+  </section>
 
-<!-- Modal for image preview -->
-<div id="modalOverlay">
-  <div id="modalContent">
-    <button id="modalCloseBtn">&times;</button>
-    <div id="modalImages"></div>
-    <h3 id="modalTitle"></h3>
-    <p id="modalCity"></p>
-    <p id="modalType"></p>
-    <p id="modalPrice"></p>
-    <p id="modalDesc"></p>
-  </div>
-</div>
+  <!-- Properties List -->
+  <section id="propertyList"></section>
+</main>
 
 <script>
   // Firebase config
@@ -244,372 +329,352 @@
 
   const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
   const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const adminWhatsapp = "917378342192";
+  const myWhatsApp = "917378342192";
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postBtn = document.getElementById('postBtn');
-  const adminPanelBtn = document.getElementById('adminPanelBtn');
-
-  const uploadSection = document.getElementById('uploadSection');
-  const submitPost = document.getElementById('submitPost');
-  const cancelPost = document.getElementById('cancelPost');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const propertyList = document.getElementById('propertyList');
-
-  const searchInput = document.getElementById('searchInput');
-  const filterType = document.getElementById('filterType');
-  const searchBtn = document.getElementById('searchBtn');
-
-  // Modal Elements
-  const modalOverlay = document.getElementById('modalOverlay');
-  const modalContent = document.getElementById('modalContent');
-  const modalCloseBtn = document.getElementById('modalCloseBtn');
-  const modalImages = document.getElementById('modalImages');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalCity = document.getElementById('modalCity');
-  const modalType = document.getElementById('modalType');
-  const modalPrice = document.getElementById('modalPrice');
-  const modalDesc = document.getElementById('modalDesc');
+  // UI elements
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postBtn = document.getElementById("postBtn");
+  const uploadSection = document.getElementById("uploadSection");
+  const submitPost = document.getElementById("submitPost");
+  const cancelPost = document.getElementById("cancelPost");
+  const uploadStatus = document.getElementById("uploadStatus");
+  const propertyList = document.getElementById("propertyList");
+  const searchInput = document.getElementById("searchInput");
+  const filterType = document.getElementById("filterType");
+  const searchBtn = document.getElementById("searchBtn");
 
   let currentUser = null;
   let isAdmin = false;
 
-  // Login
-  loginBtn.addEventListener('click', () => {
+  // Google Login
+  loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert("Login Failed: " + err.message));
-  });
+    auth.signInWithPopup(provider).catch(e => alert(e.message));
+  };
 
-  // Logout
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.onclick = () => {
     auth.signOut();
-  });
+  };
 
-  // Show post form
-  postBtn.addEventListener('click', () => {
-    uploadSection.style.display = 'block';
-    uploadStatus.textContent = '';
-  });
+  postBtn.onclick = () => {
+    uploadSection.style.display = "block";
+  };
 
-  // Cancel post
-  cancelPost.addEventListener('click', () => {
+  cancelPost.onclick = () => {
+    uploadSection.style.display = "none";
     clearForm();
-    uploadSection.style.display = 'none';
-  });
+  };
 
-  // Search button
-  searchBtn.addEventListener('click', loadProperties);
-  searchInput.addEventListener('keyup', e => { if(e.key === 'Enter') loadProperties(); });
-  filterType.addEventListener('change', loadProperties);
-
-  // Clear form
+  // Clear form inputs
   function clearForm() {
-    document.getElementById('title').value = '';
-    document.getElementById('city').value = '';
-    document.getElementById('type').value = 'sale';
-    document.getElementById('price').value = '';
-    document.getElementById('desc').value = '';
-    document.getElementById('imageFiles').value = '';
-    uploadStatus.textContent = '';
+    document.getElementById("title").value = "";
+    document.getElementById("city").value = "";
+    document.getElementById("type").value = "sale";
+    document.getElementById("price").value = "";
+    document.getElementById("desc").value = "";
+    document.getElementById("imageFile").value = "";
+    uploadStatus.textContent = "";
   }
 
-  // Upload images to imgbb (multiple)
-  async function uploadImagesToImgbb(files) {
-    const urls = [];
-    for(let i=0; i < files.length; i++){
-      const formData = new FormData();
-      formData.append('image', files[i]);
-      try {
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        if(data.success){
-          urls.push(data.data.url);
-        } else {
-          throw new Error('Image upload failed');
-        }
-      } catch(err){
-        throw err;
-      }
+  // Upload image to imgbb
+  async function uploadImageToImgbb(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success) return data.data.url;
+    else throw new Error("Image upload failed");
+  }
+
+  // Submit post
+  submitPost.onclick = async () => {
+    uploadStatus.textContent = "";
+    const title = document.getElementById("title").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const type = document.getElementById("type").value;
+    const price = Number(document.getElementById("price").value);
+    const desc = document.getElementById("desc").value.trim();
+    const imageFiles = document.getElementById("imageFile").files;
+
+    if (!title || !city || !type || !price || !desc || imageFiles.length === 0) {
+      uploadStatus.textContent = "कृपया सभी फील्ड्स भरें और इमेज अपलोड करें।";
+      return;
     }
-    return urls;
+
+    uploadStatus.textContent = "इमेज अपलोड हो रही है...";
+
+    try {
+      // Multiple images upload one by one (optional: you can extend as needed)
+      const uploadedUrls = [];
+      for (const file of imageFiles) {
+        const url = await uploadImageToImgbb(file);
+        uploadedUrls.push(url);
+      }
+
+      const timestamp = Date.now();
+
+      const newRef = db.ref("properties").push();
+      await newRef.set({
+        title,
+        city,
+        type,
+        price,
+        description: desc,
+        imageUrls: uploadedUrls, // array for multiple images
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        timestamp,
+        approved: false,
+      });
+
+      uploadStatus.textContent = "प्रॉपर्टी पोस्ट हो गई! प्रशासन की मंजूरी का इंतजार करें।";
+      clearForm();
+      uploadSection.style.display = "none";
+      loadProperties();
+    } catch (err) {
+      console.error(err);
+      uploadStatus.textContent = "इमेज अपलोड विफल।";
+    }
+  };
+
+  // Format price in INR style
+  function formatPrice(num) {
+    return num.toLocaleString("en-IN");
   }
 
-  // Format price Indian style
-  function formatPrice(num){
-    return num.toLocaleString('en-IN');
+  // WhatsApp link for users (their own posts)
+  function whatsappLinkUser(post) {
+    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nशीर्षक: ${post.title}\nशहर: ${post.city}\nकीमत: ₹${formatPrice(post.price)}\n\nलिंक: ${window.location.href}`;
+    return `https://wa.me/${myWhatsApp}?text=${encodeURIComponent(msg)}`;
   }
 
-  // WhatsApp link builder
-  function whatsappLinkForAdmin(post){
-    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.href}`;
-    return `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(msg)}`;
+  // WhatsApp link for admin (poster info)
+  function whatsappLinkAdmin(post) {
+    const msg = `नमस्ते, मैंने आपकी प्रॉपर्टी देखी है:\n\nशीर्षक: ${post.title}\nशहर: ${post.city}\nकीमत: ₹${formatPrice(post.price)}\n\nईमेल: ${post.userEmail}\nलिंक: ${window.location.href}`;
+    return `https://wa.me/${myWhatsApp}?text=${encodeURIComponent(msg)}`;
   }
-  function whatsappLinkForUser(){
-    return `https://wa.me/${adminWhatsapp}`;
+
+  // Check expired (older than 30 days)
+  function isExpired(ts) {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    return Date.now() - ts > THIRTY_DAYS;
   }
 
   // Delete property
-  function deleteProperty(key){
-    if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
-      db.ref('properties/'+key).remove();
+  function deleteProperty(key) {
+    if (confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")) {
+      db.ref("properties/" + key).remove();
     }
   }
 
   // Approve property (admin only)
-  function approveProperty(key){
-    db.ref('properties/'+key).update({approved:true});
-  }
-
-  // Check if post expired
-  function isExpired(ts){
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-    return (Date.now() - ts) > THIRTY_DAYS;
+  function approveProperty(key) {
+    db.ref("properties/" + key).update({ approved: true });
   }
 
   // Render properties list
-  function renderProperties(posts){
+  function renderProperties(posts) {
     propertyList.innerHTML = "";
-    if(posts.length === 0){
-      propertyList.innerHTML = "<p style='text-align:center; font-size:1.2rem;'>कोई प्रॉपर्टी नहीं मिली।</p>";
+    if (posts.length === 0) {
+      propertyList.innerHTML = "<p style='text-align:center;'>कोई प्रॉपर्टी नहीं मिली।</p>";
       return;
     }
 
-    posts.forEach(({key, post}) => {
-      const div = document.createElement('div');
-      div.classList.add('property-card');
+    posts.forEach(({ key, post }) => {
+      const div = document.createElement("div");
+      div.className = "property-card";
+      div.dataset.key = key;
 
-      // Click to open modal
-      div.addEventListener('click', () => openModal(post));
+      // Handle expand on click
+      div.onclick = e => {
+        // Avoid click on buttons triggering card expand
+        if (e.target.tagName.toLowerCase() === "button" || e.target.tagName.toLowerCase() === "a") return;
 
-      // Image carousel (show first image)
-      const img = document.createElement('img');
-      img.src = post.imageUrls ? post.imageUrls[0] : post.imageUrl;
-      img.alt = post.title;
-      div.appendChild(img);
-
-      // Info container
-      const info = document.createElement('div');
-      info.classList.add('property-info');
-      info.innerHTML = `
-        <h3>${post.title}</h3>
-        <p><strong>City:</strong> ${post.city}</p>
-        <p><strong>Type:</strong> ${post.type === "sale" ? "Buy" : "Rent"}</p>
-        <p><strong>Price:</strong> ₹${formatPrice(post.price)}</p>
-        <p>${post.description}</p>
-      `;
-      div.appendChild(info);
-
-      // Actions container (buttons)
-      const actions = document.createElement('div');
-      actions.classList.add('property-actions');
-
-      // WhatsApp button
-      const waBtn = document.createElement('a');
-      waBtn.className = 'btn-3d';
-      waBtn.target = "_blank";
-      waBtn.style.textDecoration = 'none';
-
-      // admin ko sabka whatsapp button chahiye, user ko apna whatsapp button chahiye
-      if(isAdmin){
-        waBtn.href = whatsappLinkForAdmin(post);
-        waBtn.textContent = "WhatsApp (Admin)";
-      } else {
-        // user ko apna whatsapp number
-        waBtn.href = whatsappLinkForUser();
-        waBtn.textContent = "WhatsApp";
-      }
-      waBtn.addEventListener('click', e => e.stopPropagation());
-      actions.appendChild(waBtn);
-
-      if(isAdmin){
-        if(!post.approved){
-          const approveBtn = document.createElement('button');
-          approveBtn.className = 'btn-3d';
-          approveBtn.textContent = "Approve";
-          approveBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            approveProperty(key);
-          });
-          actions.appendChild(approveBtn);
+        if (div.classList.contains("expanded")) {
+          div.classList.remove("expanded");
+        } else {
+          // Close others
+          document.querySelectorAll(".property-card.expanded").forEach(c => c.classList.remove("expanded"));
+          div.classList.add("expanded");
+          div.scrollIntoView({ behavior: "smooth", block: "center" });
         }
+      };
 
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn-3d';
+      // Image carousel for multiple images (basic)
+      const imgContainer = document.createElement("div");
+      imgContainer.style.position = "relative";
+
+      const img = document.createElement("img");
+      img.src = post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls[0] : "";
+      img.alt = post.title;
+      imgContainer.appendChild(img);
+      div.appendChild(imgContainer);
+
+      const content = document.createElement("div");
+      content.className = "property-content";
+
+      const title = document.createElement("h3");
+      title.textContent = post.title;
+      content.appendChild(title);
+
+      const city = document.createElement("p");
+      city.textContent = `शहर: ${post.city}`;
+      content.appendChild(city);
+
+      const type = document.createElement("p");
+      type.textContent = `प्रकार: ${post.type === "sale" ? "खरीदें" : "किराये पर"}`;
+      content.appendChild(type);
+
+      const price = document.createElement("p");
+      price.textContent = `कीमत: ₹${formatPrice(post.price)}`;
+      content.appendChild(price);
+
+      const desc = document.createElement("p");
+      desc.textContent = post.description;
+      content.appendChild(desc);
+
+      div.appendChild(content);
+
+      // Buttons container
+      const btnsDiv = document.createElement("div");
+      btnsDiv.className = "card-buttons";
+
+      // WhatsApp Button logic:
+      // Admin sees WhatsApp button for every post (to contact poster)
+      // Users see WhatsApp button only on their own posts
+      if (
+        (isAdmin) ||
+        (currentUser && currentUser.uid === post.userId)
+      ) {
+        const waBtn = document.createElement("a");
+        waBtn.className = "btn";
+        waBtn.target = "_blank";
+        waBtn.rel = "noopener noreferrer";
+
+        if (isAdmin) {
+          waBtn.href = whatsappLinkAdmin(post);
+          waBtn.textContent = "WhatsApp (Poster से)";
+        } else {
+          waBtn.href = whatsappLinkUser(post);
+          waBtn.textContent = "WhatsApp";
+        }
+        btnsDiv.appendChild(waBtn);
+      }
+
+      // Delete Button for admin or owner
+      if (isAdmin || (currentUser && currentUser.uid === post.userId)) {
+        const delBtn = document.createElement("button");
         delBtn.textContent = "Delete";
-        delBtn.style.background = "#e74c3c";
-        delBtn.style.boxShadow = "5px 5px 10px #c0392b, -5px -5px 10px #e74c3c";
-        delBtn.addEventListener('click', e => {
+        delBtn.onclick = e => {
           e.stopPropagation();
           deleteProperty(key);
-        });
-        actions.appendChild(delBtn);
+        };
+        btnsDiv.appendChild(delBtn);
       }
 
-      div.appendChild(actions);
+      // Approve Button for admin only, if not approved
+      if (isAdmin && !post.approved) {
+        const approveBtn = document.createElement("button");
+        approveBtn.textContent = "Approve";
+        approveBtn.onclick = e => {
+          e.stopPropagation();
+          approveProperty(key);
+        };
+        btnsDiv.appendChild(approveBtn);
+      }
+
+      content.appendChild(btnsDiv);
 
       propertyList.appendChild(div);
     });
   }
 
-  // Open modal with images & details
-  function openModal(post){
-    modalImages.innerHTML = "";
-    if(post.imageUrls && post.imageUrls.length > 0){
-      post.imageUrls.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        modalImages.appendChild(img);
-      });
-    } else if(post.imageUrl){
-      const img = document.createElement('img');
-      img.src = post.imageUrl;
-      modalImages.appendChild(img);
-    }
-    modalTitle.textContent = post.title;
-    modalCity.textContent = "City: " + post.city;
-    modalType.textContent = "Type: " + (post.type === "sale" ? "Buy" : "Rent");
-    modalPrice.textContent = "Price: ₹" + formatPrice(post.price);
-    modalDesc.textContent = post.description;
-
-    modalOverlay.style.display = "flex";
-  }
-  modalCloseBtn.addEventListener('click', () => {
-    modalOverlay.style.display = "none";
-  });
-  modalOverlay.addEventListener('click', e => {
-    if(e.target === modalOverlay){
-      modalOverlay.style.display = "none";
-    }
-  });
-
-  // Load properties from Firebase and filter/search
-  async function loadProperties(){
-    propertyList.innerHTML = "<p style='text-align:center;'>Loading properties...</p>";
-    const snapshot = await db.ref('properties').once('value');
-    const data = snapshot.val();
-
-    if(!data){
-      renderProperties([]);
-      return;
-    }
-
-    const allPosts = [];
-    Object.entries(data).forEach(([key, post]) => {
-      if(post.approved && !isExpired(post.timestamp)){
-        allPosts.push({key, post});
-      } else if(isAdmin && !isExpired(post.timestamp)){
-        // admin sees all, even unapproved
-        allPosts.push({key, post});
-      }
-    });
-
-    // Search filter
-    const searchText = searchInput.value.trim().toLowerCase();
-    const filterByType = filterType.value;
-
-    let filtered = allPosts.filter(({post}) => {
-      const inSearch = post.title.toLowerCase().includes(searchText) || post.city.toLowerCase().includes(searchText);
-      const inType = filterByType === "" || post.type === filterByType;
-      return inSearch && inType;
-    });
-
-    renderProperties(filtered);
-  }
-
-  // Upload & post new property
-  submitPost.addEventListener('click', async () => {
-    uploadStatus.style.color = 'red';
-    uploadStatus.textContent = "";
-
-    // Validation
-    const title = document.getElementById('title').value.trim();
-    const city = document.getElementById('city').value.trim();
-    const type = document.getElementById('type').value;
-    const price = parseInt(document.getElementById('price').value.trim());
-    const description = document.getElementById('desc').value.trim();
-    const imageFiles = document.getElementById('imageFiles').files;
-
-    if(!title || !city || !price || !description || imageFiles.length === 0){
-      uploadStatus.textContent = "सभी फील्ड भरें और कम से कम एक इमेज अपलोड करें।";
-      return;
-    }
-
-    uploadStatus.style.color = 'blue';
-    uploadStatus.textContent = "Images uploading... कृपया प्रतीक्षा करें";
-
+  // Load properties from Firebase DB
+  async function loadProperties() {
+    propertyList.innerHTML = "<p style='text-align:center;'>लोड हो रहा है...</p>";
     try {
-      const imageUrls = await uploadImagesToImgbb(imageFiles);
+      const snapshot = await db.ref("properties").once("value");
+      const data = snapshot.val();
+      if (!data) {
+        renderProperties([]);
+        return;
+      }
 
-      // Prepare post data
-      const newPost = {
-        title,
-        city,
-        type,
-        price,
-        description,
-        imageUrls,
-        timestamp: Date.now(),
-        userEmail: currentUser.email,
-        userId: currentUser.uid,
-        approved: false
-      };
+      // Convert object to array
+      let posts = Object.entries(data).map(([key, post]) => ({ key, post }));
 
-      // Push to Firebase DB
-      await db.ref('properties').push(newPost);
+      // Delete expired automatically
+      posts.forEach(({ key, post }) => {
+        if (isExpired(post.timestamp)) {
+          db.ref("properties/" + key).remove();
+        }
+      });
 
-      uploadStatus.style.color = 'green';
-      uploadStatus.textContent = "प्रॉपर्टी पोस्ट हो गई, admin अप्रूवल का इंतज़ार करें।";
+      // Filter posts according to admin/user
+      posts = posts.filter(({ post }) => {
+        if (isExpired(post.timestamp)) return false;
 
-      clearForm();
-      uploadSection.style.display = 'none';
+        if (isAdmin) return true; // admin sees all posts
 
-      loadProperties();
+        // User sees only approved posts and their own posts
+        if (!post.approved) return false;
+        if (currentUser && post.userId === currentUser.uid) return true;
 
+        return false;
+      });
+
+      // Apply search and type filters
+      const searchText = searchInput.value.trim().toLowerCase();
+      const typeFilter = filterType.value;
+
+      posts = posts.filter(({ post }) => {
+        const matchesSearch =
+          post.title.toLowerCase().includes(searchText) ||
+          post.city.toLowerCase().includes(searchText);
+        const matchesType = typeFilter === "" || post.type === typeFilter;
+        return matchesSearch && matchesType;
+      });
+
+      renderProperties(posts);
     } catch (err) {
-      uploadStatus.style.color = 'red';
-      uploadStatus.textContent = "इमेज अपलोड या पोस्टिंग में समस्या: " + err.message;
+      console.error(err);
+      propertyList.innerHTML = "<p style='text-align:center; color:red;'>डेटा लोड करने में त्रुटि हुई।</p>";
     }
-  });
+  }
 
-  // Auth state change
+  // Auth state listener
   auth.onAuthStateChanged(user => {
     currentUser = user;
+    if (user) {
+      isAdmin = user.email === adminEmail;
 
-    if(user){
       loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-block";
       postBtn.style.display = "inline-block";
 
-      isAdmin = (user.email === adminEmail);
-      adminPanelBtn.style.display = isAdmin ? "inline-block" : "none";
-
+      alert(isAdmin ? "आप Admin के रूप में लॉगिन हैं।" : "आप User के रूप में लॉगिन हैं।");
     } else {
+      isAdmin = false;
       loginBtn.style.display = "inline-block";
       logoutBtn.style.display = "none";
       postBtn.style.display = "none";
-      adminPanelBtn.style.display = "none";
       uploadSection.style.display = "none";
     }
 
     loadProperties();
   });
 
-  // Admin panel button (optional you can expand functionality)
-  adminPanelBtn.addEventListener('click', () => {
-    alert("Admin Panel के लिए UI अभी बनाएंगे। फिलहाल आप approve/delete बटन कार्ड पर देख सकते हैं।");
-  });
-
-  // Initial load properties on page load
-  window.onload = () => {
-    loadProperties();
+  searchBtn.onclick = loadProperties;
+  searchInput.onkeyup = e => {
+    if (e.key === "Enter") loadProperties();
   };
+  filterType.onchange = loadProperties;
 
 </script>
 
 </body>
 </html>
-
