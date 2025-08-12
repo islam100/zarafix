@@ -1,70 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Property List</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏠 Property Listings</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 10px; }
-    .card {
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #property-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+    .property-card {
       background: white;
       border-radius: 10px;
-      padding: 10px;
-      margin: 10px 0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      width: 300px;
+      padding: 15px;
+      box-sizing: border-box;
     }
-    button {
-      background: #007bff;
+    .property-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .property-card h2 {
+      margin: 0 0 5px 0;
+      font-size: 1.2em;
+    }
+    .property-info {
+      margin: 5px 0;
+    }
+    .whatsapp-btn {
+      display: inline-block;
+      margin-top: 10px;
+      background: #25D366;
       color: white;
-      border: none;
-      padding: 6px 10px;
+      padding: 8px 15px;
       border-radius: 5px;
-      cursor: pointer;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s ease;
     }
-    button:hover { background: #0056b3; }
+    .whatsapp-btn:hover {
+      background: #1DA851;
+    }
+    #error-msg {
+      color: red;
+      text-align: center;
+      font-weight: bold;
+    }
   </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
 <body>
+  <h1>🏠 Property Listings</h1>
+  <div id="error-msg"></div>
+  <div id="property-list"></div>
 
-<h2>🏠 Property Listings</h2>
-<div id="propertyList">Loading...</div>
+  <script>
+    // TODO: Replace with your own Firebase config from Firebase console
+  const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 
-<script>
-  const loggedInUserId = "user2"; // यहां अपने लॉगिन यूज़र का ID डालो
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // JSON data को fetch से लोड करना
-  fetch("properties.json")
-    .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById("propertyList");
-      container.innerHTML = "";
+    // Reference to properties node
+    const propertiesRef = db.ref('properties');
 
-      data.forEach(property => {
-        const card = document.createElement("div");
-        card.className = "card";
+    const propertyListDiv = document.getElementById('property-list');
+    const errorMsgDiv = document.getElementById('error-msg');
 
-        card.innerHTML = `
-          <h3>${property.title}</h3>
-          <p><b>Location:</b> ${property.location}</p>
-          <p><b>Price:</b> ₹${property.price}</p>
-        `;
+    function createPropertyCard(property) {
+      const div = document.createElement('div');
+      div.className = 'property-card';
 
-        // सिर्फ अपने पोस्ट पर बटन दिखे
-        if (property.userId === loggedInUserId) {
-          const editBtn = document.createElement("button");
-          editBtn.innerText = "Edit Property";
-          editBtn.onclick = () => alert(`Editing ${property.title}`);
-          card.appendChild(editBtn);
+      // Image
+      if (property.imageUrl) {
+        const img = document.createElement('img');
+        img.src = property.imageUrl;
+        img.alt = property.title || 'Property Image';
+        div.appendChild(img);
+      }
+
+      // Title
+      const title = document.createElement('h2');
+      title.textContent = property.title || 'No title';
+      div.appendChild(title);
+
+      // City
+      const city = document.createElement('p');
+      city.className = 'property-info';
+      city.textContent = `City: ${property.city || 'N/A'}`;
+      div.appendChild(city);
+
+      // Type
+      const type = document.createElement('p');
+      type.className = 'property-info';
+      type.textContent = `Type: ${property.type || 'N/A'}`;
+      div.appendChild(type);
+
+      // Price
+      const price = document.createElement('p');
+      price.className = 'property-info';
+      let priceText = 'N/A';
+      if(property.price) {
+        priceText = `₹ ${property.price.toLocaleString()}`;
+      }
+      price.textContent = `Price: ${priceText}`;
+      div.appendChild(price);
+
+      // Description
+      if (property.description) {
+        const desc = document.createElement('p');
+        desc.className = 'property-info';
+        desc.textContent = property.description;
+        div.appendChild(desc);
+      }
+
+      // WhatsApp button
+      if (property.whatsapp) {
+        const waLink = document.createElement('a');
+        waLink.href = `https://wa.me/${property.whatsapp.replace(/\D/g, '')}`;
+        waLink.target = '_blank';
+        waLink.className = 'whatsapp-btn';
+        waLink.textContent = 'Contact on WhatsApp';
+        div.appendChild(waLink);
+      }
+
+      return div;
+    }
+
+    // Fetch and render properties
+    propertiesRef.on('value', snapshot => {
+      propertyListDiv.innerHTML = ''; // Clear old list
+      errorMsgDiv.textContent = '';
+
+      if (!snapshot.exists()) {
+        errorMsgDiv.textContent = 'No properties found.';
+        return;
+      }
+
+      const data = snapshot.val();
+
+      // data expected to be an object of properties
+      for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+          const prop = data[key];
+          const card = createPropertyCard(prop);
+          propertyListDiv.appendChild(card);
         }
-
-        container.appendChild(card);
-      });
-    })
-    .catch(err => {
-      document.getElementById("propertyList").innerHTML = "❌ Error loading data";
-      console.error(err);
+      }
+    }, error => {
+      errorMsgDiv.textContent = '❌ Error loading data: ' + error.message;
+      console.error(error);
     });
-</script>
-
+  </script>
 </body>
 </html>
