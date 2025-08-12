@@ -3,231 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property — Admin + User</title>
+<title>Zara Property - Public & Admin</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0; padding: 0; background: #f5f5f5;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  header {
-    width: 100%;
-    background-color: #0066cc;
+  /* ... (पिछले कोड जैसा ही CSS होगा, बस Delete button के लिए अलग स्टाइल) */
+  .delete-btn {
+    background-color: #dc3545;
     color: white;
-    padding: 12px 16px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    box-sizing: border-box;
-  }
-  header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-  #btnGroup {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  button, select, input[type="text"], input[type="number"], textarea {
-    font-size: 1rem;
-  }
-  /* 3D Buttons Style */
-  button, #searchBtn {
-    background: linear-gradient(145deg, #3a7bd5, #1f3c88);
     border: none;
-    border-radius: 10px;
-    color: white;
-    padding: 10px 18px;
-    cursor: pointer;
-    box-shadow: 4px 4px 8px #1a2a52, -4px -4px 8px #4b88d4;
-    transition: all 0.2s ease-in-out;
-    user-select: none;
-  }
-  button:active {
-    box-shadow: inset 4px 4px 8px #1a2a52, inset -4px -4px 8px #4b88d4;
-  }
-  button:disabled {
-    background: #a0a0a0;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-  #searchBtn {
-    background: linear-gradient(145deg, #28a745, #1e7e34);
-    box-shadow: 4px 4px 8px #145d20, -4px -4px 8px #3bc95e;
-  }
-  #searchBtn:active {
-    box-shadow: inset 4px 4px 8px #145d20, inset -4px -4px 8px #3bc95e;
-  }
-  input[type="text"], input[type="number"], select, textarea {
-    width: 100%;
-    max-width: 400px;
-    padding: 10px;
-    margin: 8px 0;
     border-radius: 8px;
-    border: 1.5px solid #ccc;
-    box-sizing: border-box;
-    transition: border-color 0.3s ease;
-  }
-  input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: #0066cc;
-  }
-  textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-  #uploadSection {
-    background: white;
-    box-shadow: 0 3px 12px rgb(0 0 0 / 0.1);
-    padding: 20px;
-    border-radius: 12px;
-    margin: 20px 10px;
-    max-width: 450px;
-    width: 100%;
-  }
-  #searchSection {
-    margin: 20px 10px;
-    width: 100%;
-    max-width: 460px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  #searchInput {
-    flex: 1 1 220px;
-  }
-  #filterType {
-    width: 120px;
-  }
-  #propertyList {
-    width: 100%;
-    max-width: 1024px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-    gap: 18px;
-    padding: 0 10px 40px;
-    box-sizing: border-box;
-  }
-  .property-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    padding: 6px 10px;
     cursor: pointer;
-    transition: transform 0.3s ease;
-    position: relative;
-  }
-  .property-card:hover {
-    transform: scale(1.02);
-  }
-  .property-card img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-  }
-  .property-content {
-    padding: 12px 16px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .property-content h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.2rem;
-    color: #0066cc;
-  }
-  .property-content p {
-    margin: 4px 0;
-    flex-grow: 0;
-  }
-  .btn-group {
-    margin-top: auto;
-    display: flex;
-    gap: 10px;
-  }
-  .btn-group a, .btn-group button {
-    flex: 1;
-    text-align: center;
-  }
-  /* Modal for big card */
-  #modalOverlay {
-    position: fixed;
-    top:0; left:0; right:0; bottom:0;
-    background: rgba(0,0,0,0.7);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  #modalCard {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    position: relative;
-  }
-  #modalCard img {
-    width: 100%;
-    height: 320px;
-    object-fit: cover;
-    border-radius: 12px 12px 0 0;
-  }
-  #modalContent {
-    padding: 20px;
-  }
-  #modalContent h2 {
-    margin-top: 0;
-    color: #0066cc;
-  }
-  #modalClose {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    font-size: 28px;
     font-weight: bold;
-    cursor: pointer;
     user-select: none;
-    color: #333;
+    box-shadow: 2px 2px 6px #a83232;
+    transition: background-color 0.3s ease;
   }
-  /* Responsive */
-  @media (max-width: 480px) {
-    header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    #btnGroup {
-      width: 100%;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-    #searchSection {
-      max-width: 100%;
-      flex-direction: column;
-      align-items: stretch;
-    }
-    #filterType, #searchInput, #searchBtn {
-      width: 100%;
-      max-width: none;
-    }
-    #uploadSection {
-      max-width: 100%;
-      padding: 15px;
-      margin: 10px 0;
-    }
+  .delete-btn:hover {
+    background-color: #a82828;
   }
 </style>
 </head>
@@ -236,58 +31,15 @@
 <header>
   <h1>Zara Property</h1>
   <div id="btnGroup">
-    <button id="loginBtn">Google Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-    <button id="postBtn" style="display:none;">Post Property</button>
+    <button id="adminLoginBtn">Admin Login (Google)</button>
+    <button id="adminLogoutBtn" style="display:none;">Admin Logout</button>
   </div>
 </header>
 
-<section id="uploadSection" style="display:none;">
-  <h2>Post Property</h2>
-  <input type="text" id="title" placeholder="Title" />
-  <input type="text" id="city" placeholder="City" />
-  <select id="type">
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <input type="number" id="price" placeholder="Price" min="1" />
-  <textarea id="desc" placeholder="Description"></textarea>
-  <input type="file" id="imageFile" accept="image/*" multiple />
-  <button id="submitPost">Upload & Post</button>
-  <button id="cancelPost">Cancel</button>
-  <p id="uploadStatus" style="color:red; margin-top:8px;"></p>
-</section>
-
-<section id="searchSection">
-  <input type="text" id="searchInput" placeholder="Search by title or city..." />
-  <select id="filterType">
-    <option value="">All types</option>
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <button id="searchBtn">Search</button>
-</section>
-
 <section id="propertyList"></section>
 
-<!-- Modal for big card -->
-<div id="modalOverlay">
-  <div id="modalCard">
-    <span id="modalClose">&times;</span>
-    <img src="" alt="Property Image" id="modalImage" />
-    <div id="modalContent">
-      <h2 id="modalTitle"></h2>
-      <p><strong>City:</strong> <span id="modalCity"></span></p>
-      <p><strong>Type:</strong> <span id="modalType"></span></p>
-      <p><strong>Price:</strong> ₹<span id="modalPrice"></span></p>
-      <p id="modalDesc"></p>
-      <a href="" id="modalWhatsapp" target="_blank" style="display:inline-block; background:#25d366; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none;">WhatsApp</a>
-    </div>
-  </div>
-</div>
-
 <script>
-  // Firebase config - अपनी Firebase जानकारी यहाँ डालें
+  // Firebase config डालें अपनी Firebase प्रोजेक्ट की जानकारी से
   const firebaseConfig = {
     apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
     authDomain: "property-20d6d.firebaseapp.com",
@@ -302,272 +54,150 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
-  const whatsappPhone = "917378342192";
+  const whatsappPhone = "917378342192"; // आपका WhatsApp नंबर
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postBtn = document.getElementById('postBtn');
-  const uploadSection = document.getElementById('uploadSection');
-  const submitPost = document.getElementById('submitPost');
-  const cancelPost = document.getElementById('cancelPost');
-  const uploadStatus = document.getElementById('uploadStatus');
+  const adminLoginBtn = document.getElementById('adminLoginBtn');
+  const adminLogoutBtn = document.getElementById('adminLogoutBtn');
   const propertyList = document.getElementById('propertyList');
-  const searchInput = document.getElementById('searchInput');
-  const filterType = document.getElementById('filterType');
-  const searchBtn = document.getElementById('searchBtn');
 
-  // Modal Elements
-  const modalOverlay = document.getElementById('modalOverlay');
-  const modalClose = document.getElementById('modalClose');
-  const modalImage = document.getElementById('modalImage');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalCity = document.getElementById('modalCity');
-  const modalType = document.getElementById('modalType');
-  const modalPrice = document.getElementById('modalPrice');
-  const modalDesc = document.getElementById('modalDesc');
-  const modalWhatsapp = document.getElementById('modalWhatsapp');
+  let isAdmin = false;
 
-  let currentUser = null;
-
-  // Google Login
-  loginBtn.onclick = () => {
+  // Admin Google Login
+  adminLoginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert("Login failed: " + err.message));
   };
 
-  // Logout
-  logoutBtn.onclick = () => {
+  adminLogoutBtn.onclick = () => {
     auth.signOut();
   };
 
-  // Show Post form
-  postBtn.onclick = () => {
-    uploadSection.style.display = 'block';
-  };
+  // Admin की पहचान (email या uid के आधार पर) — आप अपने admin Google account का email डालें यहाँ:
+  const adminEmails = ["admin@gmail.com"]; // <-- यहाँ अपना admin gmail डालें
 
-  cancelPost.onclick = () => {
-    uploadSection.style.display = 'none';
-    clearForm();
-  };
-
-  function clearForm(){
-    document.getElementById('title').value = "";
-    document.getElementById('city').value = "";
-    document.getElementById('type').value = "sale";
-    document.getElementById('price').value = "";
-    document.getElementById('desc').value = "";
-    document.getElementById('imageFile').value = "";
-    uploadStatus.textContent = "";
-    submitPost.disabled = false;
-  }
-
-  async function uploadImageToImgbb(file){
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-      method: "POST",
-      body: formData
-    });
-    const data = await res.json();
-    if(data.success) return data.data.url;
-    throw new Error("Image upload failed");
-  }
-
-  function formatPrice(num){
-    return num.toLocaleString('en-IN');
-  }
-
-  function whatsappLink(postKey, title, city, price){
-    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${title}\nCity: ${city}\nPrice: ₹${formatPrice(price)}\n\nLink: ${window.location.origin + window.location.pathname}#property=${postKey}`;
+  // WhatsApp लिंक जनरेट करने वाला फंक्शन
+  function whatsappLink(title, city, price, key){
+    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${title}\nCity: ${city}\nPrice: ₹${price}\n\nLink: ${window.location.origin + window.location.pathname}#property=${key}`;
     return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`;
   }
 
-  // Render list of properties
-  function renderProperties(properties){
-    propertyList.innerHTML = "";
-    if(properties.length === 0){
-      propertyList.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
-      return;
-    }
-
-    properties.forEach(({key, post}) => {
-      const card = document.createElement('div');
-      card.className = "property-card";
-
-      // Show first image only
-      const img = document.createElement('img');
-      img.src = post.imageUrls?.[0] || post.imageUrl || '';
-      img.alt = post.title;
-      card.appendChild(img);
-
-      const content = document.createElement('div');
-      content.className = "property-content";
-
-      const title = document.createElement('h3');
-      title.textContent = post.title;
-      content.appendChild(title);
-
-      const city = document.createElement('p');
-      city.textContent = `City: ${post.city}`;
-      content.appendChild(city);
-
-      const type = document.createElement('p');
-      type.textContent = `Type: ${post.type === "sale" ? "Buy" : "Rent"}`;
-      content.appendChild(type);
-
-      const price = document.createElement('p');
-      price.textContent = `Price: ₹${formatPrice(post.price)}`;
-      content.appendChild(price);
-
-      const desc = document.createElement('p');
-      desc.textContent = post.description;
-      content.appendChild(desc);
-
-      const waBtn = document.createElement('a');
-      waBtn.href = whatsappLink(key, post.title, post.city, post.price);
-      waBtn.target = "_blank";
-      waBtn.textContent = "WhatsApp";
-      waBtn.style.backgroundColor = "#25d366";
-      waBtn.style.color = "white";
-      waBtn.style.padding = "8px 12px";
-      waBtn.style.borderRadius = "6px";
-      waBtn.style.textDecoration = "none";
-      waBtn.style.userSelect = "none";
-      waBtn.style.marginTop = "8px";
-      content.appendChild(waBtn);
-
-      card.appendChild(content);
-      propertyList.appendChild(card);
-
-      // Click card to open modal
-      card.onclick = () => openModal(key, post);
-    });
-  }
-
-  // Modal open
-  function openModal(key, post){
-    modalImage.src = post.imageUrls?.[0] || post.imageUrl || '';
-    modalTitle.textContent = post.title;
-    modalCity.textContent = post.city;
-    modalType.textContent = post.type === "sale" ? "Buy" : "Rent";
-    modalPrice.textContent = formatPrice(post.price);
-    modalDesc.textContent = post.description;
-    modalWhatsapp.href = whatsappLink(key, post.title, post.city, post.price);
-    modalOverlay.style.display = "flex";
-  }
-
-  modalClose.onclick = () => {
-    modalOverlay.style.display = "none";
-  };
-  modalOverlay.onclick = e => {
-    if(e.target === modalOverlay){
-      modalOverlay.style.display = "none";
-    }
-  };
-
-  // Load properties from Firebase and filter/search
+  // प्रॉपर्टी लोड करें और दिखाएं
   function loadProperties(){
     db.ref('properties').once('value').then(snapshot => {
       const data = snapshot.val();
-      if(!data) {
-        renderProperties([]);
+      propertyList.innerHTML = "";
+      if(!data){
+        propertyList.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>कोई प्रॉपर्टी उपलब्ध नहीं है।</p>";
         return;
       }
-      const properties = Object.entries(data).map(([key, post]) => ({key, post}));
+      Object.entries(data).forEach(([key, post]) => {
+        const card = document.createElement('div');
+        card.className = "property-card";
+        card.style = `
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
+          overflow: hidden;
+          margin: 15px;
+          padding: 12px;
+          max-width: 320px;
+          display: inline-block;
+          vertical-align: top;
+          cursor: default;
+          font-family: Arial, sans-serif;
+        `;
 
-      // Filter by search and type
-      const q = searchInput.value.trim().toLowerCase();
-      const typeFilter = filterType.value;
+        // Image
+        const img = document.createElement('img');
+        img.src = post.imageUrls?.[0] || post.imageUrl || "";
+        img.alt = post.title;
+        img.style = "width:100%; height:180px; object-fit:cover; border-radius:8px;";
+        card.appendChild(img);
 
-      const filtered = properties.filter(({post}) => {
-        if(q && !(
-          post.title.toLowerCase().includes(q) || post.city.toLowerCase().includes(q)
-        )) return false;
+        // Title
+        const title = document.createElement('h3');
+        title.textContent = post.title;
+        title.style.color = "#0066cc";
+        card.appendChild(title);
 
-        if(typeFilter && post.type !== typeFilter) return false;
+        // City, Type, Price
+        const city = document.createElement('p');
+        city.textContent = "City: " + post.city;
+        card.appendChild(city);
 
-        return true;
+        const type = document.createElement('p');
+        type.textContent = "Type: " + (post.type === "sale" ? "Buy" : "Rent");
+        card.appendChild(type);
+
+        const price = document.createElement('p');
+        price.textContent = "Price: ₹" + post.price.toLocaleString('en-IN');
+        card.appendChild(price);
+
+        // Description
+        const desc = document.createElement('p');
+        desc.textContent = post.description;
+        card.appendChild(desc);
+
+        // WhatsApp Button
+        const waBtn = document.createElement('a');
+        waBtn.href = whatsappLink(post.title, post.city, post.price, key);
+        waBtn.target = "_blank";
+        waBtn.textContent = "WhatsApp";
+        waBtn.style = `
+          display: inline-block;
+          background-color: #25d366;
+          color: white;
+          padding: 8px 14px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+          margin-top: 10px;
+          user-select: none;
+        `;
+        card.appendChild(waBtn);
+
+        // अगर admin लॉगिन है तो Delete बटन दिखाओ
+        if(isAdmin){
+          const delBtn = document.createElement('button');
+          delBtn.textContent = "Delete";
+          delBtn.className = "delete-btn";
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm("क्या आप इस प्रॉपर्टी को डिलीट करना चाहते हैं?")){
+              db.ref('properties/' + key).remove()
+                .then(() => {
+                  alert("प्रॉपर्टी डिलीट हो गई है।");
+                  loadProperties();
+                })
+                .catch(err => alert("डिलीट करते समय त्रुटि: " + err.message));
+            }
+          };
+          card.appendChild(delBtn);
+        }
+
+        propertyList.appendChild(card);
       });
-
-      renderProperties(filtered);
+    }).catch(err => {
+      propertyList.innerHTML = `<p style="color:red; padding:20px; text-align:center;">Error loading properties: ${err.message}</p>`;
     });
   }
 
-  searchBtn.onclick = () => loadProperties();
-  searchInput.onkeyup = (e) => {
-    if(e.key === "Enter") loadProperties();
-  };
-  filterType.onchange = () => loadProperties();
-
-  // Submit new post
-  submitPost.onclick = async () => {
-    uploadStatus.textContent = "";
-    submitPost.disabled = true;
-
-    const title = document.getElementById('title').value.trim();
-    const city = document.getElementById('city').value.trim();
-    const type = document.getElementById('type').value;
-    const price = parseInt(document.getElementById('price').value);
-    const description = document.getElementById('desc').value.trim();
-    const imageFiles = document.getElementById('imageFile').files;
-
-    if(!title || !city || !type || !price || !description || imageFiles.length === 0){
-      uploadStatus.textContent = "सभी फ़ील्ड सही से भरें और कम से कम एक इमेज चुनें।";
-      submitPost.disabled = false;
-      return;
-    }
-
-    try {
-      uploadStatus.textContent = "Uploading images...";
-      const urls = [];
-      for(let i=0; i<imageFiles.length; i++){
-        const url = await uploadImageToImgbb(imageFiles[i]);
-        urls.push(url);
-      }
-
-      uploadStatus.textContent = "Saving post...";
-      const newPostRef = db.ref('properties').push();
-      await newPostRef.set({
-        title, city, type, price, description,
-        imageUrls: urls,
-        userId: currentUser.uid,
-        timestamp: Date.now()
-      });
-
-      uploadStatus.style.color = "green";
-      uploadStatus.textContent = "Property posted successfully!";
-      clearForm();
-      uploadSection.style.display = 'none';
-      loadProperties();
-    } catch(e) {
-      uploadStatus.style.color = "red";
-      uploadStatus.textContent = "Error: " + e.message;
-    } finally {
-      submitPost.disabled = false;
-    }
-  };
-
-  // Auth state change
+  // Firebase ऑथ स्टेटस मॉनिटर करें
   auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      postBtn.style.display = "inline-block";
-      uploadSection.style.display = "none";
-      loadProperties();
+    if(user && adminEmails.includes(user.email)){
+      isAdmin = true;
+      adminLoginBtn.style.display = "none";
+      adminLogoutBtn.style.display = "inline-block";
     } else {
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      postBtn.style.display = "none";
-      uploadSection.style.display = "none";
-      propertyList.innerHTML = "<p style='text-align:center; padding:20px;'>कृपया Google से लॉगिन करें।</p>";
+      isAdmin = false;
+      adminLoginBtn.style.display = "inline-block";
+      adminLogoutBtn.style.display = "none";
     }
+    loadProperties();
   });
 
-  // Initial load message
-  propertyList.innerHTML = "<p style='text-align:center; padding:20px;'>कृपया Google से लॉगिन करें।</p>";
+  // पेज लोड पर प्रॉपर्टी लोड करें
+  loadProperties();
 </script>
 
 </body>
