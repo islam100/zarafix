@@ -3,13 +3,89 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property — Admin + User</title>
+<title>Zara Property — Admin + User (Approved/Pending)</title>
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!-- Day.js for date handling -->
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
 <style>
-  /* बेसिक और 3D बटन स्टाइल्स (पहले जैसा) */
-  /* ... */
+  /* Reset + base */
+  *{box-sizing:border-box}
+  body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f3f6fb;color:#222}
+  a{color:inherit}
+
+  /* Header */
+  header{background:#0b47a1;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-size:20px}
+  #btnGroup{display:flex;gap:8px;align-items:center}
+  .top-btn{background:#ffb300;border:none;padding:9px 12px;border-radius:6px;cursor:pointer;font-weight:700}
+  .top-btn.blue{background:#1976d2;color:#fff}
+  .top-btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff}
+
+  /* Upload section */
+  #uploadSection{max-width:720px;margin:18px auto;background:#fff;padding:16px;border-radius:10px;box-shadow:0 6px 18px rgba(12,37,80,0.08);display:none}
+  #uploadSection .row{display:flex;gap:10px}
+  #uploadSection input[type=text],#uploadSection input[type=number],#uploadSection textarea,#uploadSection select{width:100%;padding:10px;border-radius:6px;border:1px solid #d7e2f3}
+  #uploadSection textarea{min-height:80px}
+  #uploadActions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  #uploadStatus{font-weight:700;margin-top:6px}
+
+  /* Search / filters */
+  #searchSection{max-width:1200px;margin:12px auto;display:flex;gap:10px;align-items:center;padding:0 16px;flex-wrap:wrap}
+  #searchSection input,#searchSection select{padding:10px;border-radius:8px;border:1px solid #d7e2f3}
+  #searchSection button{padding:10px 14px;border-radius:8px;border:none;background:#0b47a1;color:#fff;cursor:pointer}
+
+  /* Grid */
+  #propertyList{max-width:1200px;margin:18px auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;padding:0 16px}
+
+  /* Card style (99acres inspired) */
+  .property-card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(12,37,80,0.06);cursor:pointer;display:flex;flex-direction:column;transition:transform .18s ease,box-shadow .18s ease}
+  .property-card:hover{transform:translateY(-6px);box-shadow:0 12px 30px rgba(12,37,80,0.12)}
+  .property-card .media{height:190px;background:#e9eef9;display:flex;align-items:center;justify-content:center}
+  .property-card .media img{width:100%;height:100%;object-fit:cover}
+  .property-card .meta{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+  .meta h3{margin:0;font-size:1.05rem;color:#143c7a}
+  .meta .line{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .meta p{margin:0;color:#4b5563;font-size:0.94rem}
+  .meta .shortdesc{color:#6b7280;font-size:0.86rem}
+  .meta .tags{display:flex;gap:8px;margin-top:8px}
+  .pill{background:#eef2ff;color:#1e3a8a;padding:6px 8px;border-radius:6px;font-weight:700;font-size:0.82rem}
+
+  .card-actions{display:flex;gap:8px;margin-top:12px}
+  .card-actions a, .card-actions button{flex:1;padding:10px;border-radius:8px;text-align:center;border:none;font-weight:800;cursor:pointer}
+  .wa-btn{background:#25d366;color:#fff;text-decoration:none}
+  .del-btn{background:#ef4444;color:#fff}
+  .approve-btn{background:#2563eb;color:#fff}
+
+  /* small badge for pending */
+  .badge{position:absolute;top:10px;left:10px;background:rgba(255,193,7,0.95);color:#000;padding:6px 8px;border-radius:6px;font-weight:800}
+
+  /* Modal */
+  #modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:999}
+  #modalCard{background:#fff;border-radius:10px;max-width:900px;width:94%;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(2,6,23,0.45)}
+  #modalTop{display:flex;gap:14px}
+  #modalTop img{width:45%;height:420px;object-fit:cover;border-radius:10px 10px 0 0}
+  #modalBody{padding:16px;display:flex;flex-direction:column}
+  #modalBody h2{margin:4px 0;color:#0b47a1}
+  #modalBody p{margin:6px 0;color:#374151}
+  #modalClose{position:absolute;right:14px;top:10px;background:#ef4444;border:none;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .modal-actions{display:flex;gap:10px;margin-top:12px}
+
+  /* Admin panel area */
+  #adminPanel{max-width:1200px;margin:18px auto;background:#fff;padding:12px;border-radius:10px;display:none;box-shadow:0 8px 20px rgba(12,37,80,0.06)}
+  #adminPanel h3{margin:0 0 10px 0}
+  .pending-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .empty{padding:18px;text-align:center;color:#6b7280}
+
+  @media(max-width:800px){
+    #modalTop img{width:100%;height:260px}
+    #modalTop{flex-direction:column}
+  }
 </style>
 </head>
 <body>
@@ -17,367 +93,303 @@
 <header>
   <h1>Zara Property</h1>
   <div id="btnGroup">
-    <button id="loginBtn">Google Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-    <button id="postBtn" style="display:none;">Post Property</button>
-    <button id="adminToggleBtn" style="display:none;">Show Admin Panel</button>
+    <button id="loginBtn" class="top-btn">Google Login</button>
+    <button id="logoutBtn" class="top-btn blue" style="display:none">Logout</button>
+    <button id="postBtn" class="top-btn ghost" style="display:none">Post Property</button>
+    <button id="adminToggleBtn" class="top-btn" style="display:none">Show Admin Panel</button>
   </div>
 </header>
 
-<section id="uploadSection" style="display:none;">
-  <!-- पोस्टिंग फॉर्म -->
-  <!-- ... -->
+<!-- Upload form -->
+<section id="uploadSection">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <strong>Post Property</strong>
+    <small style="color:#6b7280">Fields marked * are required</small>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <input id="title" type="text" placeholder="Title *" />
+    <input id="city" type="text" placeholder="City *" />
+    <select id="type"><option value="sale">Buy</option><option value="rent">Rent</option></select>
+    <input id="price" type="number" placeholder="Price (₹) *" />
+  </div>
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input id="imageFile" type="file" accept="image/*" />
+  <div id="uploadActions">
+    <button id="submitPost" class="top-btn blue">Submit</button>
+    <button id="cancelPost" class="top-btn">Cancel</button>
+  </div>
+  <div id="uploadStatus"></div>
 </section>
 
+<!-- Search -> filters -->
 <section id="searchSection">
-  <input type="text" id="searchInput" placeholder="Search by title or city..." />
-  <select id="filterType">
-    <option value="">All types</option>
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
+  <input id="searchInput" type="text" placeholder="Search by title, city..." />
+  <select id="filterType"><option value="">All types</option><option value="sale">Buy</option><option value="rent">Rent</option></select>
   <button id="searchBtn">Search</button>
 </section>
 
-<section id="propertyList">
-  <!-- प्रॉपर्टी कार्ड्स यहाँ दिखेंगे -->
+<!-- Property list (approved) -->
+<section id="propertyList"></section>
+
+<!-- Admin Panel (pending) -->
+<section id="adminPanel">
+  <h3>Pending Properties (Admin)</h3>
+  <div id="pendingWrap" class="pending-grid"></div>
+  <div id="noPending" class="empty">No pending properties</div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<!-- Modal -->
+<div id="modalOverlay">
+  <div id="modalCard">
+    <button id="modalClose">Close</button>
+    <div id="modalTop">
+      <img id="modalImage" src="" alt="Property Image" />
+      <div id="modalBody">
+        <h2 id="modalTitle">Title</h2>
+        <p><strong>City:</strong> <span id="modalCity"></span></p>
+        <p><strong>Type:</strong> <span id="modalType"></span></p>
+        <p><strong>Price:</strong> ₹<span id="modalPrice"></span></p>
+        <p id="modalDesc"></p>
+        <div class="modal-actions">
+          <a id="modalWhatsappBtn" class="wa-btn" href="#" target="_blank">Contact on WhatsApp</a>
+          <button id="modalCloseBtn" class="top-btn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  // Firebase config (आपका कॉन्फिग यहाँ)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
+// --- CONFIG: बदलने के लिए ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+const imgbbApiKey = "52759d17d6011826df915af26466a7ea"; // आवश्यक हो तो बदलें
+const adminEmail = "zarasamajiksevasanstha@gmail.com"; // admin ईमेल
+const whatsappPhone = "917378342192"; // आपकी मांगी हुई नंबर
+// ------------------------
 
-  const auth = firebase.auth();
-  const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
 
-  const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const whatsappPhone = "917378342192";
+// DOM
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const postBtn = document.getElementById('postBtn');
+const adminToggleBtn = document.getElementById('adminToggleBtn');
+const uploadSection = document.getElementById('uploadSection');
+const submitPost = document.getElementById('submitPost');
+const cancelPost = document.getElementById('cancelPost');
+const uploadStatus = document.getElementById('uploadStatus');
+const propertyList = document.getElementById('propertyList');
+const searchInput = document.getElementById('searchInput');
+const filterType = document.getElementById('filterType');
+const searchBtn = document.getElementById('searchBtn');
+const adminPanel = document.getElementById('adminPanel');
+const pendingWrap = document.getElementById('pendingWrap');
+const noPending = document.getElementById('noPending');
 
-  // DOM Elements
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postBtn = document.getElementById('postBtn');
-  const adminToggleBtn = document.getElementById('adminToggleBtn');
-  const uploadSection = document.getElementById('uploadSection');
-  const submitPost = document.getElementById('submitPost');
-  const cancelPost = document.getElementById('cancelPost');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const propertyList = document.getElementById('propertyList');
-  const searchInput = document.getElementById('searchInput');
-  const filterType = document.getElementById('filterType');
-  const searchBtn = document.getElementById('searchBtn');
+// modal
+const modalOverlay = document.getElementById('modalOverlay');
+const modalImage = document.getElementById('modalImage');
+const modalTitle = document.getElementById('modalTitle');
+const modalCity = document.getElementById('modalCity');
+const modalType = document.getElementById('modalType');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const modalWhatsappBtn = document.getElementById('modalWhatsappBtn');
+const modalClose = document.getElementById('modalClose');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
 
-  let currentUser = null;
-  let isAdmin = false;
-  let showAdminPanel = false;
+let currentUser = null;
+let isAdmin = false;
+let showAdminPanel = false;
 
-  // Safe formatPrice function
-  function formatPrice(num) {
-    if (num === undefined || num === null) return "N/A";
-    const n = Number(num);
-    if (isNaN(n)) return "N/A";
-    return n.toLocaleString('en-IN');
-  }
+// helpers
+function formatPrice(num){ if(num===undefined||num===null) return 'N/A'; const n=Number(num); if(isNaN(n)) return 'N/A'; return n.toLocaleString('en-IN'); }
+function whatsappLink(postKey, post){ const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.origin+window.location.pathname}#property=${postKey}`; return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}` }
 
-  // WhatsApp लिंक बनाए (सभी कार्ड्स के लिए, admin या user कोई फर्क नहीं)
-  function whatsappLink(post, key){
-    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.origin + window.location.pathname}#property=${key}`;
-    return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`;
-  }
+// IMAGE upload to imgbb
+async function uploadImageToImgbb(file){
+  const fd = new FormData();
+  fd.append('image', file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,{method:'POST',body:fd});
+  const data = await res.json();
+  if(data.success) return data.data.url;
+  throw new Error(data.error ? data.error.message : 'Image upload failed');
+}
 
-  // प्रॉपर्टी रेंडर करें
-  function renderProperties(posts){
-    propertyList.innerHTML = "";
-    if(posts.length === 0){
-      propertyList.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
-      return;
+// render approved properties
+function renderProperties(posts){
+  propertyList.innerHTML='';
+  if(!posts || posts.length===0){ propertyList.innerHTML='<div class="empty">कोई प्रॉपर्टी नहीं मिली।</div>'; return; }
+  posts.forEach(({key,post})=>{
+    const card = document.createElement('div'); card.className='property-card';
+    // badge if not approved (shouldn't occur here)
+    if(!post.approved){ const b=document.createElement('div'); b.className='badge'; b.textContent='Pending'; card.appendChild(b); }
+
+    // media
+    const media=document.createElement('div'); media.className='media';
+    const img=document.createElement('img'); img.src=post.imageUrl || '';
+    img.alt=post.title||'Property'; media.appendChild(img);
+    card.appendChild(media);
+
+    const meta=document.createElement('div'); meta.className='meta';
+    const h=document.createElement('h3'); h.textContent=post.title||'No title'; meta.appendChild(h);
+    const line=document.createElement('div'); line.className='line';
+    const city=document.createElement('p'); city.textContent=post.city||'N/A';
+    const price=document.createElement('p'); price.textContent='₹'+formatPrice(post.price);
+    line.appendChild(city); line.appendChild(price);
+    meta.appendChild(line);
+    const typeP=document.createElement('p'); typeP.textContent = 'Type: '+(post.type==='sale'?'Buy':(post.type==='rent'?'Rent':'N/A'));
+    meta.appendChild(typeP);
+    const desc=document.createElement('p'); desc.className='shortdesc'; desc.textContent = post.description? (post.description.length>100? post.description.slice(0,100)+'...':post.description):'No description';
+    meta.appendChild(desc);
+
+    const actions=document.createElement('div'); actions.className='card-actions';
+
+    // WhatsApp
+    const wa=document.createElement('a'); wa.className='wa-btn'; wa.href=whatsappLink(key,post); wa.target='_blank'; wa.textContent='WhatsApp';
+    actions.appendChild(wa);
+
+    // if owner or admin show delete
+    if(currentUser && (currentUser.uid===post.userId || isAdmin)){
+      const del=document.createElement('button'); del.className='del-btn'; del.textContent='Delete';
+      del.onclick=(e)=>{ e.stopPropagation(); if(confirm('क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?')){ db.ref('approvedProperties/'+key).remove().catch(err=>alert('Delete failed: '+err.message)); } };
+      actions.appendChild(del);
     }
 
-    posts.forEach(({key, post}) => {
-      const card = document.createElement('div');
-      card.className = "property-card";
+    meta.appendChild(actions);
+    card.appendChild(meta);
 
-      const img = document.createElement('img');
-      img.src = post.imageUrl;
-      img.alt = post.title || "Property Image";
-      card.appendChild(img);
+    // open modal on click (except when clicking buttons/links)
+    card.onclick = (e)=>{ if(e.target.tagName==='A' || e.target.tagName==='BUTTON') return; openModal(key,post); }
 
-      const content = document.createElement('div');
-      content.className = "property-content";
-
-      const title = document.createElement('h3');
-      title.textContent = post.title || "No Title";
-      content.appendChild(title);
-
-      const city = document.createElement('p');
-      city.textContent = `City: ${post.city || "N/A"}`;
-      content.appendChild(city);
-
-      const type = document.createElement('p');
-      type.textContent = `Type: ${post.type === "sale" ? "Buy" : (post.type === "rent" ? "Rent" : "N/A")}`;
-      content.appendChild(type);
-
-      const price = document.createElement('p');
-      price.textContent = `Price: ₹${formatPrice(post.price)}`;
-      content.appendChild(price);
-
-      const desc = document.createElement('p');
-      desc.textContent = post.description || "No Description";
-      content.appendChild(desc);
-
-      const btnGroup = document.createElement('div');
-      btnGroup.className = "btn-group";
-
-      // WhatsApp button सभी को दिखे
-      const waBtn = document.createElement('a');
-      waBtn.href = whatsappLink(post, key);
-      waBtn.target = "_blank";
-      waBtn.textContent = "WhatsApp";
-      waBtn.style.backgroundColor = "#25d366";
-      waBtn.style.color = "white";
-      waBtn.style.padding = "8px 12px";
-      waBtn.style.borderRadius = "6px";
-      waBtn.style.textDecoration = "none";
-      waBtn.style.userSelect = "none";
-      btnGroup.appendChild(waBtn);
-
-      // Delete button: केवल admin या पोस्ट का मालिक देखे
-      if(isAdmin || (currentUser && currentUser.uid === post.userId)){
-        const delBtn = document.createElement('button');
-        delBtn.textContent = "Delete";
-        delBtn.style.backgroundColor = "#dc3545";
-        delBtn.style.color = "white";
-        delBtn.style.border = "none";
-        delBtn.style.padding = "8px 12px";
-        delBtn.style.borderRadius = "6px";
-        delBtn.style.cursor = "pointer";
-        delBtn.style.userSelect = "none";
-        delBtn.onclick = () => {
-          if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
-            db.ref('properties/' + key).remove()
-              .catch(err => alert("Delete failed: " + err.message));
-          }
-        };
-        btnGroup.appendChild(delBtn);
-      }
-
-      // Approve button: admin के लिए और अगर approved नहीं है
-      if(isAdmin && !post.approved){
-        const approveBtn = document.createElement('button');
-        approveBtn.textContent = "Approve";
-        approveBtn.style.backgroundColor = "#007bff";
-        approveBtn.style.color = "white";
-        approveBtn.style.border = "none";
-        approveBtn.style.padding = "8px 12px";
-        approveBtn.style.borderRadius = "6px";
-        approveBtn.style.cursor = "pointer";
-        approveBtn.style.marginLeft = "10px";
-        approveBtn.style.userSelect = "none";
-        approveBtn.onclick = () => {
-          db.ref('properties/' + key).update({approved: true})
-            .catch(err => alert("Approve failed: " + err.message));
-        };
-        btnGroup.appendChild(approveBtn);
-      }
-
-      content.appendChild(btnGroup);
-      card.appendChild(content);
-      propertyList.appendChild(card);
-    });
-  }
-
-  // Firebase से प्रॉपर्टीज़ लोड करें
-  function loadProperties(){
-    db.ref('properties').on('value', snapshot => {
-      const data = snapshot.val();
-      if(!data) {
-        renderProperties([]);
-        return;
-      }
-      let posts = Object.entries(data).map(([key, post]) => ({key, post}));
-
-      // 30 दिन से पुराने पोस्ट हटा दें
-      posts.forEach(({key, post}) => {
-        if(Date.now() - post.timestamp > 30*24*60*60*1000){
-          db.ref('properties/' + key).remove();
-        }
-      });
-
-      // फिल्टरिंग लॉजिक
-      posts = posts.filter(({post}) => {
-        // अगर admin और admin panel खुला है तो सब दिखाओ
-        if(isAdmin && showAdminPanel) return true;
-
-        // अन्यथा केवल approved पोस्ट या खुद के पोस्ट दिखाओ
-        if(!post.approved && !(currentUser && post.userId === currentUser.uid)) return false;
-
-        return true;
-      });
-
-      // सर्च और टाइप फिल्टर
-      const q = searchInput.value.trim().toLowerCase();
-      const typeFilter = filterType.value;
-
-      posts = posts.filter(({post}) => {
-        if(q && !(post.title?.toLowerCase().includes(q) || post.city?.toLowerCase().includes(q))) return false;
-        if(typeFilter && post.type !== typeFilter) return false;
-        return true;
-      });
-
-      renderProperties(posts);
-    });
-  }
-
-  // ऑथ स्टेट चेंज हैंडलर
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      postBtn.style.display = "inline-block";
-
-      isAdmin = (user.email === adminEmail);
-      adminToggleBtn.style.display = isAdmin ? "inline-block" : "none";
-
-      if(isAdmin){
-        adminToggleBtn.textContent = showAdminPanel ? "Hide Admin Panel" : "Show Admin Panel";
-        alert("आप Admin के रूप में लॉगिन हैं।");
-      } else {
-        showAdminPanel = false;
-      }
-    } else {
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      postBtn.style.display = "none";
-      uploadSection.style.display = "none";
-      adminToggleBtn.style.display = "none";
-
-      isAdmin = false;
-      showAdminPanel = false;
-    }
-    loadProperties();
+    propertyList.appendChild(card);
   });
+}
 
-  // बटन इवेंट्स
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert("Login failed: " + err.message));
-  };
+// render pending (admin)
+function renderPending(list){
+  pendingWrap.innerHTML='';
+  if(!list || list.length===0){ noPending.style.display='block'; return; }
+  noPending.style.display='none';
+  list.forEach(({key,post})=>{
+    const card=document.createElement('div'); card.className='property-card';
+    const media=document.createElement('div'); media.className='media'; const img=document.createElement('img'); img.src=post.imageUrl||''; media.appendChild(img);
+    card.appendChild(media);
+    const meta=document.createElement('div'); meta.className='meta';
+    const h=document.createElement('h3'); h.textContent=post.title||'No title'; meta.appendChild(h);
+    const p1=document.createElement('p'); p1.textContent='City: '+(post.city||'N/A'); meta.appendChild(p1);
+    const p2=document.createElement('p'); p2.textContent='Price: ₹'+formatPrice(post.price); meta.appendChild(p2);
+    const actions=document.createElement('div'); actions.className='card-actions';
+    const wa=document.createElement('a'); wa.className='wa-btn'; wa.href=whatsappLink(key,post); wa.target='_blank'; wa.textContent='WhatsApp'; actions.appendChild(wa);
+    const approve=document.createElement('button'); approve.className='approve-btn'; approve.textContent='Approve'; approve.onclick=(e)=>{ e.stopPropagation(); if(confirm('Approve this property?')){ approveProperty(key,post); } };
+    actions.appendChild(approve);
+    const reject=document.createElement('button'); reject.className='del-btn'; reject.textContent='Reject'; reject.onclick=(e)=>{ e.stopPropagation(); if(confirm('Reject & delete this property?')){ db.ref('pendingProperties/'+key).remove(); } };
+    actions.appendChild(reject);
+    meta.appendChild(actions); card.appendChild(meta); pendingWrap.appendChild(card);
+  });
+}
 
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  postBtn.onclick = () => {
-    uploadSection.style.display = 'block';
-  };
-
-  cancelPost.onclick = () => {
-    uploadSection.style.display = 'none';
-    clearForm();
-  };
-
-  searchBtn.onclick = loadProperties;
-  searchInput.onkeyup = e => { if(e.key === "Enter") loadProperties(); };
-  filterType.onchange = loadProperties;
-
-  // फॉर्म क्लियर फंक्शन
-  function clearForm(){
-    document.getElementById('title').value = "";
-    document.getElementById('city').value = "";
-    document.getElementById('type').value = "sale";
-    document.getElementById('price').value = "";
-    document.getElementById('desc').value = "";
-    document.getElementById('imageFile').value = "";
-    uploadStatus.textContent = "";
-    submitPost.disabled = false;
-  }
-
-  // इमेज अपलोडिंग
-  async function uploadImageToImgbb(file){
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-      method: "POST",
-      body: formData
+// load approved props
+function loadApproved(){
+  db.ref('approvedProperties').on('value', snap=>{
+    const data=snap.val(); if(!data){ renderProperties([]); return; }
+    const arr=Object.entries(data).map(([k,v])=>({key:k,post:v})).sort((a,b)=>b.post.timestamp - a.post.timestamp);
+    // search & filter
+    const q=searchInput.value.trim().toLowerCase(); const tf=filterType.value;
+    const filtered=arr.filter(({post})=>{
+      if(tf && post.type!==tf) return false;
+      if(q && !( (post.title||'').toLowerCase().includes(q) || (post.city||'').toLowerCase().includes(q) )) return false;
+      return true;
     });
-    const data = await res.json();
-    if(data.success){
-      return data.data.url;
-    } else {
-      throw new Error("Image upload failed");
-    }
-  }
+    renderProperties(filtered);
+  });
+}
 
-  // प्रॉपर्टी पोस्ट करें
-  submitPost.onclick = async () => {
-    const title = document.getElementById('title').value.trim();
-    const city = document.getElementById('city').value.trim();
-    const type = document.getElementById('type').value;
-    const price = document.getElementById('price').value.trim();
-    const description = document.getElementById('desc').value.trim();
-    const imageFile = document.getElementById('imageFile').files[0];
+// load pending props
+function loadPending(){
+  db.ref('pendingProperties').on('value', snap=>{
+    const data=snap.val(); if(!data){ renderPending([]); return; }
+    const arr=Object.entries(data).map(([k,v])=>({key:k,post:v})).sort((a,b)=>b.post.timestamp - a.post.timestamp);
+    renderPending(arr);
+  });
+}
 
-    if(!title || !city || !price || !imageFile){
-      alert("कृपया आवश्यक सभी फील्ड भरें और इमेज चुनें।");
-      return;
-    }
+// approve -> move to approvedProperties
+async function approveProperty(key, post){
+  try{
+    // mark approved
+    post.approved = true;
+    await db.ref('approvedProperties/'+key).set(post);
+    await db.ref('pendingProperties/'+key).remove();
+    alert('Property approved.');
+  }catch(err){ alert('Approve failed: '+err.message) }
+}
 
-    submitPost.disabled = true;
-    uploadStatus.textContent = "Uploading image...";
+// modal open
+function openModal(key, post){
+  modalImage.src = post.imageUrl || '';
+  modalTitle.textContent = post.title || '';
+  modalCity.textContent = post.city || '';
+  modalType.textContent = post.type==='sale'?'Buy':(post.type==='rent'?'Rent':'N/A');
+  modalPrice.textContent = formatPrice(post.price);
+  modalDesc.textContent = post.description || '';
+  modalWhatsappBtn.href = whatsappLink(key,post);
+  modalOverlay.style.display='flex';
+}
+function closeModal(){ modalOverlay.style.display='none'; }
+modalClose.onclick = closeModal; modalCloseBtn.onclick = closeModal;
 
-    try {
-      const imageUrl = await uploadImageToImgbb(imageFile);
+// auth state
+auth.onAuthStateChanged(user=>{
+  currentUser = user; if(user){ loginBtn.style.display='none'; logoutBtn.style.display='inline-block'; postBtn.style.display='inline-block'; isAdmin = (user.email === adminEmail); adminToggleBtn.style.display = isAdmin ? 'inline-block' : 'none'; if(isAdmin){ adminToggleBtn.textContent = showAdminPanel ? 'Hide Admin Panel' : 'Show Admin Panel'; }
+  } else { loginBtn.style.display='inline-block'; logoutBtn.style.display='none'; postBtn.style.display='none'; adminToggleBtn.style.display='none'; uploadSection.style.display='none'; isAdmin = false; showAdminPanel = false; adminPanel.style.display='none'; }
+  loadApproved(); loadPending();
+});
 
-      const postData = {
-        title,
-        city,
-        type,
-        price: Number(price),
-        description,
-        imageUrl,
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        timestamp: Date.now(),
-        approved: false
-      };
+// buttons
+loginBtn.onclick = ()=>{ const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(err=>alert('Login failed: '+err.message)); }
+logoutBtn.onclick = ()=>{ auth.signOut(); }
+postBtn.onclick = ()=>{ if(!currentUser){ alert('कृपया पहले लॉगिन करें'); return; } uploadSection.style.display = uploadSection.style.display==='block' ? 'none' : 'block'; }
+cancelPost.onclick = ()=>{ uploadSection.style.display='none'; clearForm(); }
+adminToggleBtn.onclick = ()=>{ showAdminPanel = !showAdminPanel; adminPanel.style.display = showAdminPanel ? 'block' : 'none'; adminToggleBtn.textContent = showAdminPanel ? 'Hide Admin Panel' : 'Show Admin Panel'; }
+searchBtn.onclick = ()=>{ loadApproved(); }
+searchInput.onkeyup = (e)=>{ if(e.key==='Enter') loadApproved(); }
+filterType.onchange = loadApproved;
 
-      await db.ref('properties').push(postData);
+// submit post
+submitPost.onclick = async ()=>{
+  const title=document.getElementById('title').value.trim();
+  const city=document.getElementById('city').value.trim();
+  const type=document.getElementById('type').value;
+  const price=document.getElementById('price').value.trim();
+  const description=document.getElementById('desc').value.trim();
+  const file=document.getElementById('imageFile').files[0];
+  if(!title||!city||!price||!file){ alert('कृपया सभी आवश्यक फील्ड भरें (Title, City, Price, Image)'); return; }
+  submitPost.disabled=true; uploadStatus.textContent='Uploading image...';
+  try{
+    const imageUrl = await uploadImageToImgbb(file);
+    const postData = { title, city, type, price: Number(price), description, imageUrl, userId: currentUser.uid, userEmail: currentUser.email, timestamp: Date.now(), approved:false };
+    const ref = await db.ref('pendingProperties').push(postData);
+    uploadStatus.textContent='Property submitted for approval.'; clearForm(); uploadSection.style.display='none';
+  }catch(err){ alert('Error: '+err.message); }
+  submitPost.disabled=false;
+}
 
-      uploadStatus.textContent = "Property posted successfully! Admin approval needed.";
-      clearForm();
-      uploadSection.style.display = 'none';
-      loadProperties();
+function clearForm(){ document.getElementById('title').value=''; document.getElementById('city').value=''; document.getElementById('type').value='sale'; document.getElementById('price').value=''; document.getElementById('desc').value=''; document.getElementById('imageFile').value=''; uploadStatus.textContent=''; }
 
-    } catch(err){
-      alert("Error: " + err.message);
-      submitPost.disabled = false;
-      uploadStatus.textContent = "";
-    }
-  };
-
-  // Admin panel टॉगल
-  adminToggleBtn.onclick = () => {
-    showAdminPanel = !showAdminPanel;
-    adminToggleBtn.textContent = showAdminPanel ? "Hide Admin Panel" : "Show Admin Panel";
-    loadProperties();
-  };
-
-  // पेज लोड पर प्रॉपर्टी लोड करें
-  window.onload = loadProperties;
+// initial load
+loadApproved(); loadPending();
 
 </script>
-
 </body>
 </html>
