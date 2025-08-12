@@ -3,121 +3,230 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property - Free Secure App</title>
-
-<!-- Firebase SDKs -->
+<title>Zara Property — Admin + User</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
 <style>
   body {
-    font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; display:flex; flex-direction:column; min-height:100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0; background: #f5f5f5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   header {
-    background:#004aad; color:white; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;
+    width: 100%;
+    background-color: #0066cc;
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
   }
-  header h1 { margin:0; font-size:1.6rem; }
-  button {
-    background: linear-gradient(145deg, #1c60d9, #004aad);
-    border:none; border-radius:8px; color:#fff; padding:8px 16px; cursor:pointer; box-shadow: 3px 3px 6px #003580, -3px -3px 6px #0056d4;
-    transition: box-shadow 0.2s ease;
-    user-select:none;
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  #btnGroup {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button, select, input[type="text"], input[type="number"], textarea {
+    font-size: 1rem;
+  }
+  /* 3D Buttons Style */
+  button, #searchBtn {
+    background: linear-gradient(145deg, #3a7bd5, #1f3c88);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    padding: 10px 18px;
+    cursor: pointer;
+    box-shadow: 4px 4px 8px #1a2a52, -4px -4px 8px #4b88d4;
+    transition: all 0.2s ease-in-out;
+    user-select: none;
   }
   button:active {
-    box-shadow: inset 3px 3px 6px #003580, inset -3px -3px 6px #0056d4;
+    box-shadow: inset 4px 4px 8px #1a2a52, inset -4px -4px 8px #4b88d4;
   }
   button:disabled {
-    background: #888; cursor:not-allowed; box-shadow:none;
+    background: #a0a0a0;
+    cursor: not-allowed;
+    box-shadow: none;
   }
-  main {
-    flex-grow:1;
-    padding:20px;
-    max-width:900px;
-    margin: auto;
+  #searchBtn {
+    background: linear-gradient(145deg, #28a745, #1e7e34);
+    box-shadow: 4px 4px 8px #145d20, -4px -4px 8px #3bc95e;
   }
-  #loginBtn, #logoutBtn, #postBtn, #adminToggleBtn {
-    margin-left:10px;
+  #searchBtn:active {
+    box-shadow: inset 4px 4px 8px #145d20, inset -4px -4px 8px #3bc95e;
+  }
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1.5px solid #ccc;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #0066cc;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  #uploadSection {
+    background: white;
+    box-shadow: 0 3px 12px rgb(0 0 0 / 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px 10px;
+    max-width: 450px;
+    width: 100%;
+  }
+  #searchSection {
+    margin: 20px 10px;
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #searchInput {
+    flex: 1 1 220px;
+  }
+  #filterType {
+    width: 120px;
   }
   #propertyList {
-    display:grid;
-    grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
-    gap:16px;
+    width: 100%;
+    max-width: 1024px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+    gap: 18px;
+    padding: 0 10px 40px;
+    box-sizing: border-box;
   }
   .property-card {
-    background:white; border-radius:12px; box-shadow: 0 4px 10px rgb(0 0 0 / 0.1);
-    cursor:pointer; display:flex; flex-direction:column;
-    transition: transform 0.2s ease;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    position: relative;
   }
   .property-card:hover {
     transform: scale(1.02);
   }
   .property-card img {
-    width:100%; height:180px; object-fit:cover; border-top-left-radius:12px; border-top-right-radius:12px;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
   }
-  .property-info {
-    padding:12px 16px; flex-grow:1; display:flex; flex-direction: column;
+  .property-content {
+    padding: 12px 16px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
   }
-  .property-info h3 {
-    margin:0 0 8px 0; color:#004aad;
+  .property-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    color: #0066cc;
   }
-  .property-info p {
+  .property-content p {
     margin: 4px 0;
-    flex-grow:0;
+    flex-grow: 0;
   }
   .btn-group {
-    margin-top:auto;
-    display:flex; gap:8px;
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
   }
   .btn-group a, .btn-group button {
-    flex:1;
-    text-align:center;
-    padding:8px 0;
-    border-radius: 6px;
-    font-weight:600;
-    color:white;
-    text-decoration:none;
-    user-select:none;
+    flex: 1;
+    text-align: center;
   }
-  .btn-whatsapp {
-    background:#25d366;
+  /* Modal for big card */
+  #modalOverlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
   }
-  .btn-delete {
-    background:#dc3545;
+  #modalCard {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    position: relative;
   }
-  .btn-approve {
-    background:#007bff;
+  #modalCard img {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    border-radius: 12px 12px 0 0;
   }
-  /* Modal Styles */
-  #detailModal {
-    display:none;
-    position:fixed; top:0; left:0; width:100%; height:100%;
-    background:rgba(0,0,0,0.5);
-    justify-content:center; align-items:center;
-    z-index:9999;
+  #modalContent {
+    padding: 20px;
   }
-  #detailContent {
-    background:#fff; border-radius:12px; max-width:600px; width:90%;
-    max-height:80vh; overflow-y:auto; padding:20px; position:relative;
+  #modalContent h2 {
+    margin-top: 0;
+    color: #0066cc;
   }
-  #detailContent img {
-    width:100%; height:300px; object-fit:cover; border-radius: 12px;
+  #modalClose {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    color: #333;
   }
-  #detailContent h2 {
-    margin-top: 12px;
-  }
-  #closeModal {
-    position:absolute; top:12px; right:12px;
-    background:#dc3545; border:none; color:#fff;
-    border-radius:50%; width:32px; height:32px;
-    font-weight:bold; cursor:pointer;
-  }
-
   /* Responsive */
-  @media(max-width:600px) {
-    .property-card img {
-      height:140px;
+  @media (max-width: 480px) {
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    #btnGroup {
+      width: 100%;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    #searchSection {
+      max-width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    #filterType, #searchInput, #searchBtn {
+      width: 100%;
+      max-width: none;
+    }
+    #uploadSection {
+      max-width: 100%;
+      padding: 15px;
+      margin: 10px 0;
     }
   }
 </style>
@@ -126,106 +235,105 @@
 
 <header>
   <h1>Zara Property</h1>
-  <div>
+  <div id="btnGroup">
     <button id="loginBtn">Google Login</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
     <button id="postBtn" style="display:none;">Post Property</button>
-    <button id="adminToggleBtn" style="display:none;">Show Admin Panel</button>
   </div>
 </header>
 
-<main>
-  <section id="postSection" style="display:none; margin-bottom:20px; background:#fff; padding:20px; border-radius:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 450px;">
-    <h2>नई प्रॉपर्टी पोस्ट करें</h2>
-    <input type="text" id="title" placeholder="शीर्षक" /><br/>
-    <input type="text" id="city" placeholder="शहर" /><br/>
-    <select id="type">
-      <option value="sale">खरीदें</option>
-      <option value="rent">किराए पर</option>
-    </select><br/>
-    <input type="number" id="price" placeholder="कीमत (₹)" min="1" /><br/>
-    <textarea id="description" placeholder="विवरण"></textarea><br/>
-    <input type="file" id="imageFile" accept="image/*" /><br/>
-    <button id="submitPost">पोस्ट करें</button>
-    <button id="cancelPost">रद्द करें</button>
-    <p id="postStatus" style="color:red;"></p>
-  </section>
+<section id="uploadSection" style="display:none;">
+  <h2>Post Property</h2>
+  <input type="text" id="title" placeholder="Title" />
+  <input type="text" id="city" placeholder="City" />
+  <select id="type">
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <input type="number" id="price" placeholder="Price" min="1" />
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input type="file" id="imageFile" accept="image/*" multiple />
+  <button id="submitPost">Upload & Post</button>
+  <button id="cancelPost">Cancel</button>
+  <p id="uploadStatus" style="color:red; margin-top:8px;"></p>
+</section>
 
-  <section>
-    <input type="text" id="searchInput" placeholder="शहर या शीर्षक से खोजें..." style="width:100%; max-width: 400px; padding:8px; border-radius:8px; border:1px solid #ccc; margin-bottom:16px;" />
-  </section>
+<section id="searchSection">
+  <input type="text" id="searchInput" placeholder="Search by title or city..." />
+  <select id="filterType">
+    <option value="">All types</option>
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <button id="searchBtn">Search</button>
+</section>
 
-  <section id="propertyList">
-    <!-- प्रॉपर्टी कार्ड यहाँ लोड होंगे -->
-  </section>
-</main>
+<section id="propertyList"></section>
 
-<!-- Detail Modal -->
-<div id="detailModal">
-  <div id="detailContent">
-    <button id="closeModal">×</button>
+<!-- Modal for big card -->
+<div id="modalOverlay">
+  <div id="modalCard">
+    <span id="modalClose">&times;</span>
     <img src="" alt="Property Image" id="modalImage" />
-    <h2 id="modalTitle"></h2>
-    <p id="modalCity"></p>
-    <p id="modalType"></p>
-    <p id="modalPrice"></p>
-    <p id="modalDescription"></p>
+    <div id="modalContent">
+      <h2 id="modalTitle"></h2>
+      <p><strong>City:</strong> <span id="modalCity"></span></p>
+      <p><strong>Type:</strong> <span id="modalType"></span></p>
+      <p><strong>Price:</strong> ₹<span id="modalPrice"></span></p>
+      <p id="modalDesc"></p>
+      <a href="" id="modalWhatsapp" target="_blank" style="display:inline-block; background:#25d366; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none;">WhatsApp</a>
+    </div>
   </div>
 </div>
 
 <script>
-  // Firebase config - अपनी Firebase config डालें यहाँ
+  // Firebase config - अपनी Firebase जानकारी यहाँ डालें
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MSG_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
   };
   firebase.initializeApp(firebaseConfig);
 
   const auth = firebase.auth();
   const db = firebase.database();
-  const storage = firebase.storage();
 
-  // Admin UID - Firebase Authentication में admin user का UID डालें
-  const adminUID = "ADMIN_USER_UID";  // इसे अपने admin uid से बदलें
+  const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
+  const whatsappPhone = "917378342192";
 
-  // WhatsApp नंबर
-  const whatsappNumber = "917378342192";
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const postBtn = document.getElementById('postBtn');
+  const uploadSection = document.getElementById('uploadSection');
+  const submitPost = document.getElementById('submitPost');
+  const cancelPost = document.getElementById('cancelPost');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const propertyList = document.getElementById('propertyList');
+  const searchInput = document.getElementById('searchInput');
+  const filterType = document.getElementById('filterType');
+  const searchBtn = document.getElementById('searchBtn');
 
-  // DOM Elements
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postBtn = document.getElementById("postBtn");
-  const adminToggleBtn = document.getElementById("adminToggleBtn");
-  const postSection = document.getElementById("postSection");
-  const submitPost = document.getElementById("submitPost");
-  const cancelPost = document.getElementById("cancelPost");
-  const postStatus = document.getElementById("postStatus");
-  const propertyList = document.getElementById("propertyList");
-  const searchInput = document.getElementById("searchInput");
-
-  // Modal elements
-  const detailModal = document.getElementById("detailModal");
-  const closeModal = document.getElementById("closeModal");
-  const modalImage = document.getElementById("modalImage");
-  const modalTitle = document.getElementById("modalTitle");
-  const modalCity = document.getElementById("modalCity");
-  const modalType = document.getElementById("modalType");
-  const modalPrice = document.getElementById("modalPrice");
-  const modalDescription = document.getElementById("modalDescription");
+  // Modal Elements
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalClose = document.getElementById('modalClose');
+  const modalImage = document.getElementById('modalImage');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCity = document.getElementById('modalCity');
+  const modalType = document.getElementById('modalType');
+  const modalPrice = document.getElementById('modalPrice');
+  const modalDesc = document.getElementById('modalDesc');
+  const modalWhatsapp = document.getElementById('modalWhatsapp');
 
   let currentUser = null;
-  let isAdmin = false;
-  let showAdminPanel = false;
 
-  // Login
+  // Google Login
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => alert("Login failed: " + e.message));
+    auth.signInWithPopup(provider).catch(err => alert("Login failed: " + err.message));
   };
 
   // Logout
@@ -233,274 +341,233 @@
     auth.signOut();
   };
 
-  // Show post form
+  // Show Post form
   postBtn.onclick = () => {
-    postSection.style.display = "block";
+    uploadSection.style.display = 'block';
   };
 
-  // Cancel post
   cancelPost.onclick = () => {
+    uploadSection.style.display = 'none';
     clearForm();
-    postSection.style.display = "none";
   };
 
-  // Clear form fields
-  function clearForm() {
-    document.getElementById("title").value = "";
-    document.getElementById("city").value = "";
-    document.getElementById("type").value = "sale";
-    document.getElementById("price").value = "";
-    document.getElementById("description").value = "";
-    document.getElementById("imageFile").value = "";
-    postStatus.textContent = "";
+  function clearForm(){
+    document.getElementById('title').value = "";
+    document.getElementById('city').value = "";
+    document.getElementById('type').value = "sale";
+    document.getElementById('price').value = "";
+    document.getElementById('desc').value = "";
+    document.getElementById('imageFile').value = "";
+    uploadStatus.textContent = "";
+    submitPost.disabled = false;
   }
 
-  // Upload image to Firebase Storage and return URL
-  async function uploadImage(file) {
-    const storageRef = storage.ref();
-    const fileRef = storageRef.child(`property_images/${Date.now()}_${file.name}`);
-    await fileRef.put(file);
-    return await fileRef.getDownloadURL();
+  async function uploadImageToImgbb(file){
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if(data.success) return data.data.url;
+    throw new Error("Image upload failed");
   }
 
-  // Format price to Indian format
-  function formatPrice(n) {
-    return n.toLocaleString('en-IN');
+  function formatPrice(num){
+    return num.toLocaleString('en-IN');
   }
 
-  // Create WhatsApp message link
-  function createWhatsAppLink(postKey, post) {
-    const text = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nशीर्षक: ${post.title}\nशहर: ${post.city}\nकीमत: ₹${formatPrice(post.price)}\n\nयह लिंक देखें: ${window.location.href}#property=${postKey}`;
-    return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`;
+  function whatsappLink(postKey, title, city, price){
+    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${title}\nCity: ${city}\nPrice: ₹${formatPrice(price)}\n\nLink: ${window.location.origin + window.location.pathname}#property=${postKey}`;
+    return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`;
   }
 
-  // Render properties list
-  function renderProperties(properties) {
+  // Render list of properties
+  function renderProperties(properties){
     propertyList.innerHTML = "";
-    if (!properties.length) {
-      propertyList.innerHTML = "<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
+    if(properties.length === 0){
+      propertyList.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
       return;
     }
-    properties.forEach(({ key, post }) => {
-      const card = document.createElement("div");
+
+    properties.forEach(({key, post}) => {
+      const card = document.createElement('div');
       card.className = "property-card";
 
-      card.onclick = () => showDetailModal(key, post);
-
-      const img = document.createElement("img");
-      img.src = post.imageUrl;
+      // Show first image only
+      const img = document.createElement('img');
+      img.src = post.imageUrls?.[0] || post.imageUrl || '';
       img.alt = post.title;
-
-      const info = document.createElement("div");
-      info.className = "property-info";
-
-      const h3 = document.createElement("h3");
-      h3.textContent = post.title;
-
-      const cityP = document.createElement("p");
-      cityP.textContent = `शहर: ${post.city}`;
-
-      const typeP = document.createElement("p");
-      typeP.textContent = `प्रकार: ${post.type === "sale" ? "खरीदें" : "किराए पर"}`;
-
-      const priceP = document.createElement("p");
-      priceP.textContent = `कीमत: ₹${formatPrice(post.price)}`;
-
-      const btnGroup = document.createElement("div");
-      btnGroup.className = "btn-group";
-
-      // WhatsApp button सभी को दिखाएं
-      const waBtn = document.createElement("a");
-      waBtn.href = createWhatsAppLink(key, post);
-      waBtn.target = "_blank";
-      waBtn.textContent = "WhatsApp संपर्क करें";
-      waBtn.className = "btn-whatsapp";
-      btnGroup.appendChild(waBtn);
-
-      // Delete button - admin और post वाले को दिखाएं
-      if (isAdmin || (currentUser && currentUser.uid === post.userId)) {
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "डिलीट करें";
-        delBtn.className = "btn-delete";
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")) {
-            db.ref('properties/' + key).remove();
-          }
-        };
-        btnGroup.appendChild(delBtn);
-      }
-
-      // Approve बटन - केवल admin को दिखाएं
-      if (isAdmin && !post.approved) {
-        const appBtn = document.createElement("button");
-        appBtn.textContent = "स्वीकृत करें";
-        appBtn.className = "btn-approve";
-        appBtn.onclick = (e) => {
-          e.stopPropagation();
-          db.ref('properties/' + key).update({ approved: true });
-        };
-        btnGroup.appendChild(appBtn);
-      }
-
-      info.appendChild(h3);
-      info.appendChild(cityP);
-      info.appendChild(typeP);
-      info.appendChild(priceP);
-      info.appendChild(btnGroup);
-
       card.appendChild(img);
-      card.appendChild(info);
 
+      const content = document.createElement('div');
+      content.className = "property-content";
+
+      const title = document.createElement('h3');
+      title.textContent = post.title;
+      content.appendChild(title);
+
+      const city = document.createElement('p');
+      city.textContent = `City: ${post.city}`;
+      content.appendChild(city);
+
+      const type = document.createElement('p');
+      type.textContent = `Type: ${post.type === "sale" ? "Buy" : "Rent"}`;
+      content.appendChild(type);
+
+      const price = document.createElement('p');
+      price.textContent = `Price: ₹${formatPrice(post.price)}`;
+      content.appendChild(price);
+
+      const desc = document.createElement('p');
+      desc.textContent = post.description;
+      content.appendChild(desc);
+
+      const waBtn = document.createElement('a');
+      waBtn.href = whatsappLink(key, post.title, post.city, post.price);
+      waBtn.target = "_blank";
+      waBtn.textContent = "WhatsApp";
+      waBtn.style.backgroundColor = "#25d366";
+      waBtn.style.color = "white";
+      waBtn.style.padding = "8px 12px";
+      waBtn.style.borderRadius = "6px";
+      waBtn.style.textDecoration = "none";
+      waBtn.style.userSelect = "none";
+      waBtn.style.marginTop = "8px";
+      content.appendChild(waBtn);
+
+      card.appendChild(content);
       propertyList.appendChild(card);
+
+      // Click card to open modal
+      card.onclick = () => openModal(key, post);
     });
   }
 
-  // Show detail modal
-  function showDetailModal(key, post) {
-    modalImage.src = post.imageUrl;
+  // Modal open
+  function openModal(key, post){
+    modalImage.src = post.imageUrls?.[0] || post.imageUrl || '';
     modalTitle.textContent = post.title;
-    modalCity.textContent = `शहर: ${post.city}`;
-    modalType.textContent = `प्रकार: ${post.type === "sale" ? "खरीदें" : "किराए पर"}`;
-    modalPrice.textContent = `कीमत: ₹${formatPrice(post.price)}`;
-    modalDescription.textContent = post.description;
-    detailModal.style.display = "flex";
+    modalCity.textContent = post.city;
+    modalType.textContent = post.type === "sale" ? "Buy" : "Rent";
+    modalPrice.textContent = formatPrice(post.price);
+    modalDesc.textContent = post.description;
+    modalWhatsapp.href = whatsappLink(key, post.title, post.city, post.price);
+    modalOverlay.style.display = "flex";
   }
 
-  closeModal.onclick = () => {
-    detailModal.style.display = "none";
+  modalClose.onclick = () => {
+    modalOverlay.style.display = "none";
   };
-
-  window.onclick = (e) => {
-    if (e.target === detailModal) {
-      detailModal.style.display = "none";
+  modalOverlay.onclick = e => {
+    if(e.target === modalOverlay){
+      modalOverlay.style.display = "none";
     }
   };
 
-  // Load properties with filters and approval logic
-  function loadProperties() {
-    db.ref('properties').on('value', snapshot => {
+  // Load properties from Firebase and filter/search
+  function loadProperties(){
+    db.ref('properties').once('value').then(snapshot => {
       const data = snapshot.val();
-      if (!data) {
+      if(!data) {
         renderProperties([]);
         return;
       }
-      let posts = Object.entries(data).map(([key, post]) => ({ key, post }));
+      const properties = Object.entries(data).map(([key, post]) => ({key, post}));
 
-      // Filter expired posts (older than 30 दिन)
-      const now = Date.now();
-      posts.forEach(({ key, post }) => {
-        if (now - post.timestamp > 30 * 24 * 60 * 60 * 1000) {
-          db.ref('properties/' + key).remove();
-        }
-      });
+      // Filter by search and type
+      const q = searchInput.value.trim().toLowerCase();
+      const typeFilter = filterType.value;
 
-      // फिल्टरिंग: admin और user के लिए अलग नियम
-      posts = posts.filter(({ post }) => {
-        if (isAdmin) return true; // admin सभी देख सकता है
+      const filtered = properties.filter(({post}) => {
+        if(q && !(
+          post.title.toLowerCase().includes(q) || post.city.toLowerCase().includes(q)
+        )) return false;
 
-        // user केवल approved या अपनी posts देखे
-        if (!post.approved && !(currentUser && post.userId === currentUser.uid)) return false;
+        if(typeFilter && post.type !== typeFilter) return false;
 
         return true;
       });
 
-      // सर्च फिल्टर
-      const q = searchInput.value.trim().toLowerCase();
-      if (q) {
-        posts = posts.filter(({ post }) => {
-          return post.title.toLowerCase().includes(q) || post.city.toLowerCase().includes(q);
-        });
-      }
-
-      renderProperties(posts);
+      renderProperties(filtered);
     });
   }
 
-  // Post property handler
+  searchBtn.onclick = () => loadProperties();
+  searchInput.onkeyup = (e) => {
+    if(e.key === "Enter") loadProperties();
+  };
+  filterType.onchange = () => loadProperties();
+
+  // Submit new post
   submitPost.onclick = async () => {
-    postStatus.textContent = "";
-    const title = document.getElementById("title").value.trim();
-    const city = document.getElementById("city").value.trim();
-    const type = document.getElementById("type").value;
-    const price = Number(document.getElementById("price").value);
-    const description = document.getElementById("description").value.trim();
-    const imageFile = document.getElementById("imageFile").files[0];
+    uploadStatus.textContent = "";
+    submitPost.disabled = true;
 
-    if (!title || !city || !price || !description || !imageFile) {
-      postStatus.textContent = "सभी फ़ील्ड सही से भरें।";
+    const title = document.getElementById('title').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const type = document.getElementById('type').value;
+    const price = parseInt(document.getElementById('price').value);
+    const description = document.getElementById('desc').value.trim();
+    const imageFiles = document.getElementById('imageFile').files;
+
+    if(!title || !city || !type || !price || !description || imageFiles.length === 0){
+      uploadStatus.textContent = "सभी फ़ील्ड सही से भरें और कम से कम एक इमेज चुनें।";
+      submitPost.disabled = false;
       return;
     }
-    if (price <= 0) {
-      postStatus.textContent = "कीमत 0 से बड़ी होनी चाहिए।";
-      return;
-    }
-
-    postStatus.textContent = "इमेज अपलोड हो रही है, कृपया प्रतीक्षा करें...";
 
     try {
-      const imageUrl = await uploadImage(imageFile);
+      uploadStatus.textContent = "Uploading images...";
+      const urls = [];
+      for(let i=0; i<imageFiles.length; i++){
+        const url = await uploadImageToImgbb(imageFiles[i]);
+        urls.push(url);
+      }
 
+      uploadStatus.textContent = "Saving post...";
       const newPostRef = db.ref('properties').push();
       await newPostRef.set({
+        title, city, type, price, description,
+        imageUrls: urls,
         userId: currentUser.uid,
-        title,
-        city,
-        type,
-        price,
-        description,
-        imageUrl,
-        approved: false, // admin को अप्रूवल के लिए
         timestamp: Date.now()
       });
 
-      postStatus.style.color = "green";
-      postStatus.textContent = "प्रॉपर्टी पोस्ट सफलतापूर्वक भेजी गई है। कृपया admin की मंजूरी का इंतजार करें।";
+      uploadStatus.style.color = "green";
+      uploadStatus.textContent = "Property posted successfully!";
       clearForm();
-      postSection.style.display = "none";
-    } catch (error) {
-      postStatus.style.color = "red";
-      postStatus.textContent = "त्रुटि: " + error.message;
+      uploadSection.style.display = 'none';
+      loadProperties();
+    } catch(e) {
+      uploadStatus.style.color = "red";
+      uploadStatus.textContent = "Error: " + e.message;
+    } finally {
+      submitPost.disabled = false;
     }
   };
 
-  // Search input event
-  searchInput.addEventListener("input", loadProperties);
-
-  // Auth state changed
+  // Auth state change
   auth.onAuthStateChanged(user => {
     currentUser = user;
-    if (user) {
+    if(user){
       loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-block";
       postBtn.style.display = "inline-block";
-
-      isAdmin = user.uid === adminUID;
-      adminToggleBtn.style.display = isAdmin ? "inline-block" : "none";
-      if (!isAdmin) {
-        adminToggleBtn.style.display = "none";
-        showAdminPanel = false;
-      }
-
+      uploadSection.style.display = "none";
       loadProperties();
     } else {
       loginBtn.style.display = "inline-block";
       logoutBtn.style.display = "none";
       postBtn.style.display = "none";
-      adminToggleBtn.style.display = "none";
-      postSection.style.display = "none";
-      propertyList.innerHTML = "<p style='text-align:center;'>कृपया लॉगिन करें।</p>";
+      uploadSection.style.display = "none";
+      propertyList.innerHTML = "<p style='text-align:center; padding:20px;'>कृपया Google से लॉगिन करें।</p>";
     }
   });
 
-  // Admin panel toggle - अभी बस placeholder
-  adminToggleBtn.onclick = () => {
-    alert("यहाँ admin panel functionality डाली जा सकती है।");
-  };
-
   // Initial load message
-  propertyList.innerHTML = "<p style='text-align:center;'>कृपया लॉगिन करें।</p>";
-
+  propertyList.innerHTML = "<p style='text-align:center; padding:20px;'>कृपया Google से लॉगिन करें।</p>";
 </script>
 
 </body>
