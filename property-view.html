@@ -1,117 +1,174 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Property Listing</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
+  <title>Property Listing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
     body {
-        font-family: Arial, sans-serif;
-        background: #f4f4f4;
-        margin: 0;
-        padding: 0;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
     }
     header {
-        background: #007bff;
-        color: white;
-        padding: 10px;
-        text-align: center;
-        position: sticky;
-        top: 0;
-    }
-    .post-btn {
-        display: inline-block;
-        background: linear-gradient(145deg, #00aaff, #0066cc);
-        color: white;
-        padding: 10px 20px;
-        margin-top: 10px;
-        border-radius: 12px;
-        box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
-        text-decoration: none;
-        font-weight: bold;
-        transition: transform 0.2s ease;
-    }
-    .post-btn:hover {
-        transform: scale(1.05);
+      background: #007bff;
+      color: white;
+      padding: 10px;
+      text-align: center;
     }
     .container {
-        padding: 15px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 15px;
+      padding: 15px;
+      max-width: 800px;
+      margin: auto;
     }
     .card {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
-        transition: 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+      background: white;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
     .card img {
-        width: 100%;
-        height: 180px;
-        object-fit: cover;
+      width: 100%;
+      height: auto;
     }
     .card-body {
-        padding: 10px;
+      padding: 10px;
     }
-    .card-body h3 {
-        margin: 5px 0;
-        font-size: 18px;
+    .btn {
+      background: #007bff;
+      color: white;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
     }
-    .card-body p {
-        margin: 5px 0;
-        color: #555;
-        font-size: 14px;
+    .btn:hover {
+      background: #0056b3;
     }
-</style>
+    .form-group {
+      margin-bottom: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #postForm {
+      display: none;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
 
 <header>
-    <h2>🏠 Property Listings</h2>
-    <a href="post-property.html" class="post-btn">+ Post Property</a>
+  <h1>🏠 Property Listing</h1>
 </header>
 
-<div class="container" id="property-list"></div>
+<div class="container">
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Admin Property Post Form -->
+  <div id="postForm">
+    <h2>Post Property</h2>
+    <div class="form-group">
+      <input type="text" id="title" placeholder="Property Title">
+    </div>
+    <div class="form-group">
+      <input type="number" id="price" placeholder="Price">
+    </div>
+    <div class="form-group">
+      <textarea id="description" placeholder="Description"></textarea>
+    </div>
+    <div class="form-group">
+      <input type="file" id="imageInput">
+    </div>
+    <button class="btn" onclick="uploadImage()">Upload Image</button>
+    <button class="btn" onclick="postProperty()">Post Property</button>
+  </div>
+
+  <!-- Property Listing -->
+  <div id="listing"></div>
+</div>
+
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
-        authDomain: "zara-life-care.firebaseapp.com",
-        databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com/",
-        projectId: "zara-life-care",
-        storageBucket: "zara-life-care.appspot.com",
-        messagingSenderId: "1031234567890",
-        appId: "1:1031234567890:web:abcd1234efgh5678"
-    };
-    firebase.initializeApp(firebaseConfig);
+  const imgbbApiKey = "YOUR_IMGBB_API_KEY"; // यहां अपना imgbb API Key डालें
+  let imageURL = "";
 
-    const propertyList = document.getElementById("property-list");
+  // Sample JSON Data
+  let properties = [
+    {
+      "title": "3 BHK Flat",
+      "price": 4500000,
+      "description": "Spacious flat with parking",
+      "image": "https://i.ibb.co/album/sample.jpg"
+    }
+  ];
 
-    firebase.database().ref("properties").on("value", snapshot => {
-        propertyList.innerHTML = "";
-        snapshot.forEach(childSnapshot => {
-            const property = childSnapshot.val();
-            const card = `
-                <div class="card">
-                    <img src="${property.image}" alt="Property Image">
-                    <div class="card-body">
-                        <h3>${property.title}</h3>
-                        <p><b>Price:</b> ${property.price}</p>
-                        <p>${property.description}</p>
-                    </div>
-                </div>
-            `;
-            propertyList.innerHTML += card;
-        });
+  // Show Property Listing
+  function showListing() {
+    let html = "";
+    properties.forEach(p => {
+      html += `
+        <div class="card">
+          <img src="${p.image}" alt="Property">
+          <div class="card-body">
+            <h3>${p.title}</h3>
+            <p>Price: ₹${p.price}</p>
+            <p>${p.description}</p>
+          </div>
+        </div>
+      `;
     });
+    document.getElementById("listing").innerHTML = html;
+  }
+
+  // Upload Image to imgbb
+  function uploadImage() {
+    const file = document.getElementById("imageInput").files[0];
+    if (!file) {
+      alert("Please select an image");
+      return;
+    }
+    let formData = new FormData();
+    formData.append("image", file);
+    fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+      method: "POST",
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      imageURL = data.data.url;
+      alert("Image Uploaded Successfully!");
+    })
+    .catch(err => console.error(err));
+  }
+
+  // Post Property
+  function postProperty() {
+    let title = document.getElementById("title").value;
+    let price = document.getElementById("price").value;
+    let description = document.getElementById("description").value;
+
+    if (!title || !price || !description || !imageURL) {
+      alert("Please fill all fields and upload image");
+      return;
+    }
+
+    properties.push({ title, price, description, image: imageURL });
+    showListing();
+    alert("Property Posted Successfully!");
+  }
+
+  // Simulate Admin Login (for demo only)
+  let isAdmin = true; // true = show post form
+  if (isAdmin) {
+    document.getElementById("postForm").style.display = "block";
+  }
+
+  // Load Properties
+  showListing();
 </script>
 
 </body>
