@@ -1,174 +1,242 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <title>Property Listing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property — Google Login + WhatsApp Button</title>
   <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
       background: #f4f4f4;
+      margin: 0; padding: 0;
     }
     header {
       background: #007bff;
       color: white;
-      padding: 10px;
-      text-align: center;
-    }
-    .container {
       padding: 15px;
-      max-width: 800px;
-      margin: auto;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .card {
+    #btnGroup button {
+      margin: 0 8px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      background: #0056b3;
+      transition: background-color 0.3s ease;
+    }
+    #btnGroup button:hover {
+      background: #004494;
+    }
+    #propertyList {
+      display: grid;
+      grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+      gap: 16px;
+      padding: 16px;
+    }
+    .property-card {
       background: white;
       border-radius: 10px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
       overflow: hidden;
+      transition: transform 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
     }
-    .card img {
+    .property-card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .property-card img {
       width: 100%;
-      height: auto;
+      height: 180px;
+      object-fit: cover;
+      border-bottom: 1px solid #ddd;
     }
-    .card-body {
-      padding: 10px;
+    .property-content {
+      padding: 12px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
     }
-    .btn {
-      background: #007bff;
+    .property-content h3 {
+      margin: 0 0 6px 0;
+      font-size: 20px;
+      color: #222;
+    }
+    .property-content p {
+      margin: 3px 0;
+      color: #555;
+      flex-grow: 1;
+      font-size: 14px;
+    }
+    .btn-group {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-group a, .btn-group button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      user-select: none;
+    }
+    .btn-whatsapp {
+      background-color: #25d366;
       color: white;
-      padding: 10px;
+      flex-grow: 1;
+      text-align: center;
+    }
+    .btn-delete {
+      background-color: #dc3545;
+      color: white;
       border: none;
       cursor: pointer;
-      border-radius: 5px;
-    }
-    .btn:hover {
-      background: #0056b3;
-    }
-    .form-group {
-      margin-bottom: 10px;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    #postForm {
-      display: none;
-      margin-bottom: 20px;
+      flex-grow: 0;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>🏠 Property Listing</h1>
+  <h1>Zara Property</h1>
+  <div id="btnGroup">
+    <button id="loginBtn">Google Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<div class="container">
+<div id="propertyList"></div>
 
-  <!-- Admin Property Post Form -->
-  <div id="postForm">
-    <h2>Post Property</h2>
-    <div class="form-group">
-      <input type="text" id="title" placeholder="Property Title">
-    </div>
-    <div class="form-group">
-      <input type="number" id="price" placeholder="Price">
-    </div>
-    <div class="form-group">
-      <textarea id="description" placeholder="Description"></textarea>
-    </div>
-    <div class="form-group">
-      <input type="file" id="imageInput">
-    </div>
-    <button class="btn" onclick="uploadImage()">Upload Image</button>
-    <button class="btn" onclick="postProperty()">Post Property</button>
-  </div>
-
-  <!-- Property Listing -->
-  <div id="listing"></div>
-</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-  const imgbbApiKey = "YOUR_IMGBB_API_KEY"; // यहां अपना imgbb API Key डालें
-  let imageURL = "";
+  // Firebase config - इसे अपने Firebase प्रोजेक्ट से बदलें
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
 
-  // Sample JSON Data
-  let properties = [
-    {
-      "title": "3 BHK Flat",
-      "price": 4500000,
-      "description": "Spacious flat with parking",
-      "image": "https://i.ibb.co/album/sample.jpg"
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const adminUid = "3u3TzbbQFWVVn2HrIc5r65xxWdf1";   // अपना Admin UID यहाँ डालें
+  const adminWhatsapp = "917378342192";  // अपना WhatsApp नंबर यहाँ डालें
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const propertyList = document.getElementById("propertyList");
+
+  let currentUser = null;
+
+  // Google Login
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch(err => alert("Login failed: " + err.message));
+  };
+
+  // Logout
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  // Auth state change
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
     }
-  ];
+    loadProperties();
+  });
 
-  // Show Property Listing
-  function showListing() {
-    let html = "";
-    properties.forEach(p => {
-      html += `
-        <div class="card">
-          <img src="${p.image}" alt="Property">
-          <div class="card-body">
-            <h3>${p.title}</h3>
-            <p>Price: ₹${p.price}</p>
-            <p>${p.description}</p>
-          </div>
-        </div>
-      `;
+  // प्रॉपर्टी लोड करना और रेंडर करना
+  function loadProperties() {
+    db.ref("properties").once("value").then(snapshot => {
+      const data = snapshot.val();
+      if(!data) {
+        propertyList.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
+        return;
+      }
+      propertyList.innerHTML = "";
+
+      Object.entries(data).forEach(([key, post]) => {
+        const card = document.createElement("div");
+        card.className = "property-card";
+
+        const img = document.createElement("img");
+        img.src = post.imageUrl || post.image || "";
+        img.alt = post.title || "Property Image";
+        card.appendChild(img);
+
+        const content = document.createElement("div");
+        content.className = "property-content";
+
+        const title = document.createElement("h3");
+        title.textContent = post.title || "No Title";
+        content.appendChild(title);
+
+        const city = document.createElement("p");
+        city.textContent = `City: ${post.city || post.location || "N/A"}`;
+        content.appendChild(city);
+
+        const price = document.createElement("p");
+        price.textContent = `Price: ₹${post.price || "N/A"}`;
+        content.appendChild(price);
+
+        const desc = document.createElement("p");
+        desc.textContent = post.description || "No Description";
+        content.appendChild(desc);
+
+        const btnGroup = document.createElement("div");
+        btnGroup.className = "btn-group";
+
+        // WhatsApp नंबर तय करना
+        let whatsappNumber;
+        if(currentUser && currentUser.uid === adminUid){
+          // Admin को पोस्टर का नंबर दिखाओ (अगर है)
+          whatsappNumber = post.whatsapp || adminWhatsapp;
+        } else {
+          // बाकी सबको Admin नंबर दिखाओ
+          whatsappNumber = adminWhatsapp;
+        }
+
+        // WhatsApp बटन
+        const waBtn = document.createElement("a");
+        waBtn.href = `https://wa.me/${whatsappNumber}`;
+        waBtn.target = "_blank";
+        waBtn.textContent = "WhatsApp";
+        waBtn.className = "btn-whatsapp";
+        btnGroup.appendChild(waBtn);
+
+        content.appendChild(btnGroup);
+        card.appendChild(content);
+        propertyList.appendChild(card);
+      });
+    }).catch(err => {
+      propertyList.innerHTML = "<p style='color:red; padding:20px; text-align:center;'>Error loading properties: " + err.message + "</p>";
     });
-    document.getElementById("listing").innerHTML = html;
   }
-
-  // Upload Image to imgbb
-  function uploadImage() {
-    const file = document.getElementById("imageInput").files[0];
-    if (!file) {
-      alert("Please select an image");
-      return;
-    }
-    let formData = new FormData();
-    formData.append("image", file);
-    fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-      method: "POST",
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      imageURL = data.data.url;
-      alert("Image Uploaded Successfully!");
-    })
-    .catch(err => console.error(err));
-  }
-
-  // Post Property
-  function postProperty() {
-    let title = document.getElementById("title").value;
-    let price = document.getElementById("price").value;
-    let description = document.getElementById("description").value;
-
-    if (!title || !price || !description || !imageURL) {
-      alert("Please fill all fields and upload image");
-      return;
-    }
-
-    properties.push({ title, price, description, image: imageURL });
-    showListing();
-    alert("Property Posted Successfully!");
-  }
-
-  // Simulate Admin Login (for demo only)
-  let isAdmin = true; // true = show post form
-  if (isAdmin) {
-    document.getElementById("postForm").style.display = "block";
-  }
-
-  // Load Properties
-  showListing();
 </script>
 
 </body>
