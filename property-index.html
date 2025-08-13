@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:15px; background:#f9f9f9; }
+body { font-family: Arial,sans-serif; margin:0; padding:20px; background:#f9f9f9; }
 header { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
 button.btn { cursor:pointer; background:#007bff; border:none; color:white; padding:8px 14px; border-radius:6px; font-size:1rem; }
 button.btn:hover { background:#0056b3; }
@@ -20,29 +20,29 @@ button.btn-delete:hover { background:#a71d2a; }
 button.btn-approve { background:#28a745; }
 button.btn-approve:hover { background:#1e7e34; }
 
-#propertyForm { display:none; background:#fff; padding:15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.15); margin-bottom:15px; }
-#propertyForm input, #propertyForm select, #propertyForm textarea, #propertyForm button { width:100%; margin-bottom:10px; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:0.95rem; box-sizing:border-box; }
-#propertyForm textarea { resize:vertical; min-height:60px; }
-#propertyForm button { background:#007bff; color:#fff; border:none; cursor:pointer; }
+/* Posting Form */
+#propertyForm { 
+  display:none; background:#fff; padding:10px; border-radius:10px; 
+  box-shadow:0 0 8px rgba(0,0,0,0.15); margin-bottom:15px; 
+  max-width:500px; margin-left:auto; margin-right:auto; 
+}
+#propertyForm input, #propertyForm select, #propertyForm textarea, #propertyForm button { 
+  width:100%; margin-bottom:8px; padding:8px; border-radius:6px; border:1px solid #ccc; font-size:0.9rem; box-sizing:border-box; 
+}
+#propertyForm textarea { resize:vertical; min-height:50px; }
+#propertyForm button { background:#007bff; color:#fff; border:none; cursor:pointer; padding:8px 0; font-size:0.95rem; }
 #propertyForm button:hover { background:#0056b3; }
 
+/* Property List */
 #propertyList { display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
-
-.property-card { 
-  background:white; border-radius:10px; padding:5px; box-shadow:0 0 6px rgba(0,0,0,0.1); 
-  cursor:pointer; display:flex; flex-direction:column; gap:5px; 
-  transition: box-shadow 0.3s ease; overflow:hidden; 
-}
-
+.property-card { background:white; border-radius:10px; padding:5px; box-shadow:0 0 6px rgba(0,0,0,0.1); cursor:pointer; display:flex; flex-direction:column; gap:5px; transition: box-shadow 0.3s ease; overflow:hidden; }
 .property-card:hover { box-shadow:0 0 12px rgba(0,0,0,0.2); }
-
-.property-card img { width:100%; height:120px; object-fit:cover; border-radius:6px; }
-
+.property-card img { width:100%; height:120px; object-fit:contain; border-radius:6px; }
 .property-card .info { display:flex; flex-direction:column; gap:2px; font-size:0.85rem; line-height:1.2em; }
-
 .btn-whatsapp { background:#25d366; color:white; padding:4px 8px; border-radius:6px; text-decoration:none; display:inline-block; text-align:center; font-weight:600; font-size:0.8rem; }
 .btn-group { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
 
+/* Modal */
 #modalOverlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index:1000; }
 #modalContent { background:white; width:95vw; max-width:600px; max-height:95vh; overflow-y:auto; border-radius:10px; padding:20px; position:relative; box-sizing:border-box; }
 #modalContent img { width:100%; height:auto; border-radius:8px; margin-bottom:15px; }
@@ -51,7 +51,7 @@ button.btn-approve:hover { background:#1e7e34; }
 #modalContent p { line-height:1.5; font-size:0.95rem; }
 
 @media(max-width:600px){ 
-  #propertyList { grid-template-columns: repeat(2,1fr); gap:6px; } 
+  #propertyList { grid-template-columns: repeat(2,1fr); gap:6px; } /* mobile two columns */ 
   .property-card img { height:100px; }
 }
 </style>
@@ -63,16 +63,18 @@ button.btn-approve:hover { background:#1e7e34; }
   <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
 </header>
 
+<!-- Posting Form -->
 <form id="propertyForm">
   <input type="text" id="title" placeholder="Title" required />
   <input type="text" id="city" placeholder="City" required />
-  <select id="type">
+  <select id="type" required>
+    <option value="">Select Type</option>
     <option value="sale">Buy</option>
     <option value="rent">Rent</option>
   </select>
   <input type="number" id="price" placeholder="Price" required />
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
-  <input type="url" id="imageUrl" placeholder="Image URL" />
+  <input type="text" id="whatsapp" placeholder="Your WhatsApp Number" required />
+  <input type="text" id="imageUrl" placeholder="Image URL" />
   <textarea id="description" placeholder="Description"></textarea>
   <button type="submit">Post Property</button>
 </form>
@@ -103,7 +105,6 @@ const firebaseConfig = {
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.database();
 
@@ -132,7 +133,6 @@ loginBtn.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider
 logoutBtn.onclick = () => auth.signOut();
 
 function formatPrice(num){ return num.toLocaleString('en-IN'); }
-
 function getWhatsAppLink(post){
   if(currentUser && post.userId===currentUser.uid){
     return `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
@@ -147,12 +147,9 @@ function approveProperty(key){ db.ref('properties/'+key).update({approved:true})
 function renderProperties(posts){
   propertyList.innerHTML="";
   if(posts.length===0){ propertyList.innerHTML="<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>"; return; }
-
   posts.forEach(({key,post})=>{
     const card=document.createElement('div'); card.className='property-card';
-
     const img=document.createElement('img'); img.src=post.imageUrl||'https://via.placeholder.com/300x180?text=No+Image'; img.alt=post.title; card.appendChild(img);
-
     const infoDiv=document.createElement('div'); infoDiv.className='info';
     const title=document.createElement('p'); title.textContent=post.title; infoDiv.appendChild(title);
     const city=document.createElement('p'); city.textContent="City: "+post.city; infoDiv.appendChild(city);
@@ -165,11 +162,9 @@ function renderProperties(posts){
     if(isAdmin || (currentUser && currentUser.uid===post.userId)){
       const delBtn=document.createElement('button'); delBtn.textContent="Delete"; delBtn.className="btn btn-delete"; delBtn.onclick=(e)=>{ e.stopPropagation(); deleteProperty(key); }; btnGroup.appendChild(delBtn);
     }
-
     if(isAdmin && !post.approved){
       const approveBtn=document.createElement('button'); approveBtn.textContent="Approve"; approveBtn.className="btn btn-approve"; approveBtn.onclick=(e)=>{ e.stopPropagation(); approveProperty(key); }; btnGroup.appendChild(approveBtn);
     }
-
     card.appendChild(btnGroup);
 
     card.onclick=()=>{
@@ -182,7 +177,6 @@ function renderProperties(posts){
       modalWhatsapp.href=getWhatsAppLink(post);
       modalOverlay.style.display="flex";
     };
-
     propertyList.appendChild(card);
   });
 }
@@ -206,9 +200,10 @@ async function fetchProperties(){
   }
 }
 
+// Form submit
 propertyForm.onsubmit = e => {
   e.preventDefault();
-  if(!currentUser) return alert("कृपया लॉगिन करें।");
+  if(!currentUser) return alert("Login first!");
   const newPost = {
     title: document.getElementById('title').value,
     city: document.getElementById('city').value,
@@ -221,25 +216,24 @@ propertyForm.onsubmit = e => {
     approved: false
   };
   db.ref('properties').push(newPost).then(()=>{
-    alert("Property submitted for approval.");
     propertyForm.reset();
     fetchProperties();
+    alert("Property posted! Waiting for admin approval.");
   });
-};
+}
 
 auth.onAuthStateChanged(user=>{
   currentUser=user;
-  if(user){
+  if(user){ 
     loginBtn.style.display="none"; 
     logoutBtn.style.display="inline-block"; 
-    isAdmin=(user.email===adminEmail);
-    propertyForm.style.display="block";
-  }
-  else{ 
+    isAdmin=(user.email===adminEmail); 
+    propertyForm.style.display="block"; // Show form after login
+  } else{ 
     loginBtn.style.display="inline-block"; 
     logoutBtn.style.display="none"; 
     isAdmin=false; 
-    propertyForm.style.display="none";
+    propertyForm.style.display="none"; // hide form
   }
   fetchProperties();
 });
