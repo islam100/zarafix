@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Advertising</title>
+<title>Zara Advertising Admin</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{
   font-family: Arial,sans-serif;
   height:100vh;
   width:100vw;
-  overflow:hidden; /* lock screen */
-  background:#87ceeb; /* sky blue */
+  overflow:hidden;
+  background:#87ceeb;
 }
 
 /* Header */
 header{
-  position: fixed;
+  position:fixed;
   top:0; left:0;
   width:100%;
   display:flex;
   justify-content:space-between;
   align-items:center;
   padding:10px 20px;
-  background:#000; /* black */
+  background:#000;
   z-index:1000;
 }
 .logo{
@@ -47,9 +47,9 @@ header{
 .controls button:hover{background:#777;}
 .dropdown select{background:white;color:#333;}
 
-/* Card */
+/* Card container */
 #cardContainer{
-  position: absolute;
+  position:absolute;
   top:50%; left:50%;
   transform:translate(-50%,-50%);
   width:90%;
@@ -70,11 +70,46 @@ header{
   font-size:26px;
   text-align:center;
   padding:10px;
-  color:orange; /* orange text */
+  color:orange;
   text-shadow:2px 2px 5px #ff0,3px 3px 5px #f00,4px 4px 5px #0f0;
   overflow:hidden;
   word-wrap: break-word;
+  transition:all 0.5s ease;
 }
+
+/* Admin Panel */
+#adminPanel{
+  position:fixed;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(255,255,255,0.9);
+  padding:10px;
+  border-radius:10px;
+  display:none;
+  flex-wrap:wrap;
+  gap:5px;
+  z-index:1000;
+}
+
+/* Footer */
+footer{
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:5px;
+}
+footer button{
+  padding:5px 10px;
+  border-radius:5px;
+  border:none;
+  background:#555;
+  color:white;
+  cursor:pointer;
+}
+footer button:hover{background:#777;}
 
 /* Scrolling text */
 #scrollingText{
@@ -92,31 +127,6 @@ header{
   overflow:hidden;
   font-weight:bold;
   font-size:18px;
-}
-
-/* Footer */
-footer{
-  position: fixed;
-  bottom:30px;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:5px;
-}
-footer button{
-  padding:5px 10px;
-  border-radius:5px;
-  border:none;
-  background:#555;
-  color:white;
-  cursor:pointer;
-}
-footer button:hover{background:#777;}
-
-@media(max-width:480px){
-  #cardContainer{height:200px;}
-  .card{font-size:20px;}
-  #scrollingText{font-size:16px;}
 }
 </style>
 </head>
@@ -146,6 +156,14 @@ footer button:hover{background:#777;}
   <div class="card" id="adCard">Loading Ads...</div>
 </div>
 
+<div id="adminPanel">
+  <input type="text" id="cardText" placeholder="Enter card text" style="width:200px;">
+  <input type="color" id="cardColor" value="#ffa500">
+  <button id="addCardBtn">Add Card</button>
+  <button id="editCardBtn">Edit Card</button>
+  <button id="deleteCardBtn">Delete Card</button>
+</div>
+
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <footer>
@@ -172,52 +190,94 @@ const db=firebase.database();
 const auth=firebase.auth();
 
 const adCard=document.getElementById('adCard');
+const adminPanel=document.getElementById('adminPanel');
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const cardTextInput=document.getElementById('cardText');
+const cardColorInput=document.getElementById('cardColor');
+const addCardBtn=document.getElementById('addCardBtn');
+const editCardBtn=document.getElementById('editCardBtn');
+const deleteCardBtn=document.getElementById('deleteCardBtn');
+
 let cards=[],currentIndex=0;
+let selectedCardKey=null;
 
-// Load Ads
-db.ref('advertising').on('value',snapshot=>{
-  const data=snapshot.val();
-  cards=data?Object.values(data).map(item=>item.text):[];
-  if(cards.length>0){
-    currentIndex=0;
-    adCard.innerText=cards[0].substring(0,150);
-  }
-});
+// Load Cards
+function loadCards(){
+  db.ref('cards').on('value',snapshot=>{
+    const data=snapshot.val();
+    cards=data?Object.entries(data):[];
+    if(cards.length>0){
+      currentIndex=0;
+      showCard(cards[currentIndex][1]);
+      selectedCardKey=cards[currentIndex][0];
+    } else {
+      adCard.innerText="No Cards Yet";
+    }
+  });
+}
+loadCards();
 
-// Auto slide
+// Display card
+function showCard(card){
+  adCard.innerText=card.text;
+  adCard.style.color=card.color || "orange";
+}
+
+// Auto slide cards
 setInterval(()=>{
   if(cards.length>0){
     currentIndex=(currentIndex+1)%cards.length;
-    adCard.innerText=cards[currentIndex].substring(0,150);
+    showCard(cards[currentIndex][1]);
+    selectedCardKey=cards[currentIndex][0];
   }
 },4000);
 
-// Scrolling text
-const scrollText=document.getElementById('scrollingText');
-let scrollPos=window.innerWidth;
-function scrollFunc(){scrollPos--; if(scrollPos<-scrollText.scrollWidth) scrollPos=window.innerWidth; scrollText.style.transform=`translateX(${scrollPos}px)`; requestAnimationFrame(scrollFunc);}
-scrollFunc();
-
 // Login/Logout
-const loginBtn=document.getElementById('loginBtn');
-const logoutBtn=document.getElementById('logoutBtn');
-
 loginBtn.addEventListener('click',()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
+  const provider=new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).then(result=>{
-    console.log("Login successful:", result.user.displayName);
-  }).catch(err=>{alert("Login failed: "+err.message);});
+    console.log("Login:",result.user.displayName);
+  }).catch(err=>{alert("Login failed: "+err.message)});
 });
-
 logoutBtn.addEventListener('click',()=>{auth.signOut();});
 
 auth.onAuthStateChanged(user=>{
   if(user){
     loginBtn.style.display='none';
     logoutBtn.style.display='inline-block';
+    // Check admin
+    db.ref('admins/'+user.uid).once('value').then(snap=>{
+      if(snap.exists()){
+        adminPanel.style.display='flex';
+      }
+    });
   }else{
     loginBtn.style.display='inline-block';
     logoutBtn.style.display='none';
+    adminPanel.style.display='none';
+  }
+});
+
+// Admin Buttons
+addCardBtn.addEventListener('click',()=>{
+  const text=cardTextInput.value.trim();
+  const color=cardColorInput.value;
+  if(text){
+    db.ref('cards').push({text,color});
+    cardTextInput.value='';
+  }
+});
+editCardBtn.addEventListener('click',()=>{
+  if(selectedCardKey){
+    const text=cardTextInput.value.trim();
+    const color=cardColorInput.value;
+    db.ref('cards/'+selectedCardKey).update({text,color});
+  }
+});
+deleteCardBtn.addEventListener('click',()=>{
+  if(selectedCardKey){
+    db.ref('cards/'+selectedCardKey).remove();
   }
 });
 </script>
