@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Advertising</title>
+<title>Zara Fix 3D Ads</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{
   font-family: Arial,sans-serif;
   height:100vh;
   width:100vw;
-  overflow:hidden; /* Lock screen scroll */
-  background:#f8f8f8;
+  overflow:hidden;
+  background:#f0f0f0;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -26,14 +26,14 @@ header{
   padding:10px 15px;
 }
 .logo{
-  font-size:48px; /* Logo big */
+  font-size:48px;
   font-weight:bold;
   text-transform:uppercase;
   background: linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
-  transform: rotateX(15deg) rotateY(5deg) scale(1.1);
+  text-shadow:3px 3px 8px rgba(0,0,0,0.5);
+  transform: rotateX(15deg) rotateY(10deg);
 }
 header .controls{
   display:flex;
@@ -45,30 +45,39 @@ header select, header button{
   border:none;
   border-radius:5px;
   cursor:pointer;
-  font-size:13px;
+  font-size:14px;
 }
 header button{background:#555;color:white;}
 header button:hover{background:#777;}
 header select{background:white;color:#333;}
 
-/* Scrolling text container */
+/* 3D scrolling text */
 #scrollingText{
   position:fixed;
   top:50%;
-  left:100%;
-  transform:translateY(-50%);
-  white-space:nowrap;
-  font-size:60px; /* Big text */
+  left:50%;
+  transform:translate(-50%,-50%) rotateX(10deg) rotateY(5deg);
+  font-size:70px;
   font-weight:bold;
+  text-align:center;
   color:#ff4500;
-  text-shadow:2px 2px 5px rgba(0,0,0,0.5);
-  line-height:1.2;
+  text-shadow:2px 2px 5px rgba(0,0,0,0.7);
+  white-space:nowrap;
+  animation: floatText 10s linear infinite;
+}
+
+@keyframes floatText{
+  0%{transform:translate(-50%,-50%) rotateX(10deg) rotateY(5deg);}
+  25%{transform:translate(-50%,-52%) rotateX(15deg) rotateY(10deg);}
+  50%{transform:translate(-50%,-48%) rotateX(10deg) rotateY(5deg);}
+  75%{transform:translate(-50%,-51%) rotateX(12deg) rotateY(8deg);}
+  100%{transform:translate(-50%,-50%) rotateX(10deg) rotateY(5deg);}
 }
 
 /* Admin panel */
 #adminPanel{
   position:fixed;
-  bottom:10%;
+  bottom:5%;
   left:50%;
   transform:translateX(-50%);
   display:flex;
@@ -80,7 +89,6 @@ header select{background:white;color:#333;}
   max-width:90%;
   width:400px;
 }
-
 #adminPanel input, #adminPanel select, #adminPanel button{
   padding:5px;
   margin:2px 0;
@@ -108,9 +116,8 @@ footer button{
   font-size:12px;
 }
 footer button:hover{background:#777;}
-
 @media(max-width:480px){
-  #scrollingText{font-size:36px;}
+  #scrollingText{font-size:40px;}
   #adminPanel{width:90%;}
   footer{bottom:5px;}
 }
@@ -122,7 +129,7 @@ footer button:hover{background:#777;}
   <div class="logo">Zara Fix</div>
   <div class="controls">
     <select id="categoryDropdown">
-      <option value="#">Select Option</option>
+      <option value="#">Option 1</option>
     </select>
     <button id="loginBtn">Login</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
@@ -133,7 +140,7 @@ footer button:hover{background:#777;}
 
 <div id="adminPanel" style="display:none;">
   <input type="text" id="adTextInput" placeholder="Enter new scrolling text">
-  <button id="updateTextBtn">Add New Text</button>
+  <button id="updateTextBtn">Add Text</button>
   <input type="color" id="adColorPicker" title="Pick Text Color">
   <select id="adStyle">
     <option value="normal">Normal</option>
@@ -142,6 +149,9 @@ footer button:hover{background:#777;}
     <option value="gradient">Gradient</option>
     <option value="shadow">Shadow</option>
   </select>
+  <input type="text" id="dropdownText" placeholder="Dropdown link text">
+  <input type="text" id="dropdownURL" placeholder="Dropdown link URL">
+  <button id="updateDropdownBtn">Add Dropdown Link</button>
 </div>
 
 <footer>
@@ -155,7 +165,7 @@ footer button:hover{background:#777;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-// Firebase
+// Firebase setup
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -176,55 +186,25 @@ const adminPanel=document.getElementById('adminPanel');
 const adInput=document.getElementById('adTextInput');
 const adColorPicker=document.getElementById('adColorPicker');
 const adStyle=document.getElementById('adStyle');
+const dropdownSelect=document.getElementById('categoryDropdown');
+const dropdownText=document.getElementById('dropdownText');
+const dropdownURL=document.getElementById('dropdownURL');
+const updateDropdownBtn=document.getElementById('updateDropdownBtn');
 
-let textList = ["Welcome to Zara Ads! Amazing offers for you..."];
-let scrollPos=window.innerWidth;
+let textList=["Welcome to Zara Ads! Amazing offers for you..."];
+let currentTextIndex=0;
 
-// Function to cycle through all texts
-function scrollLoop(){
-  scrollPos--;
-  if(scrollPos<-scrollingText.offsetWidth){
-    scrollPos=window.innerWidth;
-    // Rotate to next text
-    textList.push(textList.shift()); 
-    scrollingText.innerText = textList[0];
-  }
-  scrollingText.style.left=scrollPos+'px';
-  requestAnimationFrame(scrollLoop);
+// Floating/animation loop
+function animateText(){
+  scrollingText.innerText = textList[currentTextIndex];
+  currentTextIndex=(currentTextIndex+1)%textList.length;
+  setTimeout(animateText,4000); // change text every 4 sec
 }
-scrollLoop();
+animateText();
 
-// Login/Logout
-loginBtn.addEventListener('click',()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-});
-logoutBtn.addEventListener('click',()=>{auth.signOut();});
-
-// Auth state
-auth.onAuthStateChanged(user=>{
-  if(user){
-    loginBtn.style.display='none';
-    logoutBtn.style.display='inline-block';
-    db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){ adminPanel.style.display='flex'; }
-    });
-  } else {
-    loginBtn.style.display='inline-block';
-    logoutBtn.style.display='none';
-    adminPanel.style.display='none';
-  }
-});
-
-// Admin panel: add new text
-document.getElementById('updateTextBtn').addEventListener('click',()=>{
-  const newText=adInput.value.trim();
-  if(newText){textList.push(newText); adInput.value='';}
-});
-
-// Color & style
-adColorPicker.addEventListener('input', e=>{scrollingText.style.color=e.target.value;});
-adStyle.addEventListener('change', e=>{
+// Color/style change
+adColorPicker.addEventListener('input',e=>{scrollingText.style.color=e.target.value;});
+adStyle.addEventListener('change',e=>{
   scrollingText.style.fontWeight='normal';
   scrollingText.style.fontStyle='normal';
   scrollingText.style.background='none';
@@ -238,7 +218,46 @@ adStyle.addEventListener('change', e=>{
     scrollingText.style.webkitBackgroundClip='text';
     scrollingText.style.webkitTextFillColor='transparent';
   }
-  if(e.target.value==='shadow') scrollingText.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)';
+  if(e.target.value==='shadow') scrollingText.style.textShadow='3px 3px 8px rgba(0,0,0,0.7)';
+});
+
+// Add new text
+document.getElementById('updateTextBtn').addEventListener('click',()=>{
+  const newText=adInput.value.trim();
+  if(newText){textList.push(newText); adInput.value='';}
+});
+
+// Dropdown add
+updateDropdownBtn.addEventListener('click',()=>{
+  const txt=dropdownText.value.trim();
+  const url=dropdownURL.value.trim();
+  if(txt && url){
+    const opt=document.createElement('option');
+    opt.text=txt;
+    opt.value=url;
+    dropdownSelect.add(opt);
+    dropdownText.value=''; dropdownURL.value='';
+  }
+});
+
+// Login/logout
+loginBtn.addEventListener('click',()=>{
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+});
+logoutBtn.addEventListener('click',()=>{auth.signOut();});
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBtn.style.display='none';
+    logoutBtn.style.display='inline-block';
+    db.ref('admins/'+user.uid).once('value').then(snap=>{
+      if(snap.exists()){ adminPanel.style.display='flex'; }
+    });
+  } else {
+    loginBtn.style.display='inline-block';
+    logoutBtn.style.display='none';
+    adminPanel.style.display='none';
+  }
 });
 </script>
 </body>
