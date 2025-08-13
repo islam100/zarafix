@@ -42,8 +42,12 @@ header button{background:#555;color:white;} header button:hover{background:#777;
 .admin-controls{
   position:fixed; top:60%; left:50%; transform:translateX(-50%); display:flex; gap:5px; flex-wrap:wrap;
 }
+.admin-controls textarea{
+  width:300px; height:120px; resize:none; overflow:hidden; line-height:20px; padding:5px; border-radius:5px;
+}
+
 .admin-style-controls{
-  position:fixed; top:70%; left:50%; transform:translateX(-50%); display:flex; gap:5px; flex-wrap:wrap; justify-content:center;
+  position:fixed; top:72%; left:50%; transform:translateX(-50%); display:flex; gap:5px; flex-wrap:wrap; justify-content:center;
 }
 
 footer{position:fixed; bottom:35px; left:50%; transform:translateX(-50%); display:flex; gap:5px; background:#333; padding:3px 5px; border-radius:5px;}
@@ -52,7 +56,7 @@ footer button:hover{background:#777;}
 
 @media(max-width:480px){
   #cardContainer{width:90%; height:220px; font-size:20px;}
-  .admin-controls input[type=text]{width:120px;}
+  .admin-controls textarea{width:250px; height:120px;}
   .admin-style-controls select, .admin-style-controls input[type=color]{width:100px;}
 }
 </style>
@@ -75,7 +79,7 @@ footer button:hover{background:#777;}
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <div class="admin-controls" id="adminControls" style="display:none;">
-  <input type="text" id="adminInputBox" placeholder="Enter card text (max 6 lines)">
+  <textarea id="adminInputBox" placeholder="Enter card text (max 6 lines)"></textarea>
   <button id="adminAddBtn">Add Card</button>
   <button id="adminEditBtn">Edit Card</button>
   <button id="adminDeleteBtn">Delete Card</button>
@@ -134,7 +138,6 @@ const logoutBtn=document.getElementById('logoutBtn');
 const adInput=document.getElementById('adminInputBox');
 const adColorPicker=document.getElementById('adColorPicker');
 const adStyle=document.getElementById('adStyle');
-const adAnimation=document.getElementById('adAnimation');
 
 let cards=[],currentIndex=0;
 
@@ -155,6 +158,16 @@ setInterval(()=>{
     cardDiv.innerText=cards[currentIndex];
   }
 },5000);
+
+// Scrolling text animation
+let scrollPos=window.innerWidth;
+function scrollText(){
+  scrollPos--; 
+  if(scrollPos<-document.getElementById('scrollingText').scrollWidth) scrollPos=window.innerWidth;
+  document.getElementById('scrollingText').style.transform=`translateX(${scrollPos}px)`; 
+  requestAnimationFrame(scrollText);
+}
+scrollText();
 
 // Login / Logout
 loginBtn.addEventListener('click',()=>{ auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); });
@@ -180,8 +193,9 @@ auth.onAuthStateChanged(user=>{
 
 // Admin buttons
 document.getElementById('adminAddBtn').addEventListener('click',()=>{
-  const text=adInput.value.trim();
-  if(text){ db.ref('cards').push({text:text}); adInput.value=''; }
+  let text=adInput.value.trim();
+  let lines=text.split("\n").slice(0,6).join("\n"); // max 6 lines
+  if(lines){ db.ref('cards').push({text:lines}); adInput.value=''; }
 });
 document.getElementById('adminDeleteBtn').addEventListener('click',()=>{
   if(cards.length>0){
@@ -195,7 +209,7 @@ document.getElementById('adminDeleteBtn').addEventListener('click',()=>{
   }
 });
 document.getElementById('adminEditBtn').addEventListener('click',()=>{
-  const newText=adInput.value.trim();
+  let newText=adInput.value.trim().split("\n").slice(0,6).join("\n"); // max 6 lines
   if(newText && cards.length>0){
     db.ref('cards').once('value').then(snapshot=>{
       const data=snapshot.val();
