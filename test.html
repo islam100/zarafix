@@ -8,14 +8,15 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f4f4f4;
-  overflow: hidden; /* scrolling lock */
+  background: #ffffff;
+  overflow: hidden; /* Scroll lock */
 }
 
 /* Header */
@@ -30,123 +31,114 @@ header {
 
 .logo {
   font-size: 3rem;
-  font-weight: bold;
+  font-weight: 900;
   background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
-  transform: perspective(500px) rotateX(10deg);
 }
 
-/* Dropdown Menu */
 nav {
   position: relative;
 }
 
-nav button {
-  background: #007bff;
-  color: white;
-  padding: 8px 15px;
-  border: none;
-  border-radius: 5px;
+.menu {
   cursor: pointer;
+  font-weight: bold;
 }
 
-nav ul {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  list-style: none;
-  margin: 0;
-  padding: 5px 0;
-  background: white;
-  border: 1px solid #ccc;
+.dropdown {
   display: none;
+  position: absolute;
+  top: 25px;
+  right: 0;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-nav:hover ul {
+.dropdown a {
   display: block;
-}
-
-nav ul li {
-  padding: 8px 20px;
-}
-
-nav ul li a {
+  padding: 8px 12px;
   text-decoration: none;
   color: #333;
 }
 
+.dropdown a:hover {
+  background: #f0f0f0;
+}
+
+#loginBtn, #logoutBtn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#loginBtn { background: #28a745; color: white; }
+#logoutBtn { background: #dc3545; color: white; }
+
 /* Slider */
 .slider {
   width: 100%;
-  height: calc(100vh - 80px);
-  background: linear-gradient(135deg, #a8edea, #fed6e3);
+  height: calc(100vh - 60px);
+  background: #f5f5f5;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  overflow: hidden;
 }
 
 .slider img {
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
-  border: none;
-  box-shadow: none;
+  transition: transform 0.5s ease;
 }
 
-/* Delete Button inside slider */
-.delete-btn {
+/* Admin Controls */
+.admin-controls {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  padding: 6px 12px;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.admin-controls button {
+  padding: 8px 14px;
+  margin: 5px;
   border: none;
-  background: #dc3545;
-  color: white;
   border-radius: 5px;
   cursor: pointer;
-  display: none;
 }
 
-/* Progress */
-#uploadProgress {
-  position: absolute;
-  bottom: 20px;
-  background: rgba(255,255,255,0.8);
-  padding: 5px 15px;
-  border-radius: 10px;
-  font-weight: bold;
-}
+.upload-btn { background: #28a745; color: white; }
+.delete-btn { background: #dc3545; color: white; }
 </style>
 </head>
 
 <body>
 
 <header>
-  <div style="display:flex; align-items:center; gap:20px;">
-    <div class="logo">ZaraFix</div>
-    <nav>
-      <button>Menu</button>
-      <ul>
-        <li><a href="#">Home</a></li>
-        <li><a href="#">Services</a></li>
-        <li><a href="#">Contact</a></li>
-        <li><a href="#">About</a></li>
-      </ul>
-    </nav>
-  </div>
+  <div class="logo">ZaraFix</div>
+  <nav>
+    <div class="menu" onclick="toggleMenu()">☰ Menu</div>
+    <div class="dropdown" id="dropdownMenu">
+      <a href="#">Home</a>
+      <a href="#">Services</a>
+      <a href="#">Contact</a>
+      <a href="#">About</a>
+    </div>
+  </nav>
   <div>
     <button id="loginBtn">Login with Google</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
-    <button id="adminUploadBtn" style="display:none; background:#28a745; color:white; padding:6px 12px; border:none; border-radius:5px;">Upload Image</button>
   </div>
 </header>
 
-<div class="slider" id="imageSlider">
-  <button class="delete-btn" id="adminDeleteBtn">Delete</button>
-  <div id="uploadProgress"></div>
+<div class="slider" id="imageSlider"></div>
+
+<div class="admin-controls" id="adminControls" style="display:none;">
+  <button class="upload-btn" id="adminUploadBtn">Upload Image</button>
+  <button class="delete-btn" id="adminDeleteBtn">Delete Current Image</button>
 </div>
 
 <script>
@@ -154,6 +146,7 @@ nav ul li a {
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
   projectId: "zara-fix-2e35a",
   storageBucket: "zara-fix-2e35a.appspot.com",
   messagingSenderId: "636550144008",
@@ -161,11 +154,18 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.database();
 const storage = firebase.storage();
 
 const adminEmail = "zarasamajiksevasanstha@gmail.com";
 let sliderImages = [];
 let currentIndex = 0;
+
+// Menu toggle
+function toggleMenu() {
+  const menu = document.getElementById('dropdownMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
 
 // Login
 document.getElementById('loginBtn').onclick = () => {
@@ -182,14 +182,12 @@ auth.onAuthStateChanged(user => {
     document.getElementById('loginBtn').style.display = "none";
     document.getElementById('logoutBtn').style.display = "inline-block";
     if (user.email === adminEmail) {
-      document.getElementById('adminUploadBtn').style.display = "inline-block";
-      document.getElementById('adminDeleteBtn').style.display = "inline-block";
+      document.getElementById('adminControls').style.display = "block";
     }
   } else {
     document.getElementById('loginBtn').style.display = "inline-block";
     document.getElementById('logoutBtn').style.display = "none";
-    document.getElementById('adminUploadBtn').style.display = "none";
-    document.getElementById('adminDeleteBtn').style.display = "none";
+    document.getElementById('adminControls').style.display = "none";
   }
 });
 
@@ -201,25 +199,20 @@ document.getElementById('adminUploadBtn').onclick = () => {
   input.onchange = async () => {
     const file = input.files[0];
     if (!file) return;
-
-    const progressDiv = document.getElementById('uploadProgress');
-    progressDiv.innerText = "Uploading... 0%";
-
-    const storageRef = storage.ref('slider/' + Date.now() + "_" + file.name);
+    const fileName = Date.now() + "_" + file.name;
+    const storageRef = storage.ref('slider/' + fileName);
     const uploadTask = storageRef.put(file);
 
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        progressDiv.innerText = `Uploading... ${Math.round(progress)}%`;
+    uploadTask.on('state_changed', 
+      snapshot => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload progress: ' + progress + '%');
       },
-      (error) => {
-        console.error(error);
-        progressDiv.innerText = "Upload Failed!";
-      },
-      () => {
-        progressDiv.innerText = "Upload Complete!";
-        setTimeout(() => progressDiv.innerText = "", 2000);
+      error => console.error('Upload error:', error),
+      async () => {
+        const url = await storageRef.getDownloadURL();
+        const timestamp = Date.now();
+        await db.ref('slider').push({ url, timestamp, fileName });
         loadSliderImages();
       }
     );
@@ -230,32 +223,38 @@ document.getElementById('adminUploadBtn').onclick = () => {
 // Delete
 document.getElementById('adminDeleteBtn').onclick = async () => {
   if (sliderImages.length === 0) return;
-  const imgUrl = sliderImages[currentIndex];
-  const filePath = decodeURIComponent(imgUrl.split("/o/")[1].split("?")[0]);
-  await storage.ref(filePath).delete();
+  const currentImage = sliderImages[currentIndex];
+  try {
+    await storage.ref('slider/' + currentImage.fileName).delete();
+  } catch(e) {
+    console.warn("Storage delete error:", e);
+  }
+  await db.ref('slider/' + currentImage.key).remove();
   loadSliderImages();
 };
 
 // Load images
 async function loadSliderImages() {
+  const snapshot = await db.ref('slider').once('value');
   sliderImages = [];
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.querySelectorAll('img').forEach(img => img.remove());
-  const list = await storage.ref('slider').listAll();
-  for (let item of list.items) {
-    const url = await item.getDownloadURL();
-    sliderImages.push(url);
-  }
+  snapshot.forEach(child => {
+    sliderImages.push({
+      key: child.key,
+      url: child.val().url,
+      fileName: child.val().fileName || ""
+    });
+  });
+  currentIndex = 0;
   showImage();
 }
 
 function showImage() {
-  if (sliderImages.length === 0) return;
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.querySelectorAll('img').forEach(img => img.remove());
-  const img = document.createElement('img');
-  img.src = sliderImages[currentIndex];
-  sliderDiv.appendChild(img);
+  if (sliderImages.length === 0) {
+    document.getElementById('imageSlider').innerHTML = "<p>No images</p>";
+    return;
+  }
+  document.getElementById('imageSlider').innerHTML =
+    `<img src="${sliderImages[currentIndex].url}">`;
 }
 
 setInterval(() => {
