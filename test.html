@@ -12,8 +12,12 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <style>
-body {
+/* Screen lock */
+html, body {
   margin: 0;
+  padding: 0;
+  overflow: hidden; /* scrolling lock */
+  height: 100%;
   font-family: Arial, sans-serif;
   background: #f4f4f4;
 }
@@ -28,69 +32,88 @@ header {
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* Logo */
 .logo {
-  font-size: 3.2rem;
+  font-size: 3rem;
   font-weight: bold;
-  letter-spacing: 1px;
   background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 3px 3px 8px rgba(0,0,0,0.4);
-  transform: perspective(500px) rotateX(10deg);
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
 }
 
+/* Dropdown Menu */
 nav {
-  display: flex;
-  gap: 20px;
+  position: relative;
 }
 
-nav a {
-  text-decoration: none;
-  color: #333;
-  font-weight: bold;
-  padding: 5px 10px;
-  transition: all 0.3s ease;
+.menu-btn {
+  background: #333;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-nav a:hover {
-  background: #eee;
+.menu-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background: white;
+  min-width: 150px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   border-radius: 5px;
 }
 
+.menu-content a {
+  display: block;
+  padding: 8px 10px;
+  color: #333;
+  text-decoration: none;
+}
+
+.menu-content a:hover {
+  background: #eee;
+}
+
+nav:hover .menu-content {
+  display: block;
+}
+
+/* Buttons */
 #loginBtn, #logoutBtn {
   padding: 6px 14px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
 }
-
 #loginBtn { background: #28a745; color: white; }
 #logoutBtn { background: #dc3545; color: white; }
 
 /* Slider */
 .slider {
   width: 100%;
-  height: 400px;
-  background: #eaeaea;
+  height: calc(100% - 80px);
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
 }
 
 .slider img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border: none;
-  box-shadow: none;
-  transition: transform 0.5s ease;
 }
 
 /* Admin Controls */
 .admin-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
-  margin-top: 10px;
 }
 
 .admin-controls button {
@@ -108,7 +131,10 @@ nav a:hover {
 #uploadProgress {
   text-align: center;
   font-weight: bold;
-  margin-top: 5px;
+  color: white;
+  background: rgba(0,0,0,0.5);
+  padding: 5px;
+  border-radius: 5px;
 }
 </style>
 </head>
@@ -116,28 +142,30 @@ nav a:hover {
 <body>
 
 <header>
-  <div style="display:flex; align-items:center; gap:20px;">
-    <div class="logo">ZaraFix</div>
-    <nav>
+  <div class="logo">ZaraFix</div>
+  <nav>
+    <button class="menu-btn">Menu ▼</button>
+    <div class="menu-content">
       <a href="#">Home</a>
       <a href="#">Services</a>
       <a href="#">Contact</a>
       <a href="#">About</a>
-    </nav>
-  </div>
+    </div>
+  </nav>
   <div>
-    <button id="loginBtn">Login with Google</button>
+    <button id="loginBtn">Login</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
 
-<div class="slider" id="imageSlider"></div>
+<div class="slider" id="imageSlider">
+  <div id="uploadProgress"></div>
+</div>
 
 <div class="admin-controls" id="adminControls" style="display:none;">
   <button class="upload-btn" id="adminUploadBtn">Upload Image</button>
-  <button class="delete-btn" id="adminDeleteBtn">Delete Current Image</button>
+  <button class="delete-btn" id="adminDeleteBtn">Delete Image</button>
 </div>
-<div id="uploadProgress"></div>
 
 <script>
 // Firebase config
@@ -162,8 +190,6 @@ document.getElementById('loginBtn').onclick = () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(console.error);
 };
-
-// Logout
 document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
 // Auth state
@@ -181,7 +207,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// Upload with progress
+// Upload (unlimited & fast)
 document.getElementById('adminUploadBtn').onclick = () => {
   let input = document.createElement('input');
   input.type = "file";
@@ -190,7 +216,7 @@ document.getElementById('adminUploadBtn').onclick = () => {
     const file = input.files[0];
     if (!file) return;
 
-    const storageRef = storage.ref('slider/' + file.name);
+    const storageRef = storage.ref('slider/' + Date.now() + "_" + file.name);
     const uploadTask = storageRef.put(file);
 
     uploadTask.on('state_changed',
@@ -212,7 +238,7 @@ document.getElementById('adminUploadBtn').onclick = () => {
   input.click();
 };
 
-// Delete with progress
+// Delete
 document.getElementById('adminDeleteBtn').onclick = async () => {
   if (sliderImages.length === 0) return;
   const imgUrl = sliderImages[currentIndex];
@@ -227,8 +253,6 @@ document.getElementById('adminDeleteBtn').onclick = async () => {
 // Load images
 async function loadSliderImages() {
   sliderImages = [];
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.innerHTML = '';
   const list = await storage.ref('slider').listAll();
   for (let item of list.items) {
     const url = await item.getDownloadURL();
@@ -240,13 +264,13 @@ async function loadSliderImages() {
 
 function showImage() {
   if (sliderImages.length === 0) {
-    document.getElementById('imageSlider').innerHTML = "<p>No Images Found</p>";
+    document.getElementById('imageSlider').innerHTML = "<p style='color:white;'>No Images</p>";
     return;
   }
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.innerHTML = `<img src="${sliderImages[currentIndex]}">`;
+  document.getElementById('imageSlider').innerHTML = `<img src="${sliderImages[currentIndex]}"> <div id="uploadProgress"></div>`;
 }
 
+// Auto slide
 setInterval(() => {
   if (sliderImages.length > 1) {
     currentIndex = (currentIndex + 1) % sliderImages.length;
