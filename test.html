@@ -10,7 +10,7 @@ body{
   font-family: Arial,sans-serif;
   height:100vh;
   width:100vw;
-  overflow:hidden; /* Lock scroll */
+  overflow:hidden; /* Lock screen scroll */
   background:#f8f8f8;
   display:flex;
   flex-direction:column;
@@ -26,7 +26,7 @@ header{
   padding:10px 15px;
 }
 .logo{
-  font-size:32px;
+  font-size:36px;
   font-weight:bold; 
   text-transform:uppercase;
   background: linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff);
@@ -51,26 +51,23 @@ header button{background:#555;color:white;}
 header button:hover{background:#777;}
 header select{background:white;color:#333;}
 
-#adBox{
+/* Scrolling text as main content */
+#scrollingText{
   position:fixed;
   top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:#fffae6;
-  padding:20px;
-  border-radius:15px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.3);
-  max-width:90%;
-  width:350px;
-  text-align:center;
-  font-size:16px;
-  line-height:1.4;
-  z-index:100;
+  left:100%;
+  transform:translateY(-50%);
+  white-space:nowrap;
+  font-size:32px;
+  font-weight:bold;
+  color:#ff4500;
+  text-shadow:2px 2px 5px rgba(0,0,0,0.4);
 }
 
+/* Admin panel */
 #adminPanel{
   position:fixed;
-  top:65%;
+  top:70%;
   left:50%;
   transform:translateX(-50%);
   display:flex;
@@ -91,27 +88,10 @@ header select{background:white;color:#333;}
   font-size:14px;
 }
 
-#scrollingText{
-  position:fixed;
-  bottom:0;
-  left:50%;
-  transform:translateX(-50%);
-  background:#333;
-  padding:5px 10px;
-  border-radius:5px 5px 0 0;
-  width:90%;
-  max-width:400px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-align:center;
-  font-weight:bold;
-  font-size:16px;
-  color:white;
-}
-
+/* Footer */
 footer{
   position:fixed;
-  bottom:35px;
+  bottom:10px;
   left:50%;
   transform:translateX(-50%);
   display:flex;
@@ -129,9 +109,9 @@ footer button{
 footer button:hover{background:#777;}
 
 @media(max-width:480px){
-  #adBox{width:90%; font-size:14px; padding:15px;}
+  #scrollingText{font-size:24px;}
   #adminPanel{width:90%;}
-  footer{bottom:30px;}
+  footer{bottom:5px;}
 }
 </style>
 </head>
@@ -148,13 +128,11 @@ footer button:hover{background:#777;}
   </div>
 </header>
 
-<div id="adBox">Loading Ads...</div>
+<div id="scrollingText">Welcome to Zara Ads! Amazing offers for you... Enjoy the best deals now!</div>
 
 <div id="adminPanel" style="display:none;">
-  <input type="text" id="adTextInput" placeholder="Enter Ad Text">
-  <button id="addAdBtn">Add</button>
-  <button id="editAdBtn">Edit</button>
-  <button id="deleteAdBtn">Delete</button>
+  <input type="text" id="adTextInput" placeholder="Enter new scrolling text">
+  <button id="updateTextBtn">Update Text</button>
   <input type="color" id="adColorPicker" title="Pick Text Color">
   <select id="adStyle">
     <option value="normal">Normal</option>
@@ -163,18 +141,7 @@ footer button:hover{background:#777;}
     <option value="gradient">Gradient</option>
     <option value="shadow">Shadow</option>
   </select>
-  <select id="adAnimation">
-    <option value="none">None</option>
-    <option value="fade">Fade</option>
-    <option value="slideLeft">Slide Left</option>
-    <option value="slideRight">Slide Right</option>
-    <option value="bounce">Bounce</option>
-    <option value="blink">Blink</option>
-    <option value="rainbowAnim">Rainbow Animation</option>
-  </select>
 </div>
-
-<div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <footer>
   <button>About</button>
@@ -187,7 +154,7 @@ footer button:hover{background:#777;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
-// Firebase config
+// Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -201,52 +168,30 @@ const db = firebase.database();
 const auth = firebase.auth();
 
 // Elements
-const adBox=document.getElementById('adBox');
-const adminPanel=document.getElementById('adminPanel');
+const scrollingText=document.getElementById('scrollingText');
 const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
+const adminPanel=document.getElementById('adminPanel');
 const adInput=document.getElementById('adTextInput');
-const categoryDropdown=document.getElementById('categoryDropdown');
-const scrollingText=document.getElementById('scrollingText');
+const adColorPicker=document.getElementById('adColorPicker');
+const adStyle=document.getElementById('adStyle');
 
-let adTexts=[],currentIndex=0;
-
-// Load Ads
-function loadAds(){
-  db.ref('ads').on('value', snapshot=>{
-    const data=snapshot.val();
-    adTexts=data?Object.values(data).map(item=>item.text):[];
-    if(adTexts.length>0){adBox.innerText=adTexts[0]; currentIndex=0;}
-  });
-}
-loadAds();
-
-// Auto slide
-setInterval(()=>{
-  if(adTexts.length>0){
-    currentIndex=(currentIndex+1)%adTexts.length;
-    adBox.innerText=adTexts[currentIndex];
-  }
-},3000);
-
-// Scrolling text
-let scrollPos=scrollingText.offsetWidth;
-function scrollText(){
+// Continuous scroll
+let scrollPos=window.innerWidth;
+function scrollLoop(){
   scrollPos--;
-  if(scrollPos<-scrollingText.scrollWidth) scrollPos=window.innerWidth;
-  scrollingText.style.transform=`translateX(${scrollPos}px)`;
-  requestAnimationFrame(scrollText);
+  if(scrollPos<-scrollingText.offsetWidth) scrollPos=window.innerWidth;
+  scrollingText.style.left=scrollPos+'px';
+  requestAnimationFrame(scrollLoop);
 }
-scrollText();
+scrollLoop();
 
 // Login/Logout
-loginBtn.addEventListener('click', ()=>{
+loginBtn.addEventListener('click',()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(res=>{
-    console.log('Login Success:',res.user.displayName);
-  }).catch(console.error);
+  auth.signInWithPopup(provider);
 });
-logoutBtn.addEventListener('click', ()=>{auth.signOut();});
+logoutBtn.addEventListener('click',()=>{auth.signOut();});
 
 // Auth state
 auth.onAuthStateChanged(user=>{
@@ -263,73 +208,30 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// Admin buttons
-document.getElementById('addAdBtn').addEventListener('click', ()=>{
-  const text=adInput.value.trim();
-  if(text){db.ref('ads').push({text:text}); adInput.value='';}
-});
-document.getElementById('deleteAdBtn').addEventListener('click', ()=>{
-  if(adTexts.length>0){
-    db.ref('ads').once('value').then(snapshot=>{
-      const data=snapshot.val();
-      const keys=Object.keys(data);
-      const keyToDelete=keys.find(k=>data[k].text===adTexts[currentIndex]);
-      if(keyToDelete){db.ref('ads/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0;}
-    });
-  }
-});
-document.getElementById('editAdBtn').addEventListener('click', ()=>{
+// Admin panel
+document.getElementById('updateTextBtn').addEventListener('click',()=>{
   const newText=adInput.value.trim();
-  if(newText && adTexts.length>0){
-    db.ref('ads').once('value').then(snapshot=>{
-      const data=snapshot.val();
-      const keys=Object.keys(data);
-      const keyToEdit=keys.find(k=>data[k].text===adTexts[currentIndex]);
-      if(keyToEdit){db.ref('ads/'+keyToEdit).update({text:newText}); adInput.value=''; adTexts[currentIndex]=newText;}
-    });
-  }
+  if(newText){scrollingText.innerText=newText; adInput.value='';}
 });
 
-// Style controls
-document.getElementById('adColorPicker').addEventListener('input',e=>{adBox.style.color=e.target.value;});
-document.getElementById('adStyle').addEventListener('change',e=>{
-  adBox.style.fontWeight='normal';
-  adBox.style.fontStyle='normal';
-  adBox.style.background='none';
-  adBox.style.webkitBackgroundClip='unset';
-  adBox.style.webkitTextFillColor='unset';
-  adBox.style.textShadow='none';
-  if(e.target.value==='bold') adBox.style.fontWeight='bold';
-  if(e.target.value==='italic') adBox.style.fontStyle='italic';
+// Color & style
+adColorPicker.addEventListener('input', e=>{scrollingText.style.color=e.target.value;});
+adStyle.addEventListener('change', e=>{
+  scrollingText.style.fontWeight='normal';
+  scrollingText.style.fontStyle='normal';
+  scrollingText.style.background='none';
+  scrollingText.style.webkitBackgroundClip='unset';
+  scrollingText.style.webkitTextFillColor='unset';
+  scrollingText.style.textShadow='none';
+  if(e.target.value==='bold') scrollingText.style.fontWeight='bold';
+  if(e.target.value==='italic') scrollingText.style.fontStyle='italic';
   if(e.target.value==='gradient'){
-    adBox.style.background='linear-gradient(45deg,#ff0000,#ff9900,#00ff00,#00ccff,#ff00ff)';
-    adBox.style.webkitBackgroundClip='text';
-    adBox.style.webkitTextFillColor='transparent';
+    scrollingText.style.background='linear-gradient(45deg,#ff0000,#ff9900,#00ff00,#00ccff,#ff00ff)';
+    scrollingText.style.webkitBackgroundClip='text';
+    scrollingText.style.webkitTextFillColor='transparent';
   }
-  if(e.target.value==='shadow') adBox.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)';
+  if(e.target.value==='shadow') scrollingText.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)';
 });
-
-// Animations
-document.getElementById('adAnimation').addEventListener('change',e=>{
-  adBox.style.animation='';
-  if(e.target.value==='fade') adBox.style.animation='fadeAnim 2s infinite alternate';
-  if(e.target.value==='slideLeft') adBox.style.animation='slideLeftAnim 5s linear infinite';
-  if(e.target.value==='slideRight') adBox.style.animation='slideRightAnim 5s linear infinite';
-  if(e.target.value==='bounce') adBox.style.animation='bounceAnim 1s infinite';
-  if(e.target.value==='blink') adBox.style.animation='blinkAnim 1s infinite';
-  if(e.target.value==='rainbowAnim') adBox.style.animation='rainbowAnim 3s linear infinite';
-});
-
-const style=document.createElement('style');
-style.innerHTML=`
-@keyframes fadeAnim{0%{opacity:1;}100%{opacity:0.3;}}
-@keyframes slideLeftAnim{0%{transform:translateX(-50%);}100%{transform:translateX(-60%);}}
-@keyframes slideRightAnim{0%{transform:translateX(-50%);}100%{transform:translateX(-40%);}}
-@keyframes bounceAnim{0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);}}
-@keyframes blinkAnim{0%,50%,100%{opacity:1;}25%,75%{opacity:0;}}
-@keyframes rainbowAnim{0%{color:red;}20%{color:orange;}40%{color:yellow;}60%{color:green;}80%{color:blue;}100%{color:violet;}}
-`;
-document.head.appendChild(style);
 </script>
 </body>
 </html>
