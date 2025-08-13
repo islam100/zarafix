@@ -1,219 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Fix - Home</title>
+<title>Zara Fix</title>
 <style>
-  body, html {
-    margin:0; padding:0;
-    font-family: Arial, sans-serif;
-    background: #f0f0f0;
-  }
-
+  body, html { margin:0; padding:0; font-family: Arial, sans-serif; background: #f0f0f0; }
   /* Header */
-  header {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 10px 20px;
-    background: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-  #googleLoginBtn {
-    padding: 8px 15px;
-    background: #4285F4;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-  }
-
-  /* Slider */
-  #sliderContainer {
-    width: 100%;
-    max-width: 800px;
-    margin: 20px auto;
-    position: relative;
-    overflow: hidden;
-    border-radius: 15px;
-    background: #ccc;
-  }
-  #sliderImages img {
-    width: 100%;
-    display: none;
-  }
-  #sliderImages img.active { display: block; }
-
-  /* Admin controls */
-  #adminControls {
-    text-align: center;
-    padding:10px;
-    background:#eee;
-  }
-  #adminControls input[type=file] { margin-bottom:10px; }
-  .deleteBtn {
-    background:#f44336;
-    color:#fff;
-    border:none;
-    padding:5px 10px;
-    margin-left:5px;
-    cursor:pointer;
-    border-radius:4px;
-  }
-
-  /* Bottom buttons */
-  .bottomBtns {
-    display:flex;
-    justify-content:center;
-    gap:15px;
-    margin:30px 0;
-  }
-  .bottomBtns button {
-    padding:10px 20px;
-    border:none;
-    border-radius:8px;
-    background:#2196F3;
-    color:#fff;
-    cursor:pointer;
-  }
+  .header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#4285F4; color:white; position:fixed; width:100%; top:0; z-index:1000; }
+  .logo { font-size:1.5rem; font-weight:bold; }
+  .login-btn { padding:6px 12px; border:none; border-radius:6px; cursor:pointer; background:white; color:#4285F4; font-weight:bold; }
+  /* Dropdown menu */
+  .dropdown { position:relative; display:inline-block; }
+  .dropdown-content { display:none; position:absolute; background:#fff; min-width:180px; box-shadow:0 4px 8px rgba(0,0,0,0.2); z-index:1; border-radius:6px; }
+  .dropdown-content button { width:100%; padding:10px; border:none; background:none; text-align:left; cursor:pointer; }
+  .dropdown:hover .dropdown-content { display:block; }
+  /* Slider Box */
+  .slider-container { max-width:600px; margin:100px auto 50px auto; position:relative; border-radius:10px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.3); background:#fff; }
+  .slider-img { width:100%; height:300px; object-fit:cover; }
+  .slider-admin { position:absolute; top:10px; right:10px; display:flex; gap:5px; }
+  .slider-admin button { padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#4285F4; color:white; font-weight:bold; }
+  /* Bottom 3 buttons */
+  .bottom-buttons { display:flex; justify-content:center; gap:20px; margin:20px 0; }
+  .bottom-buttons button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; background:#4285F4; color:white; font-weight:bold; }
 </style>
 </head>
 <body>
 
-<header>
-  <button id="googleLoginBtn">Google Login</button>
-</header>
-
-<div id="sliderContainer">
-  <div id="sliderImages"></div>
-
-  <div id="adminControls" style="display:none;">
-    <input type="file" id="sliderFile">
-    <button id="uploadBtn">Upload</button>
+<div class="header">
+  <div class="logo">Zara Fix</div>
+  <div>
+    <div class="dropdown">
+      <button class="login-btn" id="googleLoginBtn">Google Login</button>
+      <div class="dropdown-content" id="menuButtons">
+        <button onclick="location.href='recharge.html'">Recharge Request</button>
+        <button onclick="location.href='requestbottun.html'">Service Request</button>
+        <button onclick="location.href='2poster.html'">Service Provider</button>
+        <button onclick="location.href='property-index.html'">Real Estate</button>
+        <button onclick="location.href='admin-dashboard.html'">Admin Dashboard</button>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="bottomBtns">
+<div class="slider-container" id="sliderBox">
+  <img src="" class="slider-img" id="sliderImage">
+  <div class="slider-admin" id="sliderAdminButtons" style="display:none;">
+    <button id="uploadImgBtn">Upload</button>
+    <button id="deleteImgBtn">Delete</button>
+  </div>
+</div>
+
+<div class="bottom-buttons">
   <button onclick="alert('About')">About</button>
   <button onclick="alert('Contact')">Contact</button>
   <button onclick="alert('Privacy Policy')">Privacy Policy</button>
 </div>
 
-<!-- Firebase -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-firebase.initializeApp(firebaseConfig);
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
 
-const auth = firebase.auth();
-const db = firebase.database();
-const storage = firebase.storage();
+  const loginBtn = document.getElementById('googleLoginBtn');
+  const menuButtons = document.getElementById('menuButtons');
+  const sliderImage = document.getElementById('sliderImage');
+  const sliderAdminButtons = document.getElementById('sliderAdminButtons');
+  let currentSlider = 0;
+  let sliderUrls = [];
 
-// Admin UID list
-const adminUIDs = {
-  "QT3LkEToHwaiORatoKfTx8QE45s2": true
-};
-
-// Login button
-const loginBtn = document.getElementById('googleLoginBtn');
-const adminControls = document.getElementById('adminControls');
-
-loginBtn.addEventListener('click', ()=>{
-  if(auth.currentUser){
-    auth.signOut();
-  } else {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  }
-});
-
-auth.onAuthStateChanged(user=>{
-  if(user){
-    loginBtn.textContent = 'Logout';
-    if(adminUIDs[user.uid]){
-      adminControls.style.display = 'block';
+  // Login/Logout
+  loginBtn.addEventListener('click', ()=>{
+    if(auth.currentUser){
+      auth.signOut();
+    }else{
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
     }
-  } else {
-    loginBtn.textContent = 'Google Login';
-    adminControls.style.display = 'none';
-  }
-});
-
-// Upload image
-document.getElementById('uploadBtn').addEventListener('click', ()=>{
-  const file = document.getElementById('sliderFile').files[0];
-  if(!file){ alert('Select file!'); return; }
-  const storageRef = storage.ref('slider/' + Date.now() + '_' + file.name);
-  storageRef.put(file).then(snapshot=>{
-    snapshot.ref.getDownloadURL().then(url=>{
-      const key = db.ref('slider').push().key;
-      db.ref('slider/' + key).set({url:url, timestamp:Date.now()});
-      document.getElementById('sliderFile').value = '';
-    });
   });
-});
 
-// Load slider
-const sliderImagesDiv = document.getElementById('sliderImages');
-function loadSlider(){
-  db.ref('slider').on('value', snap=>{
-    sliderImagesDiv.innerHTML = '';
-    const data = snap.val();
-    if(!data) return;
-    Object.keys(data).forEach(key=>{
-      const img = document.createElement('img');
-      img.src = data[key].url;
-      img.dataset.key = key;
-      sliderImagesDiv.appendChild(img);
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      loginBtn.textContent = 'Logout';
+      // Check if admin
+      db.ref('admins/'+user.uid).once('value').then(snap=>{
+        if(snap.exists()){
+          sliderAdminButtons.style.display='flex';
+        }
+      });
+    }else{
+      loginBtn.textContent = 'Google Login';
+      sliderAdminButtons.style.display='none';
+    }
+  });
 
-      // Admin delete button
-      if(auth.currentUser && adminUIDs[auth.currentUser.uid]){
-        const del = document.createElement('button');
-        del.textContent = 'Delete';
-        del.className = 'deleteBtn';
-        del.onclick = ()=>{
-          // Delete from storage and DB
-          storage.refFromURL(data[key].url).delete().then(()=>{
-            db.ref('slider/' + key).remove();
-          });
-        };
-        sliderImagesDiv.appendChild(del);
+  // Load slider images from database
+  function loadSlider(){
+    db.ref('slider').once('value').then(snap=>{
+      sliderUrls = [];
+      snap.forEach(child=>{
+        sliderUrls.push(child.val().url);
+      });
+      if(sliderUrls.length>0){
+        sliderImage.src = sliderUrls[0];
       }
     });
+  }
+  loadSlider();
 
-    startSlider();
+  // Auto slide
+  setInterval(()=>{
+    if(sliderUrls.length>0){
+      currentSlider = (currentSlider+1)%sliderUrls.length;
+      sliderImage.src = sliderUrls[currentSlider];
+    }
+  },4000);
+
+  // Admin upload
+  document.getElementById('uploadImgBtn').addEventListener('click', ()=>{
+    const fileInput = document.createElement('input');
+    fileInput.type='file';
+    fileInput.accept='image/*';
+    fileInput.onchange = e=>{
+      const file = e.target.files[0];
+      const timestamp = Date.now();
+      const storageRef = storage.ref('slider/'+timestamp+'_'+file.name);
+      storageRef.put(file).then(snapshot=>{
+        snapshot.ref.getDownloadURL().then(url=>{
+          db.ref('slider/img'+timestamp).set({url:url, timestamp:timestamp}).then(()=>{
+            alert('Image uploaded!');
+            loadSlider();
+          });
+        });
+      });
+    };
+    fileInput.click();
   });
-}
 
-// Auto slide
-let currentIndex = 0;
-let sliderInterval;
-function startSlider(){
-  const imgs = sliderImagesDiv.querySelectorAll('img');
-  if(imgs.length==0) return;
-  imgs.forEach(img=>img.classList.remove('active'));
-  imgs[currentIndex].classList.add('active');
-  clearInterval(sliderInterval);
-  sliderInterval = setInterval(()=>{
-    imgs.forEach(img=>img.classList.remove('active'));
-    currentIndex = (currentIndex+1) % imgs.length;
-    imgs[currentIndex].classList.add('active');
-  },3000);
-}
-
-loadSlider();
+  // Admin delete
+  document.getElementById('deleteImgBtn').addEventListener('click', ()=>{
+    if(sliderUrls.length==0) return;
+    if(confirm('Delete current image?')){
+      const urlToDelete = sliderUrls[currentSlider];
+      // Find key
+      db.ref('slider').orderByChild('url').equalTo(urlToDelete).once('value').then(snap=>{
+        snap.forEach(child=>{
+          child.ref.remove().then(()=>{ alert('Deleted!'); loadSlider(); });
+        });
+      });
+    }
+  });
 </script>
 
 </body>
