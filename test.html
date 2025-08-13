@@ -1,221 +1,520 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ZaraFix All Service</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZaraFix — All Services</title>
+<style>
+  :root{
+    --accent-blue:#4285F4;
+    --bg-top:#87ceeb;
+    --bg-bottom:#e0f7ff;
+    --max-w:1100px;
+  }
+  html,body{height:100%; margin:0; font-family:Inter, "Segoe UI", Arial, sans-serif; -webkit-font-smoothing:antialiased;}
+  body{background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 85%); color:#032;}
 
-<!-- Firebase SDK -->
+  /* Header */
+  .site-header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:12px 16px; max-width:var(--max-w); margin:0 auto;
+    box-sizing:border-box;
+  }
+  .left-group{display:flex; align-items:center; gap:12px;}
+  .brand {
+    display:flex; gap:10px; align-items:center;
+  }
+  .logo{
+    font-weight:900; font-size:1.45rem; color:#ef0400;
+    text-shadow:2px 2px 0 #ffea00, 4px 4px 0 #00f7ff;
+    user-select:none;
+    line-height:1;
+  }
+  .tagline{font-size:0.82rem; color:#053047; margin-top:2px; opacity:0.95;}
+
+  /* Menu next to logo */
+  .menu-wrap{position:relative;}
+  .menu-toggle{
+    background:#fff; border:0; padding:8px 10px; border-radius:8px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.12); cursor:pointer; font-weight:700;
+  }
+  .menu-toggle:focus{outline:2px solid rgba(0,123,255,0.18)}
+  .menu-list{
+    position:absolute; left:0; top:calc(100% + 8px); min-width:240px;
+    background:#fff; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.12);
+    display:none; padding:8px; z-index:999;
+  }
+  .menu-list.show{display:block;}
+  .menu-list a{
+    display:block; padding:8px 10px; color:#033; text-decoration:none; border-radius:6px; font-weight:600;
+  }
+  .menu-list a:hover{background:#f3f7fb;}
+  .menu-actions{display:flex; gap:6px; padding-top:6px; border-top:1px solid #eee; margin-top:6px;}
+
+  /* Auth area top-right */
+  .auth-wrap{display:flex; align-items:center; gap:8px;}
+  #googleLoginBtn{
+    background:var(--accent-blue); color:#fff; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700;
+    box-shadow:0 8px 18px rgba(0,0,0,0.12);
+  }
+  #userAvatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #fff;display:none;}
+
+  /* main area */
+  main.main { max-width:960px; margin:18px auto; padding:0 16px 36px; box-sizing:border-box; }
+  .hero-box{
+    background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.12);
+    padding:12px;
+  }
+
+  /* Slider styles (absolute slides) */
+  .slider {
+    position: relative;
+    width:100%;
+    height: calc(60vw);
+    max-height:420px;
+    min-height:140px;
+    overflow:hidden;
+    border-radius:12px;
+    background:#f3f3f3;
+  }
+  .slide-wrap {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    transition:opacity .6s ease, transform .6s ease; opacity:0; transform:scale(1.02); will-change: opacity, transform;
+  }
+  .slide-wrap.active { opacity:1; transform:scale(1); z-index:2; }
+  .slide-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* delete button shown for admin */
+  .slide-delete {
+    position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.85); color:#c22; border:0; border-radius:8px; padding:6px 8px; cursor:pointer;
+    font-weight:700; box-shadow:0 4px 12px rgba(0,0,0,0.12); display:none;
+  }
+  .slide-wrap.admin .slide-delete { display:inline-block; }
+
+  /* admin uploader area */
+  .uploader-row{ display:flex; gap:10px; align-items:center; margin-top:12px; }
+  #adminUploadBtn{ display:none; background:#28a745; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
+  #uploadNote{ font-size:0.85rem; color:#053047; opacity:0.9; }
+
+  /* marquee */
+  .marquee-wrap{ margin-top:16px; background:rgba(255,255,255,0.95); padding:8px 10px; border-radius:10px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+  .marquee{ display:inline-block; white-space:nowrap; padding-left:100%; animation:marquee 18s linear infinite; font-weight:700; color:#023;}
+  @keyframes marquee{ 0%{transform:translateX(0%);} 100%{transform:translateX(-100%);} }
+  @media (prefers-reduced-motion: reduce){ .marquee{ animation:none; padding-left:12px; } }
+
+  /* tiny footer buttons */
+  .tiny-footer{display:flex; gap:8px; justify-content:center; margin-top:14px;}
+  .tiny-footer button{ padding:6px 10px; border-radius:8px; border:0; font-size:0.78rem; background:#007bff;color:#fff; cursor:pointer; }
+
+  /* responsive */
+  @media(max-width:720px){
+    .menu-list{ min-width:180px; left:auto; right:0; }
+    .slider{ height:45vw; max-height:260px; }
+    .logo{ font-size:1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header" role="banner">
+  <div class="left-group">
+    <div class="brand">
+      <div>
+        <div class="logo" id="brandLogo">ZaraFix</div>
+        <div class="tagline">All Services - One Place</div>
+      </div>
+
+      <!-- menu next to logo -->
+      <div class="menu-wrap" id="menuWrap">
+        <button class="menu-toggle" id="menuToggle" aria-haspopup="true" aria-expanded="false" aria-controls="menuList">Menu ▾</button>
+        <div class="menu-list" id="menuList" role="menu" aria-hidden="true">
+          <!-- links injected dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-wrap">
+    <img id="userAvatar" alt="user avatar" />
+    <button id="googleLoginBtn" aria-label="Sign in with Google">Google Login</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main" role="main">
+  <div class="hero-box">
+    <div id="imageSlider" class="slider" aria-label="Advertising slider" aria-roledescription="carousel">
+      <div id="sliderPlaceholder" style="padding:28px; color:#555; font-weight:700;">No images yet. Admin can upload slider images.</div>
+    </div>
+
+    <div class="uploader-row">
+      <button id="adminUploadBtn" title="Upload slider images (admin only)">Upload Images (Admin)</button>
+      <div id="uploadNote">Max per image: 5MB</div>
+    </div>
+
+    <div class="marquee-wrap" aria-hidden="false" style="margin-top:12px;">
+      <div class="marquee" id="marqueeText">Welcome to ZaraFix — All Services. Admin can update this announcement text.</div>
+    </div>
+  </div>
+
+  <div class="tiny-footer" style="margin-top:16px;">
+    <button id="f1">Btn1</button>
+    <button id="f2">Btn2</button>
+    <button id="f3">Btn3</button>
+  </div>
+</main>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-}
-
-/* Header */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: white;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.logo {
-  font-size: 3rem;
-  font-weight: bold;
-  background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
-  transform: perspective(500px) rotateX(10deg);
-}
-
-nav {
-  display: flex;
-  gap: 15px;
-}
-
-nav a {
-  text-decoration: none;
-  color: #333;
-  font-weight: bold;
-}
-
-#loginBtn, #logoutBtn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#loginBtn { background: #28a745; color: white; }
-#logoutBtn { background: #dc3545; color: white; }
-
-/* Slider */
-.slider {
-  width: 100%;
-  height: 400px;
-  background: #eaeaea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.slider img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border: none;
-  box-shadow: none;
-  transition: transform 0.5s ease;
-}
-
-/* Admin Controls */
-.admin-controls {
-  text-align: center;
-  margin-top: 10px;
-}
-
-.admin-controls button {
-  padding: 8px 14px;
-  margin: 5px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.upload-btn { background: #28a745; color: white; }
-.delete-btn { background: #dc3545; color: white; }
-</style>
-</head>
-
-<body>
-
-<header>
-  <div style="display:flex; align-items:center; gap:20px;">
-    <div class="logo">ZaraFix</div>
-    <nav>
-      <a href="#">Home</a>
-      <a href="#">Services</a>
-      <a href="#">Contact</a>
-      <a href="#">About</a>
-    </nav>
-  </div>
-  <div>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</header>
-
-<div class="slider" id="imageSlider"></div>
-
-<div class="admin-controls" id="adminControls" style="display:none;">
-  <button class="upload-btn" id="adminUploadBtn">Upload Image</button>
-  <button class="delete-btn" id="adminDeleteBtn">Delete Current Image</button>
-</div>
-
 <script>
-// Firebase config
+/* ============================
+   Firebase config - change if needed
+   ============================ */
 const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+  authDomain: "zara-fix.firebaseapp.com",
+  databaseURL: "https://zara-fix.firebaseio.com",
+  projectId: "zara-fix",
+  storageBucket: "zara-fix.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:0000000000000000"
 };
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
+const db = firebase.database();
 const storage = firebase.storage();
 
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
-let sliderImages = [];
-let currentIndex = 0;
+/* ============================
+   Constants & DOM refs
+   ============================ */
+const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+const menuToggle = document.getElementById('menuToggle');
+const menuList = document.getElementById('menuList');
+const menuWrap = document.getElementById('menuWrap');
+const googleBtn = document.getElementById('googleLoginBtn');
+const userAvatar = document.getElementById('userAvatar');
+const adminUploadBtn = document.getElementById('adminUploadBtn');
+const imageSlider = document.getElementById('imageSlider');
+const sliderPlaceholder = document.getElementById('sliderPlaceholder');
+const marqueeText = document.getElementById('marqueeText');
 
-// Login
-document.getElementById('loginBtn').onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(console.error);
-};
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const SLIDE_INTERVAL = 3500;
 
-// Logout
-document.getElementById('logoutBtn').onclick = () => auth.signOut();
+/* ============================
+   Menu links (default) & render
+   Stored in DB at 'menuLinks'
+   ============================ */
+let menuLinks = [
+  {text:'Home', href:'#'},
+  {text:'Services', href:'#'},
+  {text:'Contact', href:'#'},
+  {text:'About', href:'#'},
+  {text:'Offers', href:'#'},
+  {text:'FAQ', href:'#'},
+  {text:'Gallery', href:'#'},
+  {text:'Help', href:'#'}
+];
 
-// Auth state
-auth.onAuthStateChanged(user => {
-  if (user) {
-    document.getElementById('loginBtn').style.display = "none";
-    document.getElementById('logoutBtn').style.display = "inline-block";
-    if (user.email === adminEmail) {
-      document.getElementById('adminControls').style.display = "block";
-    }
-  } else {
-    document.getElementById('loginBtn').style.display = "inline-block";
-    document.getElementById('logoutBtn').style.display = "none";
-    document.getElementById('adminControls').style.display = "none";
+function renderMenu(){
+  menuList.innerHTML = '';
+  (menuLinks.slice(0,8)).forEach((ln, idx) => {
+    const a = document.createElement('a');
+    a.href = ln.href || '#';
+    a.textContent = ln.text || ('Link '+(idx+1));
+    a.setAttribute('role','menuitem');
+    menuList.appendChild(a);
+  });
+
+  const adminArea = document.createElement('div');
+  adminArea.className = 'menu-actions';
+  adminArea.style.display = 'none';
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit Links';
+  editBtn.style.padding = '6px 8px';
+  editBtn.style.borderRadius = '6px';
+  editBtn.style.border = 'none';
+  editBtn.style.cursor = 'pointer';
+  editBtn.addEventListener('click', editMenuLinks);
+  adminArea.appendChild(editBtn);
+  menuList.appendChild(adminArea);
+}
+
+/* Admin edit via prompt (simple) — kept for quick edits.
+   You can replace with modal UI later for better UX. */
+function editMenuLinks(){
+  for(let i=0;i<8;i++){
+    const cur = menuLinks[i] || {text:'', href:''};
+    const txt = prompt(`Link ${i+1} text:`, cur.text || '');
+    if(txt === null) break;
+    const href = prompt(`Link ${i+1} URL:`, cur.href || '#');
+    if(href === null) break;
+    menuLinks[i] = { text: txt.trim() || ('Link '+(i+1)), href: href.trim() || '#' };
+  }
+  db.ref('menuLinks').set(menuLinks).then(()=> renderMenu());
+}
+
+/* Toggle menu on click (mobile-friendly) */
+menuToggle.addEventListener('click', (e) => {
+  const open = menuList.classList.toggle('show');
+  menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  menuList.setAttribute('aria-hidden', open ? 'false' : 'true');
+});
+document.addEventListener('click', (e) => {
+  if(!menuWrap.contains(e.target)) {
+    menuList.classList.remove('show');
+    menuToggle.setAttribute('aria-expanded','false');
+    menuList.setAttribute('aria-hidden','true');
   }
 });
 
-// Upload
-document.getElementById('adminUploadBtn').onclick = () => {
-  let input = document.createElement('input');
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = async () => {
-    const file = input.files[0];
-    if (!file) return;
-    const storageRef = storage.ref('slider/' + file.name);
-    await storageRef.put(file);
-    loadSliderImages();
+/* ============================
+   Auth: Google Sign-In / Sign-out
+   ============================ */
+googleBtn.addEventListener('click', async () => {
+  try {
+    if(auth.currentUser) {
+      await auth.signOut();
+      alert('Logged out');
+    } else {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    }
+  } catch(err) {
+    console.error('Auth error', err);
+    alert('Authentication error: ' + (err.message || err));
+  }
+});
+
+/* reflect auth state in UI */
+auth.onAuthStateChanged(user => {
+  if(user) {
+    googleBtn.textContent = 'Logout';
+    googleBtn.title = 'Sign out';
+    userAvatar.src = user.photoURL || '';
+    userAvatar.style.display = user.photoURL ? 'inline-block' : 'none';
+    // admin-only controls
+    if((user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()){
+      adminUploadBtn.style.display = 'inline-block';
+      const adminArea = menuList.querySelector('.menu-actions');
+      if(adminArea) adminArea.style.display = 'flex';
+    } else {
+      adminUploadBtn.style.display = 'none';
+      const adminArea = menuList.querySelector('.menu-actions');
+      if(adminArea) adminArea.style.display = 'none';
+    }
+    toggleAdminDeleteButtons();
+  } else {
+    googleBtn.textContent = 'Google Login';
+    googleBtn.title = 'Sign in with Google';
+    userAvatar.style.display = 'none';
+    adminUploadBtn.style.display = 'none';
+    const adminArea = menuList.querySelector('.menu-actions');
+    if(adminArea) adminArea.style.display = 'none';
+    toggleAdminDeleteButtons();
+  }
+});
+
+/* ============================
+   Slider: DB-backed list + upload + delete
+   Structure: DB node 'sliderImages' children: { url, name, timestamp }
+   ============================ */
+let sliderItems = []; // { key, url, name, timestamp }
+let carouselTimer = null;
+let carouselIndex = 0;
+
+async function loadSliderFromDb(){
+  try {
+    const snap = await db.ref('sliderImages').once('value');
+    const val = snap.val();
+    sliderItems = [];
+    if(val){
+      // maintain order by timestamp ascending
+      const arr = Object.keys(val).map(k => ({ key: k, ...val[k] }));
+      arr.sort((a,b)=> (a.timestamp||0) - (b.timestamp||0));
+      sliderItems = arr;
+    }
+    renderSlider();
+  } catch(e) {
+    console.error('loadSliderFromDb error', e);
+  }
+}
+
+function renderSlider(){
+  // clear
+  imageSlider.innerHTML = '';
+  if(!sliderItems || sliderItems.length === 0) {
+    imageSlider.appendChild(sliderPlaceholder);
+    stopCarousel();
+    return;
+  }
+
+  sliderItems.forEach((item, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'slide-wrap' + (idx === 0 ? ' active' : '');
+    wrap.dataset.key = item.key;
+
+    const img = document.createElement('img');
+    img.src = item.url;
+    img.alt = item.name || 'Ad image';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'slide-delete';
+    delBtn.title = 'Delete image';
+    delBtn.innerHTML = '🗑️';
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if(!confirm('Delete this image?')) return;
+      await deleteSliderImage(item.key, item.url);
+    });
+
+    wrap.appendChild(img);
+    wrap.appendChild(delBtn);
+    imageSlider.appendChild(wrap);
+  });
+
+  toggleAdminDeleteButtons();
+  startCarousel();
+}
+
+function startCarousel(){
+  stopCarousel();
+  const slides = imageSlider.querySelectorAll('.slide-wrap');
+  if(slides.length <= 1) return;
+  carouselIndex = 0;
+  carouselTimer = setInterval(()=>{
+    const prev = carouselIndex;
+    carouselIndex = (carouselIndex + 1) % slides.length;
+    slides[prev].classList.remove('active');
+    slides[carouselIndex].classList.add('active');
+  }, SLIDE_INTERVAL);
+}
+function stopCarousel(){
+  if(carouselTimer){ clearInterval(carouselTimer); carouselTimer = null; }
+}
+
+async function deleteSliderImage(key, url){
+  try {
+    // delete storage object (best-effort)
+    try {
+      await storage.refFromURL(url).delete();
+    } catch(e) {
+      console.warn('Storage delete maybe failed:', e.message || e);
+    }
+    // delete db key
+    await db.ref('sliderImages').child(key).remove();
+    alert('Image deleted.');
+  } catch(err) {
+    console.error(err);
+    alert('Delete failed: ' + (err.message || err));
+  }
+}
+
+/* Admin upload flow (multiple files) */
+adminUploadBtn.addEventListener('click', ()=>{
+  const user = auth.currentUser;
+  if(!user || (user.email||'').toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
+    return alert('Only admin can upload images.');
+  }
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.multiple = true;
+  inp.onchange = async () => {
+    const files = Array.from(inp.files || []);
+    if(files.length === 0) return;
+    adminUploadBtn.disabled = true;
+    adminUploadBtn.textContent = 'Uploading...';
+    try {
+      let uploaded = 0;
+      for(const f of files){
+        if(f.size > MAX_IMAGE_SIZE){
+          alert(`"${f.name}" बड़ा है (max 5MB). यह स्किप किया जाएगा.`);
+          continue;
+        }
+        const safeName = f.name.replace(/\s+/g,'_');
+        const keyName = 'slider_' + Date.now() + '_' + Math.floor(Math.random()*10000) + '_' + safeName;
+        const ref = storage.ref('sliderImages/' + keyName);
+        const snap = await ref.put(f);
+        const url = await snap.ref.getDownloadURL();
+        // push to DB
+        const newRef = db.ref('sliderImages').push();
+        await newRef.set({ url, name: f.name, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        uploaded++;
+      }
+      if(uploaded) alert('Uploaded ' + uploaded + ' images.');
+      else alert('No images uploaded.');
+    } catch(err) {
+      console.error('Upload error', err);
+      alert('Upload failed: ' + (err.message || err));
+    } finally {
+      adminUploadBtn.disabled = false;
+      adminUploadBtn.textContent = 'Upload Images (Admin)';
+    }
   };
-  input.click();
-};
+  inp.click();
+});
 
-// Delete
-document.getElementById('adminDeleteBtn').onclick = async () => {
-  if (sliderImages.length === 0) return;
-  const imgUrl = sliderImages[currentIndex];
-  const filePath = decodeURIComponent(imgUrl.split("/o/")[1].split("?")[0]);
-  await storage.ref(filePath).delete();
-  loadSliderImages();
-};
-
-// Load images
-async function loadSliderImages() {
-  sliderImages = [];
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.innerHTML = '';
-  const list = await storage.ref('slider').listAll();
-  for (let item of list.items) {
-    const url = await item.getDownloadURL();
-    sliderImages.push(url);
-  }
-  showImage();
+/* toggle delete buttons for admin */
+function toggleAdminDeleteButtons(){
+  const user = auth.currentUser;
+  const isAdmin = user && ((user.email||'').toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const wraps = imageSlider.querySelectorAll('.slide-wrap');
+  wraps.forEach(w => {
+    if(isAdmin) w.classList.add('admin'); else w.classList.remove('admin');
+  });
 }
 
-function showImage() {
-  if (sliderImages.length === 0) return;
-  const sliderDiv = document.getElementById('imageSlider');
-  sliderDiv.innerHTML = `<img src="${sliderImages[currentIndex]}">`;
-}
-
-setInterval(() => {
-  if (sliderImages.length > 1) {
-    currentIndex = (currentIndex + 1) % sliderImages.length;
-    showImage();
+/* listen for DB changes (real-time) */
+db.ref('sliderImages').on('value', snapshot => {
+  const val = snapshot.val();
+  sliderItems = [];
+  if(val){
+    const arr = Object.keys(val).map(k => ({ key: k, ...val[k] }));
+    arr.sort((a,b)=> (a.timestamp||0) - (b.timestamp||0));
+    sliderItems = arr;
   }
-}, 3000);
+  renderSlider();
+});
 
-loadSliderImages();
+/* marquee text in DB */
+db.ref('marqueeText').on('value', snap => {
+  const v = snap.val();
+  if(v) marqueeText.textContent = v;
+});
+
+/* menuLinks persisted */
+db.ref('menuLinks').on('value', snap => {
+  const v = snap.val();
+  if(Array.isArray(v)) menuLinks = v;
+  else if(v && typeof v === 'object') menuLinks = Object.values(v);
+  renderMenu();
+});
+
+/* initial one-time render */
+renderMenu();
+loadSliderFromDb(); // initial load (also real-time listener is active)
+
+/* tiny footer handlers */
+document.getElementById('f1').addEventListener('click', ()=> alert('Btn1'));
+document.getElementById('f2').addEventListener('click', ()=> alert('Btn2'));
+document.getElementById('f3').addEventListener('click', ()=> alert('Btn3'));
+
+/* close menu with Escape */
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    menuList.classList.remove('show');
+    menuToggle.setAttribute('aria-expanded','false');
+    menuList.setAttribute('aria-hidden','true');
+  }
+});
 </script>
+
 </body>
 </html>
