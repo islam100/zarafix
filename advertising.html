@@ -1,128 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Fix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZaraFix All Service</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
 <style>
-html, body {
-    margin:0; padding:0;
-    height:100%; width:100%;
-    overflow:hidden; /* Lock scroll */
-    font-family: Arial, sans-serif;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #ffffff;
+  overflow: hidden; /* Scroll lock */
 }
+
+/* Header */
 header {
-    background: linear-gradient(to right, #87ceeb, #a0d8ef);
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-header h1 {
-    font-size: 28px;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 2px 2px 5px #000, 3px 3px 8px #ff0;
+
+.logo {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-nav select {
-    padding: 5px;
+
+nav {
+  position: relative;
 }
-#cardContainer {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    width: 90%;
-    max-width: 400px;
-    height: 250px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+.menu {
+  cursor: pointer;
+  font-weight: bold;
 }
-.card {
-    background: black;
-    color: orange;
-    font-size: 24px;
-    text-align: center;
-    border-radius: 15px;
-    padding: 10px;
-    text-shadow: 2px 2px 5px #ff0, 3px 3px 5px #f00;
-    overflow: hidden;
-    white-space: pre-line;
+
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 25px;
+  right: 0;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
-#adminControls {
-    position: fixed;
-    top: 70px;
-    right: 10px;
-    background: #fff;
-    padding: 10px;
-    border-radius: 8px;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
+
+.dropdown a {
+  display: block;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: #333;
 }
-footer {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
+
+.dropdown a:hover {
+  background: #f0f0f0;
 }
-.marquee {
-    background: black;
-    color: yellow;
-    padding: 5px;
-    white-space: nowrap;
-    overflow: hidden;
+
+#loginBtn, #logoutBtn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
-.marquee span {
-    display: inline-block;
-    animation: marquee 10s linear infinite;
+
+#loginBtn { background: #28a745; color: white; }
+#logoutBtn { background: #dc3545; color: white; }
+
+/* Slider */
+.slider {
+  width: 100%;
+  height: calc(100vh - 60px);
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
-@keyframes marquee {
-    from { transform: translateX(100%); }
-    to { transform: translateX(-100%); }
+
+.slider img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.5s ease;
 }
+
+/* Admin Controls */
+.admin-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.admin-controls button {
+  padding: 8px 14px;
+  margin: 5px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.upload-btn { background: #28a745; color: white; }
+.delete-btn { background: #dc3545; color: white; }
 </style>
 </head>
+
 <body>
+
 <header>
-    <h1>Zara Fix</h1>
-    <nav>
-        <select onchange="if(this.value) window.location.href=this.value">
-            <option value="">Links</option>
-            <option value="link1.html">Link 1</option>
-            <option value="link2.html">Link 2</option>
-        </select>
-    </nav>
-    <div>
-        <button id="loginBtn">Login</button>
-        <button id="logoutBtn" style="display:none;">Logout</button>
+  <div class="logo">ZaraFix</div>
+  <nav>
+    <div class="menu" onclick="toggleMenu()">☰ Menu</div>
+    <div class="dropdown" id="dropdownMenu">
+      <a href="#">Home</a>
+      <a href="#">Services</a>
+      <a href="#">Contact</a>
+      <a href="#">About</a>
     </div>
+  </nav>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<div id="cardContainer">
-    <div class="card" id="currentCard">Loading...</div>
+<div class="slider" id="imageSlider"></div>
+
+<div class="admin-controls" id="adminControls" style="display:none;">
+  <button class="upload-btn" id="adminUploadBtn">Upload Image</button>
+  <button class="delete-btn" id="adminDeleteBtn">Delete Current Image</button>
 </div>
 
-<div id="adminControls">
-    <textarea id="cardText" rows="6" maxlength="500" placeholder="Enter card text (max 6 lines)"></textarea>
-    <input type="color" id="textColor" value="#ffa500">
-    <button id="addCardBtn">Add Card</button>
-    <button id="deleteCardBtn">Delete Current Card</button>
-</div>
-
-<footer>
-    <div class="marquee"><span>Scrolling text always visible here...</span></div>
-</footer>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script>
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com", // ✅ Added for DB
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
   projectId: "zara-fix-2e35a",
   storageBucket: "zara-fix-2e35a.appspot.com",
   messagingSenderId: "636550144008",
@@ -131,90 +155,116 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
+const storage = firebase.storage();
+
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+let sliderImages = [];
+let currentIndex = 0;
+
+// Menu toggle
+function toggleMenu() {
+  const menu = document.getElementById('dropdownMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
 
 // Login
 document.getElementById('loginBtn').onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider);
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(console.error);
 };
 
-// Handle redirect login
-firebase.auth().getRedirectResult().then((result) => {
-    if (result.user) console.log("Login success:", result.user.email);
-}).catch(console.error);
-
-// State change
-auth.onAuthStateChanged(user => {
-    if (user) {
-        document.getElementById('loginBtn').style.display = 'none';
-        document.getElementById('logoutBtn').style.display = 'inline-block';
-        db.ref('admins/' + user.uid).once('value').then(snap => {
-            if (snap.exists()) {
-                document.getElementById('adminControls').style.display = 'flex';
-            }
-        });
-    } else {
-        document.getElementById('loginBtn').style.display = 'inline-block';
-        document.getElementById('logoutBtn').style.display = 'none';
-        document.getElementById('adminControls').style.display = 'none';
-    }
-});
-
+// Logout
 document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
-// Cards
-let cards = [];
-let currentIndex = 0;
-const currentCard = document.getElementById('currentCard');
-
-function showCard(index) {
-    if (cards.length > 0) {
-        currentCard.textContent = cards[index].text;
-        currentCard.style.color = cards[index].color;
-    } else {
-        currentCard.textContent = "No cards available";
+// Auth state
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginBtn').style.display = "none";
+    document.getElementById('logoutBtn').style.display = "inline-block";
+    if (user.email === adminEmail) {
+      document.getElementById('adminControls').style.display = "block";
     }
-}
-
-// Load cards from DB
-db.ref('cards').on('value', snap => {
-    cards = [];
-    snap.forEach(child => {
-        cards.push({ id: child.key, ...child.val() });
-    });
-    currentIndex = 0;
-    showCard(currentIndex);
+  } else {
+    document.getElementById('loginBtn').style.display = "inline-block";
+    document.getElementById('logoutBtn').style.display = "none";
+    document.getElementById('adminControls').style.display = "none";
+  }
 });
 
-// Auto slide
+// Upload
+document.getElementById('adminUploadBtn').onclick = () => {
+  let input = document.createElement('input');
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const fileName = Date.now() + "_" + file.name;
+    const storageRef = storage.ref('slider/' + fileName);
+    const uploadTask = storageRef.put(file);
+
+    uploadTask.on('state_changed', 
+      snapshot => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log('Upload progress: ' + progress + '%');
+      },
+      error => console.error('Upload error:', error),
+      async () => {
+        const url = await storageRef.getDownloadURL();
+        const timestamp = Date.now();
+        await db.ref('slider').push({ url, timestamp, fileName });
+        loadSliderImages();
+      }
+    );
+  };
+  input.click();
+};
+
+// Delete
+document.getElementById('adminDeleteBtn').onclick = async () => {
+  if (sliderImages.length === 0) return;
+  const currentImage = sliderImages[currentIndex];
+  try {
+    await storage.ref('slider/' + currentImage.fileName).delete();
+  } catch(e) {
+    console.warn("Storage delete error:", e);
+  }
+  await db.ref('slider/' + currentImage.key).remove();
+  loadSliderImages();
+};
+
+// Load images
+async function loadSliderImages() {
+  const snapshot = await db.ref('slider').once('value');
+  sliderImages = [];
+  snapshot.forEach(child => {
+    sliderImages.push({
+      key: child.key,
+      url: child.val().url,
+      fileName: child.val().fileName || ""
+    });
+  });
+  currentIndex = 0;
+  showImage();
+}
+
+function showImage() {
+  if (sliderImages.length === 0) {
+    document.getElementById('imageSlider').innerHTML = "<p>No images</p>";
+    return;
+  }
+  document.getElementById('imageSlider').innerHTML =
+    `<img src="${sliderImages[currentIndex].url}">`;
+}
+
 setInterval(() => {
-    if (cards.length > 1) {
-        currentIndex = (currentIndex + 1) % cards.length;
-        showCard(currentIndex);
-    }
-}, 4000);
+  if (sliderImages.length > 1) {
+    currentIndex = (currentIndex + 1) % sliderImages.length;
+    showImage();
+  }
+}, 3000);
 
-// Add card
-document.getElementById('addCardBtn').onclick = () => {
-    const text = document.getElementById('cardText').value.trim();
-    const color = document.getElementById('textColor').value;
-    if (text.split("\n").length > 6) {
-        alert("Max 6 lines allowed");
-        return;
-    }
-    if (text) {
-        db.ref('cards').push({ text, color });
-        document.getElementById('cardText').value = '';
-    }
-};
-
-// Delete card
-document.getElementById('deleteCardBtn').onclick = () => {
-    if (cards.length > 0) {
-        const id = cards[currentIndex].id;
-        db.ref('cards/' + id).remove();
-    }
-};
+loadSliderImages();
 </script>
 </body>
 </html>
