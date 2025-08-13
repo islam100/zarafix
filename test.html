@@ -23,29 +23,40 @@ header {
   align-items: center;
 }
 .dropdown {
-  position: relative;
-  display: inline-block;
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 .dropdown select {
-  padding: 5px;
-  font-size: 14px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+#adBoxContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .ad-box {
-  margin: 50px auto;
   padding: 20px;
   background: #fffae6;
   border-radius: 15px;
   text-align: center;
   font-size: 18px;
-  width: 80%;
+  width: 90%;
   max-width: 400px;
   position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 .admin-controls {
   margin-top: 10px;
   display: flex;
   justify-content: center;
   gap: 5px;
+  flex-wrap: wrap;
 }
 #scrollingText {
   background: #333;
@@ -77,9 +88,18 @@ button:hover {
 }
 input[type=text] {
   padding: 5px;
-  width: 200px;
+  width: 160px;
   border-radius: 5px;
   border: 1px solid #aaa;
+}
+@media (max-width:480px){
+  .ad-box {
+    font-size: 16px;
+    padding: 15px;
+  }
+  input[type=text] {
+    width: 120px;
+  }
 }
 </style>
 </head>
@@ -98,7 +118,9 @@ input[type=text] {
 
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
-<div class="ad-box" id="adBox">Loading Ads...</div>
+<div id="adBoxContainer">
+  <div class="ad-box" id="adBox">Loading Ads...</div>
+</div>
 
 <div class="admin-controls" id="adminControls" style="display:none;">
   <input type="text" id="adminInputBox" placeholder="Enter new ad text">
@@ -146,8 +168,9 @@ function loadAds(){
     const data = snapshot.val();
     adTexts = data ? Object.values(data).map(item=>item.text) : [];
     if(adTexts.length>0){
-      adBox.innerText = adTexts[0];
-      currentIndex = 0;
+      adBox.innerText = adTexts[currentIndex] || adTexts[0];
+    } else {
+      adBox.innerText = "No Ads Available";
     }
   });
 }
@@ -172,6 +195,7 @@ function scrollText(){
   requestAnimationFrame(scrollText);
 }
 scrollText();
+window.addEventListener('resize', ()=>{ scrollPos = scrollingText.offsetWidth; });
 
 // Admin auth check
 auth.onAuthStateChanged(user=>{
@@ -203,6 +227,7 @@ adminDeleteBtn.addEventListener('click', ()=>{
         db.ref('advertising/'+keyToDelete).remove();
         adTexts.splice(currentIndex,1);
         currentIndex = 0;
+        adBox.innerText = adTexts[0] || "No Ads Available";
       }
     });
   }
@@ -219,6 +244,7 @@ adminEditBtn.addEventListener('click', ()=>{
         if(keyToEdit){
           db.ref('advertising/'+keyToEdit).update({text:newText});
           adTexts[currentIndex] = newText;
+          adBox.innerText = newText;
           adminInput.value='';
         }
       });
