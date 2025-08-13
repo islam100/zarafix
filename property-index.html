@@ -240,8 +240,8 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const adminWhatsAppNumber = "919876543210"; // यहाँ अपना admin का WhatsApp नंबर डालें
+  const adminEmail = "zarasamajiksevasanstha@gmail.com"; // admin email
+  const adminWhatsAppNumber = "919876543210"; // admin WhatsApp number, अपनी सही नंबर डालें
 
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -369,24 +369,27 @@
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक बनाएँ (admin को poster का नंबर दिखे, बाकी को admin नंबर)
+  // WhatsApp लिंक बनाएँ (Admin को पोस्टर का नंबर दिखाना, बाकी को admin नंबर)
   function whatsappLink(post) {
-    let phone = adminWhatsAppNumber; // Default: admin number for normal users
+    let phone;
     if(isAdmin){
-      phone = post.whatsapp || adminWhatsAppNumber; // Admin को पोस्टर का नंबर दिखाएं
+      phone = post.whatsapp || adminWhatsAppNumber;
+    } else {
+      phone = adminWhatsAppNumber;
     }
+
     const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
-  // प्रॉपर्टी को डिलीट करें (admin या पोस्टर के लिए)
+  // प्रॉपर्टी डिलीट करें (admin या पोस्टर के लिए)
   function deleteProperty(key){
     if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
       db.ref('properties/'+key).remove();
     }
   }
 
-  // प्रॉपर्टी को approve करें (केवल admin)
+  // प्रॉपर्टी approve करें (केवल admin)
   function approveProperty(key){
     db.ref('properties/'+key).update({approved:true});
   }
@@ -429,7 +432,7 @@
       const btnGroup = document.createElement('div');
       btnGroup.className = "btn-group";
 
-      // WhatsApp बटन (admin को poster का नंबर दिखे, बाकी को admin नंबर)
+      // WhatsApp बटन (सभी के लिए)
       const waBtn = document.createElement('a');
       waBtn.href = whatsappLink(post);
       waBtn.target = "_blank";
@@ -443,7 +446,7 @@
         delBtn.textContent = "Delete";
         delBtn.className = "btn-small btn-delete";
         delBtn.onclick = (e) => {
-          e.stopPropagation(); // कार्ड क्लिक ना हो
+          e.stopPropagation();
           deleteProperty(key);
         };
         btnGroup.appendChild(delBtn);
@@ -476,82 +479,4 @@
       };
 
       propertyList.appendChild(div);
-    });
-  }
-
-  // Modal बंद करें
-  modalClose.onclick = () => {
-    modalOverlay.style.display = "none";
-  };
-  modalOverlay.onclick = e => {
-    if(e.target === modalOverlay) modalOverlay.style.display = "none";
-  };
-
-  // Firebase से डेटा लोड करें
-  function loadProperties(){
-    db.ref('properties').on('value', snapshot => {
-      let allPosts = [];
-      snapshot.forEach(child => {
-        allPosts.push({key: child.key, post: child.val()});
-      });
-      filterAndRender(allPosts);
-    });
-  }
-
-  // Search और Filter के हिसाब से लिस्ट दिखाएं
-  function filterAndRender(allPosts){
-    const searchTerm = searchInput.value.toLowerCase();
-    const filterVal = filterType.value;
-
-    // approved = true को फ़िल्टर करें, admin के लिए सब दिखाएं
-    let postsToShow = allPosts.filter(({post}) => {
-      if(isAdmin) return true; // admin को सब दिखेगा
-      return post.approved === true;
-    });
-
-    if(searchTerm){
-      postsToShow = postsToShow.filter(({post}) => {
-        return post.title.toLowerCase().includes(searchTerm) || post.city.toLowerCase().includes(searchTerm);
-      });
-    }
-
-    if(filterVal){
-      postsToShow = postsToShow.filter(({post}) => post.type === filterVal);
-    }
-
-    // नयी लिस्ट दिखाएँ
-    renderProperties(postsToShow);
-  }
-
-  // Event: Search बटन
-  searchBtn.onclick = () => {
-    db.ref('properties').once('value').then(snapshot => {
-      let allPosts = [];
-      snapshot.forEach(child => {
-        allPosts.push({key: child.key, post: child.val()});
-      });
-      filterAndRender(allPosts);
-    });
-  };
-
-  // Auth state changed
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      postBtn.style.display = 'inline-block';
-      isAdmin = user.email === adminEmail;
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      postBtn.style.display = 'none';
-      uploadSection.style.display = 'none';
-      isAdmin = false;
-    }
-    loadProperties();
-  });
-
-</script>
-</body>
-</html>
+   
