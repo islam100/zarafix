@@ -27,8 +27,8 @@ header{
   flex-shrink:0;
 }
 .logo{
-  font-size:24px;
-  font-weight:bold;
+  font-size:28px;
+  font-weight:bold; /* Bold logo */
   text-transform:uppercase;
   background: linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff);
   -webkit-background-clip: text;
@@ -150,14 +150,6 @@ footer button{
 }
 footer button:hover{background:#777;}
 
-/* Animations */
-@keyframes fadeAnim{0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}}
-@keyframes slideLeftAnim{0%{transform:translateX(100%);}100%{transform:translateX(0);}}
-@keyframes slideRightAnim{0%{transform:translateX(-100%);}100%{transform:translateX(0);}}
-@keyframes bounceAnim{0%,100%{transform:translateY(0);}50%{transform:translateY(-20px);}}
-@keyframes blinkAnim{0%,50%,100%{opacity:1;}25%,75%{opacity:0;}}
-@keyframes rainbowAnim{0%{background-position:0%;}100%{background-position:200%;}}
-
 @media(max-width:480px){
   #adBox{width:90%; font-size:16px;}
   .admin-controls input[type=text]{width:120px;}
@@ -184,7 +176,6 @@ footer button:hover{background:#777;}
 
 <div id="adBox">Loading Ads...</div>
 
-<!-- Admin Controls: text add/edit/delete -->
 <div class="admin-controls" id="adminControls" style="display:none;">
   <input type="text" id="adminInputBox" placeholder="Enter new ad text">
   <button id="adminAddBtn">Add</button>
@@ -192,7 +183,6 @@ footer button:hover{background:#777;}
   <button id="adminDeleteBtn">Delete</button>
 </div>
 
-<!-- Admin Style Controls: color, style, animation -->
 <div class="admin-style-controls" id="adminStyleControls" style="display:none;">
   <input type="color" id="adColorPicker" title="Pick Text Color">
   <select id="adStyle">
@@ -213,9 +203,7 @@ footer button:hover{background:#777;}
   </select>
 </div>
 
-<!-- Header Dropdown Links Controls -->
 <div id="headerLinkControls" style="display:none;">
-  <!-- 8 Options -->
   <input type="text" placeholder="Option 1 Text" id="opt1Text">
   <input type="text" placeholder="Option 1 URL" id="opt1URL">
   <input type="text" placeholder="Option 2 Text" id="opt2Text">
@@ -235,7 +223,6 @@ footer button:hover{background:#777;}
   <button id="updateDropdown">Update Dropdown</button>
 </div>
 
-<!-- Footer Buttons Links Controls -->
 <div id="footerLinkControls" style="display:none;">
   <input type="text" placeholder="About URL" id="aboutURL">
   <input type="text" placeholder="Contact URL" id="contactURL">
@@ -252,4 +239,77 @@ footer button:hover{background:#777;}
 </footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+const adBox=document.getElementById('adBox');
+const adminControls=document.getElementById('adminControls');
+const adminStyleControls=document.getElementById('adminStyleControls');
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const scrollingText=document.getElementById('scrollingText');
+const adInput=document.getElementById('adminInputBox');
+
+let adTexts=[],currentIndex=0;
+
+// Load Ads
+function loadAds(){
+  db.ref('advertising').on('value',snapshot=>{
+    const data=snapshot.val();
+    adTexts=data?Object.values(data).map(item=>item.text):[];
+    if(adTexts.length>0){adBox.innerText=adTexts[0];currentIndex=0;}
+  });
+}
+loadAds();
+
+// Auto slide
+setInterval(()=>{
+  if(adTexts.length>0){currentIndex=(currentIndex+1)%adTexts.length;adBox.innerText=adTexts[currentIndex];}
+},3000);
+
+// Scrolling text
+let scrollPos=scrollingText.offsetWidth;
+function scrollText(){scrollPos--; if(scrollPos<-scrollingText.scrollWidth) scrollPos=window.innerWidth; scrollingText.style.transform=`translateX(${scrollPos}px)`; requestAnimationFrame(scrollText);}
+scrollText();
+
+// Login/Logout
+loginBtn.addEventListener('click',()=>{auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());});
+logoutBtn.addEventListener('click',()=>{auth.signOut();});
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBtn.style.display='none';
+    logoutBtn.style.display='inline-block';
+    db.ref('admins/'+user.uid).once('value').then(snap=>{
+      if(snap.exists()){
+        adminControls.style.display='flex';
+        adminStyleControls.style.display='flex';
+        document.getElementById('headerLinkControls').style.display='flex';
+        document.getElementById('footerLinkControls').style.display='flex';
+      }
+    });
+  }else{
+    loginBtn.style.display='inline-block';
+    logoutBtn.style.display='none';
+    adminControls.style.display='none';
+    adminStyleControls.style.display='none';
+    document.getElementById('headerLinkControls').style.display='none';
+    document.getElementById('footerLinkControls').style.display='none';
+  }
+});
+
+// Admin Buttons
+document
