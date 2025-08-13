@@ -1,270 +1,305 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ZaraFix All Service</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZaraFix — ImgBB Slider</title>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK (Auth + Realtime DB) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #ffffff;
-  overflow: hidden; /* Scroll lock */
-}
+  /* Lock scroll */
+  html, body { margin:0; padding:0; overflow:hidden; height:100%; font-family: Arial, sans-serif; }
 
-/* Header */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: white;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+  /* Header */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.1);
+  }
+  .logo {
+    font-size:3.2rem; font-weight:900;
+    background:linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:2px 2px 6px rgba(0,0,0,.25);
+  }
 
-.logo {
-  font-size: 3rem;
-  font-weight: 900;
-  background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+  /* Dropdown Menu */
+  nav { position:relative; }
+  .menu-btn {
+    background:#333; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:bold;
+  }
+  .menu-content {
+    position:absolute; right:0; top:115%;
+    background:#fff; min-width:160px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    display:none; overflow:hidden;
+  }
+  .menu-content a {
+    display:block; padding:10px 14px; color:#333; text-decoration:none;
+  }
+  .menu-content a:hover { background:#f3f3f3; }
+  .menu-open .menu-content { display:block; }
 
-nav {
-  position: relative;
-}
+  /* Auth buttons */
+  #loginBtn,#logoutBtn,#adminUploadBtn {
+    padding:7px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:600;
+  }
+  #loginBtn { background:#28a745; color:#fff; }
+  #logoutBtn { background:#dc3545; color:#fff; }
+  #adminUploadBtn { background:#0d6efd; color:#fff; }
 
-.menu {
-  cursor: pointer;
-  font-weight: bold;
-}
+  /* Slider */
+  .slider {
+    position:relative; width:100%; height:calc(100vh - 68px);
+    background:linear-gradient(135deg,#a8edea,#fed6e3);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .slider img {
+    max-width:92%; max-height:92%; object-fit:contain; border:none; box-shadow:none;
+    transition:transform .5s ease;
+  }
 
-.dropdown {
-  display: none;
-  position: absolute;
-  top: 25px;
-  right: 0;
-  background: white;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
+  /* Controls on slider */
+  .controls {
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    display:flex; gap:10px; align-items:center; justify-content:center;
+  }
+  .btn {
+    padding:8px 14px; border:none; border-radius:8px; font-weight:700; cursor:pointer;
+    background:rgba(0,0,0,.65); color:#fff; backdrop-filter: blur(4px);
+  }
+  .btn:hover { background:rgba(0,0,0,.8); }
 
-.dropdown a {
-  display: block;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: #333;
-}
+  .delete-btn { background:#dc3545; }
+  .delete-btn:hover { background:#b52b38; }
 
-.dropdown a:hover {
-  background: #f0f0f0;
-}
-
-#loginBtn, #logoutBtn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#loginBtn { background: #28a745; color: white; }
-#logoutBtn { background: #dc3545; color: white; }
-
-/* Slider */
-.slider {
-  width: 100%;
-  height: calc(100vh - 60px);
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.slider img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  transition: transform 0.5s ease;
-}
-
-/* Admin Controls */
-.admin-controls {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.admin-controls button {
-  padding: 8px 14px;
-  margin: 5px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.upload-btn { background: #28a745; color: white; }
-.delete-btn { background: #dc3545; color: white; }
+  /* Progress / toast */
+  #toast {
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.9); color:#111; padding:8px 14px; border-radius:999px; font-weight:700; display:none;
+    box-shadow:0 4px 20px rgba(0,0,0,.15);
+  }
 </style>
 </head>
-
 <body>
 
 <header>
   <div class="logo">ZaraFix</div>
-  <nav>
-    <div class="menu" onclick="toggleMenu()">☰ Menu</div>
-    <div class="dropdown" id="dropdownMenu">
+
+  <nav id="nav">
+    <button class="menu-btn" onclick="toggleMenu()">Menu ▾</button>
+    <div class="menu-content">
       <a href="#">Home</a>
       <a href="#">Services</a>
       <a href="#">Contact</a>
       <a href="#">About</a>
     </div>
   </nav>
+
   <div>
-    <button id="loginBtn">Login with Google</button>
+    <button id="loginBtn">Login (Google)</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="adminUploadBtn" style="display:none;">Upload Image</button>
   </div>
 </header>
 
-<div class="slider" id="imageSlider"></div>
-
-<div class="admin-controls" id="adminControls" style="display:none;">
-  <button class="upload-btn" id="adminUploadBtn">Upload Image</button>
-  <button class="delete-btn" id="adminDeleteBtn">Delete Current Image</button>
+<div class="slider" id="slider">
+  <div id="toast"></div>
+  <!-- current image will be injected here -->
+  <div class="controls" id="adminControls" style="display:none;">
+    <button class="btn" id="prevBtn">⟵ Prev</button>
+    <button class="btn" id="nextBtn">Next ⟶</button>
+    <button class="btn delete-btn" id="deleteBtn">Delete</button>
+  </div>
 </div>
 
 <script>
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const storage = firebase.storage();
+  /* ====== CONFIG ====== */
+  const IMGBB_API_KEY = "5128d0b0687e9718139752bca8a4ec59"; // your provided key
+  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
 
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
-let sliderImages = [];
-let currentIndex = 0;
-
-// Menu toggle
-function toggleMenu() {
-  const menu = document.getElementById('dropdownMenu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-}
-
-// Login
-document.getElementById('loginBtn').onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(console.error);
-};
-
-// Logout
-document.getElementById('logoutBtn').onclick = () => auth.signOut();
-
-// Auth state
-auth.onAuthStateChanged(user => {
-  if (user) {
-    document.getElementById('loginBtn').style.display = "none";
-    document.getElementById('logoutBtn').style.display = "inline-block";
-    if (user.email === adminEmail) {
-      document.getElementById('adminControls').style.display = "block";
-    }
-  } else {
-    document.getElementById('loginBtn').style.display = "inline-block";
-    document.getElementById('logoutBtn').style.display = "none";
-    document.getElementById('adminControls').style.display = "none";
-  }
-});
-
-// Upload
-document.getElementById('adminUploadBtn').onclick = () => {
-  let input = document.createElement('input');
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = async () => {
-    const file = input.files[0];
-    if (!file) return;
-    const fileName = Date.now() + "_" + file.name;
-    const storageRef = storage.ref('slider/' + fileName);
-    const uploadTask = storageRef.put(file);
-
-    uploadTask.on('state_changed', 
-      snapshot => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        console.log('Upload progress: ' + progress + '%');
-      },
-      error => console.error('Upload error:', error),
-      async () => {
-        const url = await storageRef.getDownloadURL();
-        const timestamp = Date.now();
-        await db.ref('slider').push({ url, timestamp, fileName });
-        loadSliderImages();
-      }
-    );
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com", // not used anymore for images
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
   };
-  input.click();
-};
 
-// Delete
-document.getElementById('adminDeleteBtn').onclick = async () => {
-  if (sliderImages.length === 0) return;
-  const currentImage = sliderImages[currentIndex];
-  try {
-    await storage.ref('slider/' + currentImage.fileName).delete();
-  } catch(e) {
-    console.warn("Storage delete error:", e);
+  /* ====== INIT ====== */
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.database();
+
+  /* ====== STATE ====== */
+  let user = null;
+  let slides = []; // { key, url, delete_url, timestamp }
+  let idx = 0;
+
+  /* ====== UI HELPERS ====== */
+  function toggleMenu(){
+    document.getElementById('nav').classList.toggle('menu-open');
   }
-  await db.ref('slider/' + currentImage.key).remove();
-  loadSliderImages();
-};
+  function toast(msg, ms=1600){
+    const t = document.getElementById('toast');
+    t.innerText = msg; t.style.display = 'block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> t.style.display='none', ms);
+  }
+  function showImage(){
+    const wrap = document.getElementById('slider');
+    // remove old <img>
+    Array.from(wrap.querySelectorAll('img')).forEach(n => n.remove());
+    if(!slides.length){ return; }
+    const img = document.createElement('img');
+    img.src = slides[idx].url; // show image, not URL text
+    img.alt = "slide";
+    wrap.appendChild(img);
+  }
 
-// Load images
-async function loadSliderImages() {
-  const snapshot = await db.ref('slider').once('value');
-  sliderImages = [];
-  snapshot.forEach(child => {
-    sliderImages.push({
-      key: child.key,
-      url: child.val().url,
-      fileName: child.val().fileName || ""
-    });
+  /* ====== AUTH ====== */
+  document.getElementById('loginBtn').onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => toast("Login error"));
+  };
+  document.getElementById('logoutBtn').onclick = () => auth.signOut();
+
+  auth.onAuthStateChanged(u => {
+    user = u || null;
+    const isAdmin = !!(user && user.email === ADMIN_EMAIL);
+
+    document.getElementById('loginBtn').style.display  = user ? 'none' : 'inline-block';
+    document.getElementById('logoutBtn').style.display = user ? 'inline-block' : 'none';
+    document.getElementById('adminUploadBtn').style.display = isAdmin ? 'inline-block' : 'none';
+    document.getElementById('adminControls').style.display  = isAdmin ? 'flex' : 'none';
   });
-  currentIndex = 0;
-  showImage();
-}
 
-function showImage() {
-  if (sliderImages.length === 0) {
-    document.getElementById('imageSlider').innerHTML = "<p>No images</p>";
-    return;
-  }
-  document.getElementById('imageSlider').innerHTML =
-    `<img src="${sliderImages[currentIndex].url}">`;
-}
-
-setInterval(() => {
-  if (sliderImages.length > 1) {
-    currentIndex = (currentIndex + 1) % sliderImages.length;
+  /* ====== DB: LOAD & WATCH SLIDER ====== */
+  async function loadSlidesOnce(){
+    const snap = await db.ref('slider').orderByChild('timestamp').once('value');
+    slides = [];
+    snap.forEach(ch => {
+      const v = ch.val();
+      slides.push({ key: ch.key, url: v.url, delete_url: v.delete_url || "", timestamp: v.timestamp || 0 });
+    });
+    // latest first (optional)
+    slides.sort((a,b)=> b.timestamp - a.timestamp);
+    idx = 0;
     showImage();
   }
-}, 3000);
 
-loadSliderImages();
+  // live updates (optional; comment if not needed)
+  db.ref('slider').on('value', snap => {
+    const arr = [];
+    snap.forEach(ch => {
+      const v = ch.val();
+      arr.push({ key: ch.key, url: v.url, delete_url: v.delete_url || "", timestamp: v.timestamp || 0 });
+    });
+    arr.sort((a,b)=> b.timestamp - a.timestamp);
+    slides = arr;
+    if(idx >= slides.length) idx = 0;
+    showImage();
+  });
+
+  /* ====== CONTROLS ====== */
+  document.getElementById('prevBtn').onclick = () => {
+    if(!slides.length) return;
+    idx = (idx - 1 + slides.length) % slides.length;
+    showImage();
+  };
+  document.getElementById('nextBtn').onclick = () => {
+    if(!slides.length) return;
+    idx = (idx + 1) % slides.length;
+    showImage();
+  };
+
+  // auto-play every 3s
+  setInterval(()=> {
+    if(slides.length > 1) {
+      idx = (idx + 1) % slides.length;
+      showImage();
+    }
+  }, 3000);
+
+  /* ====== UPLOAD via ImgBB ====== */
+  document.getElementById('adminUploadBtn').onclick = () => {
+    // only admin
+    if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
+
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if(!file) return;
+
+      const form = new FormData();
+      form.append('image', file);
+
+      toast("Uploading...");
+      try {
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: form
+        });
+        const data = await res.json();
+
+        if(data && data.success) {
+          // we store the display URL and the delete URL in Realtime DB
+          const url = data.data && (data.data.url || data.data.display_url);
+          const delete_url = data.data && data.data.delete_url ? data.data.delete_url : "";
+          const timestamp = Date.now();
+
+          if(url){
+            const ref = db.ref('slider').push();
+            await ref.set({ url, delete_url, timestamp });
+            toast("Uploaded ✅");
+          } else {
+            toast("Upload ok, but no URL"); 
+          }
+        } else {
+          const msg = (data && data.error && data.error.message) ? data.error.message : "Upload failed";
+          toast("Error: " + msg);
+        }
+      } catch (e) {
+        console.error(e);
+        toast("Network error");
+      }
+    };
+    input.click();
+  };
+
+  /* ====== DELETE from ImgBB + DB ====== */
+  document.getElementById('deleteBtn').onclick = async () => {
+    if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
+    if(!slides.length){ toast("No images"); return; }
+
+    const current = slides[idx];
+    toast("Deleting...");
+
+    try {
+      // 1) Delete at ImgBB (delete_url is a one-time link provided by ImgBB)
+      if(current.delete_url){
+        // Some browsers may restrict CORS; ImgBB delete_url typically supports GET
+        await fetch(current.delete_url, { method: 'GET' });
+      }
+      // 2) Remove from Realtime Database
+      await db.ref('slider/' + current.key).remove();
+
+      toast("Deleted ✅");
+      // Local refresh handled by 'on value' listener; but adjust index to avoid skipping
+      idx = 0;
+    } catch (e) {
+      console.error(e);
+      toast("Delete failed");
+    }
+  };
+
+  /* ====== START ====== */
+  loadSlidesOnce();
 </script>
 </body>
 </html>
