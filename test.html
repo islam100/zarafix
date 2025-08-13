@@ -42,11 +42,11 @@ header .controls{
   align-items:center;
 }
 header button, .dropdown select{
-  padding:6px 12px;
+  padding:6px 10px;
   border:none;
   border-radius:5px;
   cursor:pointer;
-  font-size:14px;
+  font-size:13px;
 }
 header button{background:#555;color:white;}
 header button:hover{background:#777;}
@@ -91,7 +91,6 @@ header button:hover{background:#777;}
   left:50%;
   transform:translateX(-50%);
   background:#333;
-  color:#fff;
   padding:5px 10px;
   border-radius:5px 5px 0 0;
   width:90%;
@@ -99,6 +98,18 @@ header button:hover{background:#777;}
   white-space:nowrap;
   overflow:hidden;
   text-align:center;
+  font-weight:bold;
+  font-size:16px;
+  /* colorful gradient text */
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow 5s linear infinite;
+}
+
+@keyframes rainbow{
+  0%{background-position:0%;}
+  100%{background-position:200%;}
 }
 
 footer{
@@ -107,18 +118,19 @@ footer{
   left:50%;
   transform:translateX(-50%);
   display:flex;
-  gap:10px;
+  gap:5px;
   background:#333;
-  padding:5px 10px;
+  padding:3px 5px;
   border-radius:5px;
 }
 footer button{
-  padding:6px 12px;
+  padding:4px 8px;
   border:none;
   border-radius:5px;
   background:#555;
   color:white;
   cursor:pointer;
+  font-size:12px;
 }
 footer button:hover{background:#777;}
 
@@ -143,6 +155,7 @@ footer button:hover{background:#777;}
       </select>
     </div>
     <button id="loginBtn">Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
 
@@ -188,13 +201,23 @@ const adminAddBtn=document.getElementById('adminAddBtn');
 const adminEditBtn=document.getElementById('adminEditBtn');
 const adminDeleteBtn=document.getElementById('adminDeleteBtn');
 const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
 
 loginBtn.addEventListener('click',()=>{
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-  .then(()=>{loginBtn.style.display='none';})
+  .then(()=>{loginBtn.style.display='none'; logoutBtn.style.display='inline-block';})
   .catch(err=>{alert('Login failed: '+err.message);});
 });
 
+logoutBtn.addEventListener('click',()=>{
+  auth.signOut().then(()=>{
+    loginBtn.style.display='inline-block';
+    logoutBtn.style.display='none';
+    adminControls.style.display='none';
+  });
+});
+
+// Load Ads
 function loadAds(){
   db.ref('advertising').on('value', snapshot=>{
     const data=snapshot.val();
@@ -228,7 +251,7 @@ window.addEventListener('resize',()=>{scrollPos=scrollingText.offsetWidth;});
 auth.onAuthStateChanged(user=>{
   if(user){
     db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){ adminControls.style.display='flex'; loginBtn.style.display='none'; }
+      if(snap.exists()){ adminControls.style.display='flex'; loginBtn.style.display='none'; logoutBtn.style.display='inline-block'; }
     });
   }
 });
@@ -264,6 +287,5 @@ adminEditBtn.addEventListener('click', ()=>{
   }
 });
 </script>
-
 </body>
 </html>
