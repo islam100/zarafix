@@ -10,7 +10,7 @@ body{
   font-family: Arial,sans-serif;
   height:100vh;
   width:100vw;
-  overflow:hidden; /* Lock screen scroll */
+  overflow:hidden; /* Lock scroll */
   background:#f8f8f8;
   display:flex;
   flex-direction:column;
@@ -24,7 +24,6 @@ header{
   justify-content:space-between;
   align-items:center;
   padding:10px 15px;
-  flex-shrink:0;
 }
 .logo{
   font-size:32px;
@@ -41,7 +40,7 @@ header .controls{
   gap:10px;
   align-items:center;
 }
-header button, .dropdown select{
+header select, header button{
   padding:6px 10px;
   border:none;
   border-radius:5px;
@@ -50,7 +49,7 @@ header button, .dropdown select{
 }
 header button{background:#555;color:white;}
 header button:hover{background:#777;}
-.dropdown select{background:white;color:#333;}
+header select{background:white;color:#333;}
 
 #adBox{
   position:fixed;
@@ -69,25 +68,27 @@ header button:hover{background:#777;}
   z-index:100;
 }
 
-.admin-controls{
+#adminPanel{
   position:fixed;
-  top:60%;
+  top:65%;
   left:50%;
   transform:translateX(-50%);
   display:flex;
+  flex-direction:column;
   gap:5px;
-  flex-wrap:wrap;
+  background:rgba(255,255,255,0.95);
+  padding:10px;
+  border-radius:10px;
+  max-width:90%;
+  width:350px;
 }
 
-.admin-style-controls{
-  position:fixed;
-  top:70%;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:5px;
-  flex-wrap:wrap;
-  justify-content:center;
+#adminPanel input, #adminPanel select, #adminPanel button{
+  padding:5px;
+  margin:2px 0;
+  border-radius:5px;
+  border:1px solid #aaa;
+  font-size:14px;
 }
 
 #scrollingText{
@@ -115,9 +116,6 @@ footer{
   transform:translateX(-50%);
   display:flex;
   gap:5px;
-  background:#333;
-  padding:3px 5px;
-  border-radius:5px;
 }
 footer button{
   padding:4px 8px;
@@ -132,8 +130,7 @@ footer button:hover{background:#777;}
 
 @media(max-width:480px){
   #adBox{width:90%; font-size:14px; padding:15px;}
-  .admin-controls input[type=text]{width:120px;}
-  .admin-style-controls select, .admin-style-controls input[type=color]{width:100px;}
+  #adminPanel{width:90%;}
   footer{bottom:30px;}
 }
 </style>
@@ -143,11 +140,9 @@ footer button:hover{background:#777;}
 <header>
   <div class="logo">Zara Fix</div>
   <div class="controls">
-    <div class="dropdown">
-      <select id="categoryDropdown">
-        <option value="#">Select Option</option>
-      </select>
-    </div>
+    <select id="categoryDropdown">
+      <option value="#">Select Option</option>
+    </select>
     <button id="loginBtn">Login</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
@@ -155,20 +150,17 @@ footer button:hover{background:#777;}
 
 <div id="adBox">Loading Ads...</div>
 
-<div class="admin-controls" id="adminControls" style="display:none;">
-  <input type="text" id="adminInputBox" placeholder="Enter new ad text">
-  <button id="adminAddBtn">Add</button>
-  <button id="adminEditBtn">Edit</button>
-  <button id="adminDeleteBtn">Delete</button>
-</div>
-
-<div class="admin-style-controls" id="adminStyleControls" style="display:none;">
+<div id="adminPanel" style="display:none;">
+  <input type="text" id="adTextInput" placeholder="Enter Ad Text">
+  <button id="addAdBtn">Add</button>
+  <button id="editAdBtn">Edit</button>
+  <button id="deleteAdBtn">Delete</button>
   <input type="color" id="adColorPicker" title="Pick Text Color">
   <select id="adStyle">
     <option value="normal">Normal</option>
     <option value="bold">Bold</option>
     <option value="italic">Italic</option>
-    <option value="gradient">Gradient Rainbow</option>
+    <option value="gradient">Gradient</option>
     <option value="shadow">Shadow</option>
   </select>
   <select id="adAnimation">
@@ -185,9 +177,9 @@ footer button:hover{background:#777;}
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <footer>
-  <button id="aboutBtn">About</button>
-  <button id="contactBtn">Contact</button>
-  <button id="privacyBtn">Privacy Policy</button>
+  <button>About</button>
+  <button>Contact</button>
+  <button>Privacy Policy</button>
 </footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -208,23 +200,23 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// Elements
 const adBox=document.getElementById('adBox');
-const adminControls=document.getElementById('adminControls');
-const adminStyleControls=document.getElementById('adminStyleControls');
+const adminPanel=document.getElementById('adminPanel');
 const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
-const scrollingText=document.getElementById('scrollingText');
-const adInput=document.getElementById('adminInputBox');
+const adInput=document.getElementById('adTextInput');
 const categoryDropdown=document.getElementById('categoryDropdown');
+const scrollingText=document.getElementById('scrollingText');
 
 let adTexts=[],currentIndex=0;
 
 // Load Ads
 function loadAds(){
-  db.ref('advertising').on('value',snapshot=>{
+  db.ref('ads').on('value', snapshot=>{
     const data=snapshot.val();
     adTexts=data?Object.values(data).map(item=>item.text):[];
-    if(adTexts.length>0){adBox.innerText=adTexts[0];currentIndex=0;}
+    if(adTexts.length>0){adBox.innerText=adTexts[0]; currentIndex=0;}
   });
 }
 loadAds();
@@ -247,14 +239,14 @@ function scrollText(){
 }
 scrollText();
 
-// Login/Logout with Popup
-loginBtn.addEventListener('click',()=>{
+// Login/Logout
+loginBtn.addEventListener('click', ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).then(res=>{
-    console.log('Login successful:',res.user.displayName);
-  }).catch(err=>console.error(err));
+    console.log('Login Success:',res.user.displayName);
+  }).catch(console.error);
 });
-logoutBtn.addEventListener('click',()=>{auth.signOut();});
+logoutBtn.addEventListener('click', ()=>{auth.signOut();});
 
 // Auth state
 auth.onAuthStateChanged(user=>{
@@ -262,44 +254,38 @@ auth.onAuthStateChanged(user=>{
     loginBtn.style.display='none';
     logoutBtn.style.display='inline-block';
     db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){
-        adminControls.style.display='flex';
-        adminStyleControls.style.display='flex';
-      }
+      if(snap.exists()){ adminPanel.style.display='flex'; }
     });
   } else {
     loginBtn.style.display='inline-block';
     logoutBtn.style.display='none';
-    adminControls.style.display='none';
-    adminStyleControls.style.display='none';
+    adminPanel.style.display='none';
   }
 });
 
 // Admin buttons
-document.getElementById('adminAddBtn').addEventListener('click',()=>{
+document.getElementById('addAdBtn').addEventListener('click', ()=>{
   const text=adInput.value.trim();
-  if(text){db.ref('advertising').push({text:text}); adInput.value='';}
+  if(text){db.ref('ads').push({text:text}); adInput.value='';}
 });
-document.getElementById('adminDeleteBtn').addEventListener('click',()=>{
+document.getElementById('deleteAdBtn').addEventListener('click', ()=>{
   if(adTexts.length>0){
-    db.ref('advertising').once('value').then(snapshot=>{
+    db.ref('ads').once('value').then(snapshot=>{
       const data=snapshot.val();
       const keys=Object.keys(data);
-      const currentText=adTexts[currentIndex];
-      const keyToDelete=keys.find(k=>data[k].text===currentText);
-      if(keyToDelete){db.ref('advertising/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0;}
+      const keyToDelete=keys.find(k=>data[k].text===adTexts[currentIndex]);
+      if(keyToDelete){db.ref('ads/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0;}
     });
   }
 });
-document.getElementById('adminEditBtn').addEventListener('click',()=>{
+document.getElementById('editAdBtn').addEventListener('click', ()=>{
   const newText=adInput.value.trim();
   if(newText && adTexts.length>0){
-    db.ref('advertising').once('value').then(snapshot=>{
+    db.ref('ads').once('value').then(snapshot=>{
       const data=snapshot.val();
       const keys=Object.keys(data);
-      const currentText=adTexts[currentIndex];
-      const keyToEdit=keys.find(k=>data[k].text===currentText);
-      if(keyToEdit){db.ref('advertising/'+keyToEdit).update({text:newText}); adInput.value=''; adTexts[currentIndex]=newText;}
+      const keyToEdit=keys.find(k=>data[k].text===adTexts[currentIndex]);
+      if(keyToEdit){db.ref('ads/'+keyToEdit).update({text:newText}); adInput.value=''; adTexts[currentIndex]=newText;}
     });
   }
 });
@@ -315,9 +301,9 @@ document.getElementById('adStyle').addEventListener('change',e=>{
   adBox.style.textShadow='none';
   if(e.target.value==='bold') adBox.style.fontWeight='bold';
   if(e.target.value==='italic') adBox.style.fontStyle='italic';
-  if(e.target.value==='gradient'){ 
-    adBox.style.background='linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff)'; 
-    adBox.style.webkitBackgroundClip='text'; 
+  if(e.target.value==='gradient'){
+    adBox.style.background='linear-gradient(45deg,#ff0000,#ff9900,#00ff00,#00ccff,#ff00ff)';
+    adBox.style.webkitBackgroundClip='text';
     adBox.style.webkitTextFillColor='transparent';
   }
   if(e.target.value==='shadow') adBox.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)';
@@ -344,7 +330,6 @@ style.innerHTML=`
 @keyframes rainbowAnim{0%{color:red;}20%{color:orange;}40%{color:yellow;}60%{color:green;}80%{color:blue;}100%{color:violet;}}
 `;
 document.head.appendChild(style);
-
 </script>
 </body>
 </html>
