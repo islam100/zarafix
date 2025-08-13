@@ -63,6 +63,7 @@ header button:hover{background:#777;}
   font-size:22px; font-weight:bold;
   padding:10px;
   transition:opacity 0.5s ease;
+  opacity:0;
 }
 
 #adminPanel{
@@ -182,7 +183,7 @@ let cardsData=[],currentCardIndex=0;
 function loadCards(){
   db.ref('cards').on('value', snapshot=>{
     const data = snapshot.val();
-    cardsData = data ? Object.values(data) : [];
+    cardsData = data ? Object.keys(data).map(k=>({...data[k], key:k})) : [];
     renderCards();
   });
 }
@@ -196,7 +197,7 @@ function renderCards(){
     div.innerText=c.text;
     div.style.color=c.color||'black';
     div.style.fontWeight=c.style==='bold'?'bold':(c.style==='italic'?'italic':'normal');
-    if(i!==0) div.style.opacity=0;
+    if(i===0) div.style.opacity=1; else div.style.opacity=0;
     cardContainer.appendChild(div);
   });
 }
@@ -212,8 +213,11 @@ setInterval(()=>{
 
 loadCards();
 
-// Login/logout
-loginBtn.addEventListener('click',()=>{auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());});
+// Login/logout using popup
+loginBtn.addEventListener('click',()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err=>alert(err.message));
+});
 logoutBtn.addEventListener('click',()=>{auth.signOut();});
 
 auth.onAuthStateChanged(user=>{
@@ -246,7 +250,6 @@ addCard.addEventListener('click', ()=>{
 
 editCard.addEventListener('click', ()=>{
   if(cardsData.length===0) return alert("No card to edit");
-  const key=Object.keys(cardsData)[currentCardIndex];
   const card=cardsData[currentCardIndex];
   db.ref('cards/'+card.key).update({
     text:cardText.value || card.text,
@@ -257,11 +260,9 @@ editCard.addEventListener('click', ()=>{
 
 deleteCard.addEventListener('click', ()=>{
   if(cardsData.length===0) return alert("No card to delete");
-  const key=Object.keys(cardsData)[currentCardIndex];
   const card=cardsData[currentCardIndex];
   db.ref('cards/'+card.key).remove();
 });
-
 </script>
 </body>
 </html>
