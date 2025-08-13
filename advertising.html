@@ -29,7 +29,7 @@ nav select {
 }
 #cardContainer {
     position: absolute;
-    top: 55%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%,-50%);
     width: 90%;
@@ -45,7 +45,7 @@ nav select {
     font-size: 24px;
     text-align: center;
     border-radius: 15px;
-    padding: 15px;
+    padding: 10px;
     text-shadow: 2px 2px 5px #ff0, 3px 3px 5px #f00;
     overflow: hidden;
     white-space: pre-line;
@@ -122,7 +122,7 @@ footer {
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com", // ✅ Added for DB
   projectId: "zara-fix-2e35a",
   storageBucket: "zara-fix-2e35a.appspot.com",
   messagingSenderId: "636550144008",
@@ -138,16 +138,12 @@ document.getElementById('loginBtn').onclick = () => {
     auth.signInWithRedirect(provider);
 };
 
-// Redirect login result
-auth.getRedirectResult().then(result => {
-    if (result.user) {
-        console.log("Login success:", result.user.email);
-    }
-}).catch(err => {
-    console.error("Login error:", err);
-});
+// Handle redirect login
+firebase.auth().getRedirectResult().then((result) => {
+    if (result.user) console.log("Login success:", result.user.email);
+}).catch(console.error);
 
-// State change listener
+// State change
 auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById('loginBtn').style.display = 'none';
@@ -166,7 +162,7 @@ auth.onAuthStateChanged(user => {
 
 document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
-// Cards logic
+// Cards
 let cards = [];
 let currentIndex = 0;
 const currentCard = document.getElementById('currentCard');
@@ -190,7 +186,7 @@ db.ref('cards').on('value', snap => {
     showCard(currentIndex);
 });
 
-// Auto slide cards
+// Auto slide
 setInterval(() => {
     if (cards.length > 1) {
         currentIndex = (currentIndex + 1) % cards.length;
@@ -200,17 +196,19 @@ setInterval(() => {
 
 // Add card
 document.getElementById('addCardBtn').onclick = () => {
-    const text = document.getElementById('cardText').value;
+    const text = document.getElementById('cardText').value.trim();
     const color = document.getElementById('textColor').value;
     if (text.split("\n").length > 6) {
         alert("Max 6 lines allowed");
         return;
     }
-    db.ref('cards').push({ text, color });
-    document.getElementById('cardText').value = '';
+    if (text) {
+        db.ref('cards').push({ text, color });
+        document.getElementById('cardText').value = '';
+    }
 };
 
-// Delete current card
+// Delete card
 document.getElementById('deleteCardBtn').onclick = () => {
     if (cards.length > 0) {
         const id = cards[currentIndex].id;
