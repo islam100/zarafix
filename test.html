@@ -10,7 +10,7 @@
     background: linear-gradient(to bottom, #87ceeb 0%, #e0f7ff 80%);
   }
 
-  /* Login button upar right */
+  /* Login button */
   #googleLoginBtn {
     position: fixed;
     top: 10px;
@@ -28,12 +28,12 @@
   }
   #googleLoginBtn:hover { transform: scale(1.05); }
 
-  /* Dropdown menu for services */
+  /* Dropdown menu */
   .dropdown {
     position: relative;
     width: 90%;
-    max-width: 500px;
-    margin: 100px auto 20px auto;
+    max-width: 400px;
+    margin: 120px auto 20px auto;
   }
 
   .dropdown select {
@@ -49,10 +49,10 @@
   /* Advertising Text Box */
   .ad-box {
     margin: 20px auto;
-    padding: 25px 20px;
+    padding: 20px 15px;
     background: linear-gradient(135deg, #ffcc00, #ff6600);
     color: white;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     text-align: center;
     border-radius: 15px;
@@ -60,19 +60,21 @@
     max-width: 90%;
     opacity: 0;
     transition: opacity 0.5s;
+    min-height: 50px;
   }
 
   /* Bottom buttons */
   .bottom-buttons {
     position: fixed;
-    bottom: 20px;
+    bottom: 10px;
     width: 100%;
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
   }
   .bottom-buttons button {
-    padding: 12px 20px;
+    padding: 12px 15px;
     font-size: 16px;
     font-weight: 700;
     border-radius: 10px;
@@ -84,14 +86,36 @@
     transition: transform 0.15s ease;
   }
   .bottom-buttons button:hover { transform: translateY(3px); }
+
+  /* Admin input box */
+  #adminInputBox {
+    display: none;
+    width: 90%;
+    max-width: 400px;
+    margin: 10px auto;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 2px solid #444;
+  }
+  #adminAddBtn {
+    display: none;
+    margin: 10px auto;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    background: green;
+    color: white;
+    cursor: pointer;
+    display: block;
+  }
 </style>
 </head>
 <body>
 
-<!-- Google Login -->
 <button id="googleLoginBtn">Google Login</button>
 
-<!-- Dropdown Menu -->
 <div class="dropdown" id="serviceDropdown" style="display:none;">
   <select onchange="openLink(this.value)">
     <option value="">Select Service</option>
@@ -100,9 +124,12 @@
     <option value="https://zarafix.vercel.app/2poster.html">Service Provider</option>
     <option value="https://zarafix.vercel.app/property-index.html">Real Estate</option>
     <option value="admin-dashboard.html">Admin Dashboard</option>
-    <option value="#">Extra Option</option>
   </select>
 </div>
+
+<!-- Admin input to add new text -->
+<input type="text" id="adminInputBox" placeholder="Enter new ad text">
+<button id="adminAddBtn">Add Text</button>
 
 <!-- Advertising Text Box -->
 <div class="ad-box" id="adBox"></div>
@@ -117,71 +144,97 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-  // Firebase config
+  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
     authDomain: "zara-fix-2e35a.firebaseapp.com",
     projectId: "zara-fix-2e35a",
     storageBucket: "zara-fix-2e35a.appspot.com",
     messagingSenderId: "636550144008",
-    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com"
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.database();
 
   const loginBtn = document.getElementById('googleLoginBtn');
   const dropdown = document.getElementById('serviceDropdown');
+  const adBox = document.getElementById('adBox');
+  const adminInput = document.getElementById('adminInputBox');
+  const adminAddBtn = document.getElementById('adminAddBtn');
 
-  loginBtn.addEventListener('click', () => {
+  let adTexts = [];
+  let currentIndex = 0;
+
+  // Login/Logout
+  loginBtn.addEventListener('click', ()=>{
     if(auth.currentUser){
-      auth.signOut().then(()=>{ alert('Logged out!'); }).catch(err=>alert(err.message));
+      auth.signOut();
     } else {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-      .then(result => { alert('Welcome '+result.user.displayName); })
-      .catch(err => alert(err.message));
+      auth.signInWithPopup(provider);
     }
   });
 
+  // Check Auth state
   auth.onAuthStateChanged(user => {
     if(user){
       loginBtn.textContent = 'Logout';
       dropdown.style.display = 'block';
+
+      // Check if admin
+      db.ref('admins/'+user.uid).once('value').then(snapshot=>{
+        if(snapshot.exists()){
+          adminInput.style.display = 'block';
+          adminAddBtn.style.display = 'block';
+        }
+      });
+
+      // Load ad texts from Firebase
+      db.ref('advertising').once('value').then(snapshot=>{
+        if(snapshot.exists()){
+          adTexts = Object.values(snapshot.val()).map(obj=>obj.text);
+          if(adTexts.length>0) adBox.textContent = adTexts[0]; adBox.style.opacity=1;
+        }
+      });
+
     } else {
       loginBtn.textContent = 'Google Login';
       dropdown.style.display = 'none';
+      adminInput.style.display = 'none';
+      adminAddBtn.style.display = 'none';
+      adBox.textContent = '';
     }
   });
 
-  function openLink(url){
-    if(url) window.location.href = url;
-  }
+  function openLink(url){ if(url) window.location.href = url; }
 
-  // Advertising Text logic
-  const adBox = document.getElementById('adBox');
-  const texts = [
-    "🔥 नई सर्विस उपलब्ध! 🔥",
-    "💥 खास ऑफ़र देखें आज ही! 💥",
-    "✨ Zara Fix में आपका स्वागत है ✨",
-    "🛠️ अपने प्रोडक्ट्स का भरोसा पाएं 🛠️"
-  ];
-  let current = 0;
+  // Admin adds new text
+  adminAddBtn.addEventListener('click', ()=>{
+    const text = adminInput.value.trim();
+    if(text){
+      const newKey = db.ref('advertising').push().key;
+      db.ref('advertising/'+newKey).set({text:text});
+      adTexts.push(text);
+      adminInput.value='';
+    }
+  });
 
-  function showNextText(){
-    adBox.style.opacity = 0;
-    setTimeout(()=>{
-      adBox.textContent = texts[current];
-      adBox.style.opacity = 1;
-      current = (current + 1) % texts.length;
-    }, 500);
-  }
-
-  adBox.textContent = texts[0];
-  adBox.style.opacity = 1;
-  setInterval(showNextText, 3000);
-
+  // Auto changing text
+  setInterval(()=>{
+    if(adTexts.length>0){
+      adBox.style.opacity=0;
+      setTimeout(()=>{
+        adBox.textContent = adTexts[currentIndex];
+        adBox.style.opacity=1;
+        currentIndex = (currentIndex+1)%adTexts.length;
+      },500);
+    }
+  }, 3000);
 </script>
 </body>
 </html>
