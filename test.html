@@ -8,21 +8,22 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+  background: #f8f8f8;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: #f8f8f8;
+  height: 100vh; /* Full screen height */
+  overflow: hidden; /* Disable body scroll */
 }
-header {
+header, footer {
   background: #333;
   color: white;
   padding: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  flex-shrink: 0; /* Prevent shrinking */
 }
-header button {
+header button, footer button {
   padding: 6px 12px;
   border: none;
   border-radius: 5px;
@@ -30,7 +31,7 @@ header button {
   background: #555;
   color: white;
 }
-header button:hover {
+header button:hover, footer button:hover {
   background: #777;
 }
 .dropdown select {
@@ -40,12 +41,13 @@ header button:hover {
   border: none;
   cursor: pointer;
 }
-#adBoxContainer {
+#mainContent {
   flex: 1;
   display: flex;
-  justify-content: center;
-  align-items: center;
   flex-direction: column;
+  justify-content: center; /* vertical center */
+  align-items: center;
+  overflow: hidden;
   padding: 10px;
 }
 .ad-box {
@@ -59,41 +61,22 @@ header button:hover {
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   margin-bottom: 10px;
 }
-.admin-controls {
-  margin-top: 10px;
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  flex-wrap: wrap;
-}
 #scrollingText {
   background: #333;
   color: #fff;
   padding: 5px;
+  width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  box-sizing: border-box;
-  margin: 10px 0;
+  text-align: center;
   border-radius: 5px;
 }
-footer {
-  margin-top: auto;
-  padding: 10px;
+.admin-controls {
   display: flex;
-  justify-content: space-around;
-  background: #333;
-  color: white;
+  justify-content: center;
+  gap: 5px;
   flex-wrap: wrap;
-}
-footer button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-footer button:hover {
-  background: #555;
-  color: white;
+  margin-top: 10px;
 }
 input[type=text] {
   padding: 5px;
@@ -101,7 +84,7 @@ input[type=text] {
   border-radius: 5px;
   border: 1px solid #aaa;
 }
-@media (max-width:480px){
+@media(max-width:480px){
   .ad-box {
     font-size: 16px;
     padding: 15px;
@@ -133,7 +116,7 @@ input[type=text] {
   <button id="loginBtn">Login</button>
 </header>
 
-<div id="adBoxContainer">
+<div id="mainContent">
   <div class="ad-box" id="adBox">Loading Ads...</div>
   <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 </div>
@@ -156,6 +139,7 @@ input[type=text] {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -168,18 +152,19 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// Elements
 let adTexts = [];
 let currentIndex = 0;
 const adBox = document.getElementById('adBox');
+const scrollingText = document.getElementById('scrollingText');
 const adminControls = document.getElementById('adminControls');
 const adminInput = document.getElementById('adminInputBox');
 const adminAddBtn = document.getElementById('adminAddBtn');
 const adminEditBtn = document.getElementById('adminEditBtn');
 const adminDeleteBtn = document.getElementById('adminDeleteBtn');
-const scrollingText = document.getElementById('scrollingText');
 const loginBtn = document.getElementById('loginBtn');
 
-// Fetch ads
+// Load Ads
 function loadAds(){
   db.ref('advertising').on('value', snapshot=>{
     const data = snapshot.val();
@@ -193,7 +178,7 @@ function loadAds(){
 }
 loadAds();
 
-// Auto slide ads
+// Auto slide
 setInterval(()=>{
   if(adTexts.length>0){
     currentIndex = (currentIndex+1) % adTexts.length;
@@ -201,7 +186,7 @@ setInterval(()=>{
   }
 }, 3000);
 
-// Scrolling text animation
+// Scrolling Text
 let scrollPos = scrollingText.offsetWidth;
 function scrollText(){
   scrollPos--;
@@ -214,7 +199,7 @@ function scrollText(){
 scrollText();
 window.addEventListener('resize', ()=>{ scrollPos = scrollingText.offsetWidth; });
 
-// Admin auth check
+// Admin auth
 auth.onAuthStateChanged(user=>{
   if(user){
     db.ref('admins/'+user.uid).once('value').then(snap=>{
@@ -270,5 +255,6 @@ adminEditBtn.addEventListener('click', ()=>{
   }
 });
 </script>
+
 </body>
 </html>
