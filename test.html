@@ -22,15 +22,15 @@ header{
   flex-shrink:0;
 }
 .logo{
-  font-size:32px; font-weight:bold;
+  font-size:36px; font-weight:bold;
   background: linear-gradient(45deg,#ff0000,#ff9900,#00ff00,#00ccff,#ff00ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow:2px 2px 5px rgba(0,0,0,0.4);
+  text-shadow:2px 2px 5px rgba(0,0,0,0.5);
 }
 .controls{display:flex;gap:10px;align-items:center;}
 .controls button, .dropdown select{
-  padding:6px 10px; border:none; border-radius:5px; cursor:pointer; font-size:13px;
+  padding:6px 10px; border:none; border-radius:5px; cursor:pointer; font-size:14px;
 }
 .controls button{background:#555;color:white;}
 .controls button:hover{background:#777;}
@@ -51,37 +51,45 @@ header{
   font-size:36px; font-weight:bold;
   color:white;
   background: linear-gradient(135deg,#ffcc33,#ff9900);
-  border-radius:10px;
-  text-shadow:2px 2px 2px #000,4px 4px 5px rgba(0,0,0,0.5);
+  border-radius:15px;
+  text-shadow:3px 3px 5px #000,5px 5px 10px rgba(0,0,0,0.5);
   transform: rotateX(10deg) rotateY(5deg);
   opacity:0;
-  transition:opacity 0.5s ease;
+  transition:opacity 0.7s ease;
 }
 
 .admin-controls{
-  position:fixed; top:10%; right:10px; display:flex; flex-direction:column; gap:5px; background:rgba(255,255,255,0.9); padding:10px; border-radius:5px;
+  position:fixed; top:10%; right:10px; display:flex; flex-direction:column; gap:5px;
+  background:rgba(255,255,255,0.95); padding:10px; border-radius:5px;
 }
 
 #scrollingText{
   position:fixed; bottom:0; left:50%;
   transform:translateX(-50%);
   background:#333; color:white;
-  padding:5px 10px; border-radius:5px 5px 0 0;
-  white-space:nowrap; overflow:hidden; width:90%; max-width:400px;
+  padding:10px 15px; border-radius:5px 5px 0 0;
+  white-space:nowrap; overflow:hidden; width:95%;
+  font-weight:bold; font-size:18px;
 }
 
 footer{
-  position:fixed; bottom:35px; left:50%;
+  position:fixed; bottom:50px; left:50%;
   transform:translateX(-50%);
   display:flex; gap:5px;
-  background:#333; padding:3px 5px;
+  background:#333; padding:5px;
   border-radius:5px;
 }
 footer button{
-  padding:4px 8px; border:none; border-radius:5px;
-  background:#555; color:white; cursor:pointer; font-size:12px;
+  padding:6px 12px; border:none; border-radius:5px;
+  background:#555; color:white; cursor:pointer; font-size:14px;
 }
 footer button:hover{background:#777;}
+
+@media(max-width:480px){
+  .card{font-size:28px;}
+  .controls button, .dropdown select{font-size:12px; padding:5px;}
+  footer button{font-size:12px; padding:4px 8px;}
+}
 </style>
 </head>
 <body>
@@ -110,6 +118,14 @@ footer button:hover{background:#777;}
 
 <div class="admin-controls" id="adminControls" style="display:none;">
   <input type="text" id="adminInputBox" placeholder="Enter card text">
+  <input type="color" id="adminColorPicker" title="Pick text color">
+  <select id="adminAnimation">
+    <option value="none">None</option>
+    <option value="fade">Fade</option>
+    <option value="slideLeft">Slide Left</option>
+    <option value="slideRight">Slide Right</option>
+    <option value="bounce">Bounce</option>
+  </select>
   <button id="adminAddBtn">Add Card</button>
 </div>
 
@@ -143,6 +159,8 @@ const adminControls=document.getElementById('adminControls');
 const adminInput=document.getElementById('adminInputBox');
 const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
+const colorPicker=document.getElementById('adminColorPicker');
+const animationSelect=document.getElementById('adminAnimation');
 
 let cardsData=[],currentCard=0;
 
@@ -163,6 +181,9 @@ function renderCards(){
     const card=document.createElement('div');
     card.className='card';
     card.innerText=item.text;
+    card.style.color=item.color||'white';
+    card.style.fontSize=item.fontSize||'36px';
+    card.dataset.anim=item.animation||'none';
     if(index===currentCard) card.style.opacity=1;
     cardContainer.appendChild(card);
   });
@@ -174,7 +195,16 @@ setInterval(()=>{
     const allCards=document.querySelectorAll('.card');
     allCards.forEach(c=>c.style.opacity=0);
     currentCard=(currentCard+1)%cardsData.length;
-    allCards[currentCard].style.opacity=1;
+    const card=allCards[currentCard];
+    card.style.opacity=1;
+    // Animation
+    const anim=card.dataset.anim;
+    card.style.transition='transform 0.7s, opacity 0.7s';
+    if(anim==='slideLeft'){card.style.transform='translateX(-100%)'; setTimeout(()=>{card.style.transform='translateX(0)';},50);}
+    else if(anim==='slideRight'){card.style.transform='translateX(100%)'; setTimeout(()=>{card.style.transform='translateX(0)';},50);}
+    else if(anim==='bounce'){card.style.transform='translateY(-30px)'; setTimeout(()=>{card.style.transform='translateY(0)';},300);}
+    else if(anim==='fade'){card.style.opacity=0; setTimeout(()=>{card.style.opacity=1;},50);}
+    else{card.style.transform='rotateX(10deg) rotateY(5deg)';}
   }
 },4000);
 
@@ -199,11 +229,20 @@ auth.onAuthStateChanged(user=>{
 // Admin add card
 document.getElementById('adminAddBtn').addEventListener('click',()=>{
   const text=adminInput.value.trim();
+  const color=colorPicker.value;
+  const animation=animationSelect.value;
   if(text){
-    db.ref('cards').push({text:text});
+    db.ref('cards').push({text:text,color:color,animation:animation});
     adminInput.value='';
   }
 });
+
+// Scrolling text
+const scrollText=document.getElementById('scrollingText');
+let scrollPos=window.innerWidth;
+function scrollFunc(){scrollPos--; if(scrollPos<-scrollText.scrollWidth) scrollPos=window.innerWidth; scrollText.style.transform=`translateX(${scrollPos}px)`; requestAnimationFrame(scrollFunc);}
+scrollFunc();
 </script>
+
 </body>
 </html>
