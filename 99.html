@@ -34,6 +34,8 @@
     display: flex;
     flex-direction: column;
     transition: box-shadow 0.3s ease;
+    cursor: pointer;
+    position: relative;
   }
   .property-card:hover {
     box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
@@ -66,6 +68,71 @@
     font-weight: 700;
     color: #007bff;
   }
+  /* WhatsApp button styling */
+  .btn-whatsapp {
+    background: #25d366;
+    color: white;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 8px #128c4a;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  .btn-whatsapp:hover {
+    background: #1ebe57;
+  }
+  
+  /* Modal styles */
+  #modalOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 10px;
+  }
+  #modalContent {
+    background: white;
+    border-radius: 10px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    position: relative;
+    padding: 20px;
+  }
+  #modalContent img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+  #modalCloseBtn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: #dc3545;
+    border: none;
+    color: white;
+    font-size: 1.3rem;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  #modalCloseBtn:hover {
+    background: #a71d2a;
+  }
 </style>
 </head>
 <body>
@@ -76,8 +143,22 @@
   <!-- Properties will be rendered here -->
 </div>
 
+<!-- Modal for large view -->
+<div id="modalOverlay">
+  <div id="modalContent">
+    <button id="modalCloseBtn" title="Close">&times;</button>
+    <img id="modalImage" src="" alt="Property Image" />
+    <h2 id="modalTitle"></h2>
+    <p id="modalCity"></p>
+    <p id="modalType"></p>
+    <p id="modalPrice"></p>
+    <p id="modalDesc"></p>
+    <a id="modalWhatsApp" class="btn-whatsapp" target="_blank" rel="noopener noreferrer">WhatsApp पूछें</a>
+  </div>
+</div>
+
 <script>
-  // Firebase config (अपने प्रोजेक्ट का कॉन्फिग डालें)
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
     authDomain: "property-20d6d.firebaseapp.com",
@@ -92,8 +173,27 @@
   const db = firebase.database();
   const propertyList = document.getElementById('propertyList');
 
+  // Modal elements
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalContent = document.getElementById('modalContent');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const modalImage = document.getElementById('modalImage');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCity = document.getElementById('modalCity');
+  const modalType = document.getElementById('modalType');
+  const modalPrice = document.getElementById('modalPrice');
+  const modalDesc = document.getElementById('modalDesc');
+  const modalWhatsApp = document.getElementById('modalWhatsApp');
+
+  const whatsappNumber = "917378342192";
+
   function formatPrice(num) {
     return num.toLocaleString('en-IN');
+  }
+
+  function whatsappLink(post) {
+    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.href}`;
+    return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`;
   }
 
   function renderProperties(properties) {
@@ -105,7 +205,6 @@
     }
 
     properties.forEach(({key, post}) => {
-      // सिर्फ approved प्रॉपर्टी दिखाएं
       if(!post.approved) return;
 
       const card = document.createElement('div');
@@ -140,11 +239,54 @@
       price.textContent = "₹ " + formatPrice(post.price);
       details.appendChild(price);
 
+      // WhatsApp button inside card
+      const waBtn = document.createElement('a');
+      waBtn.href = whatsappLink(post);
+      waBtn.target = "_blank";
+      waBtn.rel = "noopener noreferrer";
+      waBtn.className = "btn-whatsapp";
+      waBtn.textContent = "WhatsApp पूछें";
+
+      // To prevent card click when clicking whatsapp button
+      waBtn.addEventListener('click', e => e.stopPropagation());
+
+      details.appendChild(waBtn);
+
       card.appendChild(details);
+
+      // Card click opens modal
+      card.addEventListener('click', () => {
+        openModal(post);
+      });
+
       propertyList.appendChild(card);
     });
   }
 
+  function openModal(post) {
+    modalImage.src = post.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image';
+    modalTitle.textContent = post.title;
+    modalCity.textContent = "City: " + post.city;
+    modalType.textContent = "Type: " + (post.type === 'sale' ? 'Buy' : 'Rent');
+    modalPrice.textContent = "Price: ₹ " + formatPrice(post.price);
+    modalDesc.textContent = post.description || "";
+    modalWhatsApp.href = whatsappLink(post);
+
+    modalOverlay.style.display = 'flex';
+  }
+
+  modalCloseBtn.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+  });
+
+  // Click outside modal content closes modal
+  modalOverlay.addEventListener('click', (e) => {
+    if(e.target === modalOverlay){
+      modalOverlay.style.display = 'none';
+    }
+  });
+
+  // Load properties from Firebase
   function loadProperties() {
     db.ref('properties').once('value')
       .then(snapshot => {
@@ -161,7 +303,6 @@
       });
   }
 
-  // लोडिंग के लिए कॉल करें
   loadProperties();
 </script>
 
