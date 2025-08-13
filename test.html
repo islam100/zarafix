@@ -5,84 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zara Advertising</title>
 <style>
-*{box-sizing:border-box;}
+* {box-sizing:border-box;}
 body {
-  margin:0;
+  margin: 0;
   font-family: Arial, sans-serif;
-  display:flex;
-  flex-direction:column;
-  height:100vh;
-  background:#f8f8f8;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f8f8f8;
+  overflow: hidden;
 }
 header, footer {
-  background:#333;
-  color:white;
-  padding:10px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-shrink:0;
+  background: #333;
+  color: white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
 }
-header button, footer button{
-  padding:6px 12px;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
-  background:#555;
-  color:white;
+header button, footer button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #555;
+  color: white;
 }
-header button:hover, footer button:hover{background:#777;}
-.dropdown select{
-  padding:4px 8px;
-  font-size:13px;
-  border-radius:5px;
-  border:none;
-  cursor:pointer;
+header button:hover, footer button:hover { background: #777; }
+.dropdown select {
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
 }
-#mainContent{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  padding:10px;
+#mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 10px;
 }
-.ad-box{
-  padding:20px;
-  background:#fffae6;
-  border-radius:15px;
-  text-align:center;
-  font-size:18px;
-  width:90%;
-  max-width:400px;
-  box-shadow:0 4px 8px rgba(0,0,0,0.1);
-  margin-bottom:10px;
+.ad-box {
+  padding: 20px;
+  background: #fffae6;
+  border-radius: 15px;
+  text-align: center;
+  font-size: 18px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  margin-bottom: 15px;
+  opacity: 1;
+  transition: opacity 0.5s ease;
 }
-#scrollingText{
-  background:#333;
-  color:#fff;
-  padding:5px;
-  overflow:hidden;
-  white-space:nowrap;
-  border-radius:5px;
-  width:90%;
-  max-width:400px;
-  text-align:center;
-  margin-top:auto; /* Footer ke upar fix */
+#scrollingText {
+  background: #333;
+  color: #fff;
+  padding: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 5px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  margin-top: auto; /* Footer ke upar fix */
 }
-.admin-controls{
-  display:flex;
-  justify-content:center;
-  gap:5px;
-  flex-wrap:wrap;
-  margin-top:10px;
+.admin-controls {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
-input[type=text]{padding:5px;width:160px;border-radius:5px;border:1px solid #aaa;}
+input[type=text] { padding: 5px; width: 160px; border-radius: 5px; border: 1px solid #aaa; }
+
 @media(max-width:480px){
-  .ad-box{font-size:16px;padding:15px;}
-  input[type=text]{width:120px;}
-  header{flex-direction:column;align-items:flex-start;}
-  header button{margin-top:5px;}
+  .ad-box { font-size: 16px; padding: 15px; }
+  input[type=text] { width: 120px; }
+  header { flex-direction: column; align-items: flex-start; }
+  header button { margin-top: 5px; }
 }
 </style>
 </head>
@@ -122,7 +127,9 @@ input[type=text]{padding:5px;width:160px;border-radius:5px;border:1px solid #aaa
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
 <script>
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -135,6 +142,7 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const auth=firebase.auth();
 
+// Elements
 let adTexts=[],currentIndex=0;
 const adBox=document.getElementById('adBox');
 const scrollingText=document.getElementById('scrollingText');
@@ -145,29 +153,33 @@ const adminEditBtn=document.getElementById('adminEditBtn');
 const adminDeleteBtn=document.getElementById('adminDeleteBtn');
 const loginBtn=document.getElementById('loginBtn');
 
+// Login Button
 loginBtn.addEventListener('click',()=>{
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-    .then(result=>{loginBtn.style.display='none';})
-    .catch(err=>{alert('Login failed: '+err.message);});
+    .then(result=>{ loginBtn.style.display='none'; })
+    .catch(err=>{ alert('Login failed: '+err.message); });
 });
 
+// Load Ads
 function loadAds(){
   db.ref('advertising').on('value', snapshot=>{
     const data=snapshot.val();
     adTexts=data?Object.values(data).map(item=>item.text):[];
-    adBox.innerText=adTexts[currentIndex]||"No Ads Available";
+    adBox.innerText=adTexts[currentIndex] || "No Ads Available";
   });
 }
 loadAds();
 
+// Auto Slide with fade
 setInterval(()=>{
   if(adTexts.length>0){
     currentIndex=(currentIndex+1)%adTexts.length;
-    adBox.innerText=adTexts[currentIndex];
+    adBox.style.opacity=0;
+    setTimeout(()=>{ adBox.innerText=adTexts[currentIndex]; adBox.style.opacity=1; }, 500);
   }
-},3000);
+}, 3000);
 
-// Scrolling
+// Scrolling Text Smooth
 let scrollPos=scrollingText.offsetWidth;
 function scrollText(){
   scrollPos--;
@@ -178,13 +190,11 @@ function scrollText(){
 scrollText();
 window.addEventListener('resize',()=>{scrollPos=scrollingText.offsetWidth;});
 
+// Admin Auth
 auth.onAuthStateChanged(user=>{
   if(user){
     db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){
-        adminControls.style.display='flex';
-        loginBtn.style.display='none';
-      }
+      if(snap.exists()){ adminControls.style.display='flex'; loginBtn.style.display='none'; }
     });
   }
 });
@@ -192,7 +202,7 @@ auth.onAuthStateChanged(user=>{
 // Admin Buttons
 adminAddBtn.addEventListener('click', ()=>{
   const text=adminInput.value.trim();
-  if(text){db.ref('advertising').push({text:text}); adminInput.value='';}
+  if(text){ db.ref('advertising').push({text:text}); adminInput.value=''; }
 });
 adminDeleteBtn.addEventListener('click', ()=>{
   if(adTexts.length>0){
@@ -201,7 +211,7 @@ adminDeleteBtn.addEventListener('click', ()=>{
       const keys=Object.keys(data);
       const currentText=adTexts[currentIndex];
       const keyToDelete=keys.find(k=>data[k].text===currentText);
-      if(keyToDelete){db.ref('advertising/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0; adBox.innerText=adTexts[0]||"No Ads Available";}
+      if(keyToDelete){ db.ref('advertising/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0; adBox.innerText=adTexts[0] || "No Ads Available"; }
     });
   }
 });
@@ -214,11 +224,12 @@ adminEditBtn.addEventListener('click', ()=>{
         const keys=Object.keys(data);
         const currentText=adTexts[currentIndex];
         const keyToEdit=keys.find(k=>data[k].text===currentText);
-        if(keyToEdit){db.ref('advertising/'+keyToEdit).update({text:newText}); adTexts[currentIndex]=newText; adBox.innerText=newText; adminInput.value='';}
+        if(keyToEdit){ db.ref('advertising/'+keyToEdit).update({text:newText}); adTexts[currentIndex]=newText; adBox.innerText=newText; adminInput.value=''; }
       });
     }
   }
 });
 </script>
+
 </body>
 </html>
