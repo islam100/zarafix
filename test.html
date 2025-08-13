@@ -78,7 +78,6 @@ header button:hover{background:#777;}
   flex-wrap:wrap;
 }
 
-/* Separate styling controls */
 .admin-style-controls{
   position:fixed;
   top:70%;
@@ -90,10 +89,25 @@ header button:hover{background:#777;}
   justify-content:center;
 }
 
-.admin-controls input[type=text], .admin-style-controls select, .admin-style-controls input[type=color]{
+#headerLinkControls, #footerLinkControls{
+  position:fixed;
+  top:78%;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  justify-content:center;
+  background:rgba(255,255,255,0.9);
   padding:5px;
   border-radius:5px;
+  max-width:95%;
+}
+#headerLinkControls input, #footerLinkControls input{
+  padding:4px;
+  border-radius:5px;
   border:1px solid #aaa;
+  width:120px;
 }
 
 #scrollingText{
@@ -148,6 +162,7 @@ footer button:hover{background:#777;}
   #adBox{width:90%; font-size:16px;}
   .admin-controls input[type=text]{width:120px;}
   .admin-style-controls select, .admin-style-controls input[type=color]{width:100px;}
+  #headerLinkControls input, #footerLinkControls input{width:100px;}
   footer{bottom:30px;}
 }
 </style>
@@ -159,10 +174,7 @@ footer button:hover{background:#777;}
   <div class="controls">
     <div class="dropdown">
       <select id="categoryDropdown">
-        <option>Car Mechanic</option>
-        <option>AC Mechanic</option>
-        <option>Plumber</option>
-        <option>Electrician</option>
+        <option value="#">Select Option</option>
       </select>
     </div>
     <button id="loginBtn">Login</button>
@@ -201,6 +213,36 @@ footer button:hover{background:#777;}
   </select>
 </div>
 
+<!-- Header Dropdown Links Controls -->
+<div id="headerLinkControls" style="display:none;">
+  <!-- 8 Options -->
+  <input type="text" placeholder="Option 1 Text" id="opt1Text">
+  <input type="text" placeholder="Option 1 URL" id="opt1URL">
+  <input type="text" placeholder="Option 2 Text" id="opt2Text">
+  <input type="text" placeholder="Option 2 URL" id="opt2URL">
+  <input type="text" placeholder="Option 3 Text" id="opt3Text">
+  <input type="text" placeholder="Option 3 URL" id="opt3URL">
+  <input type="text" placeholder="Option 4 Text" id="opt4Text">
+  <input type="text" placeholder="Option 4 URL" id="opt4URL">
+  <input type="text" placeholder="Option 5 Text" id="opt5Text">
+  <input type="text" placeholder="Option 5 URL" id="opt5URL">
+  <input type="text" placeholder="Option 6 Text" id="opt6Text">
+  <input type="text" placeholder="Option 6 URL" id="opt6URL">
+  <input type="text" placeholder="Option 7 Text" id="opt7Text">
+  <input type="text" placeholder="Option 7 URL" id="opt7URL">
+  <input type="text" placeholder="Option 8 Text" id="opt8Text">
+  <input type="text" placeholder="Option 8 URL" id="opt8URL">
+  <button id="updateDropdown">Update Dropdown</button>
+</div>
+
+<!-- Footer Buttons Links Controls -->
+<div id="footerLinkControls" style="display:none;">
+  <input type="text" placeholder="About URL" id="aboutURL">
+  <input type="text" placeholder="Contact URL" id="contactURL">
+  <input type="text" placeholder="Privacy URL" id="privacyURL">
+  <button id="updateFooterLinks">Update Footer Links</button>
+</div>
+
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <footer>
@@ -210,160 +252,4 @@ footer button:hover{background:#777;}
 </footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-const auth=firebase.auth();
-
-let adTexts=[],currentIndex=0;
-const adBox=document.getElementById('adBox');
-const scrollingText=document.getElementById('scrollingText');
-const adminControls=document.getElementById('adminControls');
-const adminStyleControls=document.getElementById('adminStyleControls');
-const adminInput=document.getElementById('adminInputBox');
-const adminAddBtn=document.getElementById('adminAddBtn');
-const adminEditBtn=document.getElementById('adminEditBtn');
-const adminDeleteBtn=document.getElementById('adminDeleteBtn');
-const loginBtn=document.getElementById('loginBtn');
-const logoutBtn=document.getElementById('logoutBtn');
-
-// Styling elements
-const adColorPicker=document.getElementById('adColorPicker');
-const adStyle=document.getElementById('adStyle');
-const adAnimation=document.getElementById('adAnimation');
-
-loginBtn.addEventListener('click',()=>{
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-  .then(()=>{loginBtn.style.display='none'; logoutBtn.style.display='inline-block';})
-  .catch(err=>{alert('Login failed: '+err.message);});
-});
-logoutBtn.addEventListener('click',()=>{
-  auth.signOut().then(()=>{
-    loginBtn.style.display='inline-block';
-    logoutBtn.style.display='none';
-    adminControls.style.display='none';
-    adminStyleControls.style.display='none';
-  });
-});
-
-// Load Ads
-function loadAds(){
-  db.ref('advertising').on('value', snapshot=>{
-    const data=snapshot.val();
-    adTexts=data?Object.values(data).map(item=>item.text):[];
-    adBox.innerText=adTexts[currentIndex]||"No Ads Available";
-  });
-}
-loadAds();
-
-// Auto slide with fade
-setInterval(()=>{
-  if(adTexts.length>0){
-    currentIndex=(currentIndex+1)%adTexts.length;
-    adBox.style.opacity=0;
-    setTimeout(()=>{adBox.innerText=adTexts[currentIndex]; adBox.style.opacity=1;},500);
-  }
-},3000);
-
-// Scrolling Text
-let scrollPos=scrollingText.offsetWidth;
-function scrollText(){
-  scrollPos--;
-  if(scrollPos<-scrollingText.scrollWidth) scrollPos=window.innerWidth;
-  scrollingText.style.transform=`translateX(${scrollPos}px)`;
-  requestAnimationFrame(scrollText);
-}
-scrollText();
-window.addEventListener('resize',()=>{scrollPos=scrollingText.offsetWidth;});
-
-// Admin Auth
-auth.onAuthStateChanged(user=>{
-  if(user){
-    db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){ 
-        adminControls.style.display='flex'; 
-        adminStyleControls.style.display='flex';
-        loginBtn.style.display='none'; 
-        logoutBtn.style.display='inline-block'; 
-      }
-    });
-  }
-});
-
-// Admin Buttons
-adminAddBtn.addEventListener('click', ()=>{
-  const text=adminInput.value.trim();
-  if(text){db.ref('advertising').push({text:text}); adminInput.value='';}
-});
-adminDeleteBtn.addEventListener('click', ()=>{
-  if(adTexts.length>0){
-    db.ref('advertising').once('value').then(snapshot=>{
-      const data=snapshot.val();
-      const keys=Object.keys(data);
-      const currentText=adTexts[currentIndex];
-      const keyToDelete=keys.find(k=>data[k].text===currentText);
-      if(keyToDelete){db.ref('advertising/'+keyToDelete).remove(); adTexts.splice(currentIndex,1); currentIndex=0; adBox.innerText=adTexts[0]||"No Ads Available";}
-    });
-  }
-});
-adminEditBtn.addEventListener('click', ()=>{
-  if(adTexts.length>0){
-    const newText=adminInput.value.trim();
-    if(newText){
-      db.ref('advertising').once('value').then(snapshot=>{
-        const data=snapshot.val();
-        const keys=Object.keys(data);
-        const currentText=adTexts[currentIndex];
-        const keyToEdit=keys.find(k=>data[k].text===currentText);
-        if(keyToEdit){db.ref('advertising/'+keyToEdit).update({text:newText}); adTexts[currentIndex]=newText; adBox.innerText=newText; adminInput.value='';}
-      });
-    }
-  }
-});
-
-// Styling Controls
-adColorPicker.addEventListener('input', ()=>{adBox.style.color=adColorPicker.value;});
-adStyle.addEventListener('change', ()=>{
-  const style=adStyle.value;
-  adBox.style.fontWeight='normal'; adBox.style.fontStyle='normal'; adBox.style.textShadow='none';
-  adBox.style.background='none'; adBox.style.webkitBackgroundClip=''; adBox.style.webkitTextFillColor='';
-  switch(style){
-    case 'bold': adBox.style.fontWeight='bold'; break;
-    case 'italic': adBox.style.fontStyle='italic'; break;
-    case 'gradient': 
-      adBox.style.background='linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet)';
-      adBox.style.webkitBackgroundClip='text';
-      adBox.style.webkitTextFillColor='transparent';
-      break;
-    case 'shadow': adBox.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)'; break;
-  }
-});
-
-adAnimation.addEventListener('change', ()=>{
-  const anim=adAnimation.value;
-  adBox.style.animation='none';
-  switch(anim){
-    case 'fade': adBox.style.animation='fadeAnim 2s infinite'; break;
-    case 'slideLeft': adBox.style.animation='slideLeftAnim 1s forwards'; break;
-    case 'slideRight': adBox.style.animation='slideRightAnim 1s forwards'; break;
-    case 'bounce': adBox.style.animation='bounceAnim 1s infinite'; break;
-    case 'blink': adBox.style.animation='blinkAnim 1s infinite'; break;
-    case 'rainbowAnim': 
-      adBox.style.background='linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet)';
-      adBox.style.backgroundSize='200% auto';
-      adBox.style.webkitBackgroundClip='text';
-      adBox.style.webkitTextFillColor='transparent';
-      adBox.style.animation='rainbowAnim 5s linear infinite';
-      break;
- 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></
