@@ -78,9 +78,20 @@ header button:hover{background:#777;}
   flex-wrap:wrap;
 }
 
-.admin-controls input[type=text]{
+/* Separate styling controls */
+.admin-style-controls{
+  position:fixed;
+  top:70%;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.admin-controls input[type=text], .admin-style-controls select, .admin-style-controls input[type=color]{
   padding:5px;
-  width:160px;
   border-radius:5px;
   border:1px solid #aaa;
 }
@@ -100,16 +111,7 @@ header button:hover{background:#777;}
   text-align:center;
   font-weight:bold;
   font-size:16px;
-  /* colorful gradient text */
-  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: rainbow 5s linear infinite;
-}
-
-@keyframes rainbow{
-  0%{background-position:0%;}
-  100%{background-position:200%;}
+  color:white;
 }
 
 footer{
@@ -134,9 +136,18 @@ footer button{
 }
 footer button:hover{background:#777;}
 
+/* Animations */
+@keyframes fadeAnim{0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}}
+@keyframes slideLeftAnim{0%{transform:translateX(100%);}100%{transform:translateX(0);}}
+@keyframes slideRightAnim{0%{transform:translateX(-100%);}100%{transform:translateX(0);}}
+@keyframes bounceAnim{0%,100%{transform:translateY(0);}50%{transform:translateY(-20px);}}
+@keyframes blinkAnim{0%,50%,100%{opacity:1;}25%,75%{opacity:0;}}
+@keyframes rainbowAnim{0%{background-position:0%;}100%{background-position:200%;}}
+
 @media(max-width:480px){
   #adBox{width:90%; font-size:16px;}
   .admin-controls input[type=text]{width:120px;}
+  .admin-style-controls select, .admin-style-controls input[type=color]{width:100px;}
   footer{bottom:30px;}
 }
 </style>
@@ -161,11 +172,33 @@ footer button:hover{background:#777;}
 
 <div id="adBox">Loading Ads...</div>
 
+<!-- Admin Controls: text add/edit/delete -->
 <div class="admin-controls" id="adminControls" style="display:none;">
   <input type="text" id="adminInputBox" placeholder="Enter new ad text">
   <button id="adminAddBtn">Add</button>
   <button id="adminEditBtn">Edit</button>
   <button id="adminDeleteBtn">Delete</button>
+</div>
+
+<!-- Admin Style Controls: color, style, animation -->
+<div class="admin-style-controls" id="adminStyleControls" style="display:none;">
+  <input type="color" id="adColorPicker" title="Pick Text Color">
+  <select id="adStyle">
+    <option value="normal">Normal</option>
+    <option value="bold">Bold</option>
+    <option value="italic">Italic</option>
+    <option value="gradient">Gradient Rainbow</option>
+    <option value="shadow">Shadow</option>
+  </select>
+  <select id="adAnimation">
+    <option value="none">None</option>
+    <option value="fade">Fade</option>
+    <option value="slideLeft">Slide Left</option>
+    <option value="slideRight">Slide Right</option>
+    <option value="bounce">Bounce</option>
+    <option value="blink">Blink</option>
+    <option value="rainbowAnim">Rainbow Animation</option>
+  </select>
 </div>
 
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
@@ -179,6 +212,7 @@ footer button:hover{background:#777;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
@@ -196,6 +230,7 @@ let adTexts=[],currentIndex=0;
 const adBox=document.getElementById('adBox');
 const scrollingText=document.getElementById('scrollingText');
 const adminControls=document.getElementById('adminControls');
+const adminStyleControls=document.getElementById('adminStyleControls');
 const adminInput=document.getElementById('adminInputBox');
 const adminAddBtn=document.getElementById('adminAddBtn');
 const adminEditBtn=document.getElementById('adminEditBtn');
@@ -203,17 +238,22 @@ const adminDeleteBtn=document.getElementById('adminDeleteBtn');
 const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
 
+// Styling elements
+const adColorPicker=document.getElementById('adColorPicker');
+const adStyle=document.getElementById('adStyle');
+const adAnimation=document.getElementById('adAnimation');
+
 loginBtn.addEventListener('click',()=>{
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
   .then(()=>{loginBtn.style.display='none'; logoutBtn.style.display='inline-block';})
   .catch(err=>{alert('Login failed: '+err.message);});
 });
-
 logoutBtn.addEventListener('click',()=>{
   auth.signOut().then(()=>{
     loginBtn.style.display='inline-block';
     logoutBtn.style.display='none';
     adminControls.style.display='none';
+    adminStyleControls.style.display='none';
   });
 });
 
@@ -251,7 +291,12 @@ window.addEventListener('resize',()=>{scrollPos=scrollingText.offsetWidth;});
 auth.onAuthStateChanged(user=>{
   if(user){
     db.ref('admins/'+user.uid).once('value').then(snap=>{
-      if(snap.exists()){ adminControls.style.display='flex'; loginBtn.style.display='none'; logoutBtn.style.display='inline-block'; }
+      if(snap.exists()){ 
+        adminControls.style.display='flex'; 
+        adminStyleControls.style.display='flex';
+        loginBtn.style.display='none'; 
+        logoutBtn.style.display='inline-block'; 
+      }
     });
   }
 });
@@ -286,6 +331,39 @@ adminEditBtn.addEventListener('click', ()=>{
     }
   }
 });
-</script>
-</body>
-</html>
+
+// Styling Controls
+adColorPicker.addEventListener('input', ()=>{adBox.style.color=adColorPicker.value;});
+adStyle.addEventListener('change', ()=>{
+  const style=adStyle.value;
+  adBox.style.fontWeight='normal'; adBox.style.fontStyle='normal'; adBox.style.textShadow='none';
+  adBox.style.background='none'; adBox.style.webkitBackgroundClip=''; adBox.style.webkitTextFillColor='';
+  switch(style){
+    case 'bold': adBox.style.fontWeight='bold'; break;
+    case 'italic': adBox.style.fontStyle='italic'; break;
+    case 'gradient': 
+      adBox.style.background='linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet)';
+      adBox.style.webkitBackgroundClip='text';
+      adBox.style.webkitTextFillColor='transparent';
+      break;
+    case 'shadow': adBox.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)'; break;
+  }
+});
+
+adAnimation.addEventListener('change', ()=>{
+  const anim=adAnimation.value;
+  adBox.style.animation='none';
+  switch(anim){
+    case 'fade': adBox.style.animation='fadeAnim 2s infinite'; break;
+    case 'slideLeft': adBox.style.animation='slideLeftAnim 1s forwards'; break;
+    case 'slideRight': adBox.style.animation='slideRightAnim 1s forwards'; break;
+    case 'bounce': adBox.style.animation='bounceAnim 1s infinite'; break;
+    case 'blink': adBox.style.animation='blinkAnim 1s infinite'; break;
+    case 'rainbowAnim': 
+      adBox.style.background='linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet)';
+      adBox.style.backgroundSize='200% auto';
+      adBox.style.webkitBackgroundClip='text';
+      adBox.style.webkitTextFillColor='transparent';
+      adBox.style.animation='rainbowAnim 5s linear infinite';
+      break;
+ 
