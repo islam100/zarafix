@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Advertising</title>
+<title>Zara Fix Advertising</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{
@@ -25,10 +25,11 @@ header{
   align-items:center;
   padding:10px 15px;
   flex-shrink:0;
+  z-index:1000;
 }
 .logo{
   font-size:28px;
-  font-weight:bold; /* Bold logo */
+  font-weight:bold;
   text-transform:uppercase;
   background: linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff);
   -webkit-background-clip: text;
@@ -47,6 +48,7 @@ header button, .dropdown select{
   border-radius:5px;
   cursor:pointer;
   font-size:13px;
+  pointer-events:auto;
 }
 header button{background:#555;color:white;}
 header button:hover{background:#777;}
@@ -66,6 +68,8 @@ header button:hover{background:#777;}
   text-align:center;
   font-size:18px;
   transition:opacity 0.5s ease;
+  pointer-events:auto;
+  z-index:999;
 }
 
 .admin-controls{
@@ -76,6 +80,7 @@ header button:hover{background:#777;}
   display:flex;
   gap:5px;
   flex-wrap:wrap;
+  z-index:1000;
 }
 
 .admin-style-controls{
@@ -87,6 +92,7 @@ header button:hover{background:#777;}
   gap:5px;
   flex-wrap:wrap;
   justify-content:center;
+  z-index:1000;
 }
 
 #headerLinkControls, #footerLinkControls{
@@ -102,6 +108,7 @@ header button:hover{background:#777;}
   padding:5px;
   border-radius:5px;
   max-width:95%;
+  z-index:1000;
 }
 #headerLinkControls input, #footerLinkControls input{
   padding:4px;
@@ -126,6 +133,7 @@ header button:hover{background:#777;}
   font-weight:bold;
   font-size:16px;
   color:white;
+  z-index:998;
 }
 
 footer{
@@ -138,6 +146,7 @@ footer{
   background:#333;
   padding:3px 5px;
   border-radius:5px;
+  z-index:1000;
 }
 footer button{
   padding:4px 8px;
@@ -204,6 +213,7 @@ footer button:hover{background:#777;}
 </div>
 
 <div id="headerLinkControls" style="display:none;">
+  <!-- 8 dropdown options -->
   <input type="text" placeholder="Option 1 Text" id="opt1Text">
   <input type="text" placeholder="Option 1 URL" id="opt1URL">
   <input type="text" placeholder="Option 2 Text" id="opt2Text">
@@ -233,9 +243,9 @@ footer button:hover{background:#777;}
 <div id="scrollingText">Welcome to Zara Ads! Amazing offers for you...</div>
 
 <footer>
-  <button>About</button>
-  <button>Contact</button>
-  <button>Privacy Policy</button>
+  <button id="aboutBtn">About</button>
+  <button id="contactBtn">Contact</button>
+  <button id="privacyBtn">Privacy Policy</button>
 </footer>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -252,8 +262,8 @@ const firebaseConfig = {
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+const db=firebase.database();
+const auth=firebase.auth();
 
 const adBox=document.getElementById('adBox');
 const adminControls=document.getElementById('adminControls');
@@ -262,6 +272,7 @@ const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
 const scrollingText=document.getElementById('scrollingText');
 const adInput=document.getElementById('adminInputBox');
+const categoryDropdown=document.getElementById('categoryDropdown');
 
 let adTexts=[],currentIndex=0;
 
@@ -275,12 +286,12 @@ function loadAds(){
 }
 loadAds();
 
-// Auto slide
+// Auto slide ads
 setInterval(()=>{
   if(adTexts.length>0){currentIndex=(currentIndex+1)%adTexts.length;adBox.innerText=adTexts[currentIndex];}
 },3000);
 
-// Scrolling text
+// Scrolling text animation
 let scrollPos=scrollingText.offsetWidth;
 function scrollText(){scrollPos--; if(scrollPos<-scrollingText.scrollWidth) scrollPos=window.innerWidth; scrollingText.style.transform=`translateX(${scrollPos}px)`; requestAnimationFrame(scrollText);}
 scrollText();
@@ -311,5 +322,86 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// Admin Buttons
-document
+// Admin add/edit/delete
+document.getElementById('adminAddBtn').addEventListener('click',()=>{
+  const text=adInput.value.trim();
+  if(text){db.ref('advertising').push({text});adInput.value='';}
+});
+document.getElementById('adminDeleteBtn').addEventListener('click',()=>{
+  if(adTexts.length>0){
+    db.ref('advertising').once('value').then(snapshot=>{
+      const data=snapshot.val();
+      const keys=Object.keys(data);
+      const currentText=adTexts[currentIndex];
+      const keyToDelete=keys.find(k=>data[k].text===currentText);
+      if(keyToDelete){db.ref('advertising/'+keyToDelete).remove();adTexts.splice(currentIndex,1);currentIndex=0;}
+    });
+  }
+});
+document.getElementById('adminEditBtn').addEventListener('click',()=>{
+  const newText=adInput.value.trim();
+  if(newText && adTexts.length>0){
+    db.ref('advertising').once('value').then(snapshot=>{
+      const data=snapshot.val();
+      const keys=Object.keys(data);
+      const currentText=adTexts[currentIndex];
+      const keyToEdit=keys.find(k=>data[k].text===currentText);
+      if(keyToEdit){db.ref('advertising/'+keyToEdit).update({text:newText});adInput.value='';}
+    });
+  }
+});
+
+// Style controls
+document.getElementById('adColorPicker').addEventListener('input',e=>{adBox.style.color=e.target.value;});
+document.getElementById('adStyle').addEventListener('change',e=>{
+  adBox.style.fontWeight='normal';
+  adBox.style.fontStyle='normal';
+  adBox.style.background='none';
+  adBox.style.textShadow='none';
+  if(e.target.value==='bold') adBox.style.fontWeight='bold';
+  if(e.target.value==='italic') adBox.style.fontStyle='italic';
+  if(e.target.value==='gradient') adBox.style.background='linear-gradient(45deg, #ff0000, #ff9900, #00ff00, #00ccff, #ff00ff)'; adBox.style.webkitBackgroundClip='text'; adBox.style.webkitTextFillColor='transparent';
+  if(e.target.value==='shadow') adBox.style.textShadow='2px 2px 5px rgba(0,0,0,0.5)';
+});
+document.getElementById('adAnimation').addEventListener('change',e=>{
+  adBox.style.animation='';
+  if(e.target.value==='fade') adBox.style.animation='fadeAnim 2s infinite alternate';
+  if(e.target.value==='slideLeft') adBox.style.animation='slideLeftAnim 5s linear infinite';
+  if(e.target.value==='slideRight') adBox.style.animation='slideRightAnim 5s linear infinite';
+  if(e.target.value==='bounce') adBox.style.animation='bounceAnim 1s infinite';
+  if(e.target.value==='blink') adBox.style.animation='blinkAnim 1s infinite';
+  if(e.target.value==='rainbowAnim') adBox.style.animation='rainbowAnim 3s linear infinite';
+});
+
+// Animations
+const style=document.createElement('style');
+style.innerHTML=`
+@keyframes fadeAnim{0%{opacity:1;}100%{opacity:0.3;}}
+@keyframes slideLeftAnim{0%{transform:translateX(0);}100%{transform:translateX(-50vw);}}
+@keyframes slideRightAnim{0%{transform:translateX(0);}100%{transform:translateX(50vw);}}
+@keyframes bounceAnim{0%,100%{transform:translateY(0);}50%{transform:translateY(-20px);}}
+@keyframes blinkAnim{0%,50%,100%{opacity:1;}25%,75%{opacity:0;}}
+@keyframes rainbowAnim{0%{color:red;}20%{color:orange;}40%{color:yellow;}60%{color:green;}80%{color:blue;}100%{color:violet;}}
+`;
+document.head.appendChild(style);
+
+// Dropdown links update
+document.getElementById('updateDropdown').addEventListener('click',()=>{
+  categoryDropdown.innerHTML='';
+  for(let i=1;i<=8;i++){
+    const text=document.getElementById('opt'+i+'Text').value||'Option '+i;
+    const url=document.getElementById('opt'+i+'URL').value||'#';
+    const opt=document.createElement('option'); opt.value=url; opt.innerText=text;
+    categoryDropdown.appendChild(opt);
+  }
+});
+
+// Footer links
+document.getElementById('updateFooterLinks').addEventListener('click',()=>{
+  document.getElementById('aboutBtn').onclick=()=>{window.open(document.getElementById('aboutURL').value,'_blank');};
+  document.getElementById('contactBtn').onclick=()=>{window.open(document.getElementById('contactURL').value,'_blank');};
+  document.getElementById('privacyBtn').onclick=()=>{window.open(document.getElementById('privacyURL').value,'_blank');};
+});
+</script>
+</body>
+</html>
