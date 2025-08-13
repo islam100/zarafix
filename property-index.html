@@ -21,6 +21,7 @@
     justify-content: flex-end;
     gap: 10px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
   }
   button.btn, button.btn-small {
     cursor: pointer;
@@ -95,6 +96,10 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    transition: box-shadow 0.3s ease;
+  }
+  .property-card:hover {
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
   }
   .property-card img {
     width: 100%;
@@ -126,15 +131,17 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 10px;
   }
   #modalContent {
     background: white;
-    max-width: 90vw;
+    max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 10px;
     padding: 20px;
     position: relative;
+    box-sizing: border-box;
   }
   #modalContent img {
     max-width: 100%;
@@ -155,6 +162,7 @@
   }
   #modalContent p {
     line-height: 1.5;
+    margin: 8px 0;
   }
   #modalButtons {
     margin-top: 15px;
@@ -167,6 +175,16 @@
   @media (max-width: 600px) {
     #propertyList {
       grid-template-columns: 1fr;
+    }
+    header {
+      justify-content: center;
+    }
+    #uploadSection {
+      max-width: 100%;
+    }
+    #modalContent {
+      max-width: 100%;
+      max-height: 80vh;
     }
   }
 </style>
@@ -241,7 +259,7 @@
   const db = firebase.database();
 
   const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const adminWhatsAppNumber = "919876543210"; // admin का नंबर डालें यहाँ
+  const adminWhatsAppNumber = "917378342192"; // user को अपनी पोस्ट पर ये नंबर दिखाना है
 
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -343,7 +361,7 @@
         price,
         description: desc,
         imageUrl,
-        whatsapp: whatsappNum,
+        whatsapp: whatsappNum.startsWith("91") ? whatsappNum : "91"+whatsappNum,
         userId: currentUser.uid,
         userEmail: currentUser.email,
         timestamp,
@@ -369,11 +387,19 @@
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक - हमेशा admin नंबर दिखाए
+  // WhatsApp लिंक - logic के अनुसार नंबर सेट करें
   function whatsappLink(post) {
-    const phone = adminWhatsAppNumber;
-    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
-    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    // अगर currentUser है और ये पोस्ट उसी user की है, तो admin नंबर दिखाओ
+    if (currentUser && post.userId === currentUser.uid) {
+      const phone = adminWhatsAppNumber;  // admin नंबर
+      const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    } else {
+      // अन्यथा पोस्ट करने वाले का नंबर दिखाओ
+      const phone = post.whatsapp.startsWith("91") ? post.whatsapp : "91" + post.whatsapp;
+      const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    }
   }
 
   // Delete प्रॉपर्टी
@@ -426,7 +452,7 @@
       const btnGroup = document.createElement('div');
       btnGroup.className = "btn-group";
 
-      // WhatsApp Button (हमेशा admin नंबर के साथ)
+      // WhatsApp Button (logic के हिसाब से नंबर)
       const waBtn = document.createElement('a');
       waBtn.href = whatsappLink(post);
       waBtn.target = "_blank";
@@ -485,7 +511,69 @@
     }
   };
 
-  // Fetch properties - **बिना login के भी सभी approved properties दिखाएं**
+  // Fetch properties - बिना login के भी approved properties दिखाएं
   async function fetchProperties(){
     const snapshot = await db.ref('properties').once('value');
-    const data = snapshot
+    const data = snapshot.val();
+
+    if(!data){
+      renderProperties([]);
+      return;
+    }
+
+    // Search और filter logic
+    const searchText = searchInput.value.trim().toLowerCase();
+    const filter = filterType.value;
+
+    const posts = Object.entries(data)
+      .filter(([key, post]) => {
+        // केवल approved properties दिखाएं (admin के अलावा)
+        if(!post.approved && !(isAdmin)) return false;
+
+        // Search: title या city में searchText हो
+        const matchesSearch = post.title.toLowerCase().includes(searchText) || post.city.toLowerCase().includes(searchText);
+
+        // filterType मैच करे या खाली हो
+        const matchesFilter = filter === "" || post.type === filter;
+
+        return matchesSearch && matchesFilter;
+      })
+      .map(([key, post]) => ({key, post}));
+
+    renderProperties(posts);
+  }
+
+  // Auth state change handle करें
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      postBtn.style.display = 'inline-block';
+
+      isAdmin = (user.email === adminEmail);
+    } else {
+      loginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+      postBtn.style.display = 'none';
+      isAdmin = false;
+    }
+    fetchProperties();
+  });
+
+  // Search button
+  searchBtn.onclick = () => {
+    fetchProperties();
+  };
+
+  // Enter key से भी सर्च हो जाए
+  searchInput.onkeydown = (e) => {
+    if(e.key === "Enter") fetchProperties();
+  };
+
+  // Auto fetch on page load
+  fetchProperties();
+</script>
+
+</body>
+</html>
