@@ -240,8 +240,8 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const adminEmail = "zarasamajiksevasanstha@gmail.com"; // admin email
-  const adminWhatsAppNumber = "919876543210"; // admin WhatsApp number, अपनी सही नंबर डालें
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  const adminWhatsAppNumber = "919876543210"; // admin का नंबर डालें यहाँ
 
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -288,7 +288,6 @@
     clearForm();
   };
 
-  // Clear form inputs
   function clearForm(){
     document.getElementById('titleInput').value = "";
     document.getElementById('cityInput').value = "";
@@ -300,7 +299,6 @@
     uploadStatus.textContent = "";
   }
 
-  // Upload Image to imgbb.com
   async function uploadImageToImgbb(file){
     const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
     const formData = new FormData();
@@ -349,7 +347,7 @@
         userId: currentUser.uid,
         userEmail: currentUser.email,
         timestamp,
-        approved: false // सभी पोस्ट की शुरुआत में अप्रूव्ड false रहेगा
+        approved: false
       });
 
       uploadStatus.style.color = "#28a745";
@@ -364,12 +362,12 @@
     }
   };
 
-  // Format price with Indian commas
+  // Price formatting (Indian style)
   function formatPrice(num){
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक बनाएँ (Admin को पोस्टर का नंबर दिखाना, बाकी को admin नंबर)
+  // WhatsApp लिंक
   function whatsappLink(post) {
     let phone;
     if(isAdmin){
@@ -377,24 +375,23 @@
     } else {
       phone = adminWhatsAppNumber;
     }
-
     const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
-  // प्रॉपर्टी डिलीट करें (admin या पोस्टर के लिए)
+  // Delete प्रॉपर्टी
   function deleteProperty(key){
     if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
       db.ref('properties/'+key).remove();
     }
   }
 
-  // प्रॉपर्टी approve करें (केवल admin)
+  // Approve प्रॉपर्टी
   function approveProperty(key){
     db.ref('properties/'+key).update({approved:true});
   }
 
-  // प्रॉपर्टी कार्ड दिखाएं
+  // Properties Render करें
   function renderProperties(posts){
     propertyList.innerHTML = "";
     if(posts.length === 0){
@@ -428,11 +425,11 @@
       infoPrice.textContent = "Price: ₹" + formatPrice(post.price);
       div.appendChild(infoPrice);
 
-      // बटन ग्रुप
+      // Buttons Group
       const btnGroup = document.createElement('div');
       btnGroup.className = "btn-group";
 
-      // WhatsApp बटन (सभी के लिए)
+      // WhatsApp Button
       const waBtn = document.createElement('a');
       waBtn.href = whatsappLink(post);
       waBtn.target = "_blank";
@@ -440,7 +437,7 @@
       waBtn.textContent = "WhatsApp";
       btnGroup.appendChild(waBtn);
 
-      // Delete बटन (admin या पोस्टर के लिए)
+      // Delete Button (admin or owner)
       if(isAdmin || (currentUser && currentUser.uid === post.userId)){
         const delBtn = document.createElement('button');
         delBtn.textContent = "Delete";
@@ -452,7 +449,7 @@
         btnGroup.appendChild(delBtn);
       }
 
-      // Approve बटन (केवल admin और अप्रूव्ड न हो)
+      // Approve Button (only admin and if not approved)
       if(isAdmin && !post.approved){
         const approveBtn = document.createElement('button');
         approveBtn.textContent = "Approve";
@@ -466,7 +463,7 @@
 
       div.appendChild(btnGroup);
 
-      // कार्ड क्लिक पर modal खोलें
+      // Card click to show modal
       div.onclick = () => {
         modalImage.src = post.imageUrl;
         modalTitle.textContent = post.title;
@@ -479,4 +476,79 @@
       };
 
       propertyList.appendChild(div);
-   
+    });
+  }
+
+  modalClose.onclick = () => {
+    modalOverlay.style.display = "none";
+  };
+  modalOverlay.onclick = (e) => {
+    if(e.target === modalOverlay){
+      modalOverlay.style.display = "none";
+    }
+  };
+
+  // Fetch और Filter properties
+  async function fetchProperties(){
+    const snapshot = await db.ref('properties').once('value');
+    const data = snapshot.val() || {};
+    let posts = Object.entries(data).map(([key, post]) => ({key, post}));
+    // सिर्फ अप्रूव्ड दिखाएं User को, Admin को सभी दिखाएं
+    if(!isAdmin){
+      posts = posts.filter(({post}) => post.approved);
+    }
+
+    // Search filter
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const filterVal = filterType.value;
+
+    if(searchTerm){
+      posts = posts.filter(({post}) =>
+        post.title.toLowerCase().includes(searchTerm) ||
+        post.city.toLowerCase().includes(searchTerm)
+      );
+    }
+    if(filterVal){
+      posts = posts.filter(({post}) => post.type === filterVal);
+    }
+
+    // Sort latest first
+    posts.sort((a,b) => b.post.timestamp - a.post.timestamp);
+
+    renderProperties(posts);
+  }
+
+  searchBtn.onclick = () => fetchProperties();
+
+  // Auth state change handler
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      isAdmin = (user.email === adminEmail);
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      postBtn.style.display = 'inline-block';
+
+      uploadSection.style.display = 'none';
+      clearForm();
+
+      fetchProperties();
+
+    } else {
+      currentUser = null;
+      isAdmin = false;
+      loginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+      postBtn.style.display = 'none';
+      uploadSection.style.display = 'none';
+      propertyList.innerHTML = "<p style='text-align:center; color:#666;'>कृपया लॉगिन करें।</p>";
+    }
+  });
+
+  // Initial load
+  propertyList.innerHTML = "<p style='text-align:center; color:#666;'>कृपया लॉगिन करें।</p>";
+
+</script>
+
+</body>
+</html>
