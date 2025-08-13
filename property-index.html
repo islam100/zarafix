@@ -20,6 +20,10 @@ button.btn-delete:hover { background:#a71d2a; }
 button.btn-approve { background:#28a745; }
 button.btn-approve:hover { background:#1e7e34; }
 
+#propertyForm { display:none; margin-bottom:15px; background:white; padding:10px; border-radius:10px; box-shadow:0 0 6px rgba(0,0,0,0.1); }
+#propertyForm input, #propertyForm select, #propertyForm textarea { width:100%; padding:6px; margin-bottom:6px; border-radius:5px; border:1px solid #ccc; box-sizing:border-box; }
+#propertyForm button { width:100%; }
+
 #propertyList { display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
 
 .property-card { 
@@ -58,6 +62,21 @@ button.btn-approve:hover { background:#1e7e34; }
   <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
 </header>
 
+<!-- Posting Form -->
+<form id="propertyForm">
+  <input type="text" id="title" placeholder="Title" required />
+  <input type="text" id="city" placeholder="City" required />
+  <select id="type">
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <input type="number" id="price" placeholder="Price" required />
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+  <input type="url" id="imageUrl" placeholder="Image URL" />
+  <textarea id="description" placeholder="Description"></textarea>
+  <button type="submit" class="btn">Post Property</button>
+</form>
+
 <section id="propertyList"></section>
 
 <div id="modalOverlay">
@@ -94,6 +113,7 @@ const adminWhatsAppNumber = "917378342192";
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const propertyList = document.getElementById('propertyList');
+const propertyForm = document.getElementById('propertyForm');
 
 const modalOverlay = document.getElementById('modalOverlay');
 const modalClose = document.getElementById('modalClose');
@@ -170,6 +190,26 @@ function renderProperties(posts){
 modalClose.onclick=()=>{ modalOverlay.style.display="none"; };
 modalOverlay.onclick=(e)=>{ if(e.target===modalOverlay){ modalOverlay.style.display="none"; } };
 
+propertyForm.onsubmit=(e)=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Please login first");
+  const newPost = {
+    title: document.getElementById('title').value,
+    city: document.getElementById('city').value,
+    type: document.getElementById('type').value,
+    price: Number(document.getElementById('price').value),
+    whatsapp: document.getElementById('whatsapp').value,
+    imageUrl: document.getElementById('imageUrl').value,
+    description: document.getElementById('description').value,
+    userId: currentUser.uid,
+    approved: false,
+    timestamp: Date.now()
+  };
+  db.ref('properties').push(newPost);
+  propertyForm.reset();
+  alert("Property posted! Waiting for admin approval.");
+};
+
 async function fetchProperties(){
   try{
     const snapshot=await db.ref('properties').once('value');
@@ -188,8 +228,17 @@ async function fetchProperties(){
 
 auth.onAuthStateChanged(user=>{
   currentUser=user;
-  if(user){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; isAdmin=(user.email===adminEmail); }
-  else{ loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; isAdmin=false; }
+  if(user){ 
+    loginBtn.style.display="none"; 
+    logoutBtn.style.display="inline-block"; 
+    isAdmin=(user.email===adminEmail); 
+    propertyForm.style.display='block'; // show form after login
+  } else { 
+    loginBtn.style.display="inline-block"; 
+    logoutBtn.style.display="none"; 
+    isAdmin=false; 
+    propertyForm.style.display='none'; // hide form
+  }
   fetchProperties();
 });
 
