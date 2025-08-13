@@ -3,264 +3,196 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property - Upload & List</title>
+<title>Zara Property Listing</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <style>
-  body { font-family: Arial, sans-serif; background:#f0f0f0; margin:0; padding:20px; }
-  header { text-align:center; margin-bottom:20px; }
-  #propertyList { display:grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
-  .card { background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden; }
-  .card img { width:100%; height:180px; object-fit:cover; }
-  .card-content { padding:15px; }
-  .card-content h3 { margin:0 0 10px; }
-  .btn { display:inline-block; padding:8px 14px; border:none; border-radius:5px; cursor:pointer; user-select:none; text-decoration:none; }
-  .btn-whatsapp { background:#25D366; color:#fff; }
-  .btn-delete { background:#dc3545; color:#fff; margin-left:10px; }
-  form { max-width:400px; margin:0 auto 30px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-  form input, form textarea, form select { width:100%; margin-bottom:15px; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:4px; }
-  form label { font-weight:bold; margin-bottom:5px; display:block; }
-  #loginBtn, #logoutBtn { margin-bottom:20px; cursor:pointer; padding:10px 20px; border:none; border-radius:5px; }
-  #loginBtn { background:#4285F4; color:#fff; }
-  #logoutBtn { background:#555; color:#fff; display:none; }
-  #uploadStatus { text-align:center; margin-bottom:15px; font-weight:bold; }
+  body { font-family: Arial,sans-serif; margin:0; padding:20px; background:#f9f9f9; }
+  header { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:15px; }
+  button.btn { cursor:pointer; background:#007bff; border:none; color:white; padding:6px 10px; border-radius:6px; font-size:0.9rem; }
+  button.btn:hover { background:#0056b3; }
+  button.btn-delete { background:#dc3545; }
+  button.btn-delete:hover { background:#a71d2a; }
+  button.btn-approve { background:#28a745; }
+  button.btn-approve:hover { background:#1e7e34; }
+  #propertyList { display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .property-card { background:white; border-radius:8px; padding:6px; box-shadow:0 0 6px rgba(0,0,0,0.1); cursor:pointer; display:flex; flex-direction:column; gap:6px; height:160px; overflow:hidden; transition: box-shadow 0.3s ease; }
+  .property-card:hover { box-shadow:0 0 12px rgba(0,0,0,0.2); }
+  .property-card img { width:100%; height:90px; object-fit:cover; border-radius:6px; }
+  .property-card h3 { font-size:1rem; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .property-card p { font-size:0.8rem; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .btn-whatsapp { background:#25d366; color:white; padding:4px 8px; border-radius:6px; text-decoration:none; display:inline-block; text-align:center; font-weight:600; font-size:0.8rem; }
+  .btn-group { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+  #modalOverlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index:1000; }
+  #modalContent { background:white; max-width:90vw; max-height:90vh; overflow-y:auto; border-radius:10px; padding:20px; position:relative; box-sizing:border-box; }
+  #modalContent img { max-width:100%; max-height:400px; border-radius:8px; margin-bottom:15px; }
+  #modalClose { position:absolute; top:10px; right:15px; cursor:pointer; font-size:1.5rem; font-weight:bold; color:#333; }
+  #modalContent h3 { margin-top:0; font-size:1.2rem; }
+  #modalContent p { line-height:1.5; font-size:1rem; }
+  @media(max-width:600px){ 
+    #propertyList { grid-template-columns: repeat(2,1fr); } /* मोबाइल पर 2 कार्ड एक लाइन में */
+    .property-card { height:140px; }
+    .property-card img { height:70px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Zara Property</h1>
-  <button id="loginBtn">Google Login</button>
-  <button id="logoutBtn">Logout</button>
+  <button id="loginBtn" class="btn">Google Login</button>
+  <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
 </header>
 
-<form id="postForm" style="display:none;">
-  <div id="uploadStatus"></div>
-  <label for="title">Title *</label>
-  <input type="text" id="title" required />
-  <label for="city">City *</label>
-  <input type="text" id="city" required />
-  <label for="type">Type *</label>
-  <select id="type" required>
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <label for="price">Price (Number) *</label>
-  <input type="number" id="price" required />
-  <label for="desc">Description</label>
-  <textarea id="desc"></textarea>
-  <label for="imageFile">Image *</label>
-  <input type="file" id="imageFile" accept="image/*" required />
-  <button type="submit">Post Property</button>
-</form>
+<section id="propertyList">
+  <!-- Properties listed here -->
+</section>
 
-<div id="propertyList"></div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<!-- Modal for full view -->
+<div id="modalOverlay">
+  <div id="modalContent">
+    <span id="modalClose">&times;</span>
+    <img id="modalImage" src="" alt="Property Image" />
+    <h3 id="modalTitle"></h3>
+    <p id="modalCity"></p>
+    <p id="modalType"></p>
+    <p id="modalPrice"></p>
+    <p id="modalDesc"></p>
+    <a href="#" target="_blank" id="modalWhatsapp" class="btn-whatsapp">WhatsApp पूछें</a>
+  </div>
+</div>
 
 <script>
-  // Firebase config यहाँ लगाएं
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
 
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const storage = firebase.storage();
+const auth = firebase.auth();
+const db = firebase.database();
 
-  // Admin details
-  const adminEmail = "admin@example.com"; // अपना admin email यहाँ डालें
-  const adminWhatsapp = "919876543210";   // admin का WhatsApp नंबर
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+const adminWhatsAppNumber = "917378342192";
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postForm = document.getElementById('postForm');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const propertyList = document.getElementById('propertyList');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const propertyList = document.getElementById('propertyList');
 
-  let currentUser = null;
-  let isAdmin = false;
+const modalOverlay = document.getElementById('modalOverlay');
+const modalClose = document.getElementById('modalClose');
+const modalImage = document.getElementById('modalImage');
+const modalTitle = document.getElementById('modalTitle');
+const modalCity = document.getElementById('modalCity');
+const modalType = document.getElementById('modalType');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const modalWhatsapp = document.getElementById('modalWhatsapp');
 
-  // Google Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => alert(e.message));
-  };
+let currentUser = null;
+let isAdmin = false;
 
-  // Logout
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
+loginBtn.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(e=>alert(e.message)); };
+logoutBtn.onclick = () => auth.signOut();
 
-  // On auth state change
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      postForm.style.display = 'block';
-      isAdmin = (user.email === adminEmail);
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      postForm.style.display = 'none';
-      isAdmin = false;
+function formatPrice(num){ return num.toLocaleString('en-IN'); }
+
+function getWhatsAppLink(post) {
+  if(currentUser && post.userId === currentUser.uid){
+    return `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  } else {
+    return `https://wa.me/${post.whatsapp}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  }
+}
+
+function deleteProperty(key){
+  if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")){
+    db.ref('properties/'+key).remove();
+  }
+}
+
+function approveProperty(key){
+  db.ref('properties/'+key).update({approved:true});
+}
+
+function renderProperties(posts){
+  propertyList.innerHTML = "";
+  if(posts.length===0){ propertyList.innerHTML="<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>"; return; }
+  posts.forEach(({key, post})=>{
+    const card=document.createElement('div'); card.className='property-card';
+
+    const img=document.createElement('img'); img.src=post.imageUrl||'https://via.placeholder.com/300x180?text=No+Image'; img.alt=post.title; card.appendChild(img);
+
+    const title=document.createElement('h3'); title.textContent=post.title; card.appendChild(title);
+    const city=document.createElement('p'); city.textContent="City: "+post.city; card.appendChild(city);
+    const type=document.createElement('p'); type.textContent="Type: "+(post.type==="sale"?"Buy":"Rent"); card.appendChild(type);
+    const price=document.createElement('p'); price.textContent="Price: ₹"+formatPrice(post.price); card.appendChild(price);
+
+    const btnGroup=document.createElement('div'); btnGroup.className="btn-group";
+
+    const waBtn=document.createElement('a'); waBtn.href=getWhatsAppLink(post); waBtn.target="_blank"; waBtn.className="btn-whatsapp"; waBtn.textContent="WhatsApp पूछें"; btnGroup.appendChild(waBtn);
+
+    if(isAdmin || (currentUser && currentUser.uid===post.userId)){
+      const delBtn=document.createElement('button'); delBtn.textContent="Delete"; delBtn.className="btn btn-delete"; delBtn.onclick=(e)=>{ e.stopPropagation(); deleteProperty(key); }; btnGroup.appendChild(delBtn);
     }
-    loadProperties();
+
+    if(isAdmin && !post.approved){
+      const approveBtn=document.createElement('button'); approveBtn.textContent="Approve"; approveBtn.className="btn btn-approve"; approveBtn.onclick=(e)=>{ e.stopPropagation(); approveProperty(key); }; btnGroup.appendChild(approveBtn);
+    }
+
+    card.appendChild(btnGroup);
+
+    card.onclick=()=>{
+      modalImage.src=post.imageUrl||'https://via.placeholder.com/600x400?text=No+Image';
+      modalTitle.textContent=post.title;
+      modalCity.textContent="City: "+post.city;
+      modalType.textContent="Type: "+(post.type==="sale"?"Buy":"Rent");
+      modalPrice.textContent="Price: ₹"+formatPrice(post.price);
+      modalDesc.textContent=post.description;
+      modalWhatsapp.href=getWhatsAppLink(post);
+      modalOverlay.style.display="flex";
+    };
+
+    propertyList.appendChild(card);
   });
+}
 
-  // Image upload function
-  function uploadImage(file) {
-    return new Promise((resolve, reject) => {
-      const fileName = Date.now() + '_' + file.name;
-      const storageRef = storage.ref('property_images/' + fileName);
-      const uploadTask = storageRef.put(file);
+modalClose.onclick=()=>{ modalOverlay.style.display="none"; };
+modalOverlay.onclick=(e)=>{ if(e.target===modalOverlay){ modalOverlay.style.display="none"; } };
 
-      uploadTask.on('state_changed', 
-        snapshot => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          uploadStatus.textContent = 'Uploading Image: ' + progress.toFixed(0) + '%';
-        },
-        error => {
-          uploadStatus.textContent = '';
-          reject(error);
-        },
-        () => {
-          uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-            uploadStatus.textContent = '';
-            resolve(downloadURL);
-          });
-        }
-      );
-    });
+async function fetchProperties(){
+  try{
+    const snapshot=await db.ref('properties').once('value');
+    const data=snapshot.val();
+    if(!data){ renderProperties([]); return; }
+    const posts=Object.entries(data).filter(([key,post])=>{
+      if(!isAdmin && !post.approved) return false;
+      return true;
+    }).map(([key,post])=>({key,post}));
+    renderProperties(posts);
+  }catch(e){
+    console.error("Error fetching properties:",e);
+    propertyList.innerHTML="<p style='color:red; text-align:center;'>प्रॉपर्टी लोड करने में त्रुटि।</p>";
   }
+}
 
-  // Form submit handler
-  postForm.onsubmit = async (e) => {
-    e.preventDefault();
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
+  if(user){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; isAdmin=(user.email===adminEmail); }
+  else{ loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; isAdmin=false; }
+  fetchProperties();
+});
 
-    if(!currentUser){
-      alert("Please login first!");
-      return;
-    }
-
-    const title = document.getElementById('title').value.trim();
-    const city = document.getElementById('city').value.trim();
-    const type = document.getElementById('type').value;
-    const price = Number(document.getElementById('price').value);
-    const desc = document.getElementById('desc').value.trim();
-    const imageFile = document.getElementById('imageFile').files[0];
-
-    if(!title || !city || !type || !price || !imageFile){
-      alert("Please fill all required fields and select an image.");
-      return;
-    }
-
-    try {
-      const imageUrl = await uploadImage(imageFile);
-
-      const newPost = {
-        title,
-        city,
-        type,
-        price,
-        description: desc,
-        imageUrl,
-        whatsapp: currentUser.email === adminEmail ? adminWhatsapp : "", // खाली रखें, DB में बचाएंगे
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        approved: true,  // आप चाहें तो admin approval जोड़ सकते हैं
-        timestamp: Date.now()
-      };
-
-      await db.ref('properties').push(newPost);
-
-      alert("Property posted successfully!");
-      postForm.reset();
-      loadProperties();
-
-    } catch (error) {
-      alert("Error uploading image: " + error.message);
-    }
-  };
-
-  // WhatsApp लिंक जनरेशन
-  function getWhatsappLink(post) {
-    // admin को पोस्टर का नंबर दिखाएं, बाकी को admin का नंबर
-    if(currentUser && currentUser.email === adminEmail && post.userEmail !== adminEmail && post.whatsapp){
-      return `https://wa.me/${post.whatsapp}?text=${encodeURIComponent(`नमस्ते, मैं आपकी प्रॉपर्टी "${post.title}" के बारे में जानना चाहता हूँ।`)}`;
-    } else {
-      return `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(`नमस्ते, मैं प्रॉपर्टी "${post.title}" के बारे में जानना चाहता हूँ।`)}`;
-    }
-  }
-
-  // प्रॉपर्टी लोड और दिखाएं
-  function loadProperties() {
-    propertyList.innerHTML = "Loading properties...";
-    db.ref('properties').orderByChild('approved').equalTo(true).on('value', snapshot => {
-      propertyList.innerHTML = '';
-      if(!snapshot.exists()){
-        propertyList.innerHTML = "<p style='text-align:center'>कोई प्रॉपर्टी नहीं मिली।</p>";
-        return;
-      }
-
-      snapshot.forEach(childSnapshot => {
-        const post = childSnapshot.val();
-
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        const img = document.createElement('img');
-        img.src = post.imageUrl;
-        img.alt = post.title;
-        card.appendChild(img);
-
-        const content = document.createElement('div');
-        content.className = 'card-content';
-
-        const title = document.createElement('h3');
-        title.textContent = post.title;
-        content.appendChild(title);
-
-        const city = document.createElement('p');
-        city.textContent = `City: ${post.city}`;
-        content.appendChild(city);
-
-        const type = document.createElement('p');
-        type.textContent = `Type: ${post.type === "sale" ? "Buy" : "Rent"}`;
-        content.appendChild(type);
-
-        const price = document.createElement('p');
-        price.textContent = `Price: ₹${post.price.toLocaleString('en-IN')}`;
-        content.appendChild(price);
-
-        if(post.description){
-          const desc = document.createElement('p');
-          desc.textContent = post.description;
-          content.appendChild(desc);
-        }
-
-        const waBtn = document.createElement('a');
-        waBtn.href = getWhatsappLink(post);
-        waBtn.target = "_blank";
-        waBtn.textContent = "WhatsApp";
-        waBtn.className = 'btn btn-whatsapp';
-        content.appendChild(waBtn);
-
-        card.appendChild(content);
-        propertyList.appendChild(card);
-      });
-    });
-  }
-
+// बिना login के भी approved posts दिखाएँ
+fetchProperties();
 </script>
 
 </body>
