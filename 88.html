@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zara Fix</title>
+<style>
+html, body {
+    margin:0; padding:0;
+    height:100%; width:100%;
+    overflow:hidden; /* Lock scroll */
+    font-family: Arial, sans-serif;
+}
+header {
+    background: linear-gradient(to right, #87ceeb, #a0d8ef);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+header h1 {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 5px #000, 3px 3px 8px #ff0;
+}
+nav select {
+    padding: 5px;
+}
+#cardContainer {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    width: 90%;
+    max-width: 400px;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.card {
+    background: black;
+    color: orange;
+    font-size: 24px;
+    text-align: center;
+    border-radius: 15px;
+    padding: 15px;
+    text-shadow: 2px 2px 5px #ff0, 3px 3px 5px #f00;
+    overflow: hidden;
+    white-space: pre-line;
+}
+#adminControls {
+    position: fixed;
+    top: 70px;
+    right: 10px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+.marquee {
+    background: black;
+    color: yellow;
+    padding: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.marquee span {
+    display: inline-block;
+    animation: marquee 10s linear infinite;
+}
+@keyframes marquee {
+    from { transform: translateX(100%); }
+    to { transform: translateX(-100%); }
+}
+</style>
+</head>
+<body>
+<header>
+    <h1>Zara Fix</h1>
+    <nav>
+        <select onchange="if(this.value) window.location.href=this.value">
+            <option value="">Links</option>
+            <option value="link1.html">Link 1</option>
+            <option value="link2.html">Link 2</option>
+        </select>
+    </nav>
+    <div>
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" style="display:none;">Logout</button>
+    </div>
+</header>
+
+<div id="cardContainer">
+    <div class="card" id="currentCard">Loading...</div>
+</div>
+
+<div id="adminControls">
+    <textarea id="cardText" rows="6" maxlength="500" placeholder="Enter card text (max 6 lines)"></textarea>
+    <input type="color" id="textColor" value="#ffa500">
+    <button id="addCardBtn">Add Card</button>
+    <button id="deleteCardBtn">Delete Current Card</button>
+</div>
+
+<footer>
+    <div class="marquee"><span>Scrolling text always visible here...</span></div>
+</footer>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+// Login
+document.getElementById('loginBtn').onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithRedirect(provider);
+};
+
+// Redirect login result
+auth.getRedirectResult().then(result => {
+    if (result.user) {
+        console.log("Login success:", result.user.email);
+    }
+}).catch(err => {
+    console.error("Login error:", err);
+});
+
+// State change listener
+auth.onAuthStateChanged(user => {
+    if (user) {
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        db.ref('admins/' + user.uid).once('value').then(snap => {
+            if (snap.exists()) {
+                document.getElementById('adminControls').style.display = 'flex';
+            }
+        });
+    } else {
+        document.getElementById('loginBtn').style.display = 'inline-block';
+        document.getElementById('logoutBtn').style.display = 'none';
+        document.getElementById('adminControls').style.display = 'none';
+    }
+});
+
+document.getElementById('logoutBtn').onclick = () => auth.signOut();
+
+// Cards logic
+let cards = [];
+let currentIndex = 0;
+const currentCard = document.getElementById('currentCard');
+
+function showCard(index) {
+    if (cards.length > 0) {
+        currentCard.textContent = cards[index].text;
+        currentCard.style.color = cards[index].color;
+    } else {
+        currentCard.textContent = "No cards available";
+    }
+}
+
+// Load cards from DB
+db.ref('cards').on('value', snap => {
+    cards = [];
+    snap.forEach(child => {
+        cards.push({ id: child.key, ...child.val() });
+    });
+    currentIndex = 0;
+    showCard(currentIndex);
+});
+
+// Auto slide cards
+setInterval(() => {
+    if (cards.length > 1) {
+        currentIndex = (currentIndex + 1) % cards.length;
+        showCard(currentIndex);
+    }
+}, 4000);
+
+// Add card
+document.getElementById('addCardBtn').onclick = () => {
+    const text = document.getElementById('cardText').value;
+    const color = document.getElementById('textColor').value;
+    if (text.split("\n").length > 6) {
+        alert("Max 6 lines allowed");
+        return;
+    }
+    db.ref('cards').push({ text, color });
+    document.getElementById('cardText').value = '';
+};
+
+// Delete current card
+document.getElementById('deleteCardBtn').onclick = () => {
+    if (cards.length > 0) {
+        const id = cards[currentIndex].id;
+        db.ref('cards/' + id).remove();
+    }
+};
+</script>
+</body>
+</html>
