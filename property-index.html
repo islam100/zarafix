@@ -180,7 +180,7 @@
 </header>
 
 <section id="uploadSection">
-  <h2>submit karne ke baad 917378342192 whatsapp kare apna jankari tabhi is site par apka dikhega post </h2>
+  <h2>Post Property</h2>
   <input type="text" id="titleInput" placeholder="Title" />
   <input type="text" id="cityInput" placeholder="City" />
   <select id="typeInput">
@@ -241,7 +241,7 @@
   const db = firebase.database();
 
   const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const adminWhatsAppNumber = "917378342192"; // admin का नंबर डालें यहाँ
+  const adminWhatsAppNumber = "919876543210"; // admin का नंबर डालें यहाँ
 
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -355,7 +355,7 @@
       clearForm();
       uploadSection.style.display = 'none';
 
-      fetchProperties(); // नई प्रॉपर्टी के साथ लिस्ट अपडेट करें
+      fetchProperties(); // Refresh list
 
     } catch (err) {
       uploadStatus.style.color = "#dc3545";
@@ -369,13 +369,10 @@
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक
+  // WhatsApp लिंक - हमेशा admin नंबर दिखाए
   function whatsappLink(post) {
-    // पोस्टर का नंबर दिखाओ, अगर उपलब्ध नहीं है तो admin नंबर दिखाओ
-    const phone = post.whatsapp && post.whatsapp.trim() !== "" ? post.whatsapp : adminWhatsAppNumber;
-
+    const phone = adminWhatsAppNumber;
     const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
-    
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -429,7 +426,7 @@
       const btnGroup = document.createElement('div');
       btnGroup.className = "btn-group";
 
-      // WhatsApp Button
+      // WhatsApp Button (हमेशा admin नंबर के साथ)
       const waBtn = document.createElement('a');
       waBtn.href = whatsappLink(post);
       waBtn.target = "_blank";
@@ -437,7 +434,7 @@
       waBtn.textContent = "WhatsApp";
       btnGroup.appendChild(waBtn);
 
-      // Delete Button (admin or owner)
+      // Delete Button (admin या owner को दिखाएं)
       if(isAdmin || (currentUser && currentUser.uid === post.userId)){
         const delBtn = document.createElement('button');
         delBtn.textContent = "Delete";
@@ -449,7 +446,7 @@
         btnGroup.appendChild(delBtn);
       }
 
-      // Approve Button (only admin and if not approved)
+      // Approve Button (admin को दिखाएं और तभी जब approved false हो)
       if(isAdmin && !post.approved){
         const approveBtn = document.createElement('button');
         approveBtn.textContent = "Approve";
@@ -463,7 +460,7 @@
 
       div.appendChild(btnGroup);
 
-      // Card click to show modal
+      // कार्ड क्लिक पर Modal खोलें
       div.onclick = () => {
         modalImage.src = post.imageUrl;
         modalTitle.textContent = post.title;
@@ -488,68 +485,7 @@
     }
   };
 
-  // Fetch और Filter properties
+  // Fetch properties - **बिना login के भी सभी approved properties दिखाएं**
   async function fetchProperties(){
     const snapshot = await db.ref('properties').once('value');
-    const data = snapshot.val() || {};
-    let posts = Object.entries(data).map(([key, post]) => ({key, post}));
-    // Admin को सभी दिखाएं (approved और pending दोनों)
-    // User या बिना लॉगिन वालों को सिर्फ approved दिखाएं
-    if(!isAdmin){
-      posts = posts.filter(({post}) => post.approved);
-    }
-
-    // Search filter
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    const filterVal = filterType.value;
-
-    if(searchTerm){
-      posts = posts.filter(({post}) =>
-        post.title.toLowerCase().includes(searchTerm) ||
-        post.city.toLowerCase().includes(searchTerm)
-      );
-    }
-    if(filterVal){
-      posts = posts.filter(({post}) => post.type === filterVal);
-    }
-
-    // Sort latest first
-    posts.sort((a,b) => b.post.timestamp - a.post.timestamp);
-
-    renderProperties(posts);
-  }
-
-  searchBtn.onclick = () => fetchProperties();
-
-  // Auth state change handler
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      isAdmin = (user.email === adminEmail);
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      postBtn.style.display = 'inline-block';
-
-      uploadSection.style.display = 'none';
-      clearForm();
-
-      fetchProperties();
-
-    } else {
-      currentUser = null;
-      isAdmin = false;
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      postBtn.style.display = 'none';
-      uploadSection.style.display = 'none';
-      fetchProperties(); // बिना लॉगिन के भी दिखाएं
-    }
-  });
-
-  // Initial load (बिना लॉगिन के भी दिखाना)
-  fetchProperties();
-
-</script>
-
-</body>
-</html>
+    const data = snapshot
