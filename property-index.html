@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property — Admin + User</title>
+<title>Zara Property Listing</title>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,36 +11,44 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-  /* (उपरोक्त स्टाइल्स ही रहें) */
-  /* ... */
   body {
     font-family: Arial, sans-serif;
-    margin: 0; padding: 20px;
-    background: #f9f9f9;
+    margin:0; padding:20px;
+    background:#f9f9f9;
   }
-  /* बाकी CSS ... */
   header {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-bottom: 15px;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
     flex-wrap: wrap;
+    margin-bottom:15px;
   }
-  /* ... बाकी CSS जैसा ऊपर है ... */
+  button.btn {
+    cursor:pointer;
+    background:#007bff;
+    border:none;
+    color:white;
+    padding:8px 14px;
+    border-radius:6px;
+    font-size:1rem;
+  }
+  button.btn:hover {
+    background:#0056b3;
+  }
   #propertyList {
-    display: grid;
+    display:grid;
     grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
-    gap: 15px;
+    gap:15px;
   }
   .property-card {
-    background: white;
-    border-radius: 10px;
+    background:white;
+    border-radius:10px;
+    padding:10px;
     box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    padding: 10px;
-    cursor: pointer;
-    display: flex;
+    cursor:pointer;
+    display:flex;
     flex-direction: column;
-    gap: 10px;
+    gap:10px;
     transition: box-shadow 0.3s ease;
   }
   .property-card:hover {
@@ -48,11 +56,25 @@
   }
   .property-card img {
     width: 100%;
-    max-height: 180px;
+    height: 180px;
     object-fit: cover;
     border-radius: 8px;
   }
-  /* बाकी स्टाइल जैसा ऊपर */
+  .btn-whatsapp {
+    background: #25d366;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration:none;
+    display:inline-block;
+    text-align:center;
+    font-weight:600;
+  }
+  @media(max-width:600px) {
+    #propertyList {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 <body>
@@ -60,30 +82,14 @@
 <header>
   <button id="loginBtn" class="btn">Google Login</button>
   <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
-  <button id="postBtn" class="btn" style="display:none;">Post Property</button>
 </header>
 
-<section id="uploadSection" style="display:none;">
-  <!-- (फॉर्म जैसा ऊपर है) -->
-  <!-- ... -->
+<section id="propertyList">
+  <!-- Properties will be shown here -->
 </section>
-
-<section style="margin-bottom:20px;">
-  <input type="text" id="searchInput" placeholder="Search by title or city..." style="padding:8px; width: 250px; max-width: 80%;" />
-  <select id="filterType" style="padding:8px;">
-    <option value="">All types</option>
-    <option value="sale">Buy</option>
-    <option value="rent">Rent</option>
-  </select>
-  <button id="searchBtn" class="btn">Search</button>
-</section>
-
-<section id="propertyList"></section>
-
-<!-- Modal जैसा ऊपर -->
 
 <script>
-  // Firebase Config (अपने config डालें)
+  // Firebase Config - अपने Firebase प्रोजेक्ट के हिसाब से अपडेट करें
   const firebaseConfig = {
     apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
     authDomain: "property-20d6d.firebaseapp.com",
@@ -103,146 +109,118 @@
 
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
-  const postBtn = document.getElementById('postBtn');
-
   const propertyList = document.getElementById('propertyList');
-  const searchInput = document.getElementById('searchInput');
-  const filterType = document.getElementById('filterType');
-  const searchBtn = document.getElementById('searchBtn');
 
   let currentUser = null;
   let isAdmin = false;
 
+  // Login/logout handlers
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert(err.message));
+    auth.signInWithPopup(provider).catch(e => alert(e.message));
   };
   logoutBtn.onclick = () => auth.signOut();
 
-  // Format price Indian style
-  function formatPrice(num){
+  // Price formatting
+  function formatPrice(num) {
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक
-  function whatsappLink(post) {
+  // WhatsApp लिंक: अगर current user ही पोस्ट करने वाला हो तो admin नंबर दिखाओ, वरना पोस्टर का नंबर दिखाओ
+  function getWhatsAppLink(post) {
+    let phone;
     if (currentUser && post.userId === currentUser.uid) {
-      const phone = adminWhatsAppNumber;
-      const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
-      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      phone = adminWhatsAppNumber;
     } else {
-      const phone = post.whatsapp.startsWith("91") ? post.whatsapp : "91" + post.whatsapp;
-      const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
-      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      phone = post.whatsapp.startsWith("91") ? post.whatsapp : "91" + post.whatsapp;
     }
+    const message = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   }
 
-  function renderProperties(posts){
+  // प्रॉपर्टीज़ दिखाएं
+  function renderProperties(posts) {
     propertyList.innerHTML = "";
-    if(posts.length === 0){
+    if(posts.length === 0) {
       propertyList.innerHTML = "<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
       return;
     }
-
     posts.forEach(({key, post}) => {
-      const div = document.createElement('div');
-      div.className = "property-card";
+      const card = document.createElement('div');
+      card.className = 'property-card';
 
       const img = document.createElement('img');
-      img.src = post.imageUrl;
+      img.src = post.imageUrl || 'https://via.placeholder.com/300x180?text=No+Image';
       img.alt = post.title;
-      div.appendChild(img);
+      card.appendChild(img);
 
       const title = document.createElement('h3');
-      title.className = "property-title";
       title.textContent = post.title;
-      div.appendChild(title);
+      card.appendChild(title);
 
-      const infoCity = document.createElement('p');
-      infoCity.textContent = "City: " + post.city;
-      div.appendChild(infoCity);
+      const city = document.createElement('p');
+      city.textContent = "City: " + post.city;
+      card.appendChild(city);
 
-      const infoType = document.createElement('p');
-      infoType.textContent = "Type: " + (post.type === "sale" ? "Buy" : "Rent");
-      div.appendChild(infoType);
+      const type = document.createElement('p');
+      type.textContent = "Type: " + (post.type === "sale" ? "Buy" : "Rent");
+      card.appendChild(type);
 
-      const infoPrice = document.createElement('p');
-      infoPrice.textContent = "Price: ₹" + formatPrice(post.price);
-      div.appendChild(infoPrice);
+      const price = document.createElement('p');
+      price.textContent = "Price: ₹" + formatPrice(post.price);
+      card.appendChild(price);
 
-      // WhatsApp Button
-      const waBtn = document.createElement('a');
-      waBtn.href = whatsappLink(post);
-      waBtn.target = "_blank";
-      waBtn.className = "btn-small btn-whatsapp";
-      waBtn.textContent = "WhatsApp";
-      div.appendChild(waBtn);
+      const waLink = document.createElement('a');
+      waLink.href = getWhatsAppLink(post);
+      waLink.target = "_blank";
+      waLink.className = "btn-whatsapp";
+      waLink.textContent = "WhatsApp पूछें";
+      card.appendChild(waLink);
 
-      propertyList.appendChild(div);
+      propertyList.appendChild(card);
     });
   }
 
-  async function fetchProperties(){
+  // Firebase से प्रॉपर्टीज़ fetch करें (approved और admin के लिए पूरी लिस्ट)
+  async function fetchProperties() {
     try {
       const snapshot = await db.ref('properties').once('value');
       const data = snapshot.val();
-      console.log("Fetched data:", data);
-
-      if(!data){
+      if (!data) {
         renderProperties([]);
         return;
       }
-
-      const searchText = searchInput.value.trim().toLowerCase();
-      const filter = filterType.value;
-
       const posts = Object.entries(data)
         .filter(([key, post]) => {
-          // केवल approved properties दिखाएं (admin के अलावा)
-          if(!post.approved && !isAdmin) return false;
-
-          const matchesSearch = post.title.toLowerCase().includes(searchText) || post.city.toLowerCase().includes(searchText);
-          const matchesFilter = filter === "" || post.type === filter;
-
-          return matchesSearch && matchesFilter;
+          // अगर admin है तो सब दिखाओ, वरना केवल approved दिखाओ
+          if (!post.approved && !isAdmin) return false;
+          return true;
         })
         .map(([key, post]) => ({key, post}));
-
       renderProperties(posts);
-
-    } catch(err){
-      console.error("Error fetching properties:", err);
-      propertyList.innerHTML = "<p style='text-align:center; color:#dc3545;'>प्रॉपर्टी लोड करने में त्रुटि।</p>";
+    } catch(e) {
+      console.error("Error fetching properties:", e);
+      propertyList.innerHTML = "<p style='color:red; text-align:center;'>प्रॉपर्टी लोड करने में त्रुटि।</p>";
     }
   }
 
+  // Auth state change
   auth.onAuthStateChanged(user => {
     currentUser = user;
-    if(user){
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      postBtn.style.display = 'inline-block';
-
+    if(user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
       isAdmin = (user.email === adminEmail);
     } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      postBtn.style.display = 'none';
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
       isAdmin = false;
     }
     fetchProperties();
   });
 
-  searchBtn.onclick = () => {
-    fetchProperties();
-  };
-
-  searchInput.onkeydown = (e) => {
-    if(e.key === "Enter") fetchProperties();
-  };
-
+  // शुरू में लोड करें
   fetchProperties();
-
 </script>
 
 </body>
