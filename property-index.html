@@ -11,8 +11,8 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:20px; background:#f9f9f9; }
-header { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:15px; }
+body { font-family: Arial,sans-serif; margin:0; padding:15px; background:#f9f9f9; }
+header { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
 button.btn { cursor:pointer; background:#007bff; border:none; color:white; padding:8px 14px; border-radius:6px; font-size:1rem; }
 button.btn:hover { background:#0056b3; }
 button.btn-delete { background:#dc3545; }
@@ -20,22 +20,23 @@ button.btn-delete:hover { background:#a71d2a; }
 button.btn-approve { background:#28a745; }
 button.btn-approve:hover { background:#1e7e34; }
 
-#propertyForm { display:none; margin-bottom:15px; background:white; padding:10px; border-radius:10px; box-shadow:0 0 6px rgba(0,0,0,0.1); }
-#propertyForm input, #propertyForm select, #propertyForm textarea { width:100%; padding:6px; margin-bottom:6px; border-radius:5px; border:1px solid #ccc; box-sizing:border-box; }
-#propertyForm button { width:100%; }
+#propertyForm { display:none; background:#fff; padding:15px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.15); margin-bottom:15px; }
+#propertyForm input, #propertyForm select, #propertyForm textarea, #propertyForm button { width:100%; margin-bottom:10px; padding:10px; border-radius:6px; border:1px solid #ccc; font-size:0.95rem; box-sizing:border-box; }
+#propertyForm textarea { resize:vertical; min-height:60px; }
+#propertyForm button { background:#007bff; color:#fff; border:none; cursor:pointer; }
+#propertyForm button:hover { background:#0056b3; }
 
 #propertyList { display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
 
 .property-card { 
   background:white; border-radius:10px; padding:5px; box-shadow:0 0 6px rgba(0,0,0,0.1); 
   cursor:pointer; display:flex; flex-direction:column; gap:5px; 
-  transition: box-shadow 0.3s ease; 
-  overflow:hidden; 
+  transition: box-shadow 0.3s ease; overflow:hidden; 
 }
 
 .property-card:hover { box-shadow:0 0 12px rgba(0,0,0,0.2); }
 
-.property-card img { width:100%; height:120px; object-fit:contain; border-radius:6px; }
+.property-card img { width:100%; height:120px; object-fit:cover; border-radius:6px; }
 
 .property-card .info { display:flex; flex-direction:column; gap:2px; font-size:0.85rem; line-height:1.2em; }
 
@@ -50,7 +51,7 @@ button.btn-approve:hover { background:#1e7e34; }
 #modalContent p { line-height:1.5; font-size:0.95rem; }
 
 @media(max-width:600px){ 
-  #propertyList { grid-template-columns: repeat(2,1fr); gap:6px; } /* mobile two columns */ 
+  #propertyList { grid-template-columns: repeat(2,1fr); gap:6px; } 
   .property-card img { height:100px; }
 }
 </style>
@@ -62,7 +63,6 @@ button.btn-approve:hover { background:#1e7e34; }
   <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
 </header>
 
-<!-- Posting Form -->
 <form id="propertyForm">
   <input type="text" id="title" placeholder="Title" required />
   <input type="text" id="city" placeholder="City" required />
@@ -74,7 +74,7 @@ button.btn-approve:hover { background:#1e7e34; }
   <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
   <input type="url" id="imageUrl" placeholder="Image URL" />
   <textarea id="description" placeholder="Description"></textarea>
-  <button type="submit" class="btn">Post Property</button>
+  <button type="submit">Post Property</button>
 </form>
 
 <section id="propertyList"></section>
@@ -190,26 +190,6 @@ function renderProperties(posts){
 modalClose.onclick=()=>{ modalOverlay.style.display="none"; };
 modalOverlay.onclick=(e)=>{ if(e.target===modalOverlay){ modalOverlay.style.display="none"; } };
 
-propertyForm.onsubmit=(e)=>{
-  e.preventDefault();
-  if(!currentUser) return alert("Please login first");
-  const newPost = {
-    title: document.getElementById('title').value,
-    city: document.getElementById('city').value,
-    type: document.getElementById('type').value,
-    price: Number(document.getElementById('price').value),
-    whatsapp: document.getElementById('whatsapp').value,
-    imageUrl: document.getElementById('imageUrl').value,
-    description: document.getElementById('description').value,
-    userId: currentUser.uid,
-    approved: false,
-    timestamp: Date.now()
-  };
-  db.ref('properties').push(newPost);
-  propertyForm.reset();
-  alert("Property posted! Waiting for admin approval.");
-};
-
 async function fetchProperties(){
   try{
     const snapshot=await db.ref('properties').once('value');
@@ -226,18 +206,40 @@ async function fetchProperties(){
   }
 }
 
+propertyForm.onsubmit = e => {
+  e.preventDefault();
+  if(!currentUser) return alert("कृपया लॉगिन करें।");
+  const newPost = {
+    title: document.getElementById('title').value,
+    city: document.getElementById('city').value,
+    type: document.getElementById('type').value,
+    price: Number(document.getElementById('price').value),
+    whatsapp: document.getElementById('whatsapp').value,
+    imageUrl: document.getElementById('imageUrl').value,
+    description: document.getElementById('description').value,
+    userId: currentUser.uid,
+    approved: false
+  };
+  db.ref('properties').push(newPost).then(()=>{
+    alert("Property submitted for approval.");
+    propertyForm.reset();
+    fetchProperties();
+  });
+};
+
 auth.onAuthStateChanged(user=>{
   currentUser=user;
-  if(user){ 
+  if(user){
     loginBtn.style.display="none"; 
     logoutBtn.style.display="inline-block"; 
-    isAdmin=(user.email===adminEmail); 
-    propertyForm.style.display='block'; // show form after login
-  } else { 
+    isAdmin=(user.email===adminEmail);
+    propertyForm.style.display="block";
+  }
+  else{ 
     loginBtn.style.display="inline-block"; 
     logoutBtn.style.display="none"; 
     isAdmin=false; 
-    propertyForm.style.display='none'; // hide form
+    propertyForm.style.display="none";
   }
   fetchProperties();
 });
