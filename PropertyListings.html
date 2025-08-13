@@ -3,158 +3,340 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Property Listings — Zara Property</title>
+<title>Zara Property — 99acres Style</title>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
   body {
     font-family: Arial, sans-serif;
-    margin: 10px;
-    background: #f0f2f5;
+    margin: 0; padding: 0; background: #f0f2f5;
   }
-  h1 {
-    text-align: center;
-    color: #333;
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: white;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
-  #propertyList {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-    gap: 16px;
-    max-width: 1200px;
+  header h1 {
+    margin: 0;
+    color: #007bff;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+  .header-right button {
+    margin-left: 12px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+  }
+  .btn-login {
+    background-color: #007bff;
+    color: white;
+  }
+  .btn-login:hover {
+    background-color: #0056b3;
+  }
+  .btn-logout {
+    background-color: #dc3545;
+    color: white;
+  }
+  .btn-logout:hover {
+    background-color: #a71d2a;
+  }
+  .btn-post {
+    background-color: #28a745;
+    color: white;
+  }
+  .btn-post:hover {
+    background-color: #1e7e34;
+  }
+
+  /* Search Bar */
+  .search-bar {
     margin: 20px auto;
+    max-width: 900px;
+    display: flex;
+    gap: 12px;
+    padding: 0 20px;
   }
+  .search-bar input, .search-bar select {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+  .search-bar button {
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .search-bar button:hover {
+    background-color: #0056b3;
+  }
+
+  /* Property list container */
+  #propertyList {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(270px,1fr));
+    gap: 20px;
+  }
+
+  /* Property Card */
   .property-card {
     background: white;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.12);
     overflow: hidden;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
-    transition: box-shadow 0.3s ease;
-    cursor: pointer;
-    position: relative;
+    transition: transform 0.2s ease;
   }
   .property-card:hover {
-    box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.18);
   }
   .property-image {
     width: 100%;
     height: 180px;
     object-fit: cover;
+    background: #ddd;
   }
-  .property-details {
+  .property-content {
     padding: 12px 16px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
   }
   .property-title {
-    font-weight: 600;
+    margin: 0 0 6px 0;
     font-size: 1.1rem;
-    margin: 0 0 6px;
-    color: #222;
+    font-weight: 700;
+    color: #333;
+    flex-shrink: 0;
   }
-  .property-info {
-    font-size: 0.9rem;
+  .property-info p {
+    margin: 3px 0;
     color: #555;
-    margin-bottom: 8px;
+    font-size: 0.9rem;
   }
   .property-price {
-    font-size: 1rem;
+    margin-top: auto;
     font-weight: 700;
+    font-size: 1rem;
     color: #007bff;
   }
-  /* WhatsApp button styling */
+
+  /* WhatsApp Button in card */
   .btn-whatsapp {
+    margin-top: 10px;
     background: #25d366;
     color: white;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-weight: 600;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 12px;
     font-size: 0.9rem;
-    box-shadow: 0 4px 8px #128c4a;
-    margin-top: 10px;
+    font-weight: 600;
     cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    width: 100%;
   }
   .btn-whatsapp:hover {
-    background: #1ebe57;
+    background: #128c4a;
   }
-  
-  /* Modal styles */
+
+  /* Modal */
   #modalOverlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
     display: none;
+    position: fixed;
+    top: 0; left: 0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
     padding: 10px;
   }
   #modalContent {
     background: white;
     border-radius: 10px;
-    max-width: 90vw;
+    max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    position: relative;
     padding: 20px;
+    position: relative;
   }
   #modalContent img {
     width: 100%;
-    max-height: 300px;
-    object-fit: cover;
     border-radius: 8px;
     margin-bottom: 15px;
   }
-  #modalCloseBtn {
+  #modalClose {
     position: absolute;
-    top: 8px;
-    right: 12px;
-    background: #dc3545;
-    border: none;
-    color: white;
-    font-size: 1.3rem;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    top: 10px; right: 15px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
     cursor: pointer;
-    font-weight: bold;
   }
-  #modalCloseBtn:hover {
-    background: #a71d2a;
+  #modalContent h2 {
+    margin-top: 0;
+    color: #007bff;
+  }
+  #modalContent p {
+    margin: 6px 0;
+    color: #555;
+  }
+
+  /* Upload Section Modal */
+  #uploadSection {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    max-width: 400px;
+    width: 100%;
+    z-index: 300;
+  }
+  #uploadSection h2 {
+    margin-top: 0;
+    color: #007bff;
+  }
+  #uploadSection input, #uploadSection select, #uploadSection textarea {
+    width: 100%;
+    margin: 10px 0;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+  #uploadSection button {
+    margin-top: 12px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #submitPostBtn {
+    background: #28a745;
+    color: white;
+    margin-right: 10px;
+  }
+  #submitPostBtn:hover {
+    background: #1e7e34;
+  }
+  #cancelPostBtn {
+    background: #6c757d;
+    color: white;
+  }
+  #cancelPostBtn:hover {
+    background: #565e64;
+  }
+  #uploadStatus {
+    margin-top: 10px;
+    min-height: 20px;
+    font-weight: 600;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .search-bar {
+      flex-direction: column;
+    }
+    #propertyList {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 </head>
 <body>
 
-<h1>Property Listings</h1>
+<header>
+  <h1>Zara Property</h1>
+  <div class="header-right">
+    <button id="loginBtn" class="btn-login">Google Login</button>
+    <button id="logoutBtn" class="btn-logout" style="display:none;">Logout</button>
+    <button id="postBtn" class="btn-post" style="display:none;">Post Property</button>
+  </div>
+</header>
 
-<div id="propertyList">
-  <!-- Properties will be rendered here -->
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search by title or city..." />
+  <select id="filterType">
+    <option value="">All types</option>
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <button id="searchBtn">Search</button>
 </div>
 
-<!-- Modal for large view -->
+<section id="propertyList"></section>
+
+<!-- Modal for property details -->
 <div id="modalOverlay">
   <div id="modalContent">
-    <button id="modalCloseBtn" title="Close">&times;</button>
+    <span id="modalClose">&times;</span>
     <img id="modalImage" src="" alt="Property Image" />
     <h2 id="modalTitle"></h2>
-    <p id="modalCity"></p>
-    <p id="modalType"></p>
-    <p id="modalPrice"></p>
+    <p><strong>City:</strong> <span id="modalCity"></span></p>
+    <p><strong>Type:</strong> <span id="modalType"></span></p>
+    <p><strong>Price:</strong> ₹<span id="modalPrice"></span></p>
     <p id="modalDesc"></p>
-    <a id="modalWhatsApp" class="btn-whatsapp" target="_blank" rel="noopener noreferrer">WhatsApp पूछें</a>
+    <a id="modalWhatsapp" href="#" target="_blank" class="btn-whatsapp">WhatsApp पर पूछें</a>
   </div>
+</div>
+
+<!-- Upload Section Modal -->
+<div id="uploadSection">
+  <h2>Post Property</h2>
+  <input type="text" id="titleInput" placeholder="Title" />
+  <input type="text" id="cityInput" placeholder="City" />
+  <select id="typeInput">
+    <option value="sale">Buy</option>
+    <option value="rent">Rent</option>
+  </select>
+  <input type="number" id="priceInput" placeholder="Price (₹)" />
+  <textarea id="descInput" placeholder="Description"></textarea>
+  <input type="file" id="imageInput" accept="image/*" />
+  <input type="text" id="linkInput" placeholder="Property Link (optional)" />
+  <div style="margin-top: 15px; text-align: right;">
+    <button id="submitPostBtn">Upload & Post</button>
+    <button id="cancelPostBtn">Cancel</button>
+  </div>
+  <p id="uploadStatus"></p>
 </div>
 
 <script>
@@ -170,141 +352,112 @@
   };
   firebase.initializeApp(firebaseConfig);
 
+  const auth = firebase.auth();
   const db = firebase.database();
+
+  const imgbbApiKey = "52759d17d6011826df915af26466a7ea";
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  const whatsappAdminPhone = "917378342192";
+
+  // Elements
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const postBtn = document.getElementById('postBtn');
+
+  const uploadSection = document.getElementById('uploadSection');
+  const submitPostBtn = document.getElementById('submitPostBtn');
+  const cancelPostBtn = document.getElementById('cancelPostBtn');
+  const uploadStatus = document.getElementById('uploadStatus');
+
+  const searchInput = document.getElementById('searchInput');
+  const filterType = document.getElementById('filterType');
+  const searchBtn = document.getElementById('searchBtn');
+
   const propertyList = document.getElementById('propertyList');
 
   // Modal elements
   const modalOverlay = document.getElementById('modalOverlay');
-  const modalContent = document.getElementById('modalContent');
-  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const modalClose = document.getElementById('modalClose');
   const modalImage = document.getElementById('modalImage');
   const modalTitle = document.getElementById('modalTitle');
   const modalCity = document.getElementById('modalCity');
   const modalType = document.getElementById('modalType');
   const modalPrice = document.getElementById('modalPrice');
   const modalDesc = document.getElementById('modalDesc');
-  const modalWhatsApp = document.getElementById('modalWhatsApp');
+  const modalWhatsapp = document.getElementById('modalWhatsapp');
 
-  const whatsappNumber = "917378342192";
+  let currentUser = null;
+  let isAdmin = false;
 
-  function formatPrice(num) {
-    return num.toLocaleString('en-IN');
+  // Login with Google
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => alert(err.message));
+  };
+
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  postBtn.onclick = () => {
+    openUploadModal();
+  };
+
+  cancelPostBtn.onclick = () => {
+    closeUploadModal();
+  };
+
+  // Modal close
+  modalClose.onclick = () => {
+    closeModal();
+  };
+  modalOverlay.onclick = (e) => {
+    if (e.target === modalOverlay) closeModal();
+  };
+
+  // Upload modal functions
+  function openUploadModal() {
+    uploadSection.style.display = 'block';
+    clearUploadForm();
+    uploadStatus.textContent = "";
+  }
+  function closeUploadModal() {
+    uploadSection.style.display = 'none';
+    clearUploadForm();
+  }
+  function clearUploadForm() {
+    document.getElementById('titleInput').value = "";
+    document.getElementById('cityInput').value = "";
+    document.getElementById('typeInput').value = "sale";
+    document.getElementById('priceInput').value = "";
+    document.getElementById('descInput').value = "";
+    document.getElementById('imageInput').value = "";
+    document.getElementById('linkInput').value = "";
   }
 
-  function whatsappLink(post) {
-    const msg = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\n\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}\n\nLink: ${window.location.href}`;
-    return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`;
-  }
+  // Upload property
+  submitPostBtn.onclick = async () => {
+    uploadStatus.textContent = "";
+    const title = document.getElementById('titleInput').value.trim();
+    const city = document.getElementById('cityInput').value.trim();
+    const type = document.getElementById('typeInput').value;
+    const price = Number(document.getElementById('priceInput').value);
+    const desc = document.getElementById('descInput').value.trim();
+    const imageFile = document.getElementById('imageInput').files[0];
+    const link = document.getElementById('linkInput').value.trim();
 
-  function renderProperties(properties) {
-    propertyList.innerHTML = "";
-
-    if (properties.length === 0) {
-      propertyList.innerHTML = "<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>";
+    if(!title || !city || !type || !price || !desc || !imageFile){
+      uploadStatus.style.color = "#dc3545";
+      uploadStatus.textContent = "सभी फील्ड्स भरें और इमेज अपलोड करें।";
       return;
     }
 
-    properties.forEach(({key, post}) => {
-      if(!post.approved) return;
+    uploadStatus.style.color = "black";
+    uploadStatus.textContent = "Uploading image...";
 
-      const card = document.createElement('div');
-      card.className = "property-card";
+    try {
+      const imageUrl = await uploadImageToImgbb(imageFile);
+      const timestamp = Date.now();
 
-      const img = document.createElement('img');
-      img.className = "property-image";
-      img.src = post.imageUrl || 'https://via.placeholder.com/300x180?text=No+Image';
-      img.alt = post.title;
-      card.appendChild(img);
-
-      const details = document.createElement('div');
-      details.className = "property-details";
-
-      const title = document.createElement('h3');
-      title.className = "property-title";
-      title.textContent = post.title;
-      details.appendChild(title);
-
-      const city = document.createElement('div');
-      city.className = "property-info";
-      city.textContent = "City: " + post.city;
-      details.appendChild(city);
-
-      const type = document.createElement('div');
-      type.className = "property-info";
-      type.textContent = "Type: " + (post.type === 'sale' ? 'Buy' : 'Rent');
-      details.appendChild(type);
-
-      const price = document.createElement('div');
-      price.className = "property-price";
-      price.textContent = "₹ " + formatPrice(post.price);
-      details.appendChild(price);
-
-      // WhatsApp button inside card
-      const waBtn = document.createElement('a');
-      waBtn.href = whatsappLink(post);
-      waBtn.target = "_blank";
-      waBtn.rel = "noopener noreferrer";
-      waBtn.className = "btn-whatsapp";
-      waBtn.textContent = "WhatsApp पूछें";
-
-      // To prevent card click when clicking whatsapp button
-      waBtn.addEventListener('click', e => e.stopPropagation());
-
-      details.appendChild(waBtn);
-
-      card.appendChild(details);
-
-      // Card click opens modal
-      card.addEventListener('click', () => {
-        openModal(post);
-      });
-
-      propertyList.appendChild(card);
-    });
-  }
-
-  function openModal(post) {
-    modalImage.src = post.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image';
-    modalTitle.textContent = post.title;
-    modalCity.textContent = "City: " + post.city;
-    modalType.textContent = "Type: " + (post.type === 'sale' ? 'Buy' : 'Rent');
-    modalPrice.textContent = "Price: ₹ " + formatPrice(post.price);
-    modalDesc.textContent = post.description || "";
-    modalWhatsApp.href = whatsappLink(post);
-
-    modalOverlay.style.display = 'flex';
-  }
-
-  modalCloseBtn.addEventListener('click', () => {
-    modalOverlay.style.display = 'none';
-  });
-
-  // Click outside modal content closes modal
-  modalOverlay.addEventListener('click', (e) => {
-    if(e.target === modalOverlay){
-      modalOverlay.style.display = 'none';
-    }
-  });
-
-  // Load properties from Firebase
-  function loadProperties() {
-    db.ref('properties').once('value')
-      .then(snapshot => {
-        const data = snapshot.val();
-        if(!data) {
-          renderProperties([]);
-          return;
-        }
-        const properties = Object.entries(data).map(([key, post]) => ({key, post}));
-        renderProperties(properties);
-      })
-      .catch(err => {
-        propertyList.innerHTML = `<p style='color:red; text-align:center;'>Error loading properties: ${err.message}</p>`;
-      });
-  }
-
-  loadProperties();
-</script>
-
-</body>
-</html>
+      const newRef = db.ref('properties').push();
+      await newRef.set
