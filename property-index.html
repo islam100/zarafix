@@ -89,7 +89,7 @@
 </section>
 
 <script>
-  // Firebase Config - अपने Firebase प्रोजेक्ट के हिसाब से अपडेट करें
+  // Firebase Config - अपने Firebase प्रोजेक्ट के अनुसार बदलें
   const firebaseConfig = {
     apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
     authDomain: "property-20d6d.firebaseapp.com",
@@ -114,31 +114,35 @@
   let currentUser = null;
   let isAdmin = false;
 
-  // Login/logout handlers
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(e => alert(e.message));
   };
   logoutBtn.onclick = () => auth.signOut();
 
-  // Price formatting
   function formatPrice(num) {
     return num.toLocaleString('en-IN');
   }
 
-  // WhatsApp लिंक: अगर current user ही पोस्ट करने वाला हो तो admin नंबर दिखाओ, वरना पोस्टर का नंबर दिखाओ
+  // Updated getWhatsAppLink to safely check whatsapp field
   function getWhatsAppLink(post) {
     let phone;
+
     if (currentUser && post.userId === currentUser.uid) {
       phone = adminWhatsAppNumber;
     } else {
-      phone = post.whatsapp.startsWith("91") ? post.whatsapp : "91" + post.whatsapp;
+      if (post.whatsapp && typeof post.whatsapp === "string") {
+        phone = post.whatsapp.startsWith("91") ? post.whatsapp : "91" + post.whatsapp;
+      } else {
+        phone = adminWhatsAppNumber; // fallback
+      }
     }
+
     const message = `नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: ${post.title}\nCity: ${post.city}\nPrice: ₹${formatPrice(post.price)}`;
+
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   }
 
-  // प्रॉपर्टीज़ दिखाएं
   function renderProperties(posts) {
     propertyList.innerHTML = "";
     if(posts.length === 0) {
@@ -181,7 +185,6 @@
     });
   }
 
-  // Firebase से प्रॉपर्टीज़ fetch करें (approved और admin के लिए पूरी लिस्ट)
   async function fetchProperties() {
     try {
       const snapshot = await db.ref('properties').once('value');
@@ -192,7 +195,6 @@
       }
       const posts = Object.entries(data)
         .filter(([key, post]) => {
-          // अगर admin है तो सब दिखाओ, वरना केवल approved दिखाओ
           if (!post.approved && !isAdmin) return false;
           return true;
         })
@@ -204,7 +206,6 @@
     }
   }
 
-  // Auth state change
   auth.onAuthStateChanged(user => {
     currentUser = user;
     if(user) {
@@ -219,7 +220,7 @@
     fetchProperties();
   });
 
-  // शुरू में लोड करें
+  // Initial fetch (for not logged in users)
   fetchProperties();
 </script>
 
