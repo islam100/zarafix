@@ -1,110 +1,243 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <title>🛠️ ZaraFix - Welcome</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #f0f8ff, #ffffff);
-      text-align: center;
-      padding: 20px;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zara Property Listing</title>
 
-    h2 {
-      font-size: 24px;
-      margin-bottom: 30px;
-    }
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    .btn {
-      background: #4CAF50;
-      color: white;
-      padding: 15px 30px;
-      border: none;
-      margin: 10px;
-      font-size: 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3);
-      transition: transform 0.2s;
-    }
+<style>
+/* Full screen sky gradient background */
+body {
+  font-family: Arial,sans-serif; margin:0; padding:0;
+  min-height:100vh;
+  background: linear-gradient(to bottom, #87ceeb, #b0e0e6);
+}
 
-    .btn:hover {
-      transform: scale(1.05);
-    }
+/* Header */
+header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 20px; background:rgba(255,255,255,0.2);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); backdrop-filter: blur(6px);
+  flex-wrap:wrap;
+}
 
-    #buttons.hidden {
-      display: none;
-    }
-  </style>
+/* Logo */
+.logo {
+  font-size:2.5rem; font-weight:900; color:#fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 4px 4px 6px rgba(0,0,0,0.3);
+  user-select:none;
+}
+
+/* Buttons */
+button.btn {
+  cursor:pointer;
+  background:#007bff;
+  border:none;
+  color:white;
+  padding:6px 12px; /* smaller than before */
+  border-radius:8px;
+  font-size:0.9rem;
+  font-weight:bold;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+button.btn:hover {
+  background:#0056b3;
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+}
+
+/* Property grid */
+#propertyList { 
+  display:grid; 
+  grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); 
+  gap:10px; 
+  padding:15px;
+}
+
+/* Property card */
+.property-card { 
+  background:white; border-radius:10px; padding:5px; box-shadow:0 0 6px rgba(0,0,0,0.1); 
+  cursor:pointer; display:flex; flex-direction:column; gap:5px; 
+  transition: box-shadow 0.3s ease; 
+  overflow:hidden; 
+}
+.property-card:hover { box-shadow:0 0 12px rgba(0,0,0,0.25); }
+.property-card img { width:100%; height:120px; object-fit:contain; border-radius:6px; }
+.property-card .info { display:flex; flex-direction:column; gap:2px; font-size:0.85rem; line-height:1.2em; }
+
+/* WhatsApp button */
+.btn-whatsapp { background:#25d366; color:white; padding:4px 8px; border-radius:6px; text-decoration:none; display:inline-block; text-align:center; font-weight:600; font-size:0.8rem; }
+.btn-group { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+
+/* Modal */
+#modalOverlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index:1000; }
+#modalContent { background:white; width:95vw; max-width:600px; max-height:95vh; overflow-y:auto; border-radius:10px; padding:20px; position:relative; box-sizing:border-box; }
+#modalContent img { width:100%; height:auto; border-radius:8px; margin-bottom:15px; }
+#modalClose { position:absolute; top:10px; right:15px; cursor:pointer; font-size:1.5rem; font-weight:bold; color:#333; }
+#modalContent h3 { margin-top:0; font-size:1.2rem; }
+#modalContent p { line-height:1.5; font-size:0.95rem; }
+
+@media(max-width:600px){ 
+  #propertyList { grid-template-columns: repeat(2,1fr); gap:6px; } 
+  .property-card img { height:100px; }
+  .logo { font-size:1.8rem; }
+}
+</style>
 </head>
 <body>
-  <h2>🛠️ Welcome to ZaraFix</h2>
 
-  <div id="buttons" class="hidden">
-    <button class="btn" id="providerBtn" onclick="goToProvider()">Registration Form</button>
-    <button class="btn" id="requestBtn" onclick="goToRequest()">Dashboard</button>
-    <button class="btn" onclick="logout()">Logout</button>
+<header>
+  <div class="logo">ZaraFix-Property</div>
+  <div>
+    <button id="loginBtn" class="btn">Login</button>
+    <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
   </div>
+</header>
 
-  <button class="btn" id="loginBtn" onclick="login()">Login with Google</button>
+<section id="propertyList"></section>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<div id="modalOverlay">
+  <div id="modalContent">
+    <span id="modalClose">&times;</span>
+    <img id="modalImage" src="" alt="Property Image" />
+    <h3 id="modalTitle"></h3>
+    <p id="modalCity"></p>
+    <p id="modalType"></p>
+    <p id="modalPrice"></p>
+    <p id="modalDesc"></p>
+    <a href="#" target="_blank" id="modalWhatsapp" class="btn-whatsapp">WhatsApp पूछें</a>
+  </div>
+</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+const adminWhatsAppNumber = "917378342192";
+
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const propertyList = document.getElementById('propertyList');
+
+const modalOverlay = document.getElementById('modalOverlay');
+const modalClose = document.getElementById('modalClose');
+const modalImage = document.getElementById('modalImage');
+const modalTitle = document.getElementById('modalTitle');
+const modalCity = document.getElementById('modalCity');
+const modalType = document.getElementById('modalType');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const modalWhatsapp = document.getElementById('modalWhatsapp');
+
+let currentUser = null;
+let isAdmin = false;
+
+loginBtn.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(e=>alert(e.message)); };
+logoutBtn.onclick = () => auth.signOut();
+
+function formatPrice(num){ return num.toLocaleString('en-IN'); }
+
+function getWhatsAppLink(post){
+  if(currentUser && post.userId===currentUser.uid){
+    return `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  } else {
+    return `https://wa.me/${post.whatsapp}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  }
+}
+
+function deleteProperty(key){ if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")) db.ref('properties/'+key).remove(); }
+function approveProperty(key){ db.ref('properties/'+key).update({approved:true}); }
+
+function renderProperties(posts){
+  propertyList.innerHTML="";
+  if(posts.length===0){ propertyList.innerHTML="<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>"; return; }
+
+  posts.forEach(({key,post})=>{
+    const card=document.createElement('div'); card.className='property-card';
+
+    const img=document.createElement('img'); img.src=post.imageUrl||'https://via.placeholder.com/300x180?text=No+Image'; img.alt=post.title; card.appendChild(img);
+
+    const infoDiv=document.createElement('div'); infoDiv.className='info';
+    const title=document.createElement('p'); title.textContent=post.title; infoDiv.appendChild(title);
+    const city=document.createElement('p'); city.textContent="City: "+post.city; infoDiv.appendChild(city);
+    const price=document.createElement('p'); price.textContent="₹"+formatPrice(post.price); infoDiv.appendChild(price);
+    card.appendChild(infoDiv);
+
+    const btnGroup=document.createElement('div'); btnGroup.className="btn-group";
+    const waBtn=document.createElement('a'); waBtn.href=getWhatsAppLink(post); waBtn.target="_blank"; waBtn.className="btn-whatsapp"; waBtn.textContent="WhatsApp"; btnGroup.appendChild(waBtn);
+
+    if(isAdmin || (currentUser && currentUser.uid===post.userId)){
+      const delBtn=document.createElement('button'); delBtn.textContent="Delete"; delBtn.className="btn btn-delete"; delBtn.onclick=(e)=>{ e.stopPropagation(); deleteProperty(key); }; btnGroup.appendChild(delBtn);
+    }
+
+    if(isAdmin && !post.approved){
+      const approveBtn=document.createElement('button'); approveBtn.textContent="Approve"; approveBtn.className="btn btn-approve"; approveBtn.onclick=(e)=>{ e.stopPropagation(); approveProperty(key); }; btnGroup.appendChild(approveBtn);
+    }
+
+    card.appendChild(btnGroup);
+
+    card.onclick=()=>{
+      modalImage.src=post.imageUrl||'https://via.placeholder.com/600x400?text=No+Image';
+      modalTitle.textContent=post.title;
+      modalCity.textContent="City: "+post.city;
+      modalType.textContent="Type: "+(post.type==="sale"?"Buy":"Rent");
+      modalPrice.textContent="Price: ₹"+formatPrice(post.price);
+      modalDesc.textContent=post.description;
+      modalWhatsapp.href=getWhatsAppLink(post);
+      modalOverlay.style.display="flex";
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    propertyList.appendChild(card);
+  });
+}
 
-    // Check login state
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        document.getElementById("buttons").classList.remove("hidden");
-        document.getElementById("loginBtn").style.display = "none";
-      } else {
-        document.getElementById("buttons").classList.add("hidden");
-        document.getElementById("loginBtn").style.display = "inline-block";
-      }
-    });
+modalClose.onclick=()=>{ modalOverlay.style.display="none"; };
+modalOverlay.onclick=(e)=>{ if(e.target===modalOverlay){ modalOverlay.style.display="none"; } };
 
-    // Login
-    function login() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(result => {
-          console.log("Logged in:", result.user.displayName);
-        })
-        .catch(error => {
-          console.error("Login error:", error);
-        });
-    }
+async function fetchProperties(){
+  try{
+    const snapshot=await db.ref('properties').once('value');
+    const data=snapshot.val();
+    if(!data){ renderProperties([]); return; }
+    const posts=Object.entries(data).filter(([key,post])=>{
+      if(!isAdmin && !post.approved) return false;
+      return true;
+    }).map(([key,post])=>({key,post}));
+    renderProperties(posts);
+  }catch(e){
+    console.error("Error fetching properties:",e);
+    propertyList.innerHTML="<p style='color:red; text-align:center;'>प्रॉपर्टी लोड करने में त्रुटि।</p>";
+  }
+}
 
-    // Logout
-    function logout() {
-      auth.signOut()
-        .then(() => {
-          console.log("Logged out");
-        });
-    }
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
+  if(user){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; isAdmin=(user.email===adminEmail); }
+  else{ loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; isAdmin=false; }
+  fetchProperties();
+});
 
-    // Redirect functions
-    function goToProvider() {
-      window.location.href = "posterDashboard.html";
-    }
+// बिना login के भी approved posts दिखाएँ
+fetchProperties();
+</script>
 
-    function goToRequest() {
-      window.location.href = "form.html";
-    }
-  </script>
 </body>
 </html>
