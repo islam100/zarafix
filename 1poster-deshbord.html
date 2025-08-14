@@ -1,173 +1,294 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <title>🧾 ZaraFix - Admin Recharge Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #f0f8ff, #ffffff);
-      margin: 0; padding: 20px;
-    }
-    h2 { text-align: center; color: #222; }
-    #loginBtn { display: block; margin: auto; padding: 10px 20px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; }
-    .card {
-      background: white; margin: 10px auto; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      border-radius: 12px; width: 95%; max-width: 600px; transition: transform 0.2s;
-    }
-    .card:hover { transform: scale(1.02); }
-    .actions button {
-      margin: 5px; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;
-    }
-    .approve { background: #4CAF50; color: white; }
-    .delete { background: #f44336; color: white; }
-    .recharge { background: #2196F3; color: white; }
-    .status { font-weight: bold; }
-    .search-bar, .pagination {
-      text-align: center; margin: 15px 0;
-    }
-    .pagination button {
-      margin: 0 5px; padding: 6px 10px; border-radius: 6px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZaraFix — ImgBB Slider</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+html, body {
+  margin:0; padding:0; height:100%; overflow:hidden;
+  font-family: Arial, sans-serif; background:#f4f4f4;
+}
+
+/* Header */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px; background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; z-index:10;
+  flex-wrap:wrap;
+}
+.logo {
+  font-size:2rem; font-weight:900;
+  background:linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+
+/* Dropdown menus */
+nav {
+  display:flex; gap:10px; flex-wrap:wrap;
+}
+.dropdown {
+  position:relative;
+}
+.dropbtn {
+  background:#111; color:#fff; border:none; padding:8px 14px;
+  border-radius:6px; cursor:pointer; font-weight:bold;
+}
+.dropdown-content {
+  position:absolute; top:110%; left:0;
+  background:#fff; min-width:180px; border-radius:8px; overflow:hidden;
+  box-shadow:0 8px 20px rgba(0,0,0,0.15);
+  display:none; flex-direction:column; z-index:20;
+}
+.dropdown-content a {
+  padding:10px 14px; text-decoration:none; color:#333;
+}
+.dropdown-content a:hover { background:#f2f2f2; }
+.dropdown.open .dropdown-content { display:flex; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
+
+/* Buttons */
+#loginBtn, #logoutBtn, #adminUploadBtn {
+  padding:6px 12px; border:none; border-radius:6px; margin-left:6px;
+}
+#loginBtn { background:#28a745; color:#fff; }
+#logoutBtn { background:#dc3545; color:#fff; }
+#adminUploadBtn { background:#007bff; color:#fff; }
+
+/* Slider */
+.slider {
+  position:relative; width:100%; height:calc(100vh - 68px);
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,#a8edea,#fed6e3);
+}
+.slider img {
+  max-width:92%; max-height:92%; object-fit:contain;
+  border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* Admin Controls ऊपर fixed */
+.admin-controls {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 5;
+}
+.admin-controls .btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-weight: bold;
+  backdrop-filter: blur(4px);
+}
+.admin-controls .btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+.delete-btn { background: #dc3545; }
+.delete-btn:hover { background: #b52b38; }
+
+/* Toast */
+#toast {
+  position:absolute; top:14px; left:50%; transform:translateX(-50%);
+  background:rgba(255,255,255,0.9); color:#111; padding:8px 14px;
+  border-radius:999px; font-weight:700; display:none;
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+}
+</style>
 </head>
 <body>
-  <h2>Admin Recharge Panel 🔋</h2>
-  <button id="loginBtn">Login with Google</button>
-  <div class="search-bar">
-    🔍 <input type="text" id="searchBox" placeholder="Search by name or date..." style="padding: 6px; width: 80%; max-width: 300px;">
+
+<header>
+  <div class="logo">ZaraFix</div>
+
+  <nav>
+    <div class="dropdown" id="menu1">
+      <button class="dropbtn" onclick="toggleDropdown('menu1')">Menu 1 ▾</button>
+      <div class="dropdown-content">
+        <a href="#">Home</a>
+        <a href="#">Services</a>
+        <a href="#">About</a>
+      </div>
+    </div>
+    <div class="dropdown" id="menu2">
+      <button class="dropbtn" onclick="toggleDropdown('menu2')">Menu 2 ▾</button>
+      <div class="dropdown-content">
+        <a href="#">Contact</a>
+        <a href="#">Support</a>
+        <a href="#">FAQ</a>
+      </div>
+    </div>
+  </nav>
+
+  <div>
+    <button id="loginBtn">Login (Google)</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="adminUploadBtn" style="display:none;">Upload</button>
   </div>
-  <div id="rechargeList"></div>
-  <div class="pagination">
-    <button id="prevBtn">⬅️ Previous</button>
-    <span id="pageInfo"></span>
-    <button id="nextBtn">Next ➡️</button>
+</header>
+
+<div class="slider" id="slider">
+  <div id="toast"></div>
+  <div class="admin-controls" id="adminControls" style="display:none;">
+    <button class="btn" id="prevBtn">⟵ Prev</button>
+    <button class="btn" id="nextBtn">Next ⟶</button>
+    <button class="btn delete-btn" id="deleteBtn">Delete</button>
   </div>
+</div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-      authDomain: "zara-fix.firebaseapp.com",
-      databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-      projectId: "zara-fix",
-      storageBucket: "zara-fix.appspot.com",
-      messagingSenderId: "476473209200",
-      appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+<script>
+const IMGBB_API_KEY = "5128d0b0687e9718139752bca8a4ec59";
+const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
 
-    const adminUID = "wjbEIAEF5jWgJKb2LlfWoIv4EqO2"; // ✅ Replace with real admin UID
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
 
-    const loginBtn = document.getElementById("loginBtn");
-    const rechargeList = document.getElementById("rechargeList");
-    const searchBox = document.getElementById("searchBox");
-    const prevBtn = document.getElementById("prevBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const pageInfo = document.getElementById("pageInfo");
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
 
-    let rechargeData = [];
-    let currentPage = 1;
-    const itemsPerPage = 10;
+let user = null;
+let slides = [];
+let idx = 0;
 
-    loginBtn.addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    });
+function toggleDropdown(id){
+  document.querySelectorAll('.dropdown').forEach(d => {
+    if(d.id === id) d.classList.toggle('open');
+    else d.classList.remove('open');
+  });
+}
+function toast(msg, ms=1500){
+  const t = document.getElementById('toast');
+  t.innerText = msg; t.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=> t.style.display='none', ms);
+}
+function showImage(){
+  const wrap = document.getElementById('slider');
+  Array.from(wrap.querySelectorAll('img')).forEach(n => n.remove());
+  if(!slides.length) return;
+  const img = document.createElement('img');
+  img.src = slides[idx].url;
+  wrap.appendChild(img);
+}
 
-    auth.onAuthStateChanged(user => {
-      if (user && user.uid === adminUID) {
-        loginBtn.style.display = "none";
-        loadRechargeData();
-      } else if (user) {
-        alert("Access Denied: Not an Admin");
-        firebase.auth().signOut();
-      }
-    });
+/* Auth */
+document.getElementById('loginBtn').onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(()=> toast("Login error"));
+};
+document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
-    function loadRechargeData() {
-      db.ref("rechargeRequests").on("value", snapshot => {
-        rechargeData = [];
-        snapshot.forEach(child => {
-          rechargeData.push({ key: child.key, ...child.val() });
-        });
-        applySearchAndRender();
+auth.onAuthStateChanged(u => {
+  user = u || null;
+  const isAdmin = !!(user && user.email === ADMIN_EMAIL);
+  document.getElementById('loginBtn').style.display = user ? 'none':'inline-block';
+  document.getElementById('logoutBtn').style.display = user ? 'inline-block':'none';
+  document.getElementById('adminUploadBtn').style.display = isAdmin ? 'inline-block':'none';
+  document.getElementById('adminControls').style.display = isAdmin ? 'flex':'none';
+});
+
+/* Load slider data */
+db.ref('slider').on('value', snap => {
+  const arr = [];
+  snap.forEach(ch => {
+    const v = ch.val();
+    arr.push({ key: ch.key, url: v.url, delete_url: v.delete_url || "", timestamp: v.timestamp || 0 });
+  });
+  arr.sort((a,b)=> b.timestamp - a.timestamp);
+  slides = arr;
+  if(idx >= slides.length) idx = 0;
+  showImage();
+});
+
+/* Controls */
+document.getElementById('prevBtn').onclick = () => {
+  if(!slides.length) return;
+  idx = (idx - 1 + slides.length) % slides.length;
+  showImage();
+};
+document.getElementById('nextBtn').onclick = () => {
+  if(!slides.length) return;
+  idx = (idx + 1) % slides.length;
+  showImage();
+};
+
+/* Auto slide */
+setInterval(()=> {
+  if(slides.length > 1) {
+    idx = (idx + 1) % slides.length;
+    showImage();
+  }
+}, 3000);
+
+/* Upload */
+document.getElementById('adminUploadBtn').onclick = () => {
+  if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const form = new FormData();
+    form.append('image', file);
+    toast("Uploading...");
+    try {
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: form
       });
-    }
-
-    function applySearchAndRender() {
-      const searchTerm = searchBox.value.toLowerCase();
-      const filtered = rechargeData.filter(item =>
-        item.name?.toLowerCase().includes(searchTerm) ||
-        item.date?.toLowerCase().includes(searchTerm)
-      );
-      renderPage(filtered);
-    }
-
-    function renderPage(data) {
-      const start = (currentPage - 1) * itemsPerPage;
-      const pagedData = data.slice(start, start + itemsPerPage);
-      rechargeList.innerHTML = "";
-
-      if (pagedData.length === 0) {
-        rechargeList.innerHTML = "<p style='text-align:center;'>No recharge requests.</p>";
-        return;
+      const data = await res.json();
+      if(data && data.success) {
+        const url = data.data.display_url;
+        const delete_url = data.data.delete_url || "";
+        const timestamp = Date.now();
+        const ref = db.ref('slider').push();
+        await ref.set({ url, delete_url, timestamp });
+        toast("Uploaded ✅");
+      } else {
+        toast("Upload failed");
       }
-
-      pagedData.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <p><b>Name:</b> ${item.name || "N/A"}</p>
-          <p><b>WhatsApp:</b> <a href="https://wa.me/${item.whatsapp}" target="_blank">${item.whatsapp}</a></p>
-          <p><b>Date:</b> ${item.date || "N/A"}</p>
-          <p><b>Status:</b> <span class="status" style="color:${item.status ? "green" : "red"}">${item.status ? "Approved" : "Pending"}</span></p>
-          <p><img src="${item.image}" alt="screenshot" width="100%"></p>
-          <div class="actions">
-            <button class="approve" onclick="approveRecharge('${item.key}')">✔️ Approve</button>
-            <button class="delete" onclick="deleteRecharge('${item.key}')">🗑️ Delete</button>
-            <button class="recharge" onclick="alert('Manual recharge ₹100 to user ID: ${item.userId}')">💰 Recharge</button>
-          </div>
-        `;
-        rechargeList.appendChild(div);
-      });
-
-      const totalPages = Math.ceil(data.length / itemsPerPage);
-      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-      prevBtn.disabled = currentPage === 1;
-      nextBtn.disabled = currentPage === totalPages;
+    } catch(e) {
+      toast("Network error");
     }
+  };
+  input.click();
+};
 
-    searchBox.addEventListener("input", () => {
-      currentPage = 1;
-      applySearchAndRender();
-    });
-
-    prevBtn.onclick = () => {
-      if (currentPage > 1) {
-        currentPage--;
-        applySearchAndRender();
-      }
-    };
-
-    nextBtn.onclick = () => {
-      currentPage++;
-      applySearchAndRender();
-    };
-
-    function approveRecharge(key) {
-      db.ref("rechargeRequests/" + key).update({ status: true });
+/* Delete */
+document.getElementById('deleteBtn').onclick = async () => {
+  if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
+  if(!slides.length){ toast("No images"); return; }
+  const current = slides[idx];
+  toast("Deleting...");
+  try {
+    if(current.delete_url) {
+      await fetch(current.delete_url, { method: 'GET' }).catch(()=>{});
     }
-
-    function deleteRecharge(key) {
-      if (confirm("Are you sure you want to delete this recharge request?")) {
-        db.ref("rechargeRequests/" + key).remove();
-      }
-    }
-  </script>
+    await db.ref('slider/' + current.key).remove();
+    toast("Deleted ✅");
+    idx = 0;
+  } catch(e) {
+    toast("Delete failed");
+  }
+};
+</script>
 </body>
 </html>
