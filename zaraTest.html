@@ -1,317 +1,252 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <title>🛠️ ZaraFix - All in One</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-      padding: 20px;
-      background: linear-gradient(to bottom, #f3f3f3, #ffffff);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZaraFix Property Listing</title>
 
-    h2 {
-      text-align: center;
-      font-size: 24px;
-    }
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    .dropdown {
-      width: 90%;
-      margin: 10px auto;
-      display: block;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 12px;
-    }
+<style>
+body {
+  font-family: Arial,sans-serif; margin:0; padding:0;
+  min-height:100vh;
+  background: linear-gradient(to bottom, #87ceeb, #b0e0e6);
+}
 
-    .btn3d {
-      background: linear-gradient(to bottom right, #4facfe, #00f2fe);
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      margin: 10px;
-      border-radius: 15px;
-      box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
-      font-size: 16px;
-      transition: all 0.3s;
-    }
+/* Header */
+header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:15px 20px;
+  background:rgba(255,255,255,0.25);
+  backdrop-filter: blur(6px);
+  flex-wrap:wrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
 
-    .btn3d:hover {
-      transform: translateY(-2px);
-      box-shadow: 4px 6px 10px rgba(0, 0, 0, 0.3);
-    }
+/* Logo */
+.logo {
+  font-size:3rem; font-weight:900; color:#ff4081;
+  text-shadow: 3px 3px 5px #fff, 6px 6px 8px rgba(0,0,0,0.3);
+  user-select:none;
+}
 
-    .section {
-      display: none;
-      max-width: 600px;
-      margin: auto;
-      padding: 15px;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 0 10px #ccc;
-    }
+/* Buttons */
+button.btn {
+  cursor:pointer;
+  border:none; padding:8px 16px;
+  border-radius:10px;
+  font-size:1rem; font-weight:bold;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+button.btn-login { background: linear-gradient(45deg,#00bcd4,#009688); color:#fff; }
+button.btn-login:hover { background: linear-gradient(45deg,#009688,#00796b); }
+button.btn-logout { background: linear-gradient(45deg,#ff4081,#e91e63); color:#fff; }
+button.btn-logout:hover { background: linear-gradient(45deg,#e91e63,#c2185b); }
 
-    label {
-      display: block;
-      margin-top: 10px;
-    }
+#propertyList {
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+  gap:12px; padding:15px;
+}
 
-    input, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-    }
+/* Property card */
+.property-card {
+  background:white; border-radius:12px; padding:8px;
+  box-shadow:0 0 8px rgba(0,0,0,0.1);
+  cursor:pointer; display:flex; flex-direction:column; gap:5px;
+  transition: box-shadow 0.3s ease;
+}
+.property-card:hover { box-shadow:0 0 14px rgba(0,0,0,0.25); }
+.property-card img { width:100%; height:130px; object-fit:contain; border-radius:6px; }
+.property-card .info { display:flex; flex-direction:column; gap:2px; font-size:0.85rem; line-height:1.2em; }
 
-    #logoutBtn {
-      float: right;
-      margin-right: 20px;
-    }
+/* WhatsApp button */
+.btn-whatsapp { background:#25d366; color:white; padding:4px 8px; border-radius:6px; text-decoration:none; display:inline-block; text-align:center; font-weight:600; font-size:0.8rem; }
+.btn-group { display:flex; gap:5px; flex-wrap:wrap; margin-top:5px; }
 
-    #statusMsg {
-      text-align: center;
-      margin-top: 10px;
-      color: green;
-      font-weight: bold;
-    }
-  </style>
+/* Modal */
+#modalOverlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; z-index:1000; }
+#modalContent { background:white; width:95vw; max-width:600px; max-height:95vh; overflow-y:auto; border-radius:10px; padding:20px; position:relative; box-sizing:border-box; }
+#modalContent img { width:100%; height:auto; border-radius:8px; margin-bottom:15px; }
+#modalClose { position:absolute; top:10px; right:15px; cursor:pointer; font-size:1.5rem; font-weight:bold; color:#333; }
+#modalContent h3 { margin-top:0; font-size:1.2rem; }
+#modalContent p { line-height:1.5; font-size:0.95rem; }
+
+@media(max-width:600px){
+  #propertyList { grid-template-columns: repeat(2,1fr); gap:8px; }
+  .property-card img { height:100px; }
+  .logo { font-size:2rem; }
+}
+</style>
 </head>
 <body>
-  <h2>🛠️ Welcome to ZaraFix</h2>
-  <button class="btn3d" onclick="loginWithGoogle()" id="loginBtn">Login with Google</button>
-  <button class="btn3d" onclick="logout()" id="logoutBtn" style="display:none;">Logout</button>
 
-  <select class="dropdown" id="pageSelect" onchange="toggleSections()">
-    <option value="">🔽 Select Page</option>
-    <option value="providerForm">🧰 Provider Form</option>
-    <option value="providerDash">📋 Provider Dashboard</option>
-    <option value="requestForm">📨 Service Request</option>
-    <option value="requestDash">📂 Request Dashboard</option>
-    <option value="adminDash">🛠️ Admin Dashboard</option>
-  </select>
-
-  <div id="statusMsg"></div>
-
-  <!-- Provider Form -->
-  <div id="providerForm" class="section">
-    <h3>Service Provider Registration</h3>
-    <label>Name</label><input id="pName">
-    <label>Address</label><input id="pAddress">
-    <label>Shop Name</label><input id="pShop">
-    <label>WhatsApp Number</label><input id="pWhatsApp">
-    <label>Category</label>
-    <select id="pCategory">
-      <option value="">Select Category</option>
-      <option value="AC Mechanic">AC Mechanic</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
-    <button class="btn3d" onclick="submitProvider()">Submit</button>
+<header>
+  <div class="logo">ZaraFix</div>
+  <div>
+    <button id="loginBtn" class="btn btn-login">Login</button>
+    <button id="logoutBtn" class="btn btn-logout" style="display:none;">Logout</button>
   </div>
+</header>
 
-  <!-- Provider Dashboard -->
-  <div id="providerDash" class="section">
-    <h3>Your Jobs</h3>
-    <div id="providerJobs"></div>
+<section id="propertyList"></section>
+
+<div id="modalOverlay">
+  <div id="modalContent">
+    <span id="modalClose">&times;</span>
+    <img id="modalImage" src="" alt="Property Image" />
+    <h3 id="modalTitle"></h3>
+    <p id="modalCity"></p>
+    <p id="modalType"></p>
+    <p id="modalPrice"></p>
+    <p id="modalDesc"></p>
+    <a href="#" target="_blank" id="modalWhatsapp" class="btn-whatsapp">WhatsApp पूछें</a>
   </div>
+</div>
 
-  <!-- Request Form -->
-  <div id="requestForm" class="section">
-    <h3>Post a Repair Request</h3>
-    <label>Name</label><input id="rName">
-    <label>Address</label><input id="rAddress">
-    <label>WhatsApp</label><input id="rWhatsApp">
-    <label>Problem</label><input id="rProblem">
-    <label>Category</label>
-    <select id="rCategory">
-      <option value="">Select Category</option>
-      <option value="AC Mechanic">AC Mechanic</option>
-      <option value="Electrician">Electrician</option>
-      <option value="Carpenter">Carpenter</option>
-    </select>
-    <button class="btn3d" onclick="submitRequest()">Submit Request</button>
-  </div>
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
 
-  <!-- Request Dashboard -->
-  <div id="requestDash" class="section">
-    <h3>Your Service Requests</h3>
-    <div id="requestList"></div>
-  </div>
+const auth = firebase.auth();
+const db = firebase.database();
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+const adminWhatsAppNumber = "917378342192";
 
-  <!-- Admin Dashboard -->
-  <div id="adminDash" class="section">
-    <h3>Admin Panel</h3>
-    <div id="adminContent"></div>
-  </div>
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const propertyList = document.getElementById('propertyList');
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+const modalOverlay = document.getElementById('modalOverlay');
+const modalClose = document.getElementById('modalClose');
+const modalImage = document.getElementById('modalImage');
+const modalTitle = document.getElementById('modalTitle');
+const modalCity = document.getElementById('modalCity');
+const modalType = document.getElementById('modalType');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const modalWhatsapp = document.getElementById('modalWhatsapp');
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+let currentUser = null;
+let isAdmin = false;
+
+// Login / Logout
+loginBtn.onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e=>alert(e.message));
+};
+logoutBtn.onclick = () => auth.signOut();
+
+function formatPrice(num){ return num.toLocaleString('en-IN'); }
+
+function getWhatsAppLink(post){
+  if(currentUser && post.userId===currentUser.uid){
+    return `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  } else {
+    return `https://wa.me/${post.whatsapp}?text=${encodeURIComponent('नमस्ते, मैं इस प्रॉपर्टी के बारे में जानना चाहता हूँ:\nTitle: '+post.title+'\nCity: '+post.city+'\nPrice: ₹'+formatPrice(post.price))}`;
+  }
+}
+
+function deleteProperty(key){ 
+  if(confirm("क्या आप इस प्रॉपर्टी को हटाना चाहते हैं?")) {
+    db.ref('properties/'+key).remove()
+      .then(()=>fetchProperties())
+      .catch(err=>alert("Error: "+err.message));
+  }
+}
+function approveProperty(key){ 
+  db.ref('properties/'+key).update({approved:true})
+    .then(()=>fetchProperties())
+    .catch(err=>alert("Error: "+err.message));
+}
+
+function renderProperties(posts){
+  propertyList.innerHTML="";
+  if(posts.length===0){ propertyList.innerHTML="<p style='text-align:center; color:#666;'>कोई प्रॉपर्टी नहीं मिली।</p>"; return; }
+
+  posts.forEach(({key,post})=>{
+    const card=document.createElement('div'); card.className='property-card';
+
+    const img=document.createElement('img'); img.src=post.imageUrl||'https://via.placeholder.com/300x180?text=No+Image'; img.alt=post.title; card.appendChild(img);
+
+    const infoDiv=document.createElement('div'); infoDiv.className='info';
+    const title=document.createElement('p'); title.textContent=post.title; infoDiv.appendChild(title);
+    const city=document.createElement('p'); city.textContent="City: "+post.city; infoDiv.appendChild(city);
+    const price=document.createElement('p'); price.textContent="₹"+formatPrice(post.price); infoDiv.appendChild(price);
+    card.appendChild(infoDiv);
+
+    const btnGroup=document.createElement('div'); btnGroup.className="btn-group";
+    const waBtn=document.createElement('a'); waBtn.href=getWhatsAppLink(post); waBtn.target="_blank"; waBtn.className="btn-whatsapp"; waBtn.textContent="WhatsApp"; btnGroup.appendChild(waBtn);
+
+    if(isAdmin || (currentUser && currentUser.uid===post.userId)){
+      const delBtn=document.createElement('button'); delBtn.textContent="Delete"; delBtn.className="btn btn-delete"; 
+      delBtn.onclick=(e)=>{ e.stopPropagation(); deleteProperty(key); }; 
+      btnGroup.appendChild(delBtn);
+    }
+
+    if(isAdmin && !post.approved){
+      const approveBtn=document.createElement('button'); approveBtn.textContent="Approve"; approveBtn.className="btn btn-approve"; 
+      approveBtn.onclick=(e)=>{ e.stopPropagation(); approveProperty(key); }; 
+      btnGroup.appendChild(approveBtn);
+    }
+
+    card.appendChild(btnGroup);
+
+    card.onclick=()=>{
+      modalImage.src=post.imageUrl||'https://via.placeholder.com/600x400?text=No+Image';
+      modalTitle.textContent=post.title;
+      modalCity.textContent="City: "+post.city;
+      modalType.textContent="Type: "+(post.type==="sale"?"Buy":"Rent");
+      modalPrice.textContent="Price: ₹"+formatPrice(post.price);
+      modalDesc.textContent=post.description;
+      modalWhatsapp.href=getWhatsAppLink(post);
+      modalOverlay.style.display="flex";
     };
-    firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
-    const db = firebase.database();
-    const adminUIDs = ["QT3LkEToHwaiORatoKfTx8QE45s2"];
+    propertyList.appendChild(card);
+  });
+}
 
-    let currentUser;
+modalClose.onclick=()=>{ modalOverlay.style.display="none"; };
+modalOverlay.onclick=(e)=>{ if(e.target===modalOverlay){ modalOverlay.style.display="none"; } };
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-      } else {
-        currentUser = null;
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        pageSelect.value = "";
-        toggleSections();
-      }
-    });
+async function fetchProperties(){
+  try{
+    const snapshot=await db.ref('properties').once('value');
+    const data=snapshot.val();
+    if(!data){ renderProperties([]); return; }
+    const posts=Object.entries(data).filter(([key,post])=>{
+      if(!isAdmin && !post.approved) return false;
+      return true;
+    }).map(([key,post])=>({key,post}));
+    renderProperties(posts);
+  }catch(e){
+    console.error("Error fetching properties:",e);
+    propertyList.innerHTML="<p style='color:red; text-align:center;'>प्रॉपर्टी लोड करने में त्रुटि।</p>";
+  }
+}
 
-    function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
+// Authentication
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
+  if(user){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; isAdmin=(user.email===adminEmail); fetchProperties(); }
+  else{ loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; isAdmin=false; propertyList.innerHTML="<p style='text-align:center; color:#666;'>Login करें ताकि properties देख सकें।</p>"; }
+});
 
-    function logout() {
-      auth.signOut();
-    }
-
-    function toggleSections() {
-      const sectionIds = ["providerForm", "providerDash", "requestForm", "requestDash", "adminDash"];
-      sectionIds.forEach(id => document.getElementById(id).style.display = "none");
-
-      const selected = pageSelect.value;
-      if (!currentUser || (selected === "adminDash" && !adminUIDs.includes(currentUser.uid))) {
-        alert("Access denied. Please login with the correct account.");
-        return;
-      }
-      if (selected) {
-        document.getElementById(selected).style.display = "block";
-        if (selected === "providerDash") loadProviderJobs();
-        if (selected === "requestDash") loadRequestList();
-        if (selected === "adminDash") loadAdminPanel();
-      }
-    }
-
-    function showStatus(msg) {
-      statusMsg.innerText = msg;
-      setTimeout(() => statusMsg.innerText = "", 3000);
-    }
-
-    function submitProvider() {
-      if (!currentUser) return alert("Please login first");
-      const data = {
-        name: pName.value,
-        address: pAddress.value,
-        shop: pShop.value,
-        whatsapp: pWhatsApp.value,
-        category: pCategory.value,
-        wallet: 100
-      };
-      db.ref("posters/" + currentUser.uid).set(data).then(() => {
-        showStatus("Provider submitted successfully!");
-        pName.value = "";
-        pAddress.value = "";
-        pShop.value = "";
-        pWhatsApp.value = "";
-        pCategory.value = "";
-      });
-    }
-
-    function submitRequest() {
-      if (!currentUser) return alert("Please login first");
-      const data = {
-        name: rName.value,
-        address: rAddress.value,
-        whatsapp: rWhatsApp.value.startsWith("91") ? rWhatsApp.value : "91" + rWhatsApp.value,
-        problem: rProblem.value,
-        category: rCategory.value,
-        timestamp: Date.now()
-      };
-      db.ref("requests/" + currentUser.uid).push(data).then(() => {
-        showStatus("Request posted successfully!");
-        rName.value = "";
-        rAddress.value = "";
-        rWhatsApp.value = "";
-        rProblem.value = "";
-        rCategory.value = "";
-      });
-    }
-
-    function loadProviderJobs() {
-      db.ref("requests").once("value", snap => {
-        let html = "";
-        snap.forEach(userSnap => {
-          userSnap.forEach(req => {
-            const d = req.val();
-            html += `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-              <b>${d.name}</b><br>${d.problem}<br>${d.category}<br>
-              <a href="https://wa.me/${d.whatsapp}" target="_blank">WhatsApp</a>
-            </div>`;
-          });
-        });
-        providerJobs.innerHTML = html || "No requests.";
-      });
-    }
-
-    function loadRequestList() {
-      db.ref("requests/" + currentUser.uid).once("value", snap => {
-        let html = "";
-        snap.forEach(req => {
-          const d = req.val();
-          html += `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-            <b>${d.name}</b><br>${d.problem}<br>${d.category}
-          </div>`;
-        });
-        requestList.innerHTML = html || "No requests.";
-      });
-    }
-
-    function loadAdminPanel() {
-      let html = "<h4>Service Providers</h4>";
-      db.ref("posters").once("value", snap => {
-        snap.forEach(p => {
-          const d = p.val();
-          html += `<div style="border:1px solid #ccc; margin:5px; padding:10px;">
-            <b>${d.name}</b> - ${d.category}<br>Wallet: ₹${d.wallet}<br>
-            <button class="btn3d" onclick="recharge('${p.key}')">+₹100</button>
-          </div>`;
-        });
-
-        html += "<h4>All Service Requests</h4>";
-        db.ref("requests").once("value", snap2 => {
-          snap2.forEach(userSnap => {
-            userSnap.forEach(req => {
-              const d = req.val();
-              html += `<div style="border:1px solid #ccc; padding:10px; margin:10px;">
-                <b>${d.name}</b><br>${d.problem}<br>${d.category}<br>
-                <a href="https://wa.me/${d.whatsapp}" target="_blank">WhatsApp</a>
-              </div>`;
-            });
-          });
-          adminContent.innerHTML = html;
-        });
-      });
-    }
-
-    function recharge(uid) {
-      db.ref("posters/" + uid + "/wallet").transaction(w => (w || 0) + 100);
-    }
-  </script>
+</script>
 </body>
 </html>
