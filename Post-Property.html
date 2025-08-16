@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post Property</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body>
+<h1>Post Property</h1>
+<button onclick="loginUser()">Login</button>
+<form id="postForm" onsubmit="postProperty(event)">
+  <input type="text" id="title" placeholder="Title" required><br>
+  <input type="text" id="city" placeholder="City" required><br>
+  <input type="text" id="type" placeholder="Sale/Rent" required><br>
+  <input type="number" id="price" placeholder="Price" required><br>
+  <textarea id="desc" placeholder="Description"></textarea><br>
+  <input type="url" id="imgUrl" placeholder="Image URL" required><br>
+  <input type="tel" id="whatsapp" placeholder="WhatsApp Number" required><br>
+  <button type="submit">Post</button>
+</form>
+
+<script>
+const firebaseConfig = { /* same config */ };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+let currentUser = null;
+
+function loginUser() {
+  const email = prompt("Email:");
+  const password = prompt("Password:");
+  auth.signInWithEmailAndPassword(email, password)
+    .then(user => {
+      currentUser = user.user;
+      alert("Logged in as " + currentUser.email);
+    }).catch(err => alert(err.message));
+}
+
+function postProperty(e){
+  e.preventDefault();
+  if(!currentUser) { alert("Login first!"); return; }
+  const key = db.ref('properties').push().key;
+  db.ref('properties/' + key).set({
+    title: document.getElementById('title').value,
+    city: document.getElementById('city').value,
+    type: document.getElementById('type').value,
+    price: document.getElementById('price').value,
+    description: document.getElementById('desc').value,
+    imageUrl: document.getElementById('imgUrl').value,
+    whatsapp: document.getElementById('whatsapp').value,
+    userId: currentUser.uid,
+    userEmail: currentUser.email,
+    approved: false,
+    timestamp: Date.now()
+  }).then(()=>alert("Property posted! Await admin approval."));
+}
+</script>
+</body>
+</html>
