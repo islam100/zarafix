@@ -3,40 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix Admin Panel</title>
+<title>ZaraFix Property Listing</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-body { font-family: Arial; background:#f0f0f0; margin:0; padding:0; }
-.container { max-width:800px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);}
-input, textarea { width:100%; padding:8px; margin:5px 0; }
-button { padding:8px 15px; margin:5px; border:none; border-radius:5px; cursor:pointer; }
-.approved { color:green; font-weight:bold; }
-.not-approved { color:red; font-weight:bold; }
-.card { background:#eee; margin:10px 0; padding:10px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f0f0;}
+  .container { display:flex; flex-wrap:wrap; justify-content:center; padding:20px; }
+  .card { width:300px; margin:15px; background:#fff; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);
+          overflow:hidden; cursor:pointer; transition: transform 0.3s, box-shadow 0.3s; }
+  .card:hover { transform: scale(1.05); box-shadow:0 10px 25px rgba(0,0,0,0.2);}
+  .card img { width:100%; height:200px; object-fit:cover; }
+  .card-content { padding:15px; }
+  .card-content h3 { margin:0 0 10px; }
+  .card-content p { margin:0; font-size:14px; color:#555; }
+  .buttons { display:flex; justify-content:space-between; margin-top:10px; }
+  .buttons button { padding:5px 10px; border:none; border-radius:5px; cursor:pointer; }
+  .whatsapp-btn { background:#25D366; color:white; }
 </style>
 </head>
 <body>
-<div class="container">
-<h2>Admin Panel</h2>
-<div id="loginDiv">
-    <button onclick="login()">Google Login</button>
-</div>
-
-<div id="adminDiv" style="display:none;">
-    <h3>Upload Property</h3>
-    <input type="text" id="title" placeholder="Title">
-    <textarea id="desc" placeholder="Description"></textarea>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number">
-    <input type="file" id="imageFile">
-    <button onclick="uploadProperty()">Upload</button>
-
-    <h3>Pending Approvals</h3>
-    <div id="pendingList"></div>
-</div>
-</div>
+<h2 style="text-align:center; padding:20px;">ZaraFix Property Listing</h2>
+<div class="container" id="propertyContainer"></div>
 
 <script>
 const firebaseConfig = {
@@ -51,75 +39,46 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const auth = firebase.auth();
-const imgbbKey = "5128d0b0687e9718139752bca8a4ec59"; // aapka ImgBB API key
 
-function login(){
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result=>{
-        document.getElementById('loginDiv').style.display='none';
-        document.getElementById('adminDiv').style.display='block';
-        fetchPending();
-    }).catch(console.error);
-}
-
-function uploadProperty(){
-    const title = document.getElementById('title').value;
-    const desc = document.getElementById('desc').value;
-    const whatsapp = document.getElementById('whatsapp').value;
-    const file = document.getElementById('imageFile').files[0];
-    if(!title || !desc || !whatsapp || !file) { alert('All fields required'); return; }
-
-    const formData = new FormData();
-    formData.append("image", file);
-    fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method:'POST', body: formData })
-    .then(res=>res.json())
-    .then(data=>{
-        const imageURL = data.data.url;
-        db.ref('properties').push({
-            title, description: desc, whatsapp, imageURL, approved:false
-        });
-        alert('Uploaded. Waiting approval.');
-        document.getElementById('title').value='';
-        document.getElementById('desc').value='';
-        document.getElementById('whatsapp').value='';
-        document.getElementById('imageFile').value='';
-    });
-}
-
-function fetchPending(){
-    db.ref('properties').on('value', snapshot=>{
-        const pending = document.getElementById('pendingList');
-        pending.innerHTML='';
-        snapshot.forEach(child=>{
-            const data = child.val();
-            const id = child.key;
+function fetchProperties() {
+    db.ref('properties').orderByChild('approved').equalTo(true).on('value', snapshot => {
+        const container = document.getElementById('propertyContainer');
+        container.innerHTML = '';
+        snapshot.forEach(childSnapshot => {
+            const data = childSnapshot.val();
             const card = document.createElement('div');
-            card.className='card';
-            card.innerHTML = `<div>
-                <strong>${data.title}</strong><br>
-                ${data.description}<br>
-                <span class="${data.approved?'approved':'not-approved'}">${data.approved?'Approved':'Pending'}</span>
-            </div>
-            <div>
-                ${!data.approved?`<button onclick="approve('${id}')">Approve</button>`:''}
-                <button onclick="deleteProp('${id}')">Delete</button>
-                <button onclick="window.open('https://wa.me/${data.whatsapp}','_blank')">WhatsApp</button>
-            </div>`;
-            pending.appendChild(card);
+            card.className = 'card';
+            card.innerHTML = `
+                <img src="${data.imageURL}" alt="Property Image">
+                <div class="card-content">
+                    <h3>${data.title}</h3>
+                    <p>${data.description}</p>
+                    <div class="buttons">
+                        <button class="whatsapp-btn" onclick="window.open('https://wa.me/${data.whatsapp}','_blank')">WhatsApp</button>
+                    </div>
+                </div>`;
+            card.onclick = () => {
+                const overlay = document.createElement('div');
+                overlay.style.position='fixed';
+                overlay.style.top='0';
+                overlay.style.left='0';
+                overlay.style.width='100%';
+                overlay.style.height='100%';
+                overlay.style.background='rgba(0,0,0,0.8)';
+                overlay.style.display='flex';
+                overlay.style.justifyContent='center';
+                overlay.style.alignItems='center';
+                overlay.style.zIndex='999';
+                overlay.innerHTML = `<img src="${data.imageURL}" style="max-width:90%; max-height:90%; border-radius:10px;">`;
+                overlay.onclick = () => overlay.remove();
+                document.body.appendChild(overlay);
+            };
+            container.appendChild(card);
         });
     });
 }
 
-function approve(id){
-    db.ref('properties/'+id).update({approved:true});
-}
-
-function deleteProp(id){
-    if(confirm('Are you sure to delete?')){
-        db.ref('properties/'+id).remove();
-    }
-}
+fetchProperties();
 </script>
 </body>
 </html>
