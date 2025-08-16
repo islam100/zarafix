@@ -1,162 +1,157 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property Listing</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-  header { background: #333; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
-  header h1 { margin: 0; font-size: 24px; }
-  header button { padding: 8px 12px; cursor: pointer; }
-  .container { padding: 20px; }
-  .property { border: 1px solid #ccc; margin-bottom: 15px; padding: 10px; border-radius: 8px; }
-  .property img { max-width: 100%; border-radius: 8px; }
-  .delete-btn { background: red; color: #fff; padding: 5px 10px; border: none; cursor: pointer; margin-top: 5px; }
-  .upload-box { border: 2px dashed #777; padding: 15px; margin-bottom: 20px; text-align: center; display: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zara Property Listing</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; padding:20px; }
+    h1 { text-align:center; }
+    .form-box, .list-box { background:#fff; padding:15px; margin:15px auto; border-radius:8px; max-width:600px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+    input, textarea, button { width:100%; padding:10px; margin:8px 0; border-radius:6px; border:1px solid #ccc; }
+    button { background:#007bff; color:#fff; border:none; cursor:pointer; }
+    button:hover { background:#0056b3; }
+    .property { border:1px solid #ddd; margin:10px 0; padding:10px; border-radius:6px; background:#fafafa; }
+    .property img { max-width:100%; border-radius:6px; }
+    .admin-actions button { width:auto; margin-right:10px; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>Zara Property</h1>
-  <div>
-    <button id="loginBtn">Google Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</header>
 
-<div class="container">
-  <!-- Upload Form -->
-  <div class="upload-box" id="uploadBox">
-    <h3>नई Property जोड़ें</h3>
-    <input type="text" id="title" placeholder="Title"><br><br>
-    <input type="text" id="price" placeholder="Price"><br><br>
-    <input type="file" id="imageFile"><br><br>
-    <button id="uploadBtn">Upload Property</button>
+  <h1>Zara Property Listing</h1>
+
+  <!-- Property Post Form -->
+  <div class="form-box">
+    <h2>Property Post करें</h2>
+    <input type="text" id="title" placeholder="Property Title" required>
+    <textarea id="description" placeholder="Property Description" required></textarea>
+    <input type="text" id="price" placeholder="Price" required>
+    <input type="file" id="imageFile" accept="image/*" required>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+    <button onclick="uploadProperty()">Submit</button>
   </div>
 
-  <!-- Property Listing -->
-  <h2>Available Properties</h2>
-  <div id="propertyList"></div>
-</div>
+  <!-- Public Listing -->
+  <div class="list-box">
+    <h2>Approved Properties</h2>
+    <div id="propertyList"></div>
+  </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <!-- Admin Panel -->
+  <div class="list-box">
+    <h2>Admin Panel (Approval Needed)</h2>
+    <div id="adminList"></div>
+  </div>
 
-<script>
-  // ✅ Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  firebase.initializeApp(firebaseConfig);
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
+      authDomain: "zara-life-care.firebaseapp.com",
+      databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com/",
+      projectId: "zara-life-care",
+      storageBucket: "zara-life-care.appspot.com",
+      messagingSenderId: "49079472558",
+      appId: "1:49079472558:web:74a248d609cfbd1a30c712"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  const db = firebase.database();
-  const auth = firebase.auth();
-  const provider = new firebase.auth.GoogleAuthProvider();
+    // ImgBB API key (अपनी key लगाओ)
+    const imgbbAPIKey = "9666667be1a890e44490c3dff1f1a120";
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const uploadBox = document.getElementById("uploadBox");
-  const propertyList = document.getElementById("propertyList");
+    // Upload Property
+    function uploadProperty() {
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+      const price = document.getElementById("price").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const file = document.getElementById("imageFile").files[0];
 
-  // ✅ Login
-  loginBtn.addEventListener("click", () => {
-    auth.signInWithPopup(provider).then((result) => {
-      localStorage.setItem("user", JSON.stringify(result.user));
-      checkUser();
-    });
-  });
+      if (!file) {
+        alert("कृपया इमेज सेलेक्ट करें!");
+        return;
+      }
 
-  // ✅ Logout
-  logoutBtn.addEventListener("click", () => {
-    auth.signOut().then(() => {
-      localStorage.removeItem("user");
-      checkUser();
-    });
-  });
+      // Upload image to imgbb
+      const formData = new FormData();
+      formData.append("image", file);
 
-  // ✅ Check User (Admin Access)
-  function checkUser() {
-    let user = JSON.parse(localStorage.getItem("user"));
-    if (user) {
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      uploadBox.style.display = "block"; // केवल लॉगिन पर दिखेगा
-    } else {
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      uploadBox.style.display = "none";
-    }
-  }
-
-  checkUser();
-
-  // ✅ ImgBB Upload + Firebase Save
-  document.getElementById("uploadBtn").addEventListener("click", async () => {
-    let title = document.getElementById("title").value;
-    let price = document.getElementById("price").value;
-    let file = document.getElementById("imageFile").files[0];
-
-    if (!file || !title || !price) {
-      alert("कृपया सभी जानकारी भरें!");
-      return;
+      fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        const imageUrl = data.data.url;
+        const propertyRef = db.ref("properties").push();
+        propertyRef.set({
+          title, description, price, whatsapp,
+          imageUrl, approved: false
+        });
+        alert("Property Submitted, Admin Approval Needed!");
+        document.querySelector(".form-box").reset;
+      })
+      .catch(err => alert("Image Upload Failed: " + err));
     }
 
-    let formData = new FormData();
-    formData.append("image", file);
-
-    let res = await fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
-      method: "POST",
-      body: formData
-    });
-
-    let data = await res.json();
-    if (data.success) {
-      let imageUrl = data.data.url;
-      let newRef = db.ref("properties").push();
-      newRef.set({ title, price, image: imageUrl });
-      alert("Property सफलतापूर्वक जोड़ दी गई!");
-      document.getElementById("title").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("imageFile").value = "";
-    }
-  });
-
-  // ✅ Property Fetch
-  function fetchProperties() {
-    db.ref("properties").on("value", (snapshot) => {
-      propertyList.innerHTML = "";
-      snapshot.forEach((child) => {
-        let data = child.val();
-        let div = document.createElement("div");
-        div.classList.add("property");
-        div.innerHTML = `
-          <h3>${data.title}</h3>
-          <p>Price: ${data.price}</p>
-          <img src="${data.image}" alt="Property Image">
-          ${localStorage.getItem("user") ? `<button class="delete-btn" onclick="deleteProperty('${child.key}')">Delete</button>` : ""}
-        `;
-        propertyList.appendChild(div);
+    // Show Approved Properties (Public)
+    db.ref("properties").on("value", snapshot => {
+      const list = document.getElementById("propertyList");
+      list.innerHTML = "";
+      snapshot.forEach(child => {
+        const property = child.val();
+        if (property.approved) {
+          list.innerHTML += `
+            <div class="property">
+              <h3>${property.title}</h3>
+              <img src="${property.imageUrl}" alt="">
+              <p>${property.description}</p>
+              <p><b>Price:</b> ${property.price}</p>
+              <a href="https://wa.me/${property.whatsapp}" target="_blank">Chat on WhatsApp</a>
+            </div>
+          `;
+        }
       });
     });
-  }
 
-  fetchProperties();
+    // Show Pending Properties (Admin)
+    db.ref("properties").on("value", snapshot => {
+      const adminList = document.getElementById("adminList");
+      adminList.innerHTML = "";
+      snapshot.forEach(child => {
+        const property = child.val();
+        if (!property.approved) {
+          adminList.innerHTML += `
+            <div class="property">
+              <h3>${property.title}</h3>
+              <img src="${property.imageUrl}" alt="">
+              <p>${property.description}</p>
+              <p><b>Price:</b> ${property.price}</p>
+              <div class="admin-actions">
+                <button onclick="approveProperty('${child.key}')">Approve</button>
+                <button onclick="deleteProperty('${child.key}')">Delete</button>
+              </div>
+            </div>
+          `;
+        }
+      });
+    });
 
-  // ✅ Delete Function (Only Admin/User logged in)
-  function deleteProperty(id) {
-    if (!localStorage.getItem("user")) return alert("Only admin can delete!");
-    db.ref("properties/" + id).remove();
-  }
-</script>
+    // Approve Property
+    function approveProperty(id) {
+      db.ref("properties/" + id).update({ approved: true });
+    }
+
+    // Delete Property
+    function deleteProperty(id) {
+      db.ref("properties/" + id).remove();
+    }
+  </script>
+
 </body>
 </html>
