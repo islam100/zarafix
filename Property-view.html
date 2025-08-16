@@ -4,197 +4,138 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zara Property Listing</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5;}
+  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+  header h1 { margin:0; color:#333; }
+  button { padding:8px 12px; border:none; border-radius:5px; cursor:pointer; background:#007bff; color:#fff; }
+  #properties { display:flex; flex-wrap:wrap; gap:20px; padding:20px; justify-content:center;}
+  .card { background:#fff; width:300px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.1); overflow:hidden; display:flex; flex-direction:column; }
+  .card img { width:100%; height:200px; object-fit:contain; background:#eee;}
+  .card-content { padding:15px; flex:1;}
+  .card-content h3 { margin:0 0 10px;}
+  .card-content p { margin:5px 0;}
+  .card-actions { display:flex; justify-content:space-between; padding:10px; }
+  .admin-btn { background:#28a745; }
+  .delete-btn { background:#dc3545; }
+  #loginBtn, #logoutBtn { margin-left:10px; }
+</style>
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-<style>
-body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5;}
-header { display: flex; justify-content: space-between; padding: 10px 20px; background: #333; color: white; align-items:center; }
-button { padding: 8px 15px; margin: 5px; cursor:pointer; border:none; border-radius:5px; background:#0066ff; color:white; }
-.card { background:white; padding:10px; margin:10px; border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); cursor:pointer; transition:0.3s; }
-.card img { width:100%; height:200px; object-fit:contain; border-radius:10px; }
-.card:hover { transform:scale(1.02); }
-.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; }
-.modal-content { background:white; padding:20px; border-radius:10px; max-width:500px; width:90%; }
-#propertyForm { display:flex; flex-direction:column; margin:10px 0; }
-#propertyForm input, #propertyForm textarea { margin:5px 0; padding:8px; border-radius:5px; border:1px solid #ccc; }
-</style>
+
 </head>
 <body>
 
 <header>
-  <h2>Zara Property Listing</h2>
+  <h1>Zara Property Listing</h1>
   <div>
     <button id="loginBtn">Login with Google</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
 
-<div id="noticeBoard" style="background:#ffeb3b; padding:10px; overflow:hidden; white-space:nowrap;">
-  <marquee id="notices">Welcome to Zara Property Listings!</marquee>
-</div>
-
-<div id="propertyFormContainer" style="display:none; padding:10px; background:#e0e0e0;">
-  <h3>Post Your Property</h3>
-  <form id="propertyForm">
-    <input type="text" id="title" placeholder="Title" required>
-    <input type="text" id="city" placeholder="City" required>
-    <select id="type">
-      <option value="sale">Sale</option>
-      <option value="rent">Rent</option>
-    </select>
-    <input type="number" id="price" placeholder="Price" required>
-    <textarea id="description" placeholder="Description" required></textarea>
-    <input type="file" id="imageFile" required>
-    <button type="submit">Post Property</button>
-  </form>
-</div>
-
-<div id="propertiesContainer" style="display:flex; flex-wrap:wrap; justify-content:center;"></div>
-
-<!-- Modal for large view -->
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <span id="closeModal" style="float:right; cursor:pointer;">&times;</span>
-    <div id="modalBody"></div>
-  </div>
-</div>
+<div id="properties"></div>
 
 <script>
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
-const storage = firebase.storage();
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const propertyFormContainer = document.getElementById('propertyFormContainer');
-const propertyForm = document.getElementById('propertyForm');
-const propertiesContainer = document.getElementById('propertiesContainer');
+  const admins = {"admin@example.com": true}; // अपना admin email यहाँ डालो
 
-let currentUser = null;
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const propertiesDiv = document.getElementById('properties');
 
-// Login
-loginBtn.onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-};
+  let currentUser = null;
 
-// Logout
-logoutBtn.onclick = () => auth.signOut();
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  };
 
-// Auth State Change
-auth.onAuthStateChanged(user => {
-  currentUser = user;
-  if(user){
-    loginBtn.style.display="none";
-    logoutBtn.style.display="inline-block";
-    propertyFormContainer.style.display="block";
-    loadProperties();
-  } else {
-    loginBtn.style.display="inline-block";
-    logoutBtn.style.display="none";
-    propertyFormContainer.style.display="none";
-    propertiesContainer.innerHTML="";
-  }
-});
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-// Post Property
-propertyForm.onsubmit = async (e) => {
-  e.preventDefault();
-  if(!currentUser) return alert("Login first!");
-
-  const title = document.getElementById('title').value;
-  const city = document.getElementById('city').value;
-  const type = document.getElementById('type').value;
-  const price = document.getElementById('price').value;
-  const description = document.getElementById('description').value;
-  const file = document.getElementById('imageFile').files[0];
-
-  const imageRef = storage.ref('images/' + Date.now() + '_' + file.name);
-  await imageRef.put(file);
-  const imageUrl = await imageRef.getDownloadURL();
-
-  const newPropRef = db.ref('properties').push();
-  await newPropRef.set({
-    title, city, type, price, description, imageUrl, whatsapp: currentUser.phoneNumber||"Not Provided",
-    userId: currentUser.uid, userEmail: currentUser.email,
-    approved: false, timestamp: Date.now()
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      loginBtn.style.display='none';
+      logoutBtn.style.display='inline-block';
+    } else {
+      loginBtn.style.display='inline-block';
+      logoutBtn.style.display='none';
+    }
+    fetchProperties();
   });
-  propertyForm.reset();
-  alert("Property Posted. Waiting for Admin Approval.");
-};
 
-// Load Properties
-function loadProperties(){
-  db.ref('properties').on('value', snapshot => {
-    propertiesContainer.innerHTML="";
-    const data = snapshot.val();
-    if(!data) return;
+  function fetchProperties(){
+    propertiesDiv.innerHTML = '';
+    db.ref('properties').once('value').then(snapshot => {
+      const data = snapshot.val();
+      for(let key in data){
+        const prop = data[key];
+        if(!prop.approved && (!currentUser || !admins[currentUser.email])) continue;
 
-    Object.keys(data).forEach(key=>{
-      const prop = data[key];
-      if(!prop.approved && currentUser.email !== adminEmail) return; // only admin can see unapproved
+        const card = document.createElement('div');
+        card.className='card';
 
-      const card = document.createElement('div');
-      card.className="card";
-      card.innerHTML = `<h3>${prop.title}</h3>
-        <p>${prop.city} | ${prop.type} | ₹${prop.price}</p>
-        <img src="${prop.imageUrl}" alt="${prop.title}">`;
+        const img = document.createElement('img');
+        img.src = prop.imageUrl;
+        card.appendChild(img);
 
-      // Modal click
-      card.onclick = ()=>showModal(prop);
+        const content = document.createElement('div');
+        content.className='card-content';
+        content.innerHTML = `<h3>${prop.title}</h3>
+                             <p><strong>City:</strong> ${prop.city}</p>
+                             <p><strong>Type:</strong> ${prop.type}</p>
+                             <p><strong>Price:</strong> ₹${prop.price}</p>
+                             <p>${prop.description}</p>
+                             <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp Poster</a></p>`;
+        card.appendChild(content);
 
-      // Admin buttons
-      if(currentUser.email===adminEmail){
-        const approveBtn = document.createElement('button');
-        approveBtn.innerText = prop.approved?"Approved":"Approve";
-        approveBtn.onclick = (e)=>{
-          e.stopPropagation();
-          db.ref('properties/'+key+'/approved').set(true);
-        };
-        const deleteBtn = document.createElement('button');
-        deleteBtn.innerText="Delete";
-        deleteBtn.onclick=(e)=>{
-          e.stopPropagation();
-          db.ref('properties/'+key).remove();
-        };
-        card.appendChild(approveBtn);
-        card.appendChild(deleteBtn);
+        // Admin buttons
+        if(currentUser && admins[currentUser.email]){
+          const actions = document.createElement('div');
+          actions.className='card-actions';
+          const approveBtn = document.createElement('button');
+          approveBtn.className='admin-btn';
+          approveBtn.innerText='Approve';
+          approveBtn.onclick = () => {
+            db.ref('properties/'+key+'/approved').set(true);
+            fetchProperties();
+          };
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className='delete-btn';
+          deleteBtn.innerText='Delete';
+          deleteBtn.onclick = () => {
+            db.ref('properties/'+key).remove();
+            fetchProperties();
+          };
+          actions.appendChild(approveBtn);
+          actions.appendChild(deleteBtn);
+          card.appendChild(actions);
+        }
+
+        propertiesDiv.appendChild(card);
       }
-
-      propertiesContainer.appendChild(card);
     });
-  });
-}
-
-// Modal
-const modal = document.getElementById('modal');
-const modalBody = document.getElementById('modalBody');
-const closeModal = document.getElementById('closeModal');
-function showModal(prop){
-  modal.style.display="flex";
-  modalBody.innerHTML = `<h2>${prop.title}</h2>
-    <p>${prop.city} | ${prop.type} | ₹${prop.price}</p>
-    <img src="${prop.imageUrl}" style="width:100%; height:auto; object-fit:contain;">
-    <p>${prop.description}</p>
-    <p>WhatsApp: ${prop.whatsapp}</p>`;
-}
-closeModal.onclick = ()=>modal.style.display="none";
-window.onclick = (e)=>{if(e.target===modal) modal.style.display="none";}
+  }
 </script>
+
 </body>
 </html>
