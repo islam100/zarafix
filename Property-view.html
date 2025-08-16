@@ -5,26 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zara Property Listing</title>
 <style>
-  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5;}
-  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-  header h1 { margin:0; color:#333; }
-  button { padding:8px 12px; border:none; border-radius:5px; cursor:pointer; background:#007bff; color:#fff; }
-  #properties { display:flex; flex-wrap:wrap; gap:20px; padding:20px; justify-content:center;}
-  .card { background:#fff; width:300px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.1); overflow:hidden; display:flex; flex-direction:column; }
-  .card img { width:100%; height:200px; object-fit:contain; background:#eee;}
-  .card-content { padding:15px; flex:1;}
-  .card-content h3 { margin:0 0 10px;}
-  .card-content p { margin:5px 0;}
-  .card-actions { display:flex; justify-content:space-between; padding:10px; }
-  .admin-btn { background:#28a745; }
-  .delete-btn { background:#dc3545; }
-  #loginBtn, #logoutBtn { margin-left:10px; }
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f0f0;}
+header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#4CAF50; color:white;}
+button { padding:8px 12px; margin:5px; border:none; border-radius:5px; cursor:pointer; box-shadow: 2px 2px 5px #aaa;}
+button:hover { box-shadow: 4px 4px 10px #888;}
+#properties { display:flex; flex-wrap:wrap; gap:15px; padding:20px; justify-content:center;}
+.card { background:white; border-radius:10px; width:250px; box-shadow:2px 2px 10px #aaa; overflow:hidden; cursor:pointer; transition:0.3s;}
+.card img { width:100%; object-fit:cover; height:180px;}
+.card-content { padding:10px;}
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;}
+.modal-content { background:white; padding:20px; border-radius:10px; max-width:500px; width:90%;}
+.close { float:right; cursor:pointer; font-size:20px;}
 </style>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
 </head>
 <body>
 
@@ -33,108 +25,155 @@
   <div>
     <button id="loginBtn">Login with Google</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="postBtn" style="display:none;">Post Property</button>
   </div>
 </header>
 
 <div id="properties"></div>
 
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="close" id="closeModal">&times;</span>
+    <img id="modalImg" src="" style="width:100%; height:auto; border-radius:10px;">
+    <h2 id="modalTitle"></h2>
+    <p id="modalDesc"></p>
+    <p><strong>City:</strong> <span id="modalCity"></span></p>
+    <p><strong>Price:</strong> ₹<span id="modalPrice"></span></p>
+    <button id="whatsappBtn">Chat on WhatsApp</button>
+    <div id="adminButtons" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
 
-  const auth = firebase.auth();
-  const db = firebase.database();
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
 
-  const admins = {"admin@example.com": true}; // अपना admin email यहाँ डालो
+let currentUser = null;
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const propertiesDiv = document.getElementById('properties');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const postBtn = document.getElementById('postBtn');
 
-  let currentUser = null;
+loginBtn.onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+};
 
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
+logoutBtn.onclick = () => {
+  auth.signOut();
+};
 
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if(user){
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+    postBtn.style.display = 'inline-block';
+  } else {
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+    postBtn.style.display = 'none';
+  }
+  fetchProperties();
+});
 
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display='none';
-      logoutBtn.style.display='inline-block';
-    } else {
-      loginBtn.style.display='inline-block';
-      logoutBtn.style.display='none';
-    }
-    fetchProperties();
-  });
-
-  function fetchProperties(){
-    propertiesDiv.innerHTML = '';
-    db.ref('properties').once('value').then(snapshot => {
-      const data = snapshot.val();
-      for(let key in data){
-        const prop = data[key];
-        if(!prop.approved && (!currentUser || !admins[currentUser.email])) continue;
-
+function fetchProperties(){
+  db.ref('properties').once('value').then(snapshot=>{
+    const data = snapshot.val() || {};
+    const container = document.getElementById('properties');
+    container.innerHTML = '';
+    Object.keys(data).forEach(key=>{
+      const p = data[key];
+      if(p.approved || (currentUser && currentUser.email === adminEmail)){
         const card = document.createElement('div');
         card.className='card';
-
-        const img = document.createElement('img');
-        img.src = prop.imageUrl;
-        card.appendChild(img);
-
-        const content = document.createElement('div');
-        content.className='card-content';
-        content.innerHTML = `<h3>${prop.title}</h3>
-                             <p><strong>City:</strong> ${prop.city}</p>
-                             <p><strong>Type:</strong> ${prop.type}</p>
-                             <p><strong>Price:</strong> ₹${prop.price}</p>
-                             <p>${prop.description}</p>
-                             <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp Poster</a></p>`;
-        card.appendChild(content);
-
-        // Admin buttons
-        if(currentUser && admins[currentUser.email]){
-          const actions = document.createElement('div');
-          actions.className='card-actions';
-          const approveBtn = document.createElement('button');
-          approveBtn.className='admin-btn';
-          approveBtn.innerText='Approve';
-          approveBtn.onclick = () => {
-            db.ref('properties/'+key+'/approved').set(true);
-            fetchProperties();
-          };
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className='delete-btn';
-          deleteBtn.innerText='Delete';
-          deleteBtn.onclick = () => {
-            db.ref('properties/'+key).remove();
-            fetchProperties();
-          };
-          actions.appendChild(approveBtn);
-          actions.appendChild(deleteBtn);
-          card.appendChild(actions);
-        }
-
-        propertiesDiv.appendChild(card);
+        card.innerHTML = `<img src="${p.imageUrl}" alt="">
+                          <div class="card-content">
+                          <h3>${p.title}</h3>
+                          <p>₹${p.price}</p>
+                          </div>`;
+        card.onclick = ()=>openModal(p, key);
+        container.appendChild(card);
       }
     });
+  });
+}
+
+// Modal functions
+const modal = document.getElementById('modal');
+const closeModalBtn = document.getElementById('closeModal');
+function openModal(prop, key){
+  modal.style.display='flex';
+  document.getElementById('modalImg').src = prop.imageUrl;
+  document.getElementById('modalTitle').innerText = prop.title;
+  document.getElementById('modalDesc').innerText = prop.description;
+  document.getElementById('modalCity').innerText = prop.city;
+  document.getElementById('modalPrice').innerText = prop.price;
+  const waBtn = document.getElementById('whatsappBtn');
+  waBtn.onclick = ()=>window.open(`https://wa.me/${prop.whatsapp}`, '_blank');
+
+  const adminDiv = document.getElementById('adminButtons');
+  adminDiv.innerHTML = '';
+  if(currentUser && currentUser.email === adminEmail){
+    const approveBtn = document.createElement('button');
+    approveBtn.innerText = prop.approved ? 'Approved' : 'Approve';
+    approveBtn.disabled = prop.approved;
+    approveBtn.onclick = ()=>{
+      db.ref('properties/'+key+'/approved').set(true).then(()=>fetchProperties());
+    };
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerText='Delete';
+    deleteBtn.onclick = ()=>{
+      db.ref('properties/'+key).remove().then(()=>fetchProperties());
+      modal.style.display='none';
+    };
+    adminDiv.appendChild(approveBtn);
+    adminDiv.appendChild(deleteBtn);
   }
+}
+
+closeModalBtn.onclick = ()=> modal.style.display='none';
+window.onclick = e=> { if(e.target===modal) modal.style.display='none'; }
+
+// Post Property
+postBtn.onclick = ()=>{
+  if(!currentUser) { alert('Login required!'); return; }
+  const title = prompt('Property Title:');
+  const city = prompt('City:');
+  const price = prompt('Price:');
+  const desc = prompt('Description:');
+  const imageUrl = prompt('Image URL from Firebase Storage:');
+  const whatsapp = prompt('Your WhatsApp Number:');
+  if(title && city && price && desc && imageUrl && whatsapp){
+    const newKey = db.ref('properties').push().key;
+    db.ref('properties/'+newKey).set({
+      title, city, price, description:desc, imageUrl, whatsapp,
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      approved: false,
+      timestamp: Date.now()
+    }).then(()=>fetchProperties());
+  }
+};
 </script>
 
 </body>
