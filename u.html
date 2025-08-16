@@ -1,115 +1,105 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zara Property Listing</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f2f2f2; }
-    header { background: #0077cc; color: #fff; padding: 15px; text-align: center; font-size: 22px; font-weight: bold; }
-    .container { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap: 20px; }
-    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); overflow: hidden; cursor: pointer; transition: transform 0.2s; }
-    .card:hover { transform: scale(1.03); }
-    .card img { width: 100%; height: 180px; object-fit: cover; }
-    .card-content { padding: 15px; }
-    .card-title { font-size: 18px; font-weight: bold; }
-    .card-desc { font-size: 14px; color: #555; margin-top: 8px; }
-    .whatsapp-btn { margin-top: 10px; display: inline-block; background: #25D366; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-size: 14px; }
-
-    /* Modal (zoom card) */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-    .modal-content { background: #fff; border-radius: 10px; max-width: 600px; width: 90%; padding: 20px; position: relative; }
-    .modal img { width: 100%; border-radius: 10px; }
-    .close { position: absolute; top: 10px; right: 15px; font-size: 25px; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #property-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    .property {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .property img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .delete-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: red;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .delete-btn:hover {
+      background: darkred;
+    }
   </style>
 </head>
 <body>
-  <header>Zara Property Listing</header>
-  <div class="container" id="propertyList"></div>
+  <h2>📋 Property Listings</h2>
+  <div id="property-list"></div>
 
-  <!-- Modal -->
-  <div class="modal" id="propertyModal">
-    <div class="modal-content">
-      <span class="close" id="closeModal">&times;</span>
-      <img id="modalImage" src="" alt="Property Image">
-      <h2 id="modalTitle"></h2>
-      <p id="modalDesc"></p>
-      <a id="modalWhatsapp" class="whatsapp-btn" target="_blank">WhatsApp Seller</a>
-    </div>
-  </div>
-
-  <!-- Firebase SDK -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // ✅ आपकी Firebase config यहाँ लगाई गई है
+    // 🔹 अपनी Firebase config लगाएँ
     const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "916859697394",
-      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+      apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
+      authDomain: "zara-life-care.firebaseapp.com",
+      databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com",
+      projectId: "zara-life-care",
+      storageBucket: "zara-life-care.appspot.com",
+      messagingSenderId: "53349547206",
+      appId: "1:53349547206:web:cb53cb7c32a7e8f1a56f95"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const propertyList = document.getElementById("propertyList");
-    const modal = document.getElementById("propertyModal");
-    const closeModal = document.getElementById("closeModal");
-    const modalImage = document.getElementById("modalImage");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalDesc = document.getElementById("modalDesc");
-    const modalWhatsapp = document.getElementById("modalWhatsapp");
+    const propertyList = document.getElementById("property-list");
 
-    function fetchProperties() {
-      db.ref("properties").on("value", snapshot => {
-        propertyList.innerHTML = "";
-        snapshot.forEach(childSnapshot => {
-          const property = childSnapshot.val();
+    // 🔹 Properties fetch करना
+    db.ref("properties").on("value", (snapshot) => {
+      propertyList.innerHTML = "";
+      snapshot.forEach(childSnapshot => {
+        const data = childSnapshot.val();
+        const key = childSnapshot.key;
 
-          // सिर्फ approved properties ही सबको दिखें
-          if (property.approved === true) {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <img src="${property.imageUrl}" alt="Property">
-              <div class="card-content">
-                <div class="card-title">${property.title}</div>
-                <div class="card-desc">${property.description}</div>
-                <a href="https://wa.me/${property.whatsapp}" target="_blank" class="whatsapp-btn">Chat on WhatsApp</a>
-              </div>
-            `;
+        const div = document.createElement("div");
+        div.className = "property";
 
-            // card पर click करने से modal खुले
-            card.addEventListener("click", () => {
-              modal.style.display = "flex";
-              modalImage.src = property.imageUrl;
-              modalTitle.innerText = property.title;
-              modalDesc.innerText = property.description;
-              modalWhatsapp.href = `https://wa.me/${property.whatsapp}`;
-            });
+        div.innerHTML = `
+          <h3>${data.title}</h3>
+          <img src="${data.image}" alt="Property Image">
+          <p>${data.description}</p>
+          <button class="delete-btn" onclick="deleteProperty('${key}')">🗑 Delete</button>
+        `;
 
-            propertyList.appendChild(card);
-          }
-        });
+        propertyList.appendChild(div);
       });
-    }
-
-    closeModal.addEventListener("click", () => {
-      modal.style.display = "none";
     });
 
-    window.onclick = (event) => {
-      if (event.target === modal) {
-        modal.style.display = "none";
+    // 🔹 Delete function
+    function deleteProperty(key) {
+      if (confirm("क्या आप वाकई इस प्रॉपर्टी को डिलीट करना चाहते हैं?")) {
+        db.ref("properties/" + key).remove();
       }
-    };
-
-    fetchProperties();
+    }
   </script>
 </body>
 </html>
