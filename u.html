@@ -1,242 +1,182 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zara Property Listing</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f5f5f5;
       margin: 0;
       padding: 0;
-      background: #f2f2f2;
     }
     header {
-      background: #2c3e50;
+      background: #222;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .post-btn {
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
       color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 22px;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
       font-weight: bold;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+    .post-btn:hover {
+      transform: scale(1.05);
     }
     .container {
-      max-width: 1000px;
-      margin: 20px auto;
-      padding: 15px;
-    }
-    .grid {
+      padding: 20px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
     }
-    .property {
+    .card {
       background: white;
-      padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
     }
-    .property img {
+    .card img {
       width: 100%;
       height: 180px;
       object-fit: cover;
-      border-radius: 10px;
     }
-    .property h3 {
-      margin: 10px 0 5px;
+    .card-body {
+      padding: 12px;
+      flex-grow: 1;
+    }
+    .card h3 {
+      margin: 0;
       font-size: 18px;
+      color: #333;
     }
-    .property p {
+    .card p {
       margin: 5px 0;
+      color: #555;
       font-size: 14px;
     }
-    .btn {
-      display: inline-block;
-      padding: 6px 10px;
-      margin-top: 6px;
-      text-decoration: none;
-      border-radius: 5px;
-      font-weight: bold;
-      font-size: 13px;
-    }
-    .whatsapp {
-      background: #25D366;
+    .whatsapp-btn {
+      background: #25d366;
       color: white;
-    }
-    .delete {
-      background: red;
-      color: white;
-      margin-left: 6px;
-    }
-    .toggle-btn {
-      background: #2c3e50;
-      color: white;
-      border: none;
       padding: 10px;
-      width: 100%;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-bottom: 10px;
-    }
-    .admin-panel {
-      display: none;
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-    }
-    input, textarea {
-      width: 100%;
-      padding: 7px;
-      margin: 6px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-    button {
-      padding: 8px 12px;
-      background: #2c3e50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      text-align: center;
+      display: block;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 10px;
       font-weight: bold;
-    }
-    @media(max-width:600px){
-      .property img { height: 150px; }
     }
   </style>
 </head>
 <body>
 
-<header>Zara Property Listing</header>
+  <header>
+    <h1>Zara Property</h1>
+    <button class="post-btn" onclick="document.getElementById('formBox').style.display='block'">+ Property Post</button>
+  </header>
 
-<div class="container">
-
-  <!-- Toggle Button for Form -->
-  <button class="toggle-btn" onclick="toggleForm()">+ Add Property</button>
-
-  <!-- Admin Upload Panel -->
-  <div class="admin-panel" id="uploadForm">
-    <h2>Add New Property</h2>
-    <input type="text" id="title" placeholder="Property Title">
-    <textarea id="desc" placeholder="Property Description"></textarea>
-    <input type="text" id="price" placeholder="Price (₹)">
-    <input type="text" id="posterNumber" placeholder="Your WhatsApp Number">
-    <input type="file" id="imageFile">
-    <button onclick="uploadProperty()">Upload Property</button>
+  <!-- Property Form -->
+  <div id="formBox" style="display:none; padding:20px; background:#fff;">
+    <h2>नई Property Post करें</h2>
+    <input type="text" id="title" placeholder="Title" /><br><br>
+    <input type="text" id="price" placeholder="Price" /><br><br>
+    <input type="text" id="details" placeholder="Details" /><br><br>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" /><br><br>
+    <input type="file" id="imageFile" /><br><br>
+    <button onclick="uploadProperty()">Post</button>
   </div>
 
-  <!-- Property List -->
-  <div id="propertyList" class="grid"></div>
+  <div class="container" id="propertyList"></div>
 
-</div>
+  <script>
+    // Firebase config
+   const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_KEY",
-    authDomain: "your-app.firebaseapp.com",
-    databaseURL: "https://your-app.firebaseio.com",
-    projectId: "your-app",
-    storageBucket: "your-app.appspot.com",
-    messagingSenderId: "xxxxxx",
-    appId: "xxxxxx"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    // ImgBB API key
+    const imgbbKey = "9666667be1a890e44490c3dff1f1a120";
 
-  const imgbbAPI = "YOUR_IMGBB_API_KEY"; // ImgBB API key
+    // Upload Property
+    function uploadProperty() {
+      const title = document.getElementById("title").value;
+      const price = document.getElementById("price").value;
+      const details = document.getElementById("details").value;
+      const whatsapp = document.getElementById("whatsapp").value;
+      const file = document.getElementById("imageFile").files[0];
 
-  const ADMIN_NUMBER = "917378342192"; // Admin का WhatsApp नंबर
-  const ADMIN_EMAIL = "admin@zara.com"; // future use if auth
+      if (!file) {
+        alert("कृपया image चुनें");
+        return;
+      }
 
-  // Form Toggle
-  function toggleForm() {
-    let form = document.getElementById("uploadForm");
-    form.style.display = form.style.display === "none" || form.style.display === "" ? "block" : "none";
-  }
+      const formData = new FormData();
+      formData.append("image", file);
 
-  // Upload Property
-  function uploadProperty() {
-    let title = document.getElementById("title").value;
-    let desc = document.getElementById("desc").value;
-    let price = document.getElementById("price").value;
-    let posterNumber = document.getElementById("posterNumber").value;
-    let file = document.getElementById("imageFile").files[0];
-
-    if (!file) {
-      alert("Please select an image!");
-      return;
+      fetch("https://api.imgbb.com/1/upload?key=" + imgbbKey, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        const imageUrl = data.data.url;
+        const newRef = db.ref("properties").push();
+        newRef.set({ title, price, details, whatsapp, imageUrl });
+        alert("Property Posted!");
+        document.getElementById("formBox").style.display = "none";
+      });
     }
 
-    let formData = new FormData();
-    formData.append("image", file);
-
-    fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPI}`, {
-      method: "POST",
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      let imageUrl = data.data.url;
-
-      let newRef = db.ref("properties").push();
-      newRef.set({
-        id: newRef.key,
-        title: title,
-        desc: desc,
-        price: price,
-        posterNumber: posterNumber,
-        image: imageUrl
+    // Show Properties
+    function showProperties() {
+      db.ref("properties").on("value", snapshot => {
+        const propertyList = document.getElementById("propertyList");
+        propertyList.innerHTML = "";
+        snapshot.forEach(child => {
+          const p = child.val();
+          propertyList.innerHTML += `
+            <div class="card">
+              <img src="${p.imageUrl}" alt="Property">
+              <div class="card-body">
+                <h3>${p.title}</h3>
+                <p>₹ ${p.price}</p>
+                <p>${p.details}</p>
+              </div>
+              <a class="whatsapp-btn" href="https://wa.me/${p.whatsapp}" target="_blank">WhatsApp</a>
+            </div>
+          `;
+        });
       });
-
-      alert("Property Uploaded!");
-      document.getElementById("uploadForm").reset();
-      toggleForm();
-    })
-    .catch(err => console.error(err));
-  }
-
-  // Fetch Properties
-  function fetchProperties() {
-    db.ref("properties").on("value", snapshot => {
-      let propertyList = document.getElementById("propertyList");
-      propertyList.innerHTML = "";
-      snapshot.forEach(child => {
-        let data = child.val();
-
-        let div = document.createElement("div");
-        div.className = "property";
-
-        div.innerHTML = `
-          <img src="${data.image}" alt="Property">
-          <h3>${data.title}</h3>
-          <p>${data.desc}</p>
-          <p><b>Price:</b> ₹${data.price}</p>
-          <a href="https://wa.me/${data.posterNumber}" class="btn whatsapp" target="_blank">Poster WhatsApp</a>
-          <a href="https://wa.me/${ADMIN_NUMBER}" class="btn whatsapp" target="_blank">Admin WhatsApp</a>
-          <button class="btn delete" onclick="deleteProperty('${data.id}')">Delete</button>
-        `;
-        propertyList.appendChild(div);
-      });
-    });
-  }
-
-  // Delete Property (Admin + Poster दोनों कर सकते हैं)
-  function deleteProperty(id) {
-    if (confirm("Delete this property?")) {
-      db.ref("properties/" + id).remove();
     }
-  }
-
-  fetchProperties();
-</script>
-
+    showProperties();
+  </script>
 </body>
 </html>
