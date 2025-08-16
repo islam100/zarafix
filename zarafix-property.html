@@ -11,14 +11,20 @@
   header button{padding:8px 12px;margin-left:10px;border:none;border-radius:5px;background:#ff9800;color:#fff;cursor:pointer;box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
   .container{padding:20px;}
   .card-container{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;}
-  .card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:250px;position:relative;}
+  .card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:250px;position:relative;cursor:pointer;}
   .card img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
   .card h3{margin:10px 0 5px;}
   .card p{margin:5px 0;font-size:14px;color:#555;}
-  .card button{margin-top:5px;width:100%;padding:6px;border:none;border-radius:5px;background:#2196F3;color:#fff;cursor:pointer;}
+  .card button{margin-top:5px;width:48%;padding:6px;border:none;border-radius:5px;background:#2196F3;color:#fff;cursor:pointer;}
+  .card button.delete{background:red;}
   form{background:#fff;padding:15px;border-radius:10px;max-width:500px;margin:0 auto 20px;}
   input, textarea{width:100%;margin:5px 0 10px;padding:8px;border-radius:5px;border:1px solid #ccc;}
   #adminDashboard{display:none;}
+  /* Modal Styles */
+  .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;}
+  .modal-content{background:#fff;padding:20px;border-radius:10px;max-width:500px;width:90%;position:relative;}
+  .modal-content img{width:100%;border-radius:8px;margin-bottom:10px;}
+  .closeModal{position:absolute;top:10px;right:15px;font-size:20px;font-weight:bold;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -56,6 +62,14 @@
 
 </div>
 
+<!-- Modal for card enlarge -->
+<div class="modal" id="cardModal">
+  <div class="modal-content">
+    <span class="closeModal" onclick="closeModal()">✖</span>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -76,8 +90,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-// Admin emails
-const admins = { "youradmin@gmail.com": true }; // <--- change your admin email
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
@@ -85,6 +98,8 @@ const posterForm = document.getElementById('posterForm');
 const adminDashboard = document.getElementById('adminDashboard');
 const propertyList = document.getElementById('propertyList');
 const approvedList = document.getElementById('approvedList');
+const cardModal = document.getElementById('cardModal');
+const modalBody = document.getElementById('modalBody');
 
 loginBtn.onclick = () => {
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -97,15 +112,17 @@ auth.onAuthStateChanged(user => {
   if(user){
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
-    if(admins[user.email]){
+    posterForm.style.display = 'block';
+    if(user.email === adminEmail){
       adminDashboard.style.display = 'block';
-      loadProperties();
+      loadAdminProperties();
     } else {
       adminDashboard.style.display = 'none';
     }
   } else {
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
+    posterForm.style.display = 'none';
     adminDashboard.style.display = 'none';
   }
 });
@@ -113,6 +130,7 @@ auth.onAuthStateChanged(user => {
 // Submit property
 posterForm.addEventListener('submit', e=>{
   e.preventDefault();
+  if(!auth.currentUser) return alert('Login required!');
   const id = 'prop_'+Date.now();
   db.ref('properties/'+id).set({
     title: document.getElementById('title').value,
@@ -126,8 +144,8 @@ posterForm.addEventListener('submit', e=>{
   posterForm.reset();
 });
 
-// Load properties for admin
-function loadProperties(){
+// Load admin properties
+function loadAdminProperties(){
   propertyList.innerHTML = '';
   db.ref('properties').on('value', snapshot=>{
     propertyList.innerHTML = '';
@@ -143,25 +161,28 @@ function loadProperties(){
         <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
         <p>Status: ${prop.approved ? 'Approved ✅' : 'Pending ❌'}</p>
         <button class="approveBtn">${prop.approved ? 'Unapprove' : 'Approve'}</button>
-        <button class="deleteBtn" style="background:red;">Delete</button>
+        <button class="delete deleteBtn">Delete</button>
       `;
       const approveBtn = card.querySelector('.approveBtn');
       const deleteBtn = card.querySelector('.deleteBtn');
 
-      approveBtn.onclick = ()=>{
+      approveBtn.onclick = (ev)=>{
+        ev.stopPropagation();
         db.ref('properties/'+snap.key+'/approved').set(!prop.approved);
       }
-      deleteBtn.onclick = ()=>{
+      deleteBtn.onclick = (ev)=>{
+        ev.stopPropagation();
         if(confirm('Delete this property?')){
           db.ref('properties/'+snap.key).remove();
         }
       }
+      card.onclick = ()=>openModal(prop);
       propertyList.appendChild(card);
     });
   });
 }
 
-// Load approved properties for public
+// Load approved properties
 db.ref('properties').on('value', snapshot=>{
   approvedList.innerHTML = '';
   snapshot.forEach(snap=>{
@@ -176,10 +197,26 @@ db.ref('properties').on('value', snapshot=>{
         <p>₹ ${prop.price}</p>
         <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
       `;
+      card.onclick = ()=>openModal(prop);
       approvedList.appendChild(card);
     }
   });
 });
+
+// Modal
+function openModal(prop){
+  modalBody.innerHTML = `
+    <img src="${prop.image}">
+    <h3>${prop.title}</h3>
+    <p>${prop.desc}</p>
+    <p>₹ ${prop.price}</p>
+    <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
+  `;
+  cardModal.style.display = 'flex';
+}
+function closeModal(){
+  cardModal.style.display = 'none';
+}
 </script>
 
 </body>
