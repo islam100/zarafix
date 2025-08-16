@@ -1,141 +1,163 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property Listing</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: #f4f4f9;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property Listing</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      background: #222;
+      color: #fff;
+      padding: 10px;
+    }
+    #property-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 10px;
+      text-align: center;
+      transition: transform 0.3s;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: scale(1.05);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .card h3 {
+      margin: 10px 0 5px;
+    }
+    .card p {
+      margin: 2px 0;
+    }
 
-  h1 {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-
-  .property-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-  }
-
-  .card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    overflow: hidden;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .card img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-    transition: height 0.3s ease;
-  }
-
-  .card-content {
-    padding: 15px;
-  }
-
-  .card h3 {
-    margin: 0 0 10px;
-  }
-
-  .card p {
-    margin: 5px 0;
-    color: #555;
-  }
-
-  /* Expanded Card Style */
-  .card.expanded {
-    grid-column: span 2;
-    transform: scale(1.05);
-    z-index: 10;
-  }
-
-  .card.expanded img {
-    height: 300px;
-  }
-
-  .hidden-details {
-    display: none;
-    margin-top: 10px;
-    color: #333;
-  }
-
-  .card.expanded .hidden-details {
-    display: block;
-  }
-</style>
+    /* Modal (Card enlarge) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: rgba(0,0,0,0.7);
+    }
+    .modal-content {
+      background: #fff;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
+      position: relative;
+    }
+    .modal-content img {
+      width: 100%;
+      border-radius: 10px;
+    }
+    .close {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <h1>Zara Property Listing</h1>
+  <div id="property-list"></div>
 
-<h1>🏡 Zara Property Listing</h1>
-
-<div class="property-grid">
-  <div class="card">
-    <img src="https://via.placeholder.com/400x250" alt="Property">
-    <div class="card-content">
-      <h3>2 BHK Flat</h3>
-      <p>Location: Mumbai</p>
-      <p>Price: ₹50 Lakh</p>
-      <div class="hidden-details">
-        <p>Area: 900 sq.ft</p>
-        <p>Furnished: Yes</p>
-        <p>Near Metro Station</p>
-      </div>
+  <!-- Modal -->
+  <div id="propertyModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <img id="modalImage" src="" alt="Property Image">
+      <h2 id="modalTitle"></h2>
+      <p id="modalPrice"></p>
+      <p id="modalLocation"></p>
+      <p id="modalContact"></p>
     </div>
   </div>
 
-  <div class="card">
-    <img src="https://via.placeholder.com/400x250" alt="Property">
-    <div class="card-content">
-      <h3>3 BHK Villa</h3>
-      <p>Location: Pune</p>
-      <p>Price: ₹1.2 Crore</p>
-      <div class="hidden-details">
-        <p>Area: 1500 sq.ft</p>
-        <p>Garden + Parking</p>
-        <p>24/7 Security</p>
-      </div>
-    </div>
-  </div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script>
+    // 🔹 Firebase Config
+   const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 
-  <div class="card">
-    <img src="https://via.placeholder.com/400x250" alt="Property">
-    <div class="card-content">
-      <h3>1 RK Studio</h3>
-      <p>Location: Delhi</p>
-      <p>Price: ₹25 Lakh</p>
-      <div class="hidden-details">
-        <p>Area: 400 sq.ft</p>
-        <p>Furnished: Semi</p>
-        <p>Best for Students</p>
-      </div>
-    </div>
-  </div>
-</div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script>
-  const cards = document.querySelectorAll(".card");
-  cards.forEach(card => {
-    card.addEventListener("click", () => {
-      // Sabse pehle baaki cards se expanded class hatao
-      cards.forEach(c => {
-        if(c !== card) c.classList.remove("expanded");
+    const propertyList = document.getElementById("property-list");
+    const modal = document.getElementById("propertyModal");
+    const closeModal = document.querySelector(".close");
+
+    const modalImage = document.getElementById("modalImage");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalPrice = document.getElementById("modalPrice");
+    const modalLocation = document.getElementById("modalLocation");
+    const modalContact = document.getElementById("modalContact");
+
+    // 🔹 Fetch Properties
+    db.ref("properties").on("value", (snapshot) => {
+      propertyList.innerHTML = "";
+      snapshot.forEach((child) => {
+        const property = child.val();
+        if (!property.posterImage) return; // image missing skip
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${property.posterImage}" alt="Property Image">
+          <h3>${property.title || "No Title"}</h3>
+          <p>Price: ${property.price || "N/A"}</p>
+          <p>Location: ${property.location || "N/A"}</p>
+        `;
+
+        card.addEventListener("click", () => {
+          modal.style.display = "block";
+          modalImage.src = property.posterImage;
+          modalTitle.innerText = property.title || "No Title";
+          modalPrice.innerText = "Price: " + (property.price || "N/A");
+          modalLocation.innerText = "Location: " + (property.location || "N/A");
+          modalContact.innerText = "Contact: " + (property.contact || "N/A");
+        });
+
+        propertyList.appendChild(card);
       });
-      // Jis card pe click hua usko toggle karo
-      card.classList.toggle("expanded");
     });
-  });
-</script>
 
+    // Close Modal
+    closeModal.onclick = () => modal.style.display = "none";
+    window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; }
+  </script>
 </body>
 </html>
