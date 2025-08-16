@@ -1,198 +1,161 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zara Property Listing</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #f9f9f9;
-    }
-    header {
-      background: #222;
-      color: #fff;
-      padding: 10px 20px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    header h1 { margin: 0; font-size: 24px; }
-    button {
-      padding: 8px 14px; margin: 5px;
-      border: none; cursor: pointer;
-      border-radius: 8px;
-      font-weight: bold;
-      background: linear-gradient(145deg,#4CAF50,#45a049);
-      color: white;
-      box-shadow: 2px 2px 6px #aaa;
-    }
-    button:hover { opacity: 0.9; }
-    #propertyForm {
-      display: none;
-      margin: 20px auto; max-width: 400px; padding: 20px;
-      border: 1px solid #ccc; border-radius: 10px;
-      background: #fff; box-shadow: 2px 2px 8px #aaa;
-    }
-    input, textarea {
-      width: 100%; padding: 8px; margin: 6px 0;
-      border: 1px solid #ccc; border-radius: 5px;
-    }
-    #propertyList {
-      margin: 20px; display: grid;
-      grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
-      gap: 15px;
-    }
-    .card {
-      background: #fff; padding: 10px; border-radius: 12px;
-      box-shadow: 2px 2px 10px #ccc;
-    }
-    .card img { width: 100%; border-radius: 8px; }
-    .deleteBtn {
-      background: red; margin-top: 5px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zara Property Listing</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+  header { background: #333; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 24px; }
+  header button { padding: 8px 12px; cursor: pointer; }
+  .container { padding: 20px; }
+  .property { border: 1px solid #ccc; margin-bottom: 15px; padding: 10px; border-radius: 8px; }
+  .property img { max-width: 100%; border-radius: 8px; }
+  .delete-btn { background: red; color: #fff; padding: 5px 10px; border: none; cursor: pointer; margin-top: 5px; }
+  .upload-box { border: 2px dashed #777; padding: 15px; margin-bottom: 20px; text-align: center; display: none; }
+</style>
 </head>
 <body>
-
 <header>
-  <h1>Zara Property Listing</h1>
+  <h1>Zara Property</h1>
   <div>
     <button id="loginBtn">Google Login</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
 
-<!-- Upload Button -->
-<div style="text-align:center; margin-top:20px;">
-  <button id="uploadBtn" style="display:none;">➕ Property Post करें</button>
-</div>
+<div class="container">
+  <!-- Upload Form -->
+  <div class="upload-box" id="uploadBox">
+    <h3>नई Property जोड़ें</h3>
+    <input type="text" id="title" placeholder="Title"><br><br>
+    <input type="text" id="price" placeholder="Price"><br><br>
+    <input type="file" id="imageFile"><br><br>
+    <button id="uploadBtn">Upload Property</button>
+  </div>
 
-<!-- Property Form -->
-<div id="propertyForm">
-  <h3>नई Property जोड़ें</h3>
-  <input type="text" id="title" placeholder="Property Title" required>
-  <textarea id="desc" placeholder="Description"></textarea>
-  <input type="text" id="price" placeholder="Price (₹)">
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number">
-  <input type="file" id="imageFile" accept="image/*">
-  <button onclick="uploadProperty()">Upload</button>
+  <!-- Property Listing -->
+  <h2>Available Properties</h2>
+  <div id="propertyList"></div>
 </div>
-
-<!-- Property List -->
-<div id="propertyList"></div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
 <script>
-  // Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
+  // ✅ Firebase Config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  };
   firebase.initializeApp(firebaseConfig);
 
-  const auth = firebase.auth();
   const db = firebase.database();
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
 
-  let currentUser = null;
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadBox = document.getElementById("uploadBox");
+  const propertyList = document.getElementById("propertyList");
 
-  // Google Login
-  document.getElementById("loginBtn").onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-  document.getElementById("logoutBtn").onclick = () => auth.signOut();
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      document.getElementById("loginBtn").style.display = "none";
-      document.getElementById("logoutBtn").style.display = "inline-block";
-      document.getElementById("uploadBtn").style.display = "inline-block";
-    } else {
-      currentUser = null;
-      document.getElementById("loginBtn").style.display = "inline-block";
-      document.getElementById("logoutBtn").style.display = "none";
-      document.getElementById("uploadBtn").style.display = "none";
-      document.getElementById("propertyForm").style.display = "none";
-    }
+  // ✅ Login
+  loginBtn.addEventListener("click", () => {
+    auth.signInWithPopup(provider).then((result) => {
+      localStorage.setItem("user", JSON.stringify(result.user));
+      checkUser();
+    });
   });
 
-  // Show Form
-  document.getElementById("uploadBtn").onclick = () => {
-    document.getElementById("propertyForm").style.display =
-      document.getElementById("propertyForm").style.display === "none" ? "block" : "none";
-  };
+  // ✅ Logout
+  logoutBtn.addEventListener("click", () => {
+    auth.signOut().then(() => {
+      localStorage.removeItem("user");
+      checkUser();
+    });
+  });
 
-  // Upload Property
-  function uploadProperty() {
-    const title = document.getElementById("title").value;
-    const desc = document.getElementById("desc").value;
-    const price = document.getElementById("price").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-    const file = document.getElementById("imageFile").files[0];
-    if (!title || !file) {
-      alert("Title और Image जरूरी है");
+  // ✅ Check User (Admin Access)
+  function checkUser() {
+    let user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      uploadBox.style.display = "block"; // केवल लॉगिन पर दिखेगा
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      uploadBox.style.display = "none";
+    }
+  }
+
+  checkUser();
+
+  // ✅ ImgBB Upload + Firebase Save
+  document.getElementById("uploadBtn").addEventListener("click", async () => {
+    let title = document.getElementById("title").value;
+    let price = document.getElementById("price").value;
+    let file = document.getElementById("imageFile").files[0];
+
+    if (!file || !title || !price) {
+      alert("कृपया सभी जानकारी भरें!");
       return;
     }
 
-    // ImgBB API Upload
-    const formData = new FormData();
+    let formData = new FormData();
     formData.append("image", file);
 
-    fetch("https://api.imgbb.com/1/upload?key=9666667be1a890e44490c3dff1f1a120", {
+    let res = await fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
       method: "POST",
       body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      const imageUrl = data.data.url;
-      const propertyRef = db.ref("properties").push();
-      propertyRef.set({
-        title, desc, price, whatsapp,
-        imageUrl,
-        uid: currentUser.uid
+    });
+
+    let data = await res.json();
+    if (data.success) {
+      let imageUrl = data.data.url;
+      let newRef = db.ref("properties").push();
+      newRef.set({ title, price, image: imageUrl });
+      alert("Property सफलतापूर्वक जोड़ दी गई!");
+      document.getElementById("title").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("imageFile").value = "";
+    }
+  });
+
+  // ✅ Property Fetch
+  function fetchProperties() {
+    db.ref("properties").on("value", (snapshot) => {
+      propertyList.innerHTML = "";
+      snapshot.forEach((child) => {
+        let data = child.val();
+        let div = document.createElement("div");
+        div.classList.add("property");
+        div.innerHTML = `
+          <h3>${data.title}</h3>
+          <p>Price: ${data.price}</p>
+          <img src="${data.image}" alt="Property Image">
+          ${localStorage.getItem("user") ? `<button class="delete-btn" onclick="deleteProperty('${child.key}')">Delete</button>` : ""}
+        `;
+        propertyList.appendChild(div);
       });
-      alert("Property Uploaded!");
-      document.getElementById("propertyForm").reset();
-      document.getElementById("propertyForm").style.display="none";
     });
   }
 
-  // Load Properties
-  db.ref("properties").on("value", snapshot => {
-    const list = document.getElementById("propertyList");
-    list.innerHTML = "";
-    snapshot.forEach(child => {
-      const prop = child.val();
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <img src="${prop.imageUrl}" alt="">
-        <h3>${prop.title}</h3>
-        <p>${prop.desc}</p>
-        <p><b>Price:</b> ₹${prop.price}</p>
-        <a href="https://wa.me/${prop.whatsapp}" target="_blank">📲 WhatsApp</a>
-      `;
-      if (currentUser && currentUser.uid === prop.uid) {
-        const del = document.createElement("button");
-        del.className = "deleteBtn";
-        del.innerText = "Delete";
-        del.onclick = () => db.ref("properties/"+child.key).remove();
-        card.appendChild(del);
-      }
-      list.appendChild(card);
-    });
-  });
+  fetchProperties();
+
+  // ✅ Delete Function (Only Admin/User logged in)
+  function deleteProperty(id) {
+    if (!localStorage.getItem("user")) return alert("Only admin can delete!");
+    db.ref("properties/" + id).remove();
+  }
 </script>
 </body>
 </html>
