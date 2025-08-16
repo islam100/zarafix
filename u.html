@@ -1,163 +1,126 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zara Property Listing</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f4f4f4;
-    }
-    h1 {
-      text-align: center;
-      background: #222;
-      color: #fff;
-      padding: 10px;
-    }
-    #property-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 15px;
-      padding: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 10px;
-      text-align: center;
-      transition: transform 0.3s;
-      cursor: pointer;
-    }
-    .card:hover {
-      transform: scale(1.05);
-    }
-    .card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 10px;
-    }
-    .card h3 {
-      margin: 10px 0 5px;
-    }
-    .card p {
-      margin: 2px 0;
-    }
-
-    /* Modal (Card enlarge) */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background: rgba(0,0,0,0.7);
-    }
-    .modal-content {
-      background: #fff;
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 600px;
-      text-align: center;
-      position: relative;
-    }
-    .modal-content img {
-      width: 100%;
-      border-radius: 10px;
-    }
-    .close {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 28px;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; background: #f2f2f2; }
+    h1 { background: #333; color: white; padding: 10px; }
+    .property { background: white; margin: 15px auto; padding: 15px; border-radius: 10px; width: 320px; box-shadow: 0px 4px 6px rgba(0,0,0,0.2); }
+    .property img { width: 100%; border-radius: 8px; object-fit: contain; }
+    button { margin-top: 10px; padding: 8px 15px; border: none; background: red; color: white; border-radius: 5px; cursor: pointer; }
+    #uploadForm { margin: 20px; padding: 15px; background: white; border-radius: 10px; width: 350px; margin: auto; }
   </style>
 </head>
 <body>
-  <h1>Zara Property Listing</h1>
-  <div id="property-list"></div>
 
-  <!-- Modal -->
-  <div id="propertyModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <img id="modalImage" src="" alt="Property Image">
-      <h2 id="modalTitle"></h2>
-      <p id="modalPrice"></p>
-      <p id="modalLocation"></p>
-      <p id="modalContact"></p>
-    </div>
+  <h1>Zara Property Listing</h1>
+
+  <!-- Upload Form (Admin Only) -->
+  <div id="uploadForm">
+    <h3>नई Property पोस्ट करें</h3>
+    <input type="text" id="title" placeholder="Property Title" required><br><br>
+    <input type="text" id="price" placeholder="Price (₹)" required><br><br>
+    <input type="file" id="image" accept="image/*" required><br><br>
+    <button onclick="uploadProperty()">Upload</button>
   </div>
 
-  <!-- Firebase -->
+  <h2>🏠 सभी Property</h2>
+  <div id="propertyList"></div>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script>
-    // 🔹 Firebase Config
-   const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
 
+  <script>
+    // ✅ Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
+      authDomain: "zara-life-care.firebaseapp.com",
+      databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com/",
+      projectId: "zara-life-care",
+      storageBucket: "zara-life-care.appspot.com",
+      messagingSenderId: "877609389477",
+      appId: "1:877609389477:web:eb7c98ef2f94a60f8c60f6"
+    };
     firebase.initializeApp(firebaseConfig);
+
     const db = firebase.database();
 
-    const propertyList = document.getElementById("property-list");
-    const modal = document.getElementById("propertyModal");
-    const closeModal = document.querySelector(".close");
+    // ✅ Imgbb API Key (अपनी key यहां डालें)
+    const imgbbApiKey = "9666667be1a890e44490c3dff1f1a120";
 
-    const modalImage = document.getElementById("modalImage");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalPrice = document.getElementById("modalPrice");
-    const modalLocation = document.getElementById("modalLocation");
-    const modalContact = document.getElementById("modalContact");
+    // Upload Property
+    function uploadProperty() {
+      let title = document.getElementById("title").value;
+      let price = document.getElementById("price").value;
+      let imageFile = document.getElementById("image").files[0];
 
-    // 🔹 Fetch Properties
-    db.ref("properties").on("value", (snapshot) => {
-      propertyList.innerHTML = "";
-      snapshot.forEach((child) => {
-        const property = child.val();
-        if (!property.posterImage) return; // image missing skip
+      if (!title || !price || !imageFile) {
+        alert("कृपया सभी फील्ड भरें और इमेज अपलोड करें।");
+        return;
+      }
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${property.posterImage}" alt="Property Image">
-          <h3>${property.title || "No Title"}</h3>
-          <p>Price: ${property.price || "N/A"}</p>
-          <p>Location: ${property.location || "N/A"}</p>
-        `;
+      let formData = new FormData();
+      formData.append("image", imageFile);
 
-        card.addEventListener("click", () => {
-          modal.style.display = "block";
-          modalImage.src = property.posterImage;
-          modalTitle.innerText = property.title || "No Title";
-          modalPrice.innerText = "Price: " + (property.price || "N/A");
-          modalLocation.innerText = "Location: " + (property.location || "N/A");
-          modalContact.innerText = "Contact: " + (property.contact || "N/A");
+      // ✅ Upload to imgbb
+      fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        let imageUrl = data.data.url;
+
+        // ✅ Save to Firebase
+        let newRef = db.ref("properties").push();
+        newRef.set({
+          title: title,
+          price: price,
+          image: imageUrl
         });
 
-        propertyList.appendChild(card);
+        alert("Property सफलतापूर्वक Upload हो गई ✅");
+        document.getElementById("title").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("image").value = "";
+      })
+      .catch(err => {
+        console.error("Image Upload Error:", err);
+        alert("Image Upload Failed!");
+      });
+    }
+
+    // ✅ Show Properties (सबको दिखेगा बिना login)
+    db.ref("properties").on("value", (snapshot) => {
+      let list = document.getElementById("propertyList");
+      list.innerHTML = "";
+
+      snapshot.forEach(child => {
+        let data = child.val();
+        let key = child.key;
+
+        let div = document.createElement("div");
+        div.className = "property";
+        div.innerHTML = `
+          <h3>${data.title}</h3>
+          <p>Price: ₹${data.price}</p>
+          <img src="${data.image}" alt="Property Image">
+          <button onclick="deleteProperty('${key}')">Delete</button>
+        `;
+        list.appendChild(div);
       });
     });
 
-    // Close Modal
-    closeModal.onclick = () => modal.style.display = "none";
-    window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; }
+    // ✅ Delete Property
+    function deleteProperty(key) {
+      if (confirm("क्या आप सच में इस Property को डिलीट करना चाहते हैं?")) {
+        db.ref("properties/" + key).remove();
+      }
+    }
   </script>
+
 </body>
 </html>
