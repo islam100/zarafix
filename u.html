@@ -1,86 +1,66 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zara Property Listing</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f4f4f4;
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f8f8f8; }
+    header { background: #2c3e50; padding: 15px; color: white; text-align: center; font-size: 22px; }
+    #loginBtn, #logoutBtn, #postBtn {
+      padding: 8px 15px; border: none; border-radius: 5px; margin: 5px; cursor: pointer;
     }
-    header {
-      background: #222;
-      color: #fff;
-      padding: 15px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    .property-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 15px;
-      padding: 20px;
-    }
-    .property-card {
-      background: #fff;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-    }
-    .property-card:hover {
-      transform: scale(1.02);
-    }
-    .property-card img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-    }
-    .property-info {
-      padding: 15px;
-    }
-    .property-info h3 {
-      margin: 0;
-      font-size: 18px;
-      color: #333;
-    }
-    .property-info p {
-      margin: 5px 0;
-      font-size: 14px;
-      color: #555;
-    }
-    .whatsapp-btn {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 8px 12px;
-      background: #25D366;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    .whatsapp-btn:hover {
-      background: #1ebe5a;
-    }
+    #loginBtn { background: #27ae60; color: white; }
+    #logoutBtn { background: #e74c3c; color: white; display: none; }
+    #postBtn { background: #2980b9; color: white; display: none; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; padding: 15px; }
+    .card { background: white; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      overflow: hidden; cursor: pointer; transition: transform 0.3s; }
+    .card:hover { transform: scale(1.05); }
+    .card img { width: 100%; height: 200px; object-fit: cover; }
+    .card-body { padding: 10px; }
+    .card-body h3 { margin: 0; font-size: 18px; }
+    .card-body p { margin: 5px 0; color: #555; font-size: 14px; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; 
+      background: rgba(0,0,0,0.8); justify-content:center; align-items:center; }
+    .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 600px; width: 90%; }
+    .modal img { width: 100%; border-radius: 10px; }
+    .close { float: right; cursor: pointer; font-size: 22px; }
   </style>
 </head>
 <body>
 
-<header>Zara Property Listing</header>
+  <header>
+    Zara Property Listing
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn">Logout</button>
+    <button id="postBtn">Post Property</button>
+  </header>
 
-<div class="property-container" id="propertyList"></div>
+  <div class="grid" id="propertyList"></div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <img id="modalImg" src="">
+      <h2 id="modalTitle"></h2>
+      <p id="modalDesc"></p>
+    </div>
+  </div>
 
-<script>
-  // Firebase Config
- const firebaseConfig = {
+  <script>
+    // Firebase Config
+   const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
   databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
@@ -90,36 +70,76 @@
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // Property fetch function
-  function loadProperties() {
-    const propertyList = document.getElementById('propertyList');
-    db.ref('properties/').on('value', snapshot => {
-      propertyList.innerHTML = "";
-      snapshot.forEach(child => {
-        const prop = child.val();
-        const card = `
-          <div class="property-card">
-            <img src="${prop.imageUrl}" alt="Property Image">
-            <div class="property-info">
-              <h3>${prop.title}</h3>
-              <p>${prop.description}</p>
-              <p><strong>Price:</strong> ₹${prop.price}</p>
-              <p><strong>Location:</strong> ${prop.location}</p>
-              <p><strong>Posted By:</strong> ${prop.posterName}</p>
-              <a class="whatsapp-btn" href="https://wa.me/${prop.posterPhone}" target="_blank">WhatsApp</a>
-            </div>
-          </div>
-        `;
-        propertyList.innerHTML += card;
-      });
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const postBtn = document.getElementById("postBtn");
+
+    // Google Login
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider);
+    };
+
+    logoutBtn.onclick = () => firebase.auth().signOut();
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        postBtn.style.display = "inline-block";
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        postBtn.style.display = "none";
+      }
     });
-  }
 
-  loadProperties();
-</script>
+    // Property fetch
+    function fetchProperties() {
+      db.ref("properties").on("value", snapshot => {
+        const list = document.getElementById("propertyList");
+        list.innerHTML = "";
+        snapshot.forEach(data => {
+          const prop = data.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <img src="${prop.image}" />
+            <div class="card-body">
+              <h3>${prop.title}</h3>
+              <p>${prop.desc}</p>
+            </div>`;
+          card.onclick = () => openModal(prop);
+          list.appendChild(card);
+        });
+      });
+    }
+    fetchProperties();
 
+    // Modal
+    function openModal(prop) {
+      document.getElementById("modalImg").src = prop.image;
+      document.getElementById("modalTitle").innerText = prop.title;
+      document.getElementById("modalDesc").innerText = prop.desc;
+      document.getElementById("modal").style.display = "flex";
+    }
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+    // Post property (example: dummy insert)
+    postBtn.onclick = () => {
+      const title = prompt("Enter property title:");
+      const desc = prompt("Enter property description:");
+      const imgUrl = prompt("Paste ImgBB image URL here:");
+
+      if (title && desc && imgUrl) {
+        db.ref("properties").push({ title, desc, image: imgUrl });
+      }
+    };
+  </script>
 </body>
 </html>
