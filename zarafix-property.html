@@ -3,191 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Property Listing</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f2f2f2; margin:0; padding:0;}
-  .container { max-width:1200px; margin:auto; padding:20px;}
-  .header { display:flex; justify-content:space-between; align-items:center; background:#333; color:white; padding:10px;}
-  .header h1 { margin:0; }
-  .btn { padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; margin-left:5px;}
-  .btn:hover { background:#0056b3; }
-  .card { background:white; border-radius:8px; padding:10px; margin:10px; display:inline-block; width:250px; vertical-align:top; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-  .card img { width:100%; border-radius:5px; }
-  .card h3, .card p { margin:5px 0; }
-  #loginDiv { text-align:center; margin:50px;}
-  #posterForm { background:white; padding:20px; border-radius:8px; margin:20px 0;}
-  input, textarea { width:100%; padding:8px; margin:5px 0; border-radius:4px; border:1px solid #ccc; }
-  #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
-  #modal img { max-width:90%; max-height:90%; border-radius:8px; }
-</style>
-</head>
-<body>
-<div class="header">
-  <h1>Zara Property Listing</h1>
-  <div id="authButtons">
-    <button class="btn" id="loginBtn">Login with Google</button>
-    <button class="btn" id="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</div>
-
-<div class="container">
-
-  <div id="posterForm" style="display:none;">
-    <h2>Post a Property</h2>
-    <input type="text" id="title" placeholder="Title" required>
-    <input type="text" id="city" placeholder="City" required>
-    <select id="type">
-      <option value="sale">Sale</option>
-      <option value="rent">Rent</option>
-    </select>
-    <input type="number" id="price" placeholder="Price" required>
-    <textarea id="description" placeholder="Description" required></textarea>
-    <input type="text" id="imageUrl" placeholder="Image URL" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <button class="btn" id="postBtn">Post Property</button>
-  </div>
-
-  <div id="propertiesList"></div>
-
-</div>
-
-<div id="modal" onclick="this.style.display='none'">
-  <img id="modalImg" src="">
-</div>
-
-<!-- Firebase SDK -->
+<title>Zara Property Dashboard</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<style>
+  body { font-family: Arial; padding: 10px; }
+  .card { border: 1px solid #ccc; border-radius: 10px; padding: 10px; margin: 10px; display: inline-block; width: 250px; cursor: pointer; transition: transform 0.2s; }
+  .card:hover { transform: scale(1.05); }
+  .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 5px; }
+  .admin-btn { margin: 5px; padding: 5px 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h2>Zara Property Dashboard</h2>
+<div id="login-section">
+  <button onclick="login()">Login with Google</button>
+</div>
+
+<div id="post-section" style="display:none;">
+  <h3>Post Property</h3>
+  <input type="text" id="title" placeholder="Title"><br>
+  <input type="text" id="city" placeholder="City"><br>
+  <input type="text" id="type" placeholder="Sale/Rent"><br>
+  <input type="number" id="price" placeholder="Price"><br>
+  <input type="text" id="whatsapp" placeholder="WhatsApp"><br>
+  <textarea id="description" placeholder="Description"></textarea><br>
+  <input type="file" id="image"><br>
+  <button onclick="postProperty()">Post</button>
+</div>
+
+<h3>Properties</h3>
+<div id="property-list"></div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
-
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const posterForm = document.getElementById('posterForm');
-
-loginBtn.addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-});
-
-logoutBtn.addEventListener('click', () => {
-  auth.signOut();
-});
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'inline-block';
-    posterForm.style.display = 'block';
-  }else{
-    loginBtn.style.display = 'inline-block';
-    logoutBtn.style.display = 'none';
-    posterForm.style.display = 'none';
-  }
-  fetchProperties(user);
-});
-
-document.getElementById('postBtn').addEventListener('click', () => {
-  const user = auth.currentUser;
-  if(!user){ alert('Login required'); return; }
-
-  const title = document.getElementById('title').value;
-  const city = document.getElementById('city').value;
-  const type = document.getElementById('type').value;
-  const price = document.getElementById('price').value;
-  const description = document.getElementById('description').value;
-  const imageUrl = document.getElementById('imageUrl').value;
-  const whatsapp = document.getElementById('whatsapp').value;
-
-  const newProp = {
-    title, city, type, price, description, imageUrl, whatsapp,
-    userId: user.uid,
-    userEmail: user.email,
-    approved: false,
-    timestamp: Date.now()
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
   };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
 
-  const newKey = db.ref().child('properties').push().key;
-  db.ref('properties/'+newKey).set(newProp);
-  alert('Property posted, waiting for approval.');
-  document.getElementById('title').value='';
-  document.getElementById('city').value='';
-  document.getElementById('price').value='';
-  document.getElementById('description').value='';
-  document.getElementById('imageUrl').value='';
-  document.getElementById('whatsapp').value='';
-});
+  let currentUser = null;
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-function fetchProperties(user){
-  const listDiv = document.getElementById('propertiesList');
-  listDiv.innerHTML='';
-  db.ref('properties').orderByChild('timestamp').once('value', snapshot=>{
-    snapshot.forEach(snap=>{
-      const prop = snap.val();
-      const key = snap.key;
-      const card = document.createElement('div');
-      card.className='card';
-      card.innerHTML=`
-        <img src="${prop.imageUrl}" onclick="showModal('${prop.imageUrl}')">
-        <h3>${prop.title}</h3>
-        <p>${prop.city} - ${prop.type}</p>
-        <p>₹${prop.price}</p>
-        <p>${prop.description}</p>
-        <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
-      `;
-
-      // Admin buttons
-      if(user && user.email === adminEmail){
-        const approveBtn = document.createElement('button');
-        approveBtn.className='btn';
-        approveBtn.innerText = prop.approved ? 'Approved' : 'Approve';
-        approveBtn.onclick = ()=>{ 
-          db.ref('properties/'+key+'/approved').set(true);
-          fetchProperties(user);
-        };
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className='btn';
-        deleteBtn.innerText='Delete';
-        deleteBtn.onclick = ()=>{
-          if(confirm('Delete this property?')){
-            db.ref('properties/'+key).remove();
-            fetchProperties(user);
-          }
-        };
-        card.appendChild(approveBtn);
-        card.appendChild(deleteBtn);
-      }else if(!prop.approved){
-        // Non-approved properties not shown to normal users
-        return;
-      }
-
-      listDiv.appendChild(card);
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).then(result => {
+      currentUser = result.user;
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('post-section').style.display = 'block';
+      loadProperties();
     });
-  });
-}
+  }
 
-function showModal(url){
-  const modal = document.getElementById('modal');
-  const modalImg = document.getElementById('modalImg');
-  modalImg.src = url;
-  modal.style.display='flex';
-}
+  function postProperty() {
+    if (!currentUser) return alert("Login required");
+    const file = document.getElementById('image').files[0];
+    const imageRef = storage.ref('images/' + file.name);
+    imageRef.put(file).then(() => {
+      imageRef.getDownloadURL().then(url => {
+        const newPropKey = db.ref('properties').push().key;
+        db.ref('properties/' + newPropKey).set({
+          title: document.getElementById('title').value,
+          city: document.getElementById('city').value,
+          type: document.getElementById('type').value,
+          price: Number(document.getElementById('price').value),
+          whatsapp: document.getElementById('whatsapp').value,
+          description: document.getElementById('description').value,
+          imageUrl: url,
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          approved: false,
+          timestamp: Date.now()
+        });
+      });
+    });
+  }
+
+  function loadProperties() {
+    db.ref('properties').on('value', snapshot => {
+      const list = document.getElementById('property-list');
+      list.innerHTML = '';
+      const data = snapshot.val();
+      for (let key in data) {
+        const prop = data[key];
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${prop.imageUrl}" onclick="window.open('${prop.imageUrl}', '_blank')">
+          <h4>${prop.title}</h4>
+          <p>${prop.city} - ${prop.type}</p>
+          <p>₹${prop.price}</p>
+          <p>${prop.description}</p>
+          <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
+        `;
+        if (currentUser.email === adminEmail) {
+          const approveBtn = document.createElement('button');
+          approveBtn.className = 'admin-btn';
+          approveBtn.textContent = prop.approved ? 'Approved' : 'Approve';
+          approveBtn.onclick = () => db.ref('properties/' + key + '/approved').set(true);
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'admin-btn';
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.onclick = () => db.ref('properties/' + key).remove();
+          card.appendChild(approveBtn);
+          card.appendChild(deleteBtn);
+        }
+        list.appendChild(card);
+      }
+    });
+  }
 </script>
+
 </body>
 </html>
