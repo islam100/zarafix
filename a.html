@@ -1,181 +1,177 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Zara Property Listing</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f2f2;}
-  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#1e90ff; color:white;}
-  header h1 { margin:0; font-size:1.5rem; text-shadow: 2px 2px 4px #000; }
-  .btn { padding:10px 20px; margin:5px; border:none; cursor:pointer; border-radius:10px; font-weight:bold; box-shadow: 3px 3px 5px #888; }
-  .btn-3d { box-shadow: 3px 3px 6px #555; }
-  .btn-approve { background:green; color:white;}
-  .btn-delete { background:red; color:white;}
-  .btn-login { background:#fff; color:#1e90ff; }
-  #propertyForm, #properties, #adminPanel { padding:20px; max-width:1200px; margin:auto;}
-  .property-card { background:white; margin:10px; padding:10px; border-radius:10px; display:inline-block; width:250px; vertical-align:top; box-shadow: 3px 3px 5px #aaa;}
-  .property-card img { width:100%; border-radius:10px; height:150px; object-fit:cover; }
-  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center;}
-  .modal-content { background:white; padding:20px; border-radius:10px; max-width:500px; width:90%;}
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f2f2; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#333; color:#fff; }
+  header h1 { font-size:24px; font-weight:bold; text-shadow: 2px 2px 5px #000; }
+  button { padding:5px 10px; margin-left:10px; cursor:pointer; border:none; border-radius:5px; }
+  .card-container { display:flex; flex-wrap:wrap; justify-content:center; padding:20px; }
+  .card { background:#fff; margin:10px; padding:10px; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.2); width:250px; cursor:pointer; transition:transform 0.2s; }
+  .card:hover { transform:scale(1.03); }
+  .card img { width:100%; border-radius:10px; }
+  .card h3 { margin:5px 0; }
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; }
+  .modal-content { background:#fff; padding:20px; border-radius:10px; max-width:500px; width:90%; }
+  #posterForm { background:#fff; padding:20px; border-radius:10px; max-width:400px; margin:20px auto; }
+  input, select, textarea { width:100%; margin:5px 0 15px; padding:8px; border-radius:5px; border:1px solid #ccc; }
+  .admin-buttons { display:flex; justify-content:space-between; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Zara Property Listing</h1>
-  <button class="btn btn-login" id="googleLoginBtn">Admin Login</button>
+  <div id="authButtons">
+    <button onclick="login()">Login</button>
+    <button onclick="logout()" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<!-- Poster Form -->
-<section id="propertyForm">
-  <h2>Post Property</h2>
-  <form id="newPropertyForm">
-    <input type="text" id="title" placeholder="Title" required><br><br>
-    <input type="text" id="city" placeholder="City" required><br><br>
-    <select id="type" required>
-      <option value="">Select Type</option>
-      <option value="sale">Sale</option>
-      <option value="rent">Rent</option>
-    </select><br><br>
-    <input type="number" id="price" placeholder="Price" required><br><br>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required><br><br>
-    <textarea id="description" placeholder="Description" required></textarea><br><br>
-    <input type="file" id="image" accept="image/*" required><br><br>
-    <button type="submit" class="btn btn-3d">Post Property</button>
-  </form>
-</section>
+<div id="posterForm" style="display:none;">
+  <h3>Post Your Property</h3>
+  <input type="text" id="title" placeholder="Title" required>
+  <input type="text" id="city" placeholder="City" required>
+  <select id="type"><option value="sale">Sale</option><option value="rent">Rent</option></select>
+  <input type="number" id="price" placeholder="Price" required>
+  <textarea id="description" placeholder="Description"></textarea>
+  <input type="url" id="imageUrl" placeholder="Image URL" required>
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+  <button onclick="postProperty()">Post Property</button>
+</div>
 
-<!-- Properties Listing -->
-<section id="properties">
-  <h2>Properties</h2>
-  <div id="propertyList"></div>
-</section>
+<div class="card-container" id="propertyContainer"></div>
 
-<!-- Admin Panel -->
-<section id="adminPanel" style="display:none;">
-  <h2>Admin Panel</h2>
-  <div id="adminPropertyList"></div>
-</section>
-
-<!-- Modal -->
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <span id="modalClose" style="cursor:pointer; float:right;">&times;</span>
+<!-- Modal for card view -->
+<div class="modal" id="cardModal">
+  <div class="modal-content" id="modalContent">
+    <span style="cursor:pointer; float:right;" onclick="closeModal()">✖</span>
     <div id="modalBody"></div>
   </div>
 </div>
 
-<!-- Firebase -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  let currentUser = null;
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const storage = getStorage(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider);
+  }
 
-const googleLoginBtn = document.getElementById('googleLoginBtn');
-const adminPanel = document.getElementById('adminPanel');
+  function logout() {
+    firebase.auth().signOut();
+  }
 
-let currentAdmin = null;
-
-// Google login
-googleLoginBtn.addEventListener('click', async ()=>{
-  const result = await signInWithPopup(auth, provider);
-  const user = result.user;
-  const adminCheck = ref(db, 'admins/' + user.email.replace('.',','));
-  onValue(adminCheck, (snap)=>{
-    if(snap.exists() && snap.val()===true){
-      currentAdmin = user.email;
-      alert('Admin logged in');
-      adminPanel.style.display = 'block';
+  firebase.auth().onAuthStateChanged(user => {
+    currentUser = user;
+    if(user) {
+      document.getElementById("posterForm").style.display = "block";
+      document.querySelector("#authButtons button:nth-child(1)").style.display = "none";
+      document.querySelector("#authButtons button:nth-child(2)").style.display = "inline-block";
     } else {
-      alert('You are not admin');
+      document.getElementById("posterForm").style.display = "none";
+      document.querySelector("#authButtons button:nth-child(1)").style.display = "inline-block";
+      document.querySelector("#authButtons button:nth-child(2)").style.display = "none";
     }
-  }, {onlyOnce:true});
-});
-
-// Post Property
-const newPropertyForm = document.getElementById('newPropertyForm');
-newPropertyForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const title = document.getElementById('title').value;
-  const city = document.getElementById('city').value;
-  const type = document.getElementById('type').value;
-  const price = document.getElementById('price').value;
-  const whatsapp = document.getElementById('whatsapp').value;
-  const description = document.getElementById('description').value;
-  const file = document.getElementById('image').files[0];
-
-  const storageReference = sRef(storage, 'images/'+Date.now()+file.name);
-  await uploadBytes(storageReference, file);
-  const imageUrl = await getDownloadURL(storageReference);
-
-  push(ref(db, 'properties'), {
-    title, city, type, price, whatsapp, description, imageUrl, approved:false, timestamp:Date.now()
+    fetchProperties();
   });
 
-  newPropertyForm.reset();
-  alert('Property posted, waiting for admin approval');
-});
+  function postProperty() {
+    if(!currentUser) return alert("Login required to post");
+    const newProp = {
+      title: document.getElementById("title").value,
+      city: document.getElementById("city").value,
+      type: document.getElementById("type").value,
+      price: Number(document.getElementById("price").value),
+      description: document.getElementById("description").value,
+      imageUrl: document.getElementById("imageUrl").value,
+      whatsapp: document.getElementById("whatsapp").value,
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      approved: false,
+      timestamp: Date.now()
+    };
+    db.ref("properties").push(newProp);
+    alert("Property posted. Admin approval needed.");
+    document.getElementById("posterForm").reset();
+  }
 
-// Display Properties
-const propertyList = document.getElementById('propertyList');
-const adminPropertyList = document.getElementById('adminPropertyList');
+  function fetchProperties() {
+    const container = document.getElementById("propertyContainer");
+    container.innerHTML = "";
+    db.ref("properties").orderByChild("timestamp").once("value", snapshot => {
+      snapshot.forEach(child => {
+        const prop = child.val();
+        const id = child.key;
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${prop.imageUrl}" />
+          <h3>${prop.title}</h3>
+          <p>${prop.city} | ${prop.type} | ₹${prop.price}</p>
+          <p>${prop.description}</p>
+          <a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a>
+        `;
+        card.onclick = () => openModal(prop);
+        if(currentUser && currentUser.email === adminEmail) {
+          const adminDiv = document.createElement("div");
+          adminDiv.className = "admin-buttons";
+          adminDiv.innerHTML = `
+            <button onclick="approve('${id}')">Approve</button>
+            <button onclick="remove('${id}')">Delete</button>
+          `;
+          card.appendChild(adminDiv);
+        }
+        container.appendChild(card);
+      });
+    });
+  }
 
-onValue(ref(db,'properties'), (snapshot)=>{
-  propertyList.innerHTML='';
-  adminPropertyList.innerHTML='';
-  snapshot.forEach(snap=>{
-    const data = snap.val();
-    const key = snap.key;
-    if(data.approved){
-      propertyList.innerHTML += `
-      <div class="property-card">
-        <img src="${data.imageUrl}" alt="${data.title}">
-        <h3>${data.title}</h3>
-        <p>${data.city} | ${data.type} | ₹${data.price}</p>
-        <p>${data.description}</p>
-        <a href="https://wa.me/${data.whatsapp}" target="_blank" class="btn btn-3d">WhatsApp</a>
-      </div>`;
-    }
-    if(!data.approved && currentAdmin){
-      adminPropertyList.innerHTML += `
-      <div class="property-card">
-        <img src="${data.imageUrl}" alt="${data.title}">
-        <h3>${data.title}</h3>
-        <p>${data.city} | ${data.type} | ₹${data.price}</p>
-        <p>${data.description}</p>
-        <a href="https://wa.me/${data.whatsapp}" target="_blank" class="btn btn-3d">WhatsApp</a><br><br>
-        <button class="btn btn-approve" onclick="approveProperty('${key}')">Approve</button>
-        <button class="btn btn-delete" onclick="deleteProperty('${key}')">Delete</button>
-      </div>`;
-    }
-  });
-});
+  function approve(id) {
+    db.ref("properties/" + id).update({approved:true});
+    fetchProperties();
+  }
 
-// Approve/Delete functions
-window.approveProperty = (key)=>{
-  update(ref(db,'properties/'+key), {approved:true});
-}
-window.deleteProperty = (key)=>{
-  remove(ref(db,'properties/'+key));
-}
+  function remove(id) {
+    db.ref("properties/" + id).remove();
+    fetchProperties();
+  }
+
+  function openModal(prop) {
+    document.getElementById("modalBody").innerHTML = `
+      <img src="${prop.imageUrl}" style="width:100%; border-radius:10px;">
+      <h3>${prop.title}</h3>
+      <p>${prop.city} | ${prop.type} | ₹${prop.price}</p>
+      <p>${prop.description}</p>
+      <a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a>
+    `;
+    document.getElementById("cardModal").style.display = "flex";
+  }
+
+  function closeModal() {
+    document.getElementById("cardModal").style.display = "none";
+  }
 
 </script>
 
