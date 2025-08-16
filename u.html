@@ -5,153 +5,121 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Zara Property Listing</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; padding:20px; }
-    h1 { text-align:center; }
-    .form-box, .list-box { background:#fff; padding:15px; margin:15px auto; border-radius:8px; max-width:600px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-    input, textarea, button { width:100%; padding:10px; margin:8px 0; border-radius:6px; border:1px solid #ccc; }
-    button { background:#007bff; color:#fff; border:none; cursor:pointer; }
-    button:hover { background:#0056b3; }
-    .property { border:1px solid #ddd; margin:10px 0; padding:10px; border-radius:6px; background:#fafafa; }
-    .property img { max-width:100%; border-radius:6px; }
-    .admin-actions button { width:auto; margin-right:10px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .property-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      padding: 20px;
+    }
+    .property-card {
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .property-card:hover {
+      transform: scale(1.02);
+    }
+    .property-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    .property-info {
+      padding: 15px;
+    }
+    .property-info h3 {
+      margin: 0;
+      font-size: 18px;
+      color: #333;
+    }
+    .property-info p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #555;
+    }
+    .whatsapp-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #25D366;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .whatsapp-btn:hover {
+      background: #1ebe5a;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Zara Property Listing</h1>
+<header>Zara Property Listing</header>
 
-  <!-- Property Post Form -->
-  <div class="form-box">
-    <h2>Property Post करें</h2>
-    <input type="text" id="title" placeholder="Property Title" required>
-    <textarea id="description" placeholder="Property Description" required></textarea>
-    <input type="text" id="price" placeholder="Price" required>
-    <input type="file" id="imageFile" accept="image/*" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <button onclick="uploadProperty()">Submit</button>
-  </div>
+<div class="property-container" id="propertyList"></div>
 
-  <!-- Public Listing -->
-  <div class="list-box">
-    <h2>Approved Properties</h2>
-    <div id="propertyList"></div>
-  </div>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  <!-- Admin Panel -->
-  <div class="list-box">
-    <h2>Admin Panel (Approval Needed)</h2>
-    <div id="adminList"></div>
-  </div>
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
+    authDomain: "zara-life-care.firebaseapp.com",
+    projectId: "zara-life-care",
+    databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com",
+    storageBucket: "zara-life-care.appspot.com",
+    messagingSenderId: "54289070562",
+    appId: "1:54289070562:web:ba2d0ff95fb0a72f2ab708"
+  };
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  <script>
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
-      authDomain: "zara-life-care.firebaseapp.com",
-      databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com/",
-      projectId: "zara-life-care",
-      storageBucket: "zara-life-care.appspot.com",
-      messagingSenderId: "49079472558",
-      appId: "1:49079472558:web:74a248d609cfbd1a30c712"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // ImgBB API key (अपनी key लगाओ)
-    const imgbbAPIKey = "9666667be1a890e44490c3dff1f1a120";
-
-    // Upload Property
-    function uploadProperty() {
-      const title = document.getElementById("title").value;
-      const description = document.getElementById("description").value;
-      const price = document.getElementById("price").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const file = document.getElementById("imageFile").files[0];
-
-      if (!file) {
-        alert("कृपया इमेज सेलेक्ट करें!");
-        return;
-      }
-
-      // Upload image to imgbb
-      const formData = new FormData();
-      formData.append("image", file);
-
-      fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
-        method: "POST",
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        const imageUrl = data.data.url;
-        const propertyRef = db.ref("properties").push();
-        propertyRef.set({
-          title, description, price, whatsapp,
-          imageUrl, approved: false
-        });
-        alert("Property Submitted, Admin Approval Needed!");
-        document.querySelector(".form-box").reset;
-      })
-      .catch(err => alert("Image Upload Failed: " + err));
-    }
-
-    // Show Approved Properties (Public)
-    db.ref("properties").on("value", snapshot => {
-      const list = document.getElementById("propertyList");
-      list.innerHTML = "";
+  // Property fetch function
+  function loadProperties() {
+    const propertyList = document.getElementById('propertyList');
+    db.ref('properties/').on('value', snapshot => {
+      propertyList.innerHTML = "";
       snapshot.forEach(child => {
-        const property = child.val();
-        if (property.approved) {
-          list.innerHTML += `
-            <div class="property">
-              <h3>${property.title}</h3>
-              <img src="${property.imageUrl}" alt="">
-              <p>${property.description}</p>
-              <p><b>Price:</b> ${property.price}</p>
-              <a href="https://wa.me/${property.whatsapp}" target="_blank">Chat on WhatsApp</a>
+        const prop = child.val();
+        const card = `
+          <div class="property-card">
+            <img src="${prop.imageUrl}" alt="Property Image">
+            <div class="property-info">
+              <h3>${prop.title}</h3>
+              <p>${prop.description}</p>
+              <p><strong>Price:</strong> ₹${prop.price}</p>
+              <p><strong>Location:</strong> ${prop.location}</p>
+              <p><strong>Posted By:</strong> ${prop.posterName}</p>
+              <a class="whatsapp-btn" href="https://wa.me/${prop.posterPhone}" target="_blank">WhatsApp</a>
             </div>
-          `;
-        }
+          </div>
+        `;
+        propertyList.innerHTML += card;
       });
     });
+  }
 
-    // Show Pending Properties (Admin)
-    db.ref("properties").on("value", snapshot => {
-      const adminList = document.getElementById("adminList");
-      adminList.innerHTML = "";
-      snapshot.forEach(child => {
-        const property = child.val();
-        if (!property.approved) {
-          adminList.innerHTML += `
-            <div class="property">
-              <h3>${property.title}</h3>
-              <img src="${property.imageUrl}" alt="">
-              <p>${property.description}</p>
-              <p><b>Price:</b> ${property.price}</p>
-              <div class="admin-actions">
-                <button onclick="approveProperty('${child.key}')">Approve</button>
-                <button onclick="deleteProperty('${child.key}')">Delete</button>
-              </div>
-            </div>
-          `;
-        }
-      });
-    });
-
-    // Approve Property
-    function approveProperty(id) {
-      db.ref("properties/" + id).update({ approved: true });
-    }
-
-    // Delete Property
-    function deleteProperty(id) {
-      db.ref("properties/" + id).remove();
-    }
-  </script>
+  loadProperties();
+</script>
 
 </body>
 </html>
