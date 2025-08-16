@@ -3,21 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel - ZaraFix</title>
+<title>ZaraFix Admin Panel</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-body { font-family: sans-serif; padding: 20px; background: #f0f0f0;}
-button { padding: 10px 15px; margin: 5px; cursor: pointer; border-radius: 5px; background: #25D366; color: white; border: none; }
-.card { background: white; padding: 15px; margin: 10px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
-.card:hover { transform: scale(1.05); transition: 0.3s; }
+body { font-family: Arial; background:#f0f0f0; margin:0; padding:0; }
+.container { max-width:800px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1);}
+input, textarea { width:100%; padding:8px; margin:5px 0; }
+button { padding:8px 15px; margin:5px; border:none; border-radius:5px; cursor:pointer; }
+.approved { color:green; font-weight:bold; }
+.not-approved { color:red; font-weight:bold; }
+.card { background:#eee; margin:10px 0; padding:10px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
 </style>
 </head>
 <body>
+<div class="container">
 <h2>Admin Panel</h2>
-<button id="googleLoginBtn">Google Login</button>
-<div id="listing"></div>
+<div id="loginDiv">
+    <button onclick="login()">Google Login</button>
+</div>
+
+<div id="adminDiv" style="display:none;">
+    <h3>Upload Property</h3>
+    <input type="text" id="title" placeholder="Title">
+    <textarea id="desc" placeholder="Description"></textarea>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+    <input type="file" id="imageFile">
+    <button onclick="uploadProperty()">Upload</button>
+
+    <h3>Pending Approvals</h3>
+    <div id="pendingList"></div>
+</div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -29,52 +48,77 @@ const firebaseConfig = {
   messagingSenderId: "916859697394",
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
+
 firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
 const db = firebase.database();
+const auth = firebase.auth();
+const imgbbKey = "5128d0b0687e9718139752bca8a4ec59"; // aapka ImgBB API key
 
-const loginBtn = document.getElementById('googleLoginBtn');
-const listingDiv = document.getElementById('listing');
+function login(){
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result=>{
+        document.getElementById('loginDiv').style.display='none';
+        document.getElementById('adminDiv').style.display='block';
+        fetchPending();
+    }).catch(console.error);
+}
 
-loginBtn.onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(result => {
-    alert("Admin Logged In: " + result.user.displayName);
-    loadPendingPosts();
-  }).catch(console.error);
-};
+function uploadProperty(){
+    const title = document.getElementById('title').value;
+    const desc = document.getElementById('desc').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const file = document.getElementById('imageFile').files[0];
+    if(!title || !desc || !whatsapp || !file) { alert('All fields required'); return; }
 
-function loadPendingPosts() {
-  db.ref('properties').once('value', snapshot => {
-    listingDiv.innerHTML = '';
-    snapshot.forEach(child => {
-      const data = child.val();
-      const key = child.key;
-      if(data.approved === false){
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${data.title}</h3>
-          <img src="${data.image}" width="200"/>
-          <p>${data.description}</p>
-          <button onclick="approvePost('${key}')">Approve</button>
-          <button onclick="deletePost('${key}')">Delete</button>
-        `;
-        listingDiv.appendChild(card);
-      }
+    const formData = new FormData();
+    formData.append("image", file);
+    fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method:'POST', body: formData })
+    .then(res=>res.json())
+    .then(data=>{
+        const imageURL = data.data.url;
+        db.ref('properties').push({
+            title, description: desc, whatsapp, imageURL, approved:false
+        });
+        alert('Uploaded. Waiting approval.');
+        document.getElementById('title').value='';
+        document.getElementById('desc').value='';
+        document.getElementById('whatsapp').value='';
+        document.getElementById('imageFile').value='';
     });
-  });
 }
 
-function approvePost(key){
-  db.ref('properties/'+key).update({approved:true});
-  loadPendingPosts();
+function fetchPending(){
+    db.ref('properties').on('value', snapshot=>{
+        const pending = document.getElementById('pendingList');
+        pending.innerHTML='';
+        snapshot.forEach(child=>{
+            const data = child.val();
+            const id = child.key;
+            const card = document.createElement('div');
+            card.className='card';
+            card.innerHTML = `<div>
+                <strong>${data.title}</strong><br>
+                ${data.description}<br>
+                <span class="${data.approved?'approved':'not-approved'}">${data.approved?'Approved':'Pending'}</span>
+            </div>
+            <div>
+                ${!data.approved?`<button onclick="approve('${id}')">Approve</button>`:''}
+                <button onclick="deleteProp('${id}')">Delete</button>
+                <button onclick="window.open('https://wa.me/${data.whatsapp}','_blank')">WhatsApp</button>
+            </div>`;
+            pending.appendChild(card);
+        });
+    });
 }
 
-function deletePost(key){
-  db.ref('properties/'+key).remove();
-  loadPendingPosts();
+function approve(id){
+    db.ref('properties/'+id).update({approved:true});
+}
+
+function deleteProp(id){
+    if(confirm('Are you sure to delete?')){
+        db.ref('properties/'+id).remove();
+    }
 }
 </script>
 </body>
