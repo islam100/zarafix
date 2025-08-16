@@ -2,72 +2,57 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zara Property</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zara Property Listing</title>
 <style>
-  body{font-family:sans-serif;margin:0;padding:0;background:#f0f0f0;}
-  header{background:#222;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
-  header h2{margin:0;}
-  header button{padding:8px 12px;margin-left:10px;border:none;border-radius:5px;background:#ff9800;color:#fff;cursor:pointer;box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
-  .container{padding:20px;}
-  .card-container{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;}
-  .card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:250px;position:relative;cursor:pointer;}
-  .card img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
-  .card h3{margin:10px 0 5px;}
-  .card p{margin:5px 0;font-size:14px;color:#555;}
-  .card button{margin-top:5px;width:48%;padding:6px;border:none;border-radius:5px;background:#2196F3;color:#fff;cursor:pointer;}
-  .card button.delete{background:red;}
-  form{background:#fff;padding:15px;border-radius:10px;max-width:500px;margin:0 auto 20px;}
-  input, textarea{width:100%;margin:5px 0 10px;padding:8px;border-radius:5px;border:1px solid #ccc;}
-  #adminDashboard{display:none;}
-  /* Modal Styles */
-  .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;}
-  .modal-content{background:#fff;padding:20px;border-radius:10px;max-width:500px;width:90%;position:relative;}
-  .modal-content img{width:100%;border-radius:8px;margin-bottom:10px;}
-  .closeModal{position:absolute;top:10px;right:15px;font-size:20px;font-weight:bold;cursor:pointer;}
+  body { font-family: Arial, sans-serif; background: #f2f2f2; margin:0; padding:0;}
+  .container { max-width:1200px; margin:auto; padding:20px;}
+  .header { display:flex; justify-content:space-between; align-items:center; background:#333; color:white; padding:10px;}
+  .header h1 { margin:0; }
+  .btn { padding:8px 12px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer; margin-left:5px;}
+  .btn:hover { background:#0056b3; }
+  .card { background:white; border-radius:8px; padding:10px; margin:10px; display:inline-block; width:250px; vertical-align:top; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+  .card img { width:100%; border-radius:5px; }
+  .card h3, .card p { margin:5px 0; }
+  #loginDiv { text-align:center; margin:50px;}
+  #posterForm { background:white; padding:20px; border-radius:8px; margin:20px 0;}
+  input, textarea { width:100%; padding:8px; margin:5px 0; border-radius:4px; border:1px solid #ccc; }
+  #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
+  #modal img { max-width:90%; max-height:90%; border-radius:8px; }
 </style>
 </head>
 <body>
-
-<header>
-  <h2>Zara Property</h2>
-  <div>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
+<div class="header">
+  <h1>Zara Property Listing</h1>
+  <div id="authButtons">
+    <button class="btn" id="loginBtn">Login with Google</button>
+    <button class="btn" id="logoutBtn" style="display:none;">Logout</button>
   </div>
-</header>
+</div>
 
 <div class="container">
 
-  <!-- Poster Form -->
-  <form id="posterForm">
-    <h3>Submit Property</h3>
+  <div id="posterForm" style="display:none;">
+    <h2>Post a Property</h2>
     <input type="text" id="title" placeholder="Title" required>
-    <input type="text" id="price" placeholder="Price" required>
-    <input type="url" id="image" placeholder="Image URL" required>
-    <textarea id="desc" placeholder="Description" required></textarea>
+    <input type="text" id="city" placeholder="City" required>
+    <select id="type">
+      <option value="sale">Sale</option>
+      <option value="rent">Rent</option>
+    </select>
+    <input type="number" id="price" placeholder="Price" required>
+    <textarea id="description" placeholder="Description" required></textarea>
+    <input type="text" id="imageUrl" placeholder="Image URL" required>
     <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <button type="submit">Submit Property</button>
-  </form>
-
-  <!-- Admin Dashboard -->
-  <div id="adminDashboard">
-    <h3>Admin Dashboard</h3>
-    <div class="card-container" id="propertyList"></div>
+    <button class="btn" id="postBtn">Post Property</button>
   </div>
 
-  <!-- Public Listing -->
-  <h3>Approved Properties</h3>
-  <div class="card-container" id="approvedList"></div>
+  <div id="propertiesList"></div>
 
 </div>
 
-<!-- Modal for card enlarge -->
-<div class="modal" id="cardModal">
-  <div class="modal-content">
-    <span class="closeModal" onclick="closeModal()">✖</span>
-    <div id="modalBody"></div>
-  </div>
+<div id="modal" onclick="this.style.display='none'">
+  <img id="modalImg" src="">
 </div>
 
 <!-- Firebase SDK -->
@@ -85,8 +70,8 @@ const firebaseConfig = {
   messagingSenderId: "916859697394",
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
-firebase.initializeApp(firebaseConfig);
 
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
@@ -95,129 +80,114 @@ const adminEmail = "zarasamajiksevasanstha@gmail.com";
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const posterForm = document.getElementById('posterForm');
-const adminDashboard = document.getElementById('adminDashboard');
-const propertyList = document.getElementById('propertyList');
-const approvedList = document.getElementById('approvedList');
-const cardModal = document.getElementById('cardModal');
-const modalBody = document.getElementById('modalBody');
 
-loginBtn.onclick = () => {
+loginBtn.addEventListener('click', () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider);
-}
+});
 
-logoutBtn.onclick = () => auth.signOut();
+logoutBtn.addEventListener('click', () => {
+  auth.signOut();
+});
 
 auth.onAuthStateChanged(user => {
   if(user){
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
     posterForm.style.display = 'block';
-    if(user.email === adminEmail){
-      adminDashboard.style.display = 'block';
-      loadAdminProperties();
-    } else {
-      adminDashboard.style.display = 'none';
-    }
-  } else {
+  }else{
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
     posterForm.style.display = 'none';
-    adminDashboard.style.display = 'none';
   }
+  fetchProperties(user);
 });
 
-// Submit property
-posterForm.addEventListener('submit', e=>{
-  e.preventDefault();
-  if(!auth.currentUser) return alert('Login required!');
-  const id = 'prop_'+Date.now();
-  db.ref('properties/'+id).set({
-    title: document.getElementById('title').value,
-    price: document.getElementById('price').value,
-    image: document.getElementById('image').value,
-    desc: document.getElementById('desc').value,
-    whatsapp: document.getElementById('whatsapp').value,
-    approved: false
-  });
-  alert('Property submitted! Waiting for admin approval.');
-  posterForm.reset();
+document.getElementById('postBtn').addEventListener('click', () => {
+  const user = auth.currentUser;
+  if(!user){ alert('Login required'); return; }
+
+  const title = document.getElementById('title').value;
+  const city = document.getElementById('city').value;
+  const type = document.getElementById('type').value;
+  const price = document.getElementById('price').value;
+  const description = document.getElementById('description').value;
+  const imageUrl = document.getElementById('imageUrl').value;
+  const whatsapp = document.getElementById('whatsapp').value;
+
+  const newProp = {
+    title, city, type, price, description, imageUrl, whatsapp,
+    userId: user.uid,
+    userEmail: user.email,
+    approved: false,
+    timestamp: Date.now()
+  };
+
+  const newKey = db.ref().child('properties').push().key;
+  db.ref('properties/'+newKey).set(newProp);
+  alert('Property posted, waiting for approval.');
+  document.getElementById('title').value='';
+  document.getElementById('city').value='';
+  document.getElementById('price').value='';
+  document.getElementById('description').value='';
+  document.getElementById('imageUrl').value='';
+  document.getElementById('whatsapp').value='';
 });
 
-// Load admin properties
-function loadAdminProperties(){
-  propertyList.innerHTML = '';
-  db.ref('properties').on('value', snapshot=>{
-    propertyList.innerHTML = '';
+function fetchProperties(user){
+  const listDiv = document.getElementById('propertiesList');
+  listDiv.innerHTML='';
+  db.ref('properties').orderByChild('timestamp').once('value', snapshot=>{
     snapshot.forEach(snap=>{
       const prop = snap.val();
+      const key = snap.key;
       const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${prop.image}">
+      card.className='card';
+      card.innerHTML=`
+        <img src="${prop.imageUrl}" onclick="showModal('${prop.imageUrl}')">
         <h3>${prop.title}</h3>
-        <p>${prop.desc}</p>
-        <p>₹ ${prop.price}</p>
+        <p>${prop.city} - ${prop.type}</p>
+        <p>₹${prop.price}</p>
+        <p>${prop.description}</p>
         <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
-        <p>Status: ${prop.approved ? 'Approved ✅' : 'Pending ❌'}</p>
-        <button class="approveBtn">${prop.approved ? 'Unapprove' : 'Approve'}</button>
-        <button class="delete deleteBtn">Delete</button>
       `;
-      const approveBtn = card.querySelector('.approveBtn');
-      const deleteBtn = card.querySelector('.deleteBtn');
 
-      approveBtn.onclick = (ev)=>{
-        ev.stopPropagation();
-        db.ref('properties/'+snap.key+'/approved').set(!prop.approved);
+      // Admin buttons
+      if(user && user.email === adminEmail){
+        const approveBtn = document.createElement('button');
+        approveBtn.className='btn';
+        approveBtn.innerText = prop.approved ? 'Approved' : 'Approve';
+        approveBtn.onclick = ()=>{ 
+          db.ref('properties/'+key+'/approved').set(true);
+          fetchProperties(user);
+        };
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className='btn';
+        deleteBtn.innerText='Delete';
+        deleteBtn.onclick = ()=>{
+          if(confirm('Delete this property?')){
+            db.ref('properties/'+key).remove();
+            fetchProperties(user);
+          }
+        };
+        card.appendChild(approveBtn);
+        card.appendChild(deleteBtn);
+      }else if(!prop.approved){
+        // Non-approved properties not shown to normal users
+        return;
       }
-      deleteBtn.onclick = (ev)=>{
-        ev.stopPropagation();
-        if(confirm('Delete this property?')){
-          db.ref('properties/'+snap.key).remove();
-        }
-      }
-      card.onclick = ()=>openModal(prop);
-      propertyList.appendChild(card);
+
+      listDiv.appendChild(card);
     });
   });
 }
 
-// Load approved properties
-db.ref('properties').on('value', snapshot=>{
-  approvedList.innerHTML = '';
-  snapshot.forEach(snap=>{
-    const prop = snap.val();
-    if(prop.approved){
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${prop.image}">
-        <h3>${prop.title}</h3>
-        <p>${prop.desc}</p>
-        <p>₹ ${prop.price}</p>
-        <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
-      `;
-      card.onclick = ()=>openModal(prop);
-      approvedList.appendChild(card);
-    }
-  });
-});
-
-// Modal
-function openModal(prop){
-  modalBody.innerHTML = `
-    <img src="${prop.image}">
-    <h3>${prop.title}</h3>
-    <p>${prop.desc}</p>
-    <p>₹ ${prop.price}</p>
-    <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
-  `;
-  cardModal.style.display = 'flex';
-}
-function closeModal(){
-  cardModal.style.display = 'none';
+function showModal(url){
+  const modal = document.getElementById('modal');
+  const modalImg = document.getElementById('modalImg');
+  modalImg.src = url;
+  modal.style.display='flex';
 }
 </script>
-
 </body>
 </html>
