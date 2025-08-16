@@ -11,135 +11,175 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f8f8f8; }
-    header { background: #2c3e50; padding: 15px; color: white; text-align: center; font-size: 22px; }
-    #loginBtn, #logoutBtn, #postBtn {
-      padding: 8px 15px; border: none; border-radius: 5px; margin: 5px; cursor: pointer;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
     }
-    #loginBtn { background: #27ae60; color: white; }
-    #logoutBtn { background: #e74c3c; color: white; display: none; }
-    #postBtn { background: #2980b9; color: white; display: none; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #222;
+      color: #fff;
+      padding: 10px 20px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #loginBtn { background: #4285F4; color: white; }
+    #logoutBtn { background: crimson; color: white; display: none; }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; padding: 15px; }
-    .card { background: white; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-      overflow: hidden; cursor: pointer; transition: transform 0.3s; }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
     .card:hover { transform: scale(1.05); }
-    .card img { width: 100%; height: 200px; object-fit: cover; }
-    .card-body { padding: 10px; }
-    .card-body h3 { margin: 0; font-size: 18px; }
-    .card-body p { margin: 5px 0; color: #555; font-size: 14px; }
+    .card img { width: 100%; height: 180px; object-fit: cover; }
+    .card .info { padding: 10px; }
+    .card .info h3 { margin: 5px 0; }
 
     /* Modal */
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; 
-      background: rgba(0,0,0,0.8); justify-content:center; align-items:center; }
-    .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 600px; width: 90%; }
-    .modal img { width: 100%; border-radius: 10px; }
-    .close { float: right; cursor: pointer; font-size: 22px; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 500px;
+      position: relative;
+    }
+    .modal-content img { width: 100%; border-radius: 10px; }
+    .close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 22px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-
   <header>
-    Zara Property Listing
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn">Logout</button>
-    <button id="postBtn">Post Property</button>
+    <h1>Zara Property</h1>
+    <div>
+      <button id="loginBtn">Login with Google</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
   </header>
 
-  <div class="grid" id="propertyList"></div>
+  <div class="container" id="propertyList">
+    <!-- Firebase से Property Cards आएंगे -->
+  </div>
 
   <!-- Modal -->
-  <div class="modal" id="modal">
+  <div class="modal" id="propertyModal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
-      <img id="modalImg" src="">
+      <img id="modalImg" src="" alt="">
       <h2 id="modalTitle"></h2>
       <p id="modalDesc"></p>
+      <p><b>Price:</b> <span id="modalPrice"></span></p>
     </div>
   </div>
 
   <script>
     // Firebase Config
-   const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
     firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
     const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const postBtn = document.getElementById("postBtn");
+    const propertyList = document.getElementById("propertyList");
 
-    // Google Login
+    // Login with Google
     loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider);
+      auth.signInWithPopup(provider);
     };
 
-    logoutBtn.onclick = () => firebase.auth().signOut();
+    // Logout
+    logoutBtn.onclick = () => auth.signOut();
 
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
+    auth.onAuthStateChanged(user => {
+      if(user){
         loginBtn.style.display = "none";
         logoutBtn.style.display = "inline-block";
-        postBtn.style.display = "inline-block";
       } else {
         loginBtn.style.display = "inline-block";
         logoutBtn.style.display = "none";
-        postBtn.style.display = "none";
       }
     });
 
-    // Property fetch
-    function fetchProperties() {
-      db.ref("properties").on("value", snapshot => {
-        const list = document.getElementById("propertyList");
-        list.innerHTML = "";
-        snapshot.forEach(data => {
-          const prop = data.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <img src="${prop.image}" />
-            <div class="card-body">
-              <h3>${prop.title}</h3>
-              <p>${prop.desc}</p>
-            </div>`;
-          card.onclick = () => openModal(prop);
-          list.appendChild(card);
-        });
+    // Fetch Properties
+    db.ref("properties").on("value", snapshot => {
+      propertyList.innerHTML = "";
+      snapshot.forEach(child => {
+        const data = child.val();
+        let card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${data.image}" alt="">
+          <div class="info">
+            <h3>${data.title}</h3>
+            <p>${data.description.substring(0,50)}...</p>
+            <p><b>₹${data.price}</b></p>
+          </div>
+        `;
+        card.onclick = () => openModal(data);
+        propertyList.appendChild(card);
       });
-    }
-    fetchProperties();
+    });
 
-    // Modal
-    function openModal(prop) {
-      document.getElementById("modalImg").src = prop.image;
-      document.getElementById("modalTitle").innerText = prop.title;
-      document.getElementById("modalDesc").innerText = prop.desc;
-      document.getElementById("modal").style.display = "flex";
+    // Modal Functions
+    function openModal(data){
+      document.getElementById("modalImg").src = data.image;
+      document.getElementById("modalTitle").innerText = data.title;
+      document.getElementById("modalDesc").innerText = data.description;
+      document.getElementById("modalPrice").innerText = "₹" + data.price;
+      document.getElementById("propertyModal").style.display = "flex";
     }
-    function closeModal() {
-      document.getElementById("modal").style.display = "none";
+    function closeModal(){
+      document.getElementById("propertyModal").style.display = "none";
     }
-
-    // Post property (example: dummy insert)
-    postBtn.onclick = () => {
-      const title = prompt("Enter property title:");
-      const desc = prompt("Enter property description:");
-      const imgUrl = prompt("Paste ImgBB image URL here:");
-
-      if (title && desc && imgUrl) {
-        db.ref("properties").push({ title, desc, image: imgUrl });
-      }
-    };
   </script>
 </body>
 </html>
