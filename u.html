@@ -1,182 +1,131 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zara Property Listing</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #222;
-      color: #fff;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    .post-btn {
-      background: linear-gradient(145deg, #00c6ff, #0072ff);
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-    }
-    .post-btn:hover {
-      transform: scale(1.05);
-    }
-    .container {
-      padding: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    .property-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
     .card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      display: flex;
-      flex-direction: column;
+      background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      cursor: pointer; transition: transform 0.2s ease-in-out;
     }
-    .card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
+    .card:hover { transform: scale(1.02); }
+    .card img { width: 100%; border-radius: 10px; height: 180px; object-fit: cover; }
+
+    /* Popup Expanded View */
+    .popup {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
     }
-    .card-body {
-      padding: 12px;
-      flex-grow: 1;
+    .popup-content {
+      background: #fff; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%;
+      box-shadow: 0 6px 10px rgba(0,0,0,0.2); text-align: center; position: relative;
     }
-    .card h3 {
-      margin: 0;
-      font-size: 18px;
-      color: #333;
+    .popup-content img { width: 100%; border-radius: 10px; }
+    .close-btn {
+      position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; font-weight: bold;
     }
-    .card p {
-      margin: 5px 0;
-      color: #555;
-      font-size: 14px;
-    }
-    .whatsapp-btn {
-      background: #25d366;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      display: block;
-      text-decoration: none;
-      border-radius: 6px;
-      margin: 10px;
-      font-weight: bold;
-    }
+    .approve-btn { background: green; color: white; border: none; padding: 8px 15px; margin-top: 10px; cursor: pointer; border-radius: 5px; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Zara Property</h1>
-    <button class="post-btn" onclick="document.getElementById('formBox').style.display='block'">+ Property Post</button>
-  </header>
+  <h1>Zara Property Listing</h1>
 
-  <!-- Property Form -->
-  <div id="formBox" style="display:none; padding:20px; background:#fff;">
-    <h2>नई Property Post करें</h2>
-    <input type="text" id="title" placeholder="Title" /><br><br>
-    <input type="text" id="price" placeholder="Price" /><br><br>
-    <input type="text" id="details" placeholder="Details" /><br><br>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" /><br><br>
-    <input type="file" id="imageFile" /><br><br>
-    <button onclick="uploadProperty()">Post</button>
+  <div class="property-list" id="propertyList"></div>
+
+  <!-- Popup -->
+  <div class="popup" id="popup">
+    <div class="popup-content" id="popupContent">
+      <span class="close-btn" onclick="closePopup()">×</span>
+      <img id="popupImg" src="" alt="Property">
+      <h2 id="popupTitle"></h2>
+      <p id="popupDesc"></p>
+      <p><b>Price:</b> ₹<span id="popupPrice"></span></p>
+      <button class="approve-btn" id="approveBtn" style="display:none;">Approve</button>
+    </div>
   </div>
 
-  <div class="container" id="propertyList"></div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // Firebase config
-   const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
+    // Firebase Config (अपना config लगाएं)
+    const firebaseConfig = {
+      apiKey: "AIzaSyXXXXXX",
+      authDomain: "your-app.firebaseapp.com",
+      databaseURL: "https://your-app.firebaseio.com",
+      projectId: "your-app",
+      storageBucket: "your-app.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ImgBB API key
-    const imgbbKey = "9666667be1a890e44490c3dff1f1a120";
+    const propertyList = document.getElementById("propertyList");
+    const popup = document.getElementById("popup");
+    const popupImg = document.getElementById("popupImg");
+    const popupTitle = document.getElementById("popupTitle");
+    const popupDesc = document.getElementById("popupDesc");
+    const popupPrice = document.getElementById("popupPrice");
+    const approveBtn = document.getElementById("approveBtn");
 
-    // Upload Property
-    function uploadProperty() {
-      const title = document.getElementById("title").value;
-      const price = document.getElementById("price").value;
-      const details = document.getElementById("details").value;
-      const whatsapp = document.getElementById("whatsapp").value;
-      const file = document.getElementById("imageFile").files[0];
+    let selectedKey = null;
+    const isAdmin = true; // ⚠️ यहाँ admin check (login system से) लगाना होगा
 
-      if (!file) {
-        alert("कृपया image चुनें");
-        return;
-      }
+    // Property Fetch
+    db.ref("properties").on("value", snapshot => {
+      propertyList.innerHTML = "";
+      snapshot.forEach(child => {
+        const data = child.val();
+        const key = child.key;
 
-      const formData = new FormData();
-      formData.append("image", file);
-
-      fetch("https://api.imgbb.com/1/upload?key=" + imgbbKey, {
-        method: "POST",
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        const imageUrl = data.data.url;
-        const newRef = db.ref("properties").push();
-        newRef.set({ title, price, details, whatsapp, imageUrl });
-        alert("Property Posted!");
-        document.getElementById("formBox").style.display = "none";
-      });
-    }
-
-    // Show Properties
-    function showProperties() {
-      db.ref("properties").on("value", snapshot => {
-        const propertyList = document.getElementById("propertyList");
-        propertyList.innerHTML = "";
-        snapshot.forEach(child => {
-          const p = child.val();
-          propertyList.innerHTML += `
-            <div class="card">
-              <img src="${p.imageUrl}" alt="Property">
-              <div class="card-body">
-                <h3>${p.title}</h3>
-                <p>₹ ${p.price}</p>
-                <p>${p.details}</p>
-              </div>
-              <a class="whatsapp-btn" href="https://wa.me/${p.whatsapp}" target="_blank">WhatsApp</a>
-            </div>
+        // केवल approved दिखे normal users को
+        if (data.status === "approved" || isAdmin) {
+          let div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <img src="${data.image}" alt="Property">
+            <h3>${data.title}</h3>
+            <p>₹${data.price}</p>
           `;
-        });
+          div.onclick = () => openPopup(data, key);
+          propertyList.appendChild(div);
+        }
       });
+    });
+
+    function openPopup(data, key) {
+      popup.style.display = "flex";
+      popupImg.src = data.image;
+      popupTitle.innerText = data.title;
+      popupDesc.innerText = data.description;
+      popupPrice.innerText = data.price;
+      selectedKey = key;
+
+      if (isAdmin && data.status === "pending") {
+        approveBtn.style.display = "inline-block";
+        approveBtn.onclick = () => approveProperty(key);
+      } else {
+        approveBtn.style.display = "none";
+      }
     }
-    showProperties();
+
+    function closePopup() {
+      popup.style.display = "none";
+    }
+
+    function approveProperty(key) {
+      db.ref("properties/" + key).update({ status: "approved" });
+      alert("Property Approved!");
+      closePopup();
+    }
   </script>
+
 </body>
 </html>
