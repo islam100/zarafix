@@ -2,50 +2,58 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Property Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zara Property</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 0; padding: 0; background:#f2f2f2;}
-  header { background: #222; color: #fff; padding: 15px; display:flex; justify-content:space-between; align-items:center;}
-  button { padding: 8px 12px; margin: 5px; cursor:pointer; border:none; border-radius:5px;}
-  .admin-btn { background: #4CAF50; color:#fff;}
-  .delete-btn { background: #f44336; color:#fff;}
-  .approve-btn { background:#2196F3; color:#fff;}
-  .card { background:#fff; margin:10px; padding:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-  .card img { width:100%; height:200px; object-fit:cover; border-radius:5px;}
-  .card-container { display:flex; flex-wrap:wrap;}
-  form { background:#fff; padding:15px; margin:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
-  input, textarea { width:100%; padding:8px; margin:5px 0; border-radius:5px; border:1px solid #ccc;}
+  body{font-family:sans-serif;margin:0;padding:0;background:#f0f0f0;}
+  header{background:#222;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
+  header h2{margin:0;}
+  header button{padding:8px 12px;margin-left:10px;border:none;border-radius:5px;background:#ff9800;color:#fff;cursor:pointer;box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+  .container{padding:20px;}
+  .card-container{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;}
+  .card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:250px;position:relative;}
+  .card img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
+  .card h3{margin:10px 0 5px;}
+  .card p{margin:5px 0;font-size:14px;color:#555;}
+  .card button{margin-top:5px;width:100%;padding:6px;border:none;border-radius:5px;background:#2196F3;color:#fff;cursor:pointer;}
+  form{background:#fff;padding:15px;border-radius:10px;max-width:500px;margin:0 auto 20px;}
+  input, textarea{width:100%;margin:5px 0 10px;padding:8px;border-radius:5px;border:1px solid #ccc;}
+  #adminDashboard{display:none;}
 </style>
 </head>
 <body>
 
 <header>
   <h2>Zara Property</h2>
-  <button id="loginBtn">Login with Google</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<!-- Poster Form -->
-<form id="posterForm" style="display:none;">
-  <h3>Post Your Property</h3>
-  <input type="text" id="title" placeholder="Title" required>
-  <input type="text" id="city" placeholder="City" required>
-  <select id="type">
-    <option value="sale">Sale</option>
-    <option value="rent">Rent</option>
-  </select>
-  <input type="number" id="price" placeholder="Price" required>
-  <textarea id="description" placeholder="Description" required></textarea>
-  <input type="text" id="imageUrl" placeholder="Image URL" required>
-  <input type="text" id="whatsapp" placeholder="Whatsapp Number" required>
-  <button type="submit">Submit Property</button>
-</form>
+<div class="container">
 
-<!-- Admin Dashboard -->
-<div id="adminDashboard" style="display:none;">
-  <h3>Admin Dashboard</h3>
-  <div class="card-container" id="propertyList"></div>
+  <!-- Poster Form -->
+  <form id="posterForm">
+    <h3>Submit Property</h3>
+    <input type="text" id="title" placeholder="Title" required>
+    <input type="text" id="price" placeholder="Price" required>
+    <input type="url" id="image" placeholder="Image URL" required>
+    <textarea id="desc" placeholder="Description" required></textarea>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+    <button type="submit">Submit Property</button>
+  </form>
+
+  <!-- Admin Dashboard -->
+  <div id="adminDashboard">
+    <h3>Admin Dashboard</h3>
+    <div class="card-container" id="propertyList"></div>
+  </div>
+
+  <!-- Public Listing -->
+  <h3>Approved Properties</h3>
+  <div class="card-container" id="approvedList"></div>
+
 </div>
 
 <!-- Firebase SDK -->
@@ -68,93 +76,111 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
+// Admin emails
+const admins = { "youradmin@gmail.com": true }; // <--- change your admin email
+
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const posterForm = document.getElementById('posterForm');
 const adminDashboard = document.getElementById('adminDashboard');
 const propertyList = document.getElementById('propertyList');
-
-const admins = { "admin@example.com": true }; // Admin emails
+const approvedList = document.getElementById('approvedList');
 
 loginBtn.onclick = () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider);
-};
+}
 
 logoutBtn.onclick = () => auth.signOut();
 
 auth.onAuthStateChanged(user => {
   if(user){
-    loginBtn.style.display='none';
-    logoutBtn.style.display='inline-block';
-    posterForm.style.display='block';
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
     if(admins[user.email]){
-      adminDashboard.style.display='block';
+      adminDashboard.style.display = 'block';
       loadProperties();
     } else {
-      adminDashboard.style.display='none';
+      adminDashboard.style.display = 'none';
     }
   } else {
-    loginBtn.style.display='inline-block';
-    logoutBtn.style.display='none';
-    posterForm.style.display='none';
-    adminDashboard.style.display='none';
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+    adminDashboard.style.display = 'none';
   }
 });
 
-// Submit Property
+// Submit property
 posterForm.addEventListener('submit', e=>{
   e.preventDefault();
-  const id = 'property'+Date.now();
+  const id = 'prop_'+Date.now();
   db.ref('properties/'+id).set({
     title: document.getElementById('title').value,
-    city: document.getElementById('city').value,
-    type: document.getElementById('type').value,
-    price: Number(document.getElementById('price').value),
-    description: document.getElementById('description').value,
-    imageUrl: document.getElementById('imageUrl').value,
+    price: document.getElementById('price').value,
+    image: document.getElementById('image').value,
+    desc: document.getElementById('desc').value,
     whatsapp: document.getElementById('whatsapp').value,
-    userId: auth.currentUser.uid,
-    userEmail: auth.currentUser.email,
-    approved: false,
-    timestamp: Date.now()
+    approved: false
   });
+  alert('Property submitted! Waiting for admin approval.');
   posterForm.reset();
-  alert("Property submitted! Waiting for approval.");
 });
 
-// Load Properties for Admin
+// Load properties for admin
 function loadProperties(){
-  propertyList.innerHTML='';
+  propertyList.innerHTML = '';
   db.ref('properties').on('value', snapshot=>{
-    propertyList.innerHTML='';
-    snapshot.forEach(propSnap=>{
-      const prop = propSnap.val();
-      const key = propSnap.key;
+    propertyList.innerHTML = '';
+    snapshot.forEach(snap=>{
+      const prop = snap.val();
       const card = document.createElement('div');
-      card.className='card';
-      card.innerHTML=`
-        <h4>${prop.title} (${prop.type}) - ${prop.city}</h4>
-        <img src="${prop.imageUrl}">
-        <p>${prop.description}</p>
-        <p>Price: ₹${prop.price}</p>
-        <p>Whatsapp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
-        <p>Approved: ${prop.approved}</p>
-        <button class="approve-btn">${prop.approved?'Unapprove':'Approve'}</button>
-        <button class="delete-btn">Delete</button>
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${prop.image}">
+        <h3>${prop.title}</h3>
+        <p>${prop.desc}</p>
+        <p>₹ ${prop.price}</p>
+        <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
+        <p>Status: ${prop.approved ? 'Approved ✅' : 'Pending ❌'}</p>
+        <button class="approveBtn">${prop.approved ? 'Unapprove' : 'Approve'}</button>
+        <button class="deleteBtn" style="background:red;">Delete</button>
       `;
-      // Approve / Unapprove
-      card.querySelector('.approve-btn').onclick=()=>{
-        db.ref('properties/'+key+'/approved').set(!prop.approved);
-      };
-      // Delete
-      card.querySelector('.delete-btn').onclick=()=>{
-        if(confirm('Delete this property?')) db.ref('properties/'+key).remove();
-      };
+      const approveBtn = card.querySelector('.approveBtn');
+      const deleteBtn = card.querySelector('.deleteBtn');
+
+      approveBtn.onclick = ()=>{
+        db.ref('properties/'+snap.key+'/approved').set(!prop.approved);
+      }
+      deleteBtn.onclick = ()=>{
+        if(confirm('Delete this property?')){
+          db.ref('properties/'+snap.key).remove();
+        }
+      }
       propertyList.appendChild(card);
     });
   });
 }
+
+// Load approved properties for public
+db.ref('properties').on('value', snapshot=>{
+  approvedList.innerHTML = '';
+  snapshot.forEach(snap=>{
+    const prop = snap.val();
+    if(prop.approved){
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${prop.image}">
+        <h3>${prop.title}</h3>
+        <p>${prop.desc}</p>
+        <p>₹ ${prop.price}</p>
+        <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
+      `;
+      approvedList.appendChild(card);
+    }
+  });
+});
 </script>
+
 </body>
 </html>
