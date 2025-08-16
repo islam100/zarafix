@@ -20,35 +20,43 @@
       font-weight: bold;
     }
     .container {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 20px auto;
       padding: 15px;
     }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
     .property {
       background: white;
-      padding: 15px;
-      margin-bottom: 15px;
+      padding: 12px;
       border-radius: 10px;
       box-shadow: 0 3px 6px rgba(0,0,0,0.1);
     }
     .property img {
       width: 100%;
-      height: auto;
+      height: 180px;
+      object-fit: cover;
       border-radius: 10px;
     }
     .property h3 {
       margin: 10px 0 5px;
+      font-size: 18px;
     }
     .property p {
       margin: 5px 0;
+      font-size: 14px;
     }
     .btn {
       display: inline-block;
-      padding: 8px 12px;
-      margin-top: 8px;
+      padding: 6px 10px;
+      margin-top: 6px;
       text-decoration: none;
       border-radius: 5px;
       font-weight: bold;
+      font-size: 13px;
     }
     .whatsapp {
       background: #25D366;
@@ -57,9 +65,21 @@
     .delete {
       background: red;
       color: white;
-      margin-left: 10px;
+      margin-left: 6px;
+    }
+    .toggle-btn {
+      background: #2c3e50;
+      color: white;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
     .admin-panel {
+      display: none;
       background: white;
       padding: 15px;
       border-radius: 10px;
@@ -68,19 +88,23 @@
     }
     input, textarea {
       width: 100%;
-      padding: 8px;
+      padding: 7px;
       margin: 6px 0;
       border-radius: 5px;
       border: 1px solid #ccc;
+      font-size: 14px;
     }
     button {
-      padding: 10px 15px;
+      padding: 8px 12px;
       background: #2c3e50;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
+    }
+    @media(max-width:600px){
+      .property img { height: 150px; }
     }
   </style>
 </head>
@@ -90,19 +114,22 @@
 
 <div class="container">
 
+  <!-- Toggle Button for Form -->
+  <button class="toggle-btn" onclick="toggleForm()">+ Add Property</button>
+
   <!-- Admin Upload Panel -->
-  <div class="admin-panel">
-    <h2>Admin Panel - Property Upload</h2>
+  <div class="admin-panel" id="uploadForm">
+    <h2>Add New Property</h2>
     <input type="text" id="title" placeholder="Property Title">
     <textarea id="desc" placeholder="Property Description"></textarea>
     <input type="text" id="price" placeholder="Price (₹)">
-    <input type="text" id="posterNumber" placeholder="Poster WhatsApp Number">
+    <input type="text" id="posterNumber" placeholder="Your WhatsApp Number">
     <input type="file" id="imageFile">
     <button onclick="uploadProperty()">Upload Property</button>
   </div>
 
   <!-- Property List -->
-  <div id="propertyList"></div>
+  <div id="propertyList" class="grid"></div>
 
 </div>
 
@@ -112,20 +139,28 @@
 
 <script>
   // Firebase Config
- const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_KEY",
+    authDomain: "your-app.firebaseapp.com",
+    databaseURL: "https://your-app.firebaseio.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "xxxxxx",
+    appId: "xxxxxx"
+  };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const imgbbAPI = "YOUR_IMGBB_API_KEY"; // यहाँ अपना ImgBB API Key डालें
+  const imgbbAPI = "YOUR_IMGBB_API_KEY"; // ImgBB API key
+
+  const ADMIN_NUMBER = "917378342192"; // Admin का WhatsApp नंबर
+  const ADMIN_EMAIL = "admin@zara.com"; // future use if auth
+
+  // Form Toggle
+  function toggleForm() {
+    let form = document.getElementById("uploadForm");
+    form.style.display = form.style.display === "none" || form.style.display === "" ? "block" : "none";
+  }
 
   // Upload Property
   function uploadProperty() {
@@ -162,11 +197,8 @@
       });
 
       alert("Property Uploaded!");
-      document.getElementById("title").value = "";
-      document.getElementById("desc").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("posterNumber").value = "";
-      document.getElementById("imageFile").value = "";
+      document.getElementById("uploadForm").reset();
+      toggleForm();
     })
     .catch(err => console.error(err));
   }
@@ -181,12 +213,14 @@
 
         let div = document.createElement("div");
         div.className = "property";
+
         div.innerHTML = `
           <img src="${data.image}" alt="Property">
           <h3>${data.title}</h3>
           <p>${data.desc}</p>
           <p><b>Price:</b> ₹${data.price}</p>
-          <a href="https://wa.me/${data.posterNumber}" class="btn whatsapp" target="_blank">Chat on WhatsApp</a>
+          <a href="https://wa.me/${data.posterNumber}" class="btn whatsapp" target="_blank">Poster WhatsApp</a>
+          <a href="https://wa.me/${ADMIN_NUMBER}" class="btn whatsapp" target="_blank">Admin WhatsApp</a>
           <button class="btn delete" onclick="deleteProperty('${data.id}')">Delete</button>
         `;
         propertyList.appendChild(div);
@@ -194,7 +228,7 @@
     });
   }
 
-  // Delete Property
+  // Delete Property (Admin + Poster दोनों कर सकते हैं)
   function deleteProperty(id) {
     if (confirm("Delete this property?")) {
       db.ref("properties/" + id).remove();
