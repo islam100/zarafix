@@ -76,6 +76,18 @@
 
     .floating{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;flex-direction:column;gap:10px}
 
+    /* Panels */
+    .panel{position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.55);backdrop-filter:blur(4px);z-index:60}
+    .panel.show{display:grid}
+    .sheet{width:min(720px,92vw);max-height:86vh;overflow:auto;background:#fff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 30px 70px rgba(2,6,23,.3)}
+    .sheet header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e5e7eb}
+    .sheet .content{padding:16px}
+    .sheet .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    .sheet .field{grid-column:span 6;background:#f8fafc;border:1px solid #e5e7eb;color:#0f172a}
+    .sheet .field input,.sheet .field select,.sheet .field textarea{color:#0f172a}
+    .danger{background:#ef4444;color:white}
+    .muted{color:#64748b}
+
     /* Responsive */
     @media (max-width: 960px){
       .hero-wrap{grid-template-columns:1fr}
@@ -106,11 +118,14 @@
         </div>
       </div>
       <nav class="nav-actions">
-        <a class="btn ghost" href="#">Buy</a>
-        <a class="btn ghost" href="#">Rent</a>
+        <a class="btn ghost" href="#" id="navBuy">Buy</a>
+        <a class="btn ghost" href="#" id="navRent">Rent</a>
         <a class="btn ghost" href="#">Commercial</a>
+        <button class="btn" id="myListingsBtn">My Listings</button>
         <button class="btn green" id="postPropBtn">Post Property – Free</button>
         <button class="btn secondary" id="loginBtn">Login</button>
+        <button class="btn secondary" id="logoutBtn" style="display:none">Logout</button>
+        <button class="btn" id="adminBtn" style="display:none">Admin</button>
       </nav>
     </div>
   </header>
@@ -215,7 +230,7 @@
       <!-- Listing Grid -->
       <main class="listing" id="listing">
         <div class="topbar" style="grid-column:span 12">
-          <div id="resultCount">Showing results…</div>
+          <div id="resultCount">Loading…</div>
           <div class="sort">
             <label for="sortBy">Sort</label>
             <select id="sortBy">
@@ -267,145 +282,342 @@
     <button class="btn">Get Alerts</button>
   </div>
 
-<script>
-// --- Demo Data (You can replace with API/Firebase) ---
-const PROPS = [
-  {id:1, title:"2 BHK in Andheri West", city:"Mumbai", locality:"Andheri West", type:"Apartment", bhk:2, area:780, price:145, mode:"buy", postedBy:"Owner", furnish:"Semi", verified:true, amenities:["Lift","Parking","Security"], img:"https://images.unsplash.com/photo-1505691723518-36a5ac3b2dba?q=80&w=1200&auto=format&fit=crop", created:"2025-08-01"},
-  {id:2, title:"1 BHK near Metro", city:"Mumbai", locality:"Ghatkopar", type:"Apartment", bhk:1, area:520, price:23, mode:"rent", postedBy:"Dealer", furnish:"Unfurnished", verified:false, amenities:["Lift","Security"], img:"https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1200&auto=format&fit=crop", created:"2025-07-29"},
-  {id:3, title:"Villa in Whitefield", city:"Bengaluru", locality:"Whitefield", type:"Villa", bhk:4, area:2400, price:280, mode:"buy", postedBy:"Builder", furnish:"Furnished", verified:true, amenities:["Parking","Pool","Security","Gym"], img:"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=1200&auto=format&fit=crop", created:"2025-07-22"},
-  {id:4, title:"3 BHK Golf Course Rd", city:"Gurugram", locality:"Sector 43", type:"Apartment", bhk:3, area:1500, price:95, mode:"rent", postedBy:"Owner", furnish:"Furnished", verified:true, amenities:["Lift","Gym","Security","Parking"], img:"https://images.unsplash.com/photo-1515263487990-61b07816b324?q=80&w=1200&auto=format&fit=crop", created:"2025-07-15"},
-  {id:5, title:"Plot near Airport", city:"Hyderabad", locality:"Shamshabad", type:"Plot", bhk:0, area:1800, price:55, mode:"buy", postedBy:"Dealer", furnish:"Unfurnished", verified:false, amenities:["Security"], img:"https://images.unsplash.com/photo-1464146072230-91cabc968266?q=80&w=1200&auto=format&fit=crop", created:"2025-06-30"},
-  {id:6, title:"Studio in Noida Ext.", city:"Noida", locality:"Sector 16C", type:"Apartment", bhk:1, area:410, price:12, mode:"rent", postedBy:"Dealer", furnish:"Semi", verified:true, amenities:["Lift","Security"], img:"https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200&auto=format&fit=crop", created:"2025-08-10"}
-];
-
-// --- Utilities ---
-const $ = (sel,ctx=document)=>ctx.querySelector(sel);
-const $$ = (sel,ctx=document)=>Array.from(ctx.querySelectorAll(sel));
-const fmtLakh = n => `₹ ${n.toLocaleString('en-IN')} L`; // assume input already in lakhs for demo
-
-let state = {
-  mode:'buy', qLocation:'', qType:'', qBudget:[0,9999], qBhk:'',
-  amenities:new Set(), minArea:'', maxArea:'', postedBy:new Set(), furnish:new Set(), sort:'reco'
-};
-
-function parseBudget(str){
-  if(!str) return [0,9999];
-  const parts = str.replace(/[^0-9\-]/g,'').split('-').map(s=>Number(s||0));
-  return [parts[0]||0, parts[1]||9999];
-}
-
-function applyFilters(){
-  const data = PROPS.filter(p=>
-    p.mode===state.mode &&
-    (!state.qType || p.type===state.qType) &&
-    (!state.qBhk || (state.qBhk==='4+'? p.bhk>=4 : p.bhk==Number(state.qBhk))) &&
-    (p.price>=state.qBudget[0] && p.price<=state.qBudget[1]) &&
-    (!state.qLocation || (p.city+" "+p.locality).toLowerCase().includes(state.qLocation.toLowerCase())) &&
-    (!state.minArea || p.area >= Number(state.minArea)) &&
-    (!state.maxArea || p.area <= Number(state.maxArea)) &&
-    (state.postedBy.size===0 || state.postedBy.has(p.postedBy)) &&
-    (state.furnish.size===0 || state.furnish.has(p.furnish)) &&
-    ([...state.amenities].every(a=>p.amenities.includes(a)))
-  );
-
-  // sort
-  const sorted = [...data].sort((a,b)=>{
-    if(state.sort==='priceAsc') return a.price-b.price;
-    if(state.sort==='priceDesc') return b.price-a.price;
-    if(state.sort==='new') return new Date(b.created)-new Date(a.created);
-    return (b.verified?1:0)-(a.verified?1:0); // reco: verified first
-  });
-
-  renderCards(sorted);
-  $('#resultCount').textContent = `Showing ${sorted.length} ${state.mode==='buy'?'sale':'rent'} results`;
-}
-
-function cardHTML(p){
-  return `<article class="card">
-    <div class="photo">
-      <img loading="lazy" src="${p.img}" alt="${p.title}">
-      ${p.verified?`<span class="chip badge">✅ Verified</span>`:''}
-      <div class="tagbar">
-        <span class="pill">${p.bhk||'Plot'} BHK</span>
-        <span class="pill">${p.type}</span>
+  <!-- Post Property Modal -->
+  <div class="panel" id="postPanel">
+    <div class="sheet">
+      <header>
+        <strong>Post Property</strong>
+        <button class="btn secondary" id="closePost">Close</button>
+      </header>
+      <div class="content">
+        <p class="muted">Logged in as: <span id="postUser"></span></p>
+        <div class="row">
+          <div class="field"><label>Title</label><input id="pTitle" placeholder="2BHK Flat for Sale"/></div>
+          <div class="field"><label>City</label><input id="pCity" placeholder="Mumbai"/></div>
+          <div class="field"><label>Deal Type</label>
+            <select id="pType"><option value="sale">Sale</option><option value="rent">Rent</option></select>
+          </div>
+          <div class="field"><label>Price (₹)</label><input id="pPrice" type="number" placeholder="5000000"/></div>
+          <div class="field" style="grid-column:span 12"><label>Description</label><textarea id="pDesc" rows="3" placeholder="Spacious flat near metro..."></textarea></div>
+          <div class="field" style="grid-column:span 6"><label>Image URL</label><input id="pImg" placeholder="https://..."/></div>
+          <div class="field" style="grid-column:span 6"><label>WhatsApp (countrycode+number)</label><input id="pWa" placeholder="919876543210"/></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn green" id="submitProperty">Submit for Approval</button>
+        </div>
+        <p class="muted" style="margin-top:8px">New listings need admin approval before going live.</p>
       </div>
     </div>
-    <div class="body">
-      <div class="price">${fmtLakh(p.price)}</div>
-      <div class="meta">${p.title}</div>
-      <div class="meta"><b>${p.locality}</b>, ${p.city} • ${p.area} sqft</div>
-      <div class="hero-badges" style="margin-top:8px">${p.amenities.map(a=>`<span class="chip">${a}</span>`).join('')}</div>
-    </div>
-    <div class="foot">
-      <button class="btn" onclick="alert('Contact shared via OTP (demo)')">Contact</button>
-      <div style="display:flex;gap:8px">
-        <button class="btn secondary" onclick="alert('Saved!')">Save</button>
-        <button class="btn secondary" onclick="alert('Shared!')">Share</button>
+  </div>
+
+  <!-- My Listings Panel -->
+  <div class="panel" id="myPanel">
+    <div class="sheet">
+      <header>
+        <strong>My Listings</strong>
+        <button class="btn secondary" id="closeMy">Close</button>
+      </header>
+      <div class="content">
+        <div id="myList"></div>
       </div>
     </div>
-  </article>`
-}
+  </div>
 
-function renderCards(list){
-  const root = $('#listing');
-  // remove previous cards except topbar
-  root.querySelectorAll('.card').forEach(n=>n.remove());
-  const html = list.map(cardHTML).join('');
-  root.insertAdjacentHTML('beforeend', html);
-}
+  <!-- Admin Panel -->
+  <div class="panel" id="adminPanel">
+    <div class="sheet">
+      <header>
+        <strong>Admin – Approvals</strong>
+        <button class="btn secondary" id="closeAdmin">Close</button>
+      </header>
+      <div class="content">
+        <div id="adminList"></div>
+      </div>
+    </div>
+  </div>
 
-// --- Events ---
-$('#yr').textContent = new Date().getFullYear();
+  <!-- Firebase SDKs (v10 modular via CDN) -->
+  <script type="module">
+    // ===== Firebase Setup =====
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getDatabase, ref, onValue, push, set, query, orderByChild, equalTo, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-$('#dealTabs').addEventListener('click', (e)=>{
-  const t = e.target.closest('.tab'); if(!t) return;
-  $$('.tab', $('#dealTabs')).forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
-  state.mode = t.dataset.mode;
-  applyFilters();
-});
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+    };
 
-$('#searchBtn').addEventListener('click', ()=>{
-  state.qLocation = $('#qLocation').value.trim();
-  state.qType = $('#qType').value;
-  state.qBudget = parseBudget($('#qBudget').value);
-  state.qBhk = $('#qBhk').value;
-  applyFilters();
-});
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-$('#resetBtn').addEventListener('click', ()=>{
-  $('#qLocation').value=''; $('#qType').value=''; $('#qBudget').value=''; $('#qBhk').value='';
-  state = {...state, qLocation:'', qType:'', qBudget:[0,9999], qBhk:''};
-  $$('#filters input[type="checkbox"]').forEach(c=>c.checked=false);
-  $('#minArea').value=''; $('#maxArea').value='';
-  state.amenities.clear(); state.postedBy.clear(); state.furnish.clear(); state.minArea=''; state.maxArea='';
-  $('#sortBy').value='reco'; state.sort='reco';
-  applyFilters();
-});
+    // ===== Helpers =====
+    const $ = (sel,ctx=document)=>ctx.querySelector(sel);
+    const $$ = (sel,ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+    const fmtLakh = (n)=>{
+      const num = Number(n||0);
+      if(num>=10000000) return `₹ ${(num/10000000).toFixed(2)} Cr`;
+      if(num>=100000) return `₹ ${(num/100000).toFixed(2)} L`;
+      return `₹ ${num.toLocaleString('en-IN')}`;
+    };
 
-$('#sortBy').addEventListener('change', (e)=>{ state.sort=e.target.value; applyFilters(); });
+    let allProps = []; // cached from DB (approved only for public view)
+    let state = { mode:'buy', qLocation:'', qType:'', qBudget:[0,999999999], qBhk:'',
+      amenities:new Set(), minArea:'', maxArea:'', postedBy:new Set(), furnish:new Set(), sort:'reco' };
 
-$('#amenities').addEventListener('change', (e)=>{
-  const c = e.target; if(c.tagName!=='INPUT') return;
-  c.checked? state.amenities.add(c.value) : state.amenities.delete(c.value);
-  applyFilters();
-});
-$$('.postedBy').forEach(cb=>cb.addEventListener('change', e=>{
-  const c = e.target; c.checked? state.postedBy.add(c.value): state.postedBy.delete(c.value); applyFilters();
-}));
-$$('.furnish').forEach(cb=>cb.addEventListener('change', e=>{
-  const c = e.target; c.checked? state.furnish.add(c.value): state.furnish.delete(c.value); applyFilters();
-}));
-$('#minArea').addEventListener('input', e=>{state.minArea=e.target.value;});
-$('#maxArea').addEventListener('input', e=>{state.maxArea=e.target.value;});
-['minArea','maxArea'].forEach(id=>$('#'+id).addEventListener('change', applyFilters));
+    function parseBudget(str){
+      if(!str) return [0,999999999];
+      const parts = str.replace(/[^0-9\-]/g,'').split('-').map(s=>Number(s||0));
+      return [parts[0]||0, parts[1]||999999999];
+    }
 
-// CTA demo
-$('#postPropBtn').addEventListener('click', ()=>alert('Open Post Property form (free)'))
-$('#loginBtn').addEventListener('click', ()=>alert('Open Login / Sign up'))
+    function applyFilters(){
+      const data = allProps.filter(p=>
+        ((state.mode==='buy' && p.type==='sale') || (state.mode==='rent' && p.type==='rent') || (state.mode==='pg' && p.type==='pg')) &&
+        (!state.qType || (p.kind||'').toLowerCase()===state.qType.toLowerCase() || (p.propertyType||'').toLowerCase()===state.qType.toLowerCase()) &&
+        (!state.qBhk || (state.qBhk==='4+'? (p.bhk||0)>=4 : (p.bhk||0)==Number(state.qBhk))) &&
+        (Number(p.price)>=state.qBudget[0] && Number(p.price)<=state.qBudget[1]) &&
+        (!state.qLocation || (`${p.city||''} ${p.locality||''}`.toLowerCase().includes(state.qLocation.toLowerCase()))) &&
+        (!state.minArea || (p.area||0) >= Number(state.minArea)) &&
+        (!state.maxArea || (p.area||0) <= Number(state.maxArea))
+      );
 
-// initial render
-applyFilters();
-</script>
+      const sorted = [...data].sort((a,b)=>{
+        if(state.sort==='priceAsc') return Number(a.price)-Number(b.price);
+        if(state.sort==='priceDesc') return Number(b.price)-Number(a.price);
+        if(state.sort==='new') return Number(b.timestamp||0)-Number(a.timestamp||0);
+        return (b.verified?1:0)-(a.verified?1:0);
+      });
+
+      renderCards(sorted);
+      $('#resultCount').textContent = `Showing ${sorted.length} ${state.mode==='buy'?'sale':state.mode} results`;
+    }
+
+    function cardHTML(p){
+      const img = p.imageUrl || 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200&auto=format&fit=crop';
+      const bhk = (p.bhk||0)>0? `${p.bhk} BHK` : (p.kind||'Plot');
+      return `<article class="card">
+        <div class="photo">
+          <img loading="lazy" src="${img}" alt="${p.title||'Property'}">
+          ${p.verified?`<span class="chip badge">✅ Verified</span>`:''}
+          <div class="tagbar">
+            <span class="pill">${bhk}</span>
+            <span class="pill">${(p.propertyType||'').toString().slice(0,14) || 'Property'}</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="price">${fmtLakh(p.price)}</div>
+          <div class="meta">${p.title||''}</div>
+          <div class="meta"><b>${p.locality||''}</b>, ${p.city||''} ${p.area?`• ${p.area} sqft`:''}</div>
+          ${p.amenities?`<div class="hero-badges" style="margin-top:8px">${(p.amenities||[]).map(a=>`<span class='chip'>${a}</span>`).join('')}</div>`:''}
+        </div>
+        <div class="foot">
+          <a class="btn" href="https://wa.me/${p.whatsapp||''}" target="_blank" rel="noopener">WhatsApp</a>
+          <div style="display:flex;gap:8px">
+            <button class="btn secondary" onclick="navigator.clipboard.writeText(location.href);alert('Link copied!')">Share</button>
+          </div>
+        </div>
+      </article>`
+    }
+
+    function renderCards(list){
+      const root = document.querySelector('#listing');
+      root.querySelectorAll('.card').forEach(n=>n.remove());
+      const html = list.map(cardHTML).join('');
+      root.insertAdjacentHTML('beforeend', html || '<p class="muted" style="grid-column:span 12">No results.</p>');
+    }
+
+    // ===== Auth =====
+    const provider = new GoogleAuthProvider();
+    $('#loginBtn').addEventListener('click', async ()=>{ try{ await signInWithPopup(auth, provider);}catch(e){ alert(e.message); } });
+    $('#logoutBtn').addEventListener('click', async ()=>{ await signOut(auth); });
+
+    let isAdmin = false;
+    async function checkAdmin(email){
+      if(!email) return false;
+      const snap = await get(ref(db, `admins/${encodeURIComponent(email)}`));
+      return !!snap.val();
+    }
+
+    onAuthStateChanged(auth, async (user)=>{
+      $('#yr').textContent = new Date().getFullYear();
+      if(user){
+        $('#loginBtn').style.display='none';
+        $('#logoutBtn').style.display='inline-flex';
+        $('#postUser').textContent = user.email || user.uid;
+        isAdmin = await checkAdmin(user.email);
+        $('#adminBtn').style.display = isAdmin? 'inline-flex':'none';
+      }else{
+        $('#loginBtn').style.display='inline-flex';
+        $('#logoutBtn').style.display='none';
+        $('#adminBtn').style.display='none';
+      }
+    });
+
+    // ===== Data: public feed (approved only) =====
+    function subscribeApproved(){
+      const propertiesRef = ref(db, 'properties');
+      onValue(propertiesRef, (snap)=>{
+        const data = snap.val() || {};
+        const list = Object.entries(data).map(([id, v])=>({ id, ...v }))
+          .filter(p=>p.approved===true);
+        allProps = list;
+        applyFilters();
+      });
+    }
+    subscribeApproved();
+
+    // ===== Search & Filters (UI events) =====
+    $('#dealTabs').addEventListener('click', (e)=>{
+      const t = e.target.closest('.tab'); if(!t) return;
+      $$('#dealTabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      state.mode = t.dataset.mode;
+      applyFilters();
+    });
+    $('#navBuy').addEventListener('click', (e)=>{e.preventDefault();state.mode='buy'; $$('#dealTabs .tab').forEach(x=>x.classList.remove('active')); $$('#dealTabs .tab')[0].classList.add('active'); applyFilters();});
+    $('#navRent').addEventListener('click', (e)=>{e.preventDefault();state.mode='rent'; $$('#dealTabs .tab').forEach(x=>x.classList.remove('active')); $$('#dealTabs .tab')[1].classList.add('active'); applyFilters();});
+
+    $('#searchBtn').addEventListener('click', ()=>{
+      state.qLocation = $('#qLocation').value.trim();
+      state.qType = $('#qType').value;
+      state.qBudget = parseBudget($('#qBudget').value);
+      state.qBhk = $('#qBhk').value;
+      applyFilters();
+    });
+
+    $('#resetBtn').addEventListener('click', ()=>{
+      $('#qLocation').value=''; $('#qType').value=''; $('#qBudget').value=''; $('#qBhk').value='';
+      state = {...state, qLocation:'', qType:'', qBudget:[0,999999999], qBhk:''};
+      $$('#filters input[type="checkbox"]').forEach(c=>c.checked=false);
+      $('#minArea').value=''; $('#maxArea').value='';
+      state.amenities.clear(); state.postedBy.clear(); state.furnish.clear(); state.minArea=''; state.maxArea='';
+      $('#sortBy').value='reco'; state.sort='reco';
+      applyFilters();
+    });
+
+    $('#sortBy').addEventListener('change', (e)=>{ state.sort=e.target.value; applyFilters(); });
+
+    $('#amenities').addEventListener('change', (e)=>{ const c = e.target; if(c.tagName!=='INPUT') return; c.checked? state.amenities.add(c.value) : state.amenities.delete(c.value); applyFilters(); });
+
+    $$('.postedBy').forEach(cb=>cb.addEventListener('change', e=>{ const c = e.target; c.checked? state.postedBy.add(c.value): state.postedBy.delete(c.value); applyFilters(); }));
+    $$('.furnish').forEach(cb=>cb.addEventListener('change', e=>{ const c = e.target; c.checked? state.furnish.add(c.value): state.furnish.delete(c.value); applyFilters(); }));
+    $('#minArea').addEventListener('input', e=>{state.minArea=e.target.value;});
+    $('#maxArea').addEventListener('input', e=>{state.maxArea=e.target.value;});
+    ['minArea','maxArea'].forEach(id=>$('#'+id).addEventListener('change', applyFilters));
+
+    // ===== Post Property =====
+    function openPanel(p){ p.classList.add('show'); document.body.style.overflow='hidden'; }
+    function closePanel(p){ p.classList.remove('show'); document.body.style.overflow=''; }
+
+    $('#postPropBtn').addEventListener('click', ()=>{
+      if(!auth.currentUser){ alert('Please login first'); return; }
+      openPanel($('#postPanel'));
+    });
+    $('#closePost').addEventListener('click', ()=> closePanel($('#postPanel')) );
+
+    $('#submitProperty').addEventListener('click', async ()=>{
+      const user = auth.currentUser; if(!user){ alert('Please login first'); return; }
+      const title = $('#pTitle').value.trim();
+      const city = $('#pCity').value.trim();
+      const type = $('#pType').value; // sale/rent
+      const price = Number($('#pPrice').value||0);
+      const description = $('#pDesc').value.trim();
+      const imageUrl = $('#pImg').value.trim();
+      const whatsapp = $('#pWa').value.trim();
+      if(!title || !city || !type || !price || !whatsapp){ alert('Please fill Title, City, Type, Price, WhatsApp'); return; }
+
+      const propertiesRef = ref(db, 'properties');
+      const newRef = push(propertiesRef);
+      const payload = { title, city, type, price, description, imageUrl, whatsapp,
+        userId: user.uid, userEmail: user.email, approved: false, timestamp: Date.now() };
+      try{
+        await set(newRef, payload);
+        alert('Submitted! Waiting for admin approval.');
+        closePanel($('#postPanel'));
+        // clear form
+        ['pTitle','pCity','pPrice','pDesc','pImg','pWa'].forEach(id=>$('#'+id).value='');
+      }catch(err){ alert(err.message); }
+    });
+
+    // ===== My Listings =====
+    $('#myListingsBtn').addEventListener('click', async ()=>{
+      if(!auth.currentUser){ alert('Please login first'); return; }
+      openPanel($('#myPanel'));
+      await loadMyListings();
+    });
+    $('#closeMy').addEventListener('click', ()=> closePanel($('#myPanel')) );
+
+    async function loadMyListings(){
+      const user = auth.currentUser; if(!user) return;
+      const q = query(ref(db, 'properties'), orderByChild('userId'), equalTo(user.uid));
+      const snap = await get(q);
+      const data = snap.val()||{};
+      const rows = Object.entries(data).map(([id,p])=>{
+        return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:8px 0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+            <div>
+              <div style="font-weight:700">${p.title}</div>
+              <div class="muted">${p.city} • ${fmtLakh(p.price)} • ${p.type.toUpperCase()}</div>
+              <div class="muted">Status: ${p.approved? '✅ Approved':'⏳ Pending'}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              ${!p.approved? `<button class="btn" data-act="promote" data-id="${id}">Edit</button>`:''}
+              <button class="btn danger" data-act="del" data-id="${id}">Delete</button>
+            </div>
+          </div>
+        </div>`
+      }).join('') || '<p class="muted">No listings yet.</p>';
+      $('#myList').innerHTML = rows;
+      // delete handler
+      $('#myList').querySelectorAll('button[data-act="del"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id;
+        if(confirm('Delete this listing?')){ await remove(ref(db, `properties/${id}`)); await loadMyListings(); }
+      }));
+    }
+
+    // ===== Admin Panel =====
+    $('#adminBtn').addEventListener('click', async ()=>{
+      if(!isAdmin){ alert('Not an admin'); return; }
+      openPanel($('#adminPanel'));
+      await loadAdminList();
+    });
+    $('#closeAdmin').addEventListener('click', ()=> closePanel($('#adminPanel')) );
+
+    async function loadAdminList(){
+      const snap = await get(ref(db, 'properties'));
+      const data = snap.val()||{};
+      const pending = Object.entries(data).filter(([id,p])=>p.approved!==true);
+      const rows = pending.map(([id,p])=>{
+        return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:8px 0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+            <div>
+              <div style="font-weight:700">${p.title}</div>
+              <div class="muted">${p.city} • ${fmtLakh(p.price)} • ${p.type?.toUpperCase()}</div>
+              <div class="muted">By: ${p.userEmail||p.userId}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <a class="btn secondary" href="${p.imageUrl||'#'}" target="_blank">Image</a>
+              <button class="btn green" data-act="approve" data-id="${id}">Approve</button>
+              <button class="btn danger" data-act="reject" data-id="${id}">Reject</button>
+            </div>
+          </div>
+        </div>`
+      }).join('') || '<p class="muted">No pending approvals.</p>';
+      $('#adminList').innerHTML = rows;
+      $('#adminList').querySelectorAll('button[data-act="approve"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id; await update(ref(db, `properties/${id}`), { approved: true }); await loadAdminList(); }));
+      $('#adminList').querySelectorAll('button[data-act="reject"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id; if(confirm('Reject & delete listing?')){ await remove(ref(db, `properties/${id}`)); await loadAdminList(); }
+      }));
+    }
+
+  </script>
 </body>
 </html>
