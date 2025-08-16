@@ -1,139 +1,140 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zara Property Listing</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zara Property Listing</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f4f4f9;
+  }
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
 
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; }
-    header { background: #222; padding: 15px; color: white; display:flex; justify-content:space-between; align-items:center; }
-    .logo { font-size: 22px; font-weight: bold; }
-    .btn { padding: 8px 15px; border:none; border-radius:6px; cursor:pointer; }
-    #loginBtn { background:#28a745; color:white; }
-    #logoutBtn, #addBtn { display:none; }
-    #logoutBtn { background:#dc3545; color:white; }
-    #addBtn { background:#007bff; color:white; }
+  .property-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
 
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px; padding:20px; }
-    .card { background:white; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.1); padding:10px; }
-    .card img { width:100%; height:180px; object-fit:cover; border-radius:8px; }
-    .deleteBtn { background:red; color:white; border:none; padding:6px 10px; border-radius:5px; cursor:pointer; margin-top:5px; }
-  </style>
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    transition: height 0.3s ease;
+  }
+
+  .card-content {
+    padding: 15px;
+  }
+
+  .card h3 {
+    margin: 0 0 10px;
+  }
+
+  .card p {
+    margin: 5px 0;
+    color: #555;
+  }
+
+  /* Expanded Card Style */
+  .card.expanded {
+    grid-column: span 2;
+    transform: scale(1.05);
+    z-index: 10;
+  }
+
+  .card.expanded img {
+    height: 300px;
+  }
+
+  .hidden-details {
+    display: none;
+    margin-top: 10px;
+    color: #333;
+  }
+
+  .card.expanded .hidden-details {
+    display: block;
+  }
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo">Zara Property</div>
-  <div>
-    <button id="loginBtn" class="btn">Login with Google</button>
-    <button id="logoutBtn" class="btn">Logout</button>
-    <button id="addBtn" class="btn">+ Add Property</button>
-  </div>
-</header>
+<h1>🏡 Zara Property Listing</h1>
 
-<div class="grid" id="propertyList"></div>
+<div class="property-grid">
+  <div class="card">
+    <img src="https://via.placeholder.com/400x250" alt="Property">
+    <div class="card-content">
+      <h3>2 BHK Flat</h3>
+      <p>Location: Mumbai</p>
+      <p>Price: ₹50 Lakh</p>
+      <div class="hidden-details">
+        <p>Area: 900 sq.ft</p>
+        <p>Furnished: Yes</p>
+        <p>Near Metro Station</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <img src="https://via.placeholder.com/400x250" alt="Property">
+    <div class="card-content">
+      <h3>3 BHK Villa</h3>
+      <p>Location: Pune</p>
+      <p>Price: ₹1.2 Crore</p>
+      <div class="hidden-details">
+        <p>Area: 1500 sq.ft</p>
+        <p>Garden + Parking</p>
+        <p>24/7 Security</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <img src="https://via.placeholder.com/400x250" alt="Property">
+    <div class="card-content">
+      <h3>1 RK Studio</h3>
+      <p>Location: Delhi</p>
+      <p>Price: ₹25 Lakh</p>
+      <div class="hidden-details">
+        <p>Area: 400 sq.ft</p>
+        <p>Furnished: Semi</p>
+        <p>Best for Students</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const addBtn = document.getElementById("addBtn");
-
-  let currentUser = null;
-  const ADMIN_EMAIL = "admin@gmail.com"; // सिर्फ यही यूज़र Delete कर पाएगा
-
-  // Google Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => firebase.auth().signOut();
-
-  firebase.auth().onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      addBtn.style.display = "inline-block";
-    } else {
-      currentUser = null;
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      addBtn.style.display = "none";
-    }
-  });
-
-  // Fetch Properties
-  function loadProperties() {
-    db.ref("properties").on("value", snap => {
-      const list = document.getElementById("propertyList");
-      list.innerHTML = "";
-      snap.forEach(item => {
-        const prop = item.val();
-        const key = item.key;
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${prop.image}" />
-          <h3>${prop.title}</h3>
-          <p>${prop.desc}</p>
-        `;
-        if (currentUser && currentUser.email === ADMIN_EMAIL) {
-          const del = document.createElement("button");
-          del.className = "deleteBtn";
-          del.innerText = "Delete";
-          del.onclick = () => db.ref("properties/"+key).remove();
-          card.appendChild(del);
-        }
-        list.appendChild(card);
+  const cards = document.querySelectorAll(".card");
+  cards.forEach(card => {
+    card.addEventListener("click", () => {
+      // Sabse pehle baaki cards se expanded class hatao
+      cards.forEach(c => {
+        if(c !== card) c.classList.remove("expanded");
       });
+      // Jis card pe click hua usko toggle karo
+      card.classList.toggle("expanded");
     });
-  }
-  loadProperties();
-
-  // Add Property (with ImgBB upload)
-  addBtn.onclick = async () => {
-    const title = prompt("Enter property title:");
-    const desc = prompt("Enter property description:");
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "image/*";
-    fileInput.onchange = async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const form = new FormData();
-      form.append("image", file);
-
-      const res = await fetch("https://api.imgbb.com/1/upload?key=5128d0b0687e9718139752bca8a4ec59", {
-        method: "POST",
-        body: form
-      });
-      const data = await res.json();
-      const imageUrl = data.data.url;
-
-      db.ref("properties").push({ title, desc, image: imageUrl });
-    };
-    fileInput.click();
-  };
+  });
 </script>
 
 </body>
