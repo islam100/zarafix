@@ -1,294 +1,411 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ZaraFix — ImgBB Slider</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>99Acer – Find Homes, Flats, Plots</title>
+  <style>
+    :root{
+      --bg:#0b1b2a; --card:#ffffff; --muted:#6b7280; --brand:#2563eb; --brand2:#22c55e; --chip:#eef2ff;
+      --ink:#0f172a; --soft:#f1f5f9; --ring:rgba(37,99,235,.25)
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;color:var(--ink);}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1200px;margin-inline:auto;padding:0 16px}
+    .btn{display:inline-flex;gap:8px;align-items:center;border:1px solid transparent;background:var(--brand);color:#fff;padding:10px 14px;border-radius:999px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#fff;border-color:#e5e7eb;color:#111827}
+    .btn.ghost{background:transparent;border-color:#334155;color:#e2e8f0}
+    .btn.green{background:var(--brand2)}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#1e293b;font-size:12px}
+    .header{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#071421,rgba(7,20,33,.85));backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 0;color:#e2e8f0}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#60a5fa,#22c55e);display:grid;place-items:center;color:#003; font-weight:900}
+    .nav-actions{display:flex;gap:10px;align-items:center}
+    .hero{background:radial-gradient(1200px 500px at 50% -10%, #0ea5e9 0%, transparent 60%),linear-gradient(180deg,#071421 0%, #0b1b2a 60%, #0f172a 100%);color:#e2e8f0}
+    .hero-wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;padding:38px 0}
+    .headline{font-size:clamp(28px,3.2vw,46px);line-height:1.1;margin:0 0 10px}
+    .sub{color:#b6c2cf;margin:0 0 18px}
+    .search-card{background:#0b1220;border:1px solid #1f2a44;border-radius:16px;padding:14px;box-shadow:0 8px 30px rgba(2,6,23,.35)}
+    .tabs{display:flex;background:#0f172a;border-radius:12px;overflow:hidden;border:1px solid #1f2a44}
+    .tab{flex:1;text-align:center;padding:10px 12px;color:#94a3b8;cursor:pointer;font-weight:700}
+    .tab.active{background:#111827;color:#fff}
+    .form-row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;align-items:end;margin-top:12px}
+    .field{grid-column:span 3;background:#0f172a;border:1px solid #1f2a44;border-radius:12px;padding:10px}
+    .field label{display:block;color:#9ca3af;font-size:12px;margin-bottom:6px}
+    .field input,.field select{width:100%;background:transparent;border:none;outline:none;color:#e5e7eb;font-size:14px}
+    .go{grid-column:span 3;display:flex;gap:10px}
+    .go .btn{width:100%;justify-content:center}
+    .hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .hero-img{border-radius:18px;overflow:hidden;border:1px solid #1f2a44;box-shadow:0 20px 50px rgba(2,6,23,.5);min-height:280px;background:url('https://images.unsplash.com/photo-1505691723518-36a5ac3b2dba?q=80&w=1400&auto=format&fit=crop') center/cover}
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    .section{padding:26px 0;background:#fff}
+    .section.dark{background:linear-gradient(180deg,#f8fafc,#ffffff)}
 
-<style>
-html, body {
-  margin:0; padding:0; height:100%; overflow:hidden;
-  font-family: Arial, sans-serif; background:#f4f4f4;
-}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .sidebar{grid-column:span 3;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:sticky;top:86px;height:fit-content}
+    .listing{grid-column:span 9;display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{grid-column:span 6;background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+    .card .photo{aspect-ratio:4/3;background:#f1f5f9;position:relative}
+    .card .photo img{width:100%;height:100%;object-fit:cover;display:block}
+    .badge{position:absolute;left:10px;top:10px}
+    .tagbar{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+    .card .body{padding:12px}
+    .price{font-size:18px;font-weight:800}
+    .meta{color:#64748b;font-size:13px}
+    .meta b{color:#0f172a}
+    .card .foot{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid #e5e7eb}
+    .pill{padding:6px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:12px}
 
-/* Header */
-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:10px 20px; background:#fff;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; z-index:10;
-  flex-wrap:wrap;
-}
-.logo {
-  font-size:2rem; font-weight:900;
-  background:linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-}
+    .filter h4{margin:8px 0 6px}
+    .range{display:flex;gap:10px}
+    .range input{width:100%}
+    .checkboxes{display:flex;flex-wrap:wrap;gap:8px}
 
-/* Dropdown menus */
-nav {
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-.dropdown {
-  position:relative;
-}
-.dropbtn {
-  background:#111; color:#fff; border:none; padding:8px 14px;
-  border-radius:6px; cursor:pointer; font-weight:bold;
-}
-.dropdown-content {
-  position:absolute; top:110%; left:0;
-  background:#fff; min-width:180px; border-radius:8px; overflow:hidden;
-  box-shadow:0 8px 20px rgba(0,0,0,0.15);
-  display:none; flex-direction:column; z-index:20;
-}
-.dropdown-content a {
-  padding:10px 14px; text-decoration:none; color:#333;
-}
-.dropdown-content a:hover { background:#f2f2f2; }
-.dropdown.open .dropdown-content { display:flex; animation: fadeIn 0.2s ease; }
-@keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .sort{display:flex;align-items:center;gap:8px}
+    .sort select{border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px}
 
-/* Buttons */
-#loginBtn, #logoutBtn, #adminUploadBtn {
-  padding:6px 12px; border:none; border-radius:6px; margin-left:6px;
-}
-#loginBtn { background:#28a745; color:#fff; }
-#logoutBtn { background:#dc3545; color:#fff; }
-#adminUploadBtn { background:#007bff; color:#fff; }
+    .mapwrap{grid-column:span 12;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:14px;padding:16px;text-align:center}
 
-/* Slider */
-.slider {
-  position:relative; width:100%; height:calc(100vh - 68px);
-  display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(135deg,#a8edea,#fed6e3);
-}
-.slider img {
-  max-width:92%; max-height:92%; object-fit:contain;
-  border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);
-}
+    .footer{background:#0b1b2a;color:#cbd5e1;padding:28px 0;margin-top:30px}
+    .footer .cols{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .col{grid-column:span 3}
+    .footnote{margin-top:16px;color:#94a3b8;font-size:13px}
 
-/* Admin Controls ऊपर fixed */
-.admin-controls {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-  z-index: 5;
-}
-.admin-controls .btn {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-weight: bold;
-  backdrop-filter: blur(4px);
-}
-.admin-controls .btn:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
-.delete-btn { background: #dc3545; }
-.delete-btn:hover { background: #b52b38; }
+    .floating{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;flex-direction:column;gap:10px}
 
-/* Toast */
-#toast {
-  position:absolute; top:14px; left:50%; transform:translateX(-50%);
-  background:rgba(255,255,255,0.9); color:#111; padding:8px 14px;
-  border-radius:999px; font-weight:700; display:none;
-  box-shadow:0 4px 20px rgba(0,0,0,0.15);
-}
-</style>
+    /* Responsive */
+    @media (max-width: 960px){
+      .hero-wrap{grid-template-columns:1fr}
+      .field{grid-column:span 6}
+      .go{grid-column:span 12}
+      .sidebar{grid-column:span 12;position:relative;top:0}
+      .listing{grid-column:span 12}
+      .card{grid-column:span 12}
+      .col{grid-column:span 6}
+    }
+    @media (max-width: 560px){
+      .form-row{grid-template-columns:repeat(6,1fr)}
+      .field{grid-column:span 6}
+      .nav .brand span{display:none}
+      .col{grid-column:span 12}
+    }
+  </style>
 </head>
 <body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav">
+      <div class="brand">
+        <div class="logo">99</div>
+        <div>
+          <div style="font-weight:900;letter-spacing:.3px">99Acer</div>
+          <small style="color:#93c5fd">Property Portal</small>
+        </div>
+      </div>
+      <nav class="nav-actions">
+        <a class="btn ghost" href="#">Buy</a>
+        <a class="btn ghost" href="#">Rent</a>
+        <a class="btn ghost" href="#">Commercial</a>
+        <button class="btn green" id="postPropBtn">Post Property – Free</button>
+        <button class="btn secondary" id="loginBtn">Login</button>
+      </nav>
+    </div>
+  </header>
 
-<header>
-  <div class="logo">ZaraFix</div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-wrap">
+      <div>
+        <h1 class="headline">Find your perfect home in seconds.</h1>
+        <p class="sub">Search verified flats, plots, and houses across India with smart filters, photos, and locality insights.</p>
 
-  <nav>
-    <div class="dropdown" id="menu1">
-      <button class="dropbtn" onclick="toggleDropdown('menu1')">Menu 1 ▾</button>
-      <div class="dropdown-content">
-        <a href="#">Home</a>
-        <a href="#">Services</a>
-        <a href="#">About</a>
+        <div class="search-card" role="search" aria-label="Property search">
+          <div class="tabs" id="dealTabs">
+            <div class="tab active" data-mode="buy">Buy</div>
+            <div class="tab" data-mode="rent">Rent</div>
+            <div class="tab" data-mode="pg">PG</div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>City / Locality</label>
+              <input id="qLocation" placeholder="e.g. Andheri West, Mumbai" />
+            </div>
+            <div class="field">
+              <label>Property Type</label>
+              <select id="qType">
+                <option value="">Any</option>
+                <option>Apartment</option>
+                <option>Independent House</option>
+                <option>Villa</option>
+                <option>Plot</option>
+                <option>Commercial</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Budget (₹ Lakhs)</label>
+              <input type="text" id="qBudget" placeholder="25-75" />
+            </div>
+            <div class="field">
+              <label>BHK</label>
+              <select id="qBhk">
+                <option value="">Any</option>
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4+</option>
+              </select>
+            </div>
+            <div class="go">
+              <button class="btn" id="searchBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
+                Search</button>
+              <button class="btn secondary" id="resetBtn">Reset</button>
+            </div>
+          </div>
+          <div class="hero-badges">
+            <span class="chip">🔒 Verified Listings</span>
+            <span class="chip">🧭 Near Metro</span>
+            <span class="chip">🌿 Vastu Friendly</span>
+            <span class="chip">📷 360° Photos</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-img" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- Listings + Filters -->
+  <section class="section dark">
+    <div class="container grid">
+      <!-- Sidebar Filters -->
+      <aside class="sidebar" id="filters">
+        <div class="filter">
+          <h3 style="margin:0 0 8px">Filters</h3>
+          <div class="checkboxes" id="amenities">
+            <label class="chip"><input type="checkbox" value="Parking"> Parking</label>
+            <label class="chip"><input type="checkbox" value="Lift"> Lift</label>
+            <label class="chip"><input type="checkbox" value="Security"> Security</label>
+            <label class="chip"><input type="checkbox" value="Gym"> Gym</label>
+            <label class="chip"><input type="checkbox" value="Pool"> Pool</label>
+          </div>
+          <h4>Area (sqft)</h4>
+          <div class="range">
+            <input type="number" id="minArea" placeholder="Min" />
+            <input type="number" id="maxArea" placeholder="Max" />
+          </div>
+          <h4>Posted By</h4>
+          <div class="checkboxes">
+            <label class="chip"><input type="checkbox" value="Owner" class="postedBy"> Owner</label>
+            <label class="chip"><input type="checkbox" value="Dealer" class="postedBy"> Dealer</label>
+            <label class="chip"><input type="checkbox" value="Builder" class="postedBy"> Builder</label>
+          </div>
+          <h4>Furnishing</h4>
+          <div class="checkboxes">
+            <label class="chip"><input type="checkbox" value="Unfurnished" class="furnish"> Unfurnished</label>
+            <label class="chip"><input type="checkbox" value="Semi" class="furnish"> Semi</label>
+            <label class="chip"><input type="checkbox" value="Furnished" class="furnish"> Furnished</label>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Listing Grid -->
+      <main class="listing" id="listing">
+        <div class="topbar" style="grid-column:span 12">
+          <div id="resultCount">Showing results…</div>
+          <div class="sort">
+            <label for="sortBy">Sort</label>
+            <select id="sortBy">
+              <option value="reco">Recommended</option>
+              <option value="priceAsc">Price: Low to High</option>
+              <option value="priceDesc">Price: High to Low</option>
+              <option value="new">Newest First</option>
+            </select>
+          </div>
+        </div>
+        <!-- Cards render here -->
+      </main>
+
+      <div class="mapwrap">
+        <strong>Map Preview</strong>
+        <p>Embed Google Maps or MapLibre here to show property pins by location.</p>
       </div>
     </div>
-    <div class="dropdown" id="menu2">
-      <button class="dropbtn" onclick="toggleDropdown('menu2')">Menu 2 ▾</button>
-      <div class="dropdown-content">
-        <a href="#">Contact</a>
-        <a href="#">Support</a>
-        <a href="#">FAQ</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="cols">
+        <div class="col">
+          <div class="brand"><div class="logo">99</div><span>99Acer</span></div>
+          <p class="footnote">India's trusted property portal. Buy, sell or rent homes with confidence.</p>
+        </div>
+        <div class="col">
+          <h4>Company</h4>
+          <p><a href="#">About</a><br><a href="#">Careers</a><br><a href="#">Contact</a></p>
+        </div>
+        <div class="col">
+          <h4>Services</h4>
+          <p><a href="#">Owner Plans</a><br><a href="#">Dealer Packages</a><br><a href="#">Home Loans</a></p>
+        </div>
+        <div class="col">
+          <h4>Legal</h4>
+          <p><a href="#">Terms</a><br><a href="#">Privacy</a><br><a href="#">Grievance</a></p>
+        </div>
       </div>
+      <div class="footnote">© <span id="yr"></span> 99Acer. For demo use only.</div>
     </div>
-  </nav>
+  </footer>
 
-  <div>
-    <button id="loginBtn">Login (Google)</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-    <button id="adminUploadBtn" style="display:none;">Upload</button>
+  <!-- Floating CTAs -->
+  <div class="floating">
+    <button class="btn green">Talk to Expert</button>
+    <button class="btn">Get Alerts</button>
   </div>
-</header>
-
-<div class="slider" id="slider">
-  <div id="toast"></div>
-  <div class="admin-controls" id="adminControls" style="display:none;">
-    <button class="btn" id="prevBtn">⟵ Prev</button>
-    <button class="btn" id="nextBtn">Next ⟶</button>
-    <button class="btn delete-btn" id="deleteBtn">Delete</button>
-  </div>
-</div>
 
 <script>
-const IMGBB_API_KEY = "5128d0b0687e9718139752bca8a4ec59";
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+// --- Demo Data (You can replace with API/Firebase) ---
+const PROPS = [
+  {id:1, title:"2 BHK in Andheri West", city:"Mumbai", locality:"Andheri West", type:"Apartment", bhk:2, area:780, price:145, mode:"buy", postedBy:"Owner", furnish:"Semi", verified:true, amenities:["Lift","Parking","Security"], img:"https://images.unsplash.com/photo-1505691723518-36a5ac3b2dba?q=80&w=1200&auto=format&fit=crop", created:"2025-08-01"},
+  {id:2, title:"1 BHK near Metro", city:"Mumbai", locality:"Ghatkopar", type:"Apartment", bhk:1, area:520, price:23, mode:"rent", postedBy:"Dealer", furnish:"Unfurnished", verified:false, amenities:["Lift","Security"], img:"https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1200&auto=format&fit=crop", created:"2025-07-29"},
+  {id:3, title:"Villa in Whitefield", city:"Bengaluru", locality:"Whitefield", type:"Villa", bhk:4, area:2400, price:280, mode:"buy", postedBy:"Builder", furnish:"Furnished", verified:true, amenities:["Parking","Pool","Security","Gym"], img:"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=1200&auto=format&fit=crop", created:"2025-07-22"},
+  {id:4, title:"3 BHK Golf Course Rd", city:"Gurugram", locality:"Sector 43", type:"Apartment", bhk:3, area:1500, price:95, mode:"rent", postedBy:"Owner", furnish:"Furnished", verified:true, amenities:["Lift","Gym","Security","Parking"], img:"https://images.unsplash.com/photo-1515263487990-61b07816b324?q=80&w=1200&auto=format&fit=crop", created:"2025-07-15"},
+  {id:5, title:"Plot near Airport", city:"Hyderabad", locality:"Shamshabad", type:"Plot", bhk:0, area:1800, price:55, mode:"buy", postedBy:"Dealer", furnish:"Unfurnished", verified:false, amenities:["Security"], img:"https://images.unsplash.com/photo-1464146072230-91cabc968266?q=80&w=1200&auto=format&fit=crop", created:"2025-06-30"},
+  {id:6, title:"Studio in Noida Ext.", city:"Noida", locality:"Sector 16C", type:"Apartment", bhk:1, area:410, price:12, mode:"rent", postedBy:"Dealer", furnish:"Semi", verified:true, amenities:["Lift","Security"], img:"https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200&auto=format&fit=crop", created:"2025-08-10"}
+];
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com/",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+// --- Utilities ---
+const $ = (sel,ctx=document)=>ctx.querySelector(sel);
+const $$ = (sel,ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+const fmtLakh = n => `₹ ${n.toLocaleString('en-IN')} L`; // assume input already in lakhs for demo
+
+let state = {
+  mode:'buy', qLocation:'', qType:'', qBudget:[0,9999], qBhk:'',
+  amenities:new Set(), minArea:'', maxArea:'', postedBy:new Set(), furnish:new Set(), sort:'reco'
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.database();
+function parseBudget(str){
+  if(!str) return [0,9999];
+  const parts = str.replace(/[^0-9\-]/g,'').split('-').map(s=>Number(s||0));
+  return [parts[0]||0, parts[1]||9999];
+}
 
-let user = null;
-let slides = [];
-let idx = 0;
+function applyFilters(){
+  const data = PROPS.filter(p=>
+    p.mode===state.mode &&
+    (!state.qType || p.type===state.qType) &&
+    (!state.qBhk || (state.qBhk==='4+'? p.bhk>=4 : p.bhk==Number(state.qBhk))) &&
+    (p.price>=state.qBudget[0] && p.price<=state.qBudget[1]) &&
+    (!state.qLocation || (p.city+" "+p.locality).toLowerCase().includes(state.qLocation.toLowerCase())) &&
+    (!state.minArea || p.area >= Number(state.minArea)) &&
+    (!state.maxArea || p.area <= Number(state.maxArea)) &&
+    (state.postedBy.size===0 || state.postedBy.has(p.postedBy)) &&
+    (state.furnish.size===0 || state.furnish.has(p.furnish)) &&
+    ([...state.amenities].every(a=>p.amenities.includes(a)))
+  );
 
-function toggleDropdown(id){
-  document.querySelectorAll('.dropdown').forEach(d => {
-    if(d.id === id) d.classList.toggle('open');
-    else d.classList.remove('open');
+  // sort
+  const sorted = [...data].sort((a,b)=>{
+    if(state.sort==='priceAsc') return a.price-b.price;
+    if(state.sort==='priceDesc') return b.price-a.price;
+    if(state.sort==='new') return new Date(b.created)-new Date(a.created);
+    return (b.verified?1:0)-(a.verified?1:0); // reco: verified first
   });
-}
-function toast(msg, ms=1500){
-  const t = document.getElementById('toast');
-  t.innerText = msg; t.style.display = 'block';
-  clearTimeout(toast._t);
-  toast._t = setTimeout(()=> t.style.display='none', ms);
-}
-function showImage(){
-  const wrap = document.getElementById('slider');
-  Array.from(wrap.querySelectorAll('img')).forEach(n => n.remove());
-  if(!slides.length) return;
-  const img = document.createElement('img');
-  img.src = slides[idx].url;
-  wrap.appendChild(img);
+
+  renderCards(sorted);
+  $('#resultCount').textContent = `Showing ${sorted.length} ${state.mode==='buy'?'sale':'rent'} results`;
 }
 
-/* Auth */
-document.getElementById('loginBtn').onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(()=> toast("Login error"));
-};
-document.getElementById('logoutBtn').onclick = () => auth.signOut();
+function cardHTML(p){
+  return `<article class="card">
+    <div class="photo">
+      <img loading="lazy" src="${p.img}" alt="${p.title}">
+      ${p.verified?`<span class="chip badge">✅ Verified</span>`:''}
+      <div class="tagbar">
+        <span class="pill">${p.bhk||'Plot'} BHK</span>
+        <span class="pill">${p.type}</span>
+      </div>
+    </div>
+    <div class="body">
+      <div class="price">${fmtLakh(p.price)}</div>
+      <div class="meta">${p.title}</div>
+      <div class="meta"><b>${p.locality}</b>, ${p.city} • ${p.area} sqft</div>
+      <div class="hero-badges" style="margin-top:8px">${p.amenities.map(a=>`<span class="chip">${a}</span>`).join('')}</div>
+    </div>
+    <div class="foot">
+      <button class="btn" onclick="alert('Contact shared via OTP (demo)')">Contact</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn secondary" onclick="alert('Saved!')">Save</button>
+        <button class="btn secondary" onclick="alert('Shared!')">Share</button>
+      </div>
+    </div>
+  </article>`
+}
 
-auth.onAuthStateChanged(u => {
-  user = u || null;
-  const isAdmin = !!(user && user.email === ADMIN_EMAIL);
-  document.getElementById('loginBtn').style.display = user ? 'none':'inline-block';
-  document.getElementById('logoutBtn').style.display = user ? 'inline-block':'none';
-  document.getElementById('adminUploadBtn').style.display = isAdmin ? 'inline-block':'none';
-  document.getElementById('adminControls').style.display = isAdmin ? 'flex':'none';
+function renderCards(list){
+  const root = $('#listing');
+  // remove previous cards except topbar
+  root.querySelectorAll('.card').forEach(n=>n.remove());
+  const html = list.map(cardHTML).join('');
+  root.insertAdjacentHTML('beforeend', html);
+}
+
+// --- Events ---
+$('#yr').textContent = new Date().getFullYear();
+
+$('#dealTabs').addEventListener('click', (e)=>{
+  const t = e.target.closest('.tab'); if(!t) return;
+  $$('.tab', $('#dealTabs')).forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  state.mode = t.dataset.mode;
+  applyFilters();
 });
 
-/* Load slider data */
-db.ref('slider').on('value', snap => {
-  const arr = [];
-  snap.forEach(ch => {
-    const v = ch.val();
-    arr.push({ key: ch.key, url: v.url, delete_url: v.delete_url || "", timestamp: v.timestamp || 0 });
-  });
-  arr.sort((a,b)=> b.timestamp - a.timestamp);
-  slides = arr;
-  if(idx >= slides.length) idx = 0;
-  showImage();
+$('#searchBtn').addEventListener('click', ()=>{
+  state.qLocation = $('#qLocation').value.trim();
+  state.qType = $('#qType').value;
+  state.qBudget = parseBudget($('#qBudget').value);
+  state.qBhk = $('#qBhk').value;
+  applyFilters();
 });
 
-/* Controls */
-document.getElementById('prevBtn').onclick = () => {
-  if(!slides.length) return;
-  idx = (idx - 1 + slides.length) % slides.length;
-  showImage();
-};
-document.getElementById('nextBtn').onclick = () => {
-  if(!slides.length) return;
-  idx = (idx + 1) % slides.length;
-  showImage();
-};
+$('#resetBtn').addEventListener('click', ()=>{
+  $('#qLocation').value=''; $('#qType').value=''; $('#qBudget').value=''; $('#qBhk').value='';
+  state = {...state, qLocation:'', qType:'', qBudget:[0,9999], qBhk:''};
+  $$('#filters input[type="checkbox"]').forEach(c=>c.checked=false);
+  $('#minArea').value=''; $('#maxArea').value='';
+  state.amenities.clear(); state.postedBy.clear(); state.furnish.clear(); state.minArea=''; state.maxArea='';
+  $('#sortBy').value='reco'; state.sort='reco';
+  applyFilters();
+});
 
-/* Auto slide */
-setInterval(()=> {
-  if(slides.length > 1) {
-    idx = (idx + 1) % slides.length;
-    showImage();
-  }
-}, 3000);
+$('#sortBy').addEventListener('change', (e)=>{ state.sort=e.target.value; applyFilters(); });
 
-/* Upload */
-document.getElementById('adminUploadBtn').onclick = () => {
-  if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'image/*';
-  input.onchange = async () => {
-    const file = input.files && input.files[0];
-    if(!file) return;
-    const form = new FormData();
-    form.append('image', file);
-    toast("Uploading...");
-    try {
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-        method: 'POST',
-        body: form
-      });
-      const data = await res.json();
-      if(data && data.success) {
-        const url = data.data.display_url;
-        const delete_url = data.data.delete_url || "";
-        const timestamp = Date.now();
-        const ref = db.ref('slider').push();
-        await ref.set({ url, delete_url, timestamp });
-        toast("Uploaded ✅");
-      } else {
-        toast("Upload failed");
-      }
-    } catch(e) {
-      toast("Network error");
-    }
-  };
-  input.click();
-};
+$('#amenities').addEventListener('change', (e)=>{
+  const c = e.target; if(c.tagName!=='INPUT') return;
+  c.checked? state.amenities.add(c.value) : state.amenities.delete(c.value);
+  applyFilters();
+});
+$$('.postedBy').forEach(cb=>cb.addEventListener('change', e=>{
+  const c = e.target; c.checked? state.postedBy.add(c.value): state.postedBy.delete(c.value); applyFilters();
+}));
+$$('.furnish').forEach(cb=>cb.addEventListener('change', e=>{
+  const c = e.target; c.checked? state.furnish.add(c.value): state.furnish.delete(c.value); applyFilters();
+}));
+$('#minArea').addEventListener('input', e=>{state.minArea=e.target.value;});
+$('#maxArea').addEventListener('input', e=>{state.maxArea=e.target.value;});
+['minArea','maxArea'].forEach(id=>$('#'+id).addEventListener('change', applyFilters));
 
-/* Delete */
-document.getElementById('deleteBtn').onclick = async () => {
-  if(!(user && user.email === ADMIN_EMAIL)) { toast("Admin only"); return; }
-  if(!slides.length){ toast("No images"); return; }
-  const current = slides[idx];
-  toast("Deleting...");
-  try {
-    if(current.delete_url) {
-      await fetch(current.delete_url, { method: 'GET' }).catch(()=>{});
-    }
-    await db.ref('slider/' + current.key).remove();
-    toast("Deleted ✅");
-    idx = 0;
-  } catch(e) {
-    toast("Delete failed");
-  }
-};
+// CTA demo
+$('#postPropBtn').addEventListener('click', ()=>alert('Open Post Property form (free)'))
+$('#loginBtn').addEventListener('click', ()=>alert('Open Login / Sign up'))
+
+// initial render
+applyFilters();
 </script>
 </body>
 </html>
