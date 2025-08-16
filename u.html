@@ -1,144 +1,195 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Zara Property — 99acres Style</title>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property Listing</title>
   <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f9f9f9; }
-    header { background:#004080; color:white; padding:15px 20px; display:flex; align-items:center; justify-content:space-between; }
-    header h1 { margin:0; font-size:26px; font-weight:bold; text-shadow:1px 1px 3px black; }
-    nav a { color:white; margin:0 10px; text-decoration:none; font-weight:bold; }
-    nav a:hover { text-decoration:underline; }
-
-    .search-box { text-align:center; margin:20px; }
-    .search-box input { padding:10px; width:50%; border:1px solid #ccc; border-radius:5px; }
-
-    .property-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:20px; padding:20px; }
-    .card { background:white; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.2); overflow:hidden; }
-    .card img { width:100%; height:200px; object-fit:cover; }
-    .card-body { padding:15px; }
-    .card-body h3 { margin:0; font-size:20px; color:#004080; }
-    .card-body p { margin:5px 0; color:#333; }
-
-    #postBtn {
-      position:fixed; top:20px; right:20px;
-      padding:12px 18px; border:none; border-radius:10px;
-      background:#ff6600; color:white; font-weight:bold;
-      box-shadow:0 4px 8px rgba(0,0,0,0.3);
-      cursor:pointer; font-size:14px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f9f9f9;
     }
-    #postForm { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.4); width:300px; }
-    #postForm input, #postForm textarea { width:100%; padding:8px; margin:5px 0; border:1px solid #ccc; border-radius:5px; }
-    #closeForm { background:red; color:white; border:none; padding:5px 10px; cursor:pointer; float:right; }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { margin: 0; font-size: 24px; }
+    button {
+      padding: 8px 14px; margin: 5px;
+      border: none; cursor: pointer;
+      border-radius: 8px;
+      font-weight: bold;
+      background: linear-gradient(145deg,#4CAF50,#45a049);
+      color: white;
+      box-shadow: 2px 2px 6px #aaa;
+    }
+    button:hover { opacity: 0.9; }
+    #propertyForm {
+      display: none;
+      margin: 20px auto; max-width: 400px; padding: 20px;
+      border: 1px solid #ccc; border-radius: 10px;
+      background: #fff; box-shadow: 2px 2px 8px #aaa;
+    }
+    input, textarea {
+      width: 100%; padding: 8px; margin: 6px 0;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    #propertyList {
+      margin: 20px; display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+      gap: 15px;
+    }
+    .card {
+      background: #fff; padding: 10px; border-radius: 12px;
+      box-shadow: 2px 2px 10px #ccc;
+    }
+    .card img { width: 100%; border-radius: 8px; }
+    .deleteBtn {
+      background: red; margin-top: 5px;
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Zara Property</h1>
-    <nav>
-      <a href="#">Home</a>
-      <a href="#">Buy</a>
-      <a href="#">Rent</a>
-      <a href="#">Contact</a>
-    </nav>
-  </header>
-
-  <div class="search-box">
-    <input type="text" id="searchBox" placeholder="Search Property by City or Type...">
+<header>
+  <h1>Zara Property Listing</h1>
+  <div>
+    <button id="loginBtn">Google Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
+</header>
 
-  <div class="property-list" id="propertyList"></div>
+<!-- Upload Button -->
+<div style="text-align:center; margin-top:20px;">
+  <button id="uploadBtn" style="display:none;">➕ Property Post करें</button>
+</div>
 
-  <!-- Post Property Button -->
-  <button id="postBtn">+ Post Property</button>
+<!-- Property Form -->
+<div id="propertyForm">
+  <h3>नई Property जोड़ें</h3>
+  <input type="text" id="title" placeholder="Property Title" required>
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input type="text" id="price" placeholder="Price (₹)">
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+  <input type="file" id="imageFile" accept="image/*">
+  <button onclick="uploadProperty()">Upload</button>
+</div>
 
-  <!-- Post Property Form -->
-  <div id="postForm">
-    <button id="closeForm">X</button>
-    <h2>Post Property</h2>
-    <input type="text" id="title" placeholder="Property Title" required>
-    <textarea id="desc" placeholder="Description" required></textarea>
-    <input type="text" id="price" placeholder="Price" required>
-    <input type="text" id="city" placeholder="City" required>
-    <input type="file" id="image" accept="image/*">
-    <button onclick="uploadProperty()">Submit</button>
-  </div>
+<!-- Property List -->
+<div id="propertyList"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
   // Firebase Config
- const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFgRQxK_W2T9S5QWZnxAd-kYV52Kzyb94",
+    authDomain: "zara-life-care.firebaseapp.com",
+    databaseURL: "https://zara-life-care-default-rtdb.firebaseio.com/",
+    projectId: "zara-life-care",
+    storageBucket: "zara-life-care.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef"
+  };
   firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
   const db = firebase.database();
 
-  const postBtn = document.getElementById("postBtn");
-  const postForm = document.getElementById("postForm");
-  const closeForm = document.getElementById("closeForm");
+  let currentUser = null;
 
-  postBtn.onclick = () => postForm.style.display = "block";
-  closeForm.onclick = () => postForm.style.display = "none";
+  // Google Login
+  document.getElementById("loginBtn").onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  };
+  document.getElementById("logoutBtn").onclick = () => auth.signOut();
 
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("loginBtn").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "inline-block";
+      document.getElementById("uploadBtn").style.display = "inline-block";
+    } else {
+      currentUser = null;
+      document.getElementById("loginBtn").style.display = "inline-block";
+      document.getElementById("logoutBtn").style.display = "none";
+      document.getElementById("uploadBtn").style.display = "none";
+      document.getElementById("propertyForm").style.display = "none";
+    }
+  });
+
+  // Show Form
+  document.getElementById("uploadBtn").onclick = () => {
+    document.getElementById("propertyForm").style.display =
+      document.getElementById("propertyForm").style.display === "none" ? "block" : "none";
+  };
+
+  // Upload Property
   function uploadProperty() {
     const title = document.getElementById("title").value;
     const desc = document.getElementById("desc").value;
     const price = document.getElementById("price").value;
-    const city = document.getElementById("city").value;
-    const imageFile = document.getElementById("image").files[0];
-
-    if (!title || !desc || !price || !city || !imageFile) {
-      alert("Please fill all fields!");
+    const whatsapp = document.getElementById("whatsapp").value;
+    const file = document.getElementById("imageFile").files[0];
+    if (!title || !file) {
+      alert("Title और Image जरूरी है");
       return;
     }
 
-    // Upload to ImgBB
+    // ImgBB API Upload
     const formData = new FormData();
-    formData.append("image", imageFile);
-    fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
+    formData.append("image", file);
+
+    fetch("https://api.imgbb.com/1/upload?key=9666667be1a890e44490c3dff1f1a120", {
       method: "POST",
       body: formData
     })
     .then(res => res.json())
     .then(data => {
       const imageUrl = data.data.url;
-      const newProp = { title, desc, price, city, image: imageUrl };
-      db.ref("properties").push(newProp);
-      alert("Property Posted!");
-      postForm.style.display = "none";
+      const propertyRef = db.ref("properties").push();
+      propertyRef.set({
+        title, desc, price, whatsapp,
+        imageUrl,
+        uid: currentUser.uid
+      });
+      alert("Property Uploaded!");
+      document.getElementById("propertyForm").reset();
+      document.getElementById("propertyForm").style.display="none";
     });
   }
 
-  // Fetch Properties
-  db.ref("properties").on("value", snap => {
+  // Load Properties
+  db.ref("properties").on("value", snapshot => {
     const list = document.getElementById("propertyList");
     list.innerHTML = "";
-    snap.forEach(data => {
-      const prop = data.val();
-      list.innerHTML += `
-        <div class="card">
-          <img src="${prop.image}" alt="">
-          <div class="card-body">
-            <h3>${prop.title}</h3>
-            <p>${prop.desc}</p>
-            <p><b>Price:</b> ₹${prop.price}</p>
-            <p><b>City:</b> ${prop.city}</p>
-          </div>
-        </div>
+    snapshot.forEach(child => {
+      const prop = child.val();
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${prop.imageUrl}" alt="">
+        <h3>${prop.title}</h3>
+        <p>${prop.desc}</p>
+        <p><b>Price:</b> ₹${prop.price}</p>
+        <a href="https://wa.me/${prop.whatsapp}" target="_blank">📲 WhatsApp</a>
       `;
+      if (currentUser && currentUser.uid === prop.uid) {
+        const del = document.createElement("button");
+        del.className = "deleteBtn";
+        del.innerText = "Delete";
+        del.onclick = () => db.ref("properties/"+child.key).remove();
+        card.appendChild(del);
+      }
+      list.appendChild(card);
     });
   });
 </script>
