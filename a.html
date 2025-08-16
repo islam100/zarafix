@@ -2,66 +2,77 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zara Property</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zara Property Listing</title>
 <style>
-  body{font-family:sans-serif;margin:0;padding:0;background:#f0f0f0;}
-  header{background:#222;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
-  header h2{margin:0;}
-  header button{padding:8px 12px;margin-left:10px;border:none;border-radius:5px;background:#ff9800;color:#fff;cursor:pointer;box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
-  .container{padding:20px;}
-  .card-container{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;}
-  .card{background:#fff;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:250px;position:relative;}
-  .card img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
-  .card h3{margin:10px 0 5px;}
-  .card p{margin:5px 0;font-size:14px;color:#555;}
-  .card button{margin-top:5px;width:100%;padding:6px;border:none;border-radius:5px;background:#2196F3;color:#fff;cursor:pointer;}
-  form{background:#fff;padding:15px;border-radius:10px;max-width:500px;margin:0 auto 20px;}
-  input, textarea{width:100%;margin:5px 0 10px;padding:8px;border-radius:5px;border:1px solid #ccc;}
-  #adminDashboard{display:none;}
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f2f2f2;}
+  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#1e90ff; color:white;}
+  header h1 { margin:0; font-size:1.5rem; text-shadow: 2px 2px 4px #000; }
+  .btn { padding:10px 20px; margin:5px; border:none; cursor:pointer; border-radius:10px; font-weight:bold; box-shadow: 3px 3px 5px #888; }
+  .btn-3d { box-shadow: 3px 3px 6px #555; }
+  .btn-approve { background:green; color:white;}
+  .btn-delete { background:red; color:white;}
+  .btn-login { background:#fff; color:#1e90ff; }
+  #propertyForm, #properties, #adminPanel { padding:20px; max-width:1200px; margin:auto;}
+  .property-card { background:white; margin:10px; padding:10px; border-radius:10px; display:inline-block; width:250px; vertical-align:top; box-shadow: 3px 3px 5px #aaa;}
+  .property-card img { width:100%; border-radius:10px; height:150px; object-fit:cover; }
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center;}
+  .modal-content { background:white; padding:20px; border-radius:10px; max-width:500px; width:90%;}
 </style>
 </head>
 <body>
 
 <header>
-  <h2>Zara Property</h2>
-  <div>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
+  <h1>Zara Property Listing</h1>
+  <button class="btn btn-login" id="googleLoginBtn">Admin Login</button>
 </header>
 
-<div class="container">
-
-  <!-- Poster Form -->
-  <form id="posterForm">
-    <h3>Submit Property</h3>
-    <input type="text" id="title" placeholder="Title" required>
-    <input type="text" id="price" placeholder="Price" required>
-    <input type="url" id="image" placeholder="Image URL" required>
-    <textarea id="desc" placeholder="Description" required></textarea>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <button type="submit">Submit Property</button>
+<!-- Poster Form -->
+<section id="propertyForm">
+  <h2>Post Property</h2>
+  <form id="newPropertyForm">
+    <input type="text" id="title" placeholder="Title" required><br><br>
+    <input type="text" id="city" placeholder="City" required><br><br>
+    <select id="type" required>
+      <option value="">Select Type</option>
+      <option value="sale">Sale</option>
+      <option value="rent">Rent</option>
+    </select><br><br>
+    <input type="number" id="price" placeholder="Price" required><br><br>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required><br><br>
+    <textarea id="description" placeholder="Description" required></textarea><br><br>
+    <input type="file" id="image" accept="image/*" required><br><br>
+    <button type="submit" class="btn btn-3d">Post Property</button>
   </form>
+</section>
 
-  <!-- Admin Dashboard -->
-  <div id="adminDashboard">
-    <h3>Admin Dashboard</h3>
-    <div class="card-container" id="propertyList"></div>
+<!-- Properties Listing -->
+<section id="properties">
+  <h2>Properties</h2>
+  <div id="propertyList"></div>
+</section>
+
+<!-- Admin Panel -->
+<section id="adminPanel" style="display:none;">
+  <h2>Admin Panel</h2>
+  <div id="adminPropertyList"></div>
+</section>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span id="modalClose" style="cursor:pointer; float:right;">&times;</span>
+    <div id="modalBody"></div>
   </div>
-
-  <!-- Public Listing -->
-  <h3>Approved Properties</h3>
-  <div class="card-container" id="approvedList"></div>
-
 </div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
@@ -71,115 +82,101 @@ const firebaseConfig = {
   messagingSenderId: "916859697394",
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
-firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// Admin emails
-const admins = { "youradmin@gmail.com": true }; // <--- change your admin email
+const googleLoginBtn = document.getElementById('googleLoginBtn');
+const adminPanel = document.getElementById('adminPanel');
 
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const posterForm = document.getElementById('posterForm');
-const adminDashboard = document.getElementById('adminDashboard');
-const propertyList = document.getElementById('propertyList');
-const approvedList = document.getElementById('approvedList');
+let currentAdmin = null;
 
-loginBtn.onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-}
-
-logoutBtn.onclick = () => auth.signOut();
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'inline-block';
-    if(admins[user.email]){
-      adminDashboard.style.display = 'block';
-      loadProperties();
+// Google login
+googleLoginBtn.addEventListener('click', async ()=>{
+  const result = await signInWithPopup(auth, provider);
+  const user = result.user;
+  const adminCheck = ref(db, 'admins/' + user.email.replace('.',','));
+  onValue(adminCheck, (snap)=>{
+    if(snap.exists() && snap.val()===true){
+      currentAdmin = user.email;
+      alert('Admin logged in');
+      adminPanel.style.display = 'block';
     } else {
-      adminDashboard.style.display = 'none';
+      alert('You are not admin');
     }
-  } else {
-    loginBtn.style.display = 'inline-block';
-    logoutBtn.style.display = 'none';
-    adminDashboard.style.display = 'none';
-  }
+  }, {onlyOnce:true});
 });
 
-// Submit property
-posterForm.addEventListener('submit', e=>{
+// Post Property
+const newPropertyForm = document.getElementById('newPropertyForm');
+newPropertyForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const id = 'prop_'+Date.now();
-  db.ref('properties/'+id).set({
-    title: document.getElementById('title').value,
-    price: document.getElementById('price').value,
-    image: document.getElementById('image').value,
-    desc: document.getElementById('desc').value,
-    whatsapp: document.getElementById('whatsapp').value,
-    approved: false
+  const title = document.getElementById('title').value;
+  const city = document.getElementById('city').value;
+  const type = document.getElementById('type').value;
+  const price = document.getElementById('price').value;
+  const whatsapp = document.getElementById('whatsapp').value;
+  const description = document.getElementById('description').value;
+  const file = document.getElementById('image').files[0];
+
+  const storageReference = sRef(storage, 'images/'+Date.now()+file.name);
+  await uploadBytes(storageReference, file);
+  const imageUrl = await getDownloadURL(storageReference);
+
+  push(ref(db, 'properties'), {
+    title, city, type, price, whatsapp, description, imageUrl, approved:false, timestamp:Date.now()
   });
-  alert('Property submitted! Waiting for admin approval.');
-  posterForm.reset();
+
+  newPropertyForm.reset();
+  alert('Property posted, waiting for admin approval');
 });
 
-// Load properties for admin
-function loadProperties(){
-  propertyList.innerHTML = '';
-  db.ref('properties').on('value', snapshot=>{
-    propertyList.innerHTML = '';
-    snapshot.forEach(snap=>{
-      const prop = snap.val();
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${prop.image}">
-        <h3>${prop.title}</h3>
-        <p>${prop.desc}</p>
-        <p>₹ ${prop.price}</p>
-        <p>WhatsApp: <a href="https://wa.me/${prop.whatsapp}" target="_blank">${prop.whatsapp}</a></p>
-        <p>Status: ${prop.approved ? 'Approved ✅' : 'Pending ❌'}</p>
-        <button class="approveBtn">${prop.approved ? 'Unapprove' : 'Approve'}</button>
-        <button class="deleteBtn" style="background:red;">Delete</button>
-      `;
-      const approveBtn = card.querySelector('.approveBtn');
-      const deleteBtn = card.querySelector('.deleteBtn');
+// Display Properties
+const propertyList = document.getElementById('propertyList');
+const adminPropertyList = document.getElementById('adminPropertyList');
 
-      approveBtn.onclick = ()=>{
-        db.ref('properties/'+snap.key+'/approved').set(!prop.approved);
-      }
-      deleteBtn.onclick = ()=>{
-        if(confirm('Delete this property?')){
-          db.ref('properties/'+snap.key).remove();
-        }
-      }
-      propertyList.appendChild(card);
-    });
+onValue(ref(db,'properties'), (snapshot)=>{
+  propertyList.innerHTML='';
+  adminPropertyList.innerHTML='';
+  snapshot.forEach(snap=>{
+    const data = snap.val();
+    const key = snap.key;
+    if(data.approved){
+      propertyList.innerHTML += `
+      <div class="property-card">
+        <img src="${data.imageUrl}" alt="${data.title}">
+        <h3>${data.title}</h3>
+        <p>${data.city} | ${data.type} | ₹${data.price}</p>
+        <p>${data.description}</p>
+        <a href="https://wa.me/${data.whatsapp}" target="_blank" class="btn btn-3d">WhatsApp</a>
+      </div>`;
+    }
+    if(!data.approved && currentAdmin){
+      adminPropertyList.innerHTML += `
+      <div class="property-card">
+        <img src="${data.imageUrl}" alt="${data.title}">
+        <h3>${data.title}</h3>
+        <p>${data.city} | ${data.type} | ₹${data.price}</p>
+        <p>${data.description}</p>
+        <a href="https://wa.me/${data.whatsapp}" target="_blank" class="btn btn-3d">WhatsApp</a><br><br>
+        <button class="btn btn-approve" onclick="approveProperty('${key}')">Approve</button>
+        <button class="btn btn-delete" onclick="deleteProperty('${key}')">Delete</button>
+      </div>`;
+    }
   });
+});
+
+// Approve/Delete functions
+window.approveProperty = (key)=>{
+  update(ref(db,'properties/'+key), {approved:true});
+}
+window.deleteProperty = (key)=>{
+  remove(ref(db,'properties/'+key));
 }
 
-// Load approved properties for public
-db.ref('properties').on('value', snapshot=>{
-  approvedList.innerHTML = '';
-  snapshot.forEach(snap=>{
-    const prop = snap.val();
-    if(prop.approved){
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${prop.image}">
-        <h3>${prop.title}</h3>
-        <p>${prop.desc}</p>
-        <p>₹ ${prop.price}</p>
-        <p><a href="https://wa.me/${prop.whatsapp}" target="_blank">WhatsApp</a></p>
-      `;
-      approvedList.appendChild(card);
-    }
-  });
-});
 </script>
 
 </body>
