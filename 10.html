@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZaraFix – Admin Dashboard</title>
+<style>
+  :root{--bg:#0b1b2a;--card:#fff;--ink:#0f172a;--muted:#64748b;--brand:#2563eb;--green:#16a34a;--ring:rgba(37,99,235,.2)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f8fafc;color:var(--ink)}
+  header{position:sticky;top:0;z-index:40;background:#0b1b2a;color:#e5e7eb;border-bottom:1px solid rgba(255,255,255,.08)}
+  .container{max-width:1200px;margin:0 auto;padding:12px 16px}
+  h1{font-size:20px;margin:0}
+  .grid{display:grid;grid-template-columns:260px 1fr;gap:16px;margin:16px 0}
+  .side{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:10px;height:fit-content;position:sticky;top:70px}
+  .btn{display:inline-flex;gap:8px;align-items:center;border:1px solid #e5e7eb;background:#fff;color:#111827;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.green{background:var(--green);border-color:var(--green);color:#fff}
+  .btn.danger{background:#ef4444;border-color:#ef4444;color:#fff}
+  .btn.ghost{background:transparent;color:#e2e8f0;border-color:#334155}
+  .menu{display:flex;flex-direction:column;gap:8px}
+  .menu button{width:100%;justify-content:flex-start}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px}
+  .cards{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .tile{grid-column:span 6;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px}
+  .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .muted{color:var(--muted)}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;font:inherit}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th{font-size:12px;text-transform:uppercase;color:#475569;text-align:left}
+  td,th{padding:8px 10px;background:#fff}
+  tr td{border:1px solid #e5e7eb;border-left-width:1px}
+  tr td:first-child{border-radius:10px 0 0 10px}
+  tr td:last-child{border-radius:0 10px 10px 0}
+  .kpi{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-bottom:12px}
+  .kpi .card{grid-column:span 3}
+  @media (max-width: 960px){ .grid{grid-template-columns:1fr} .kpi .card{grid-column:span 6} .tile{grid-column:span 12} }
+</style>
+</head>
+<body>
+<header>
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#60a5fa,#22c55e);display:grid;place-items:center;color:#003;font-weight:900">ZF</div>
+      <div>
+        <h1>ZaraFix – Admin</h1>
+        <small class="muted" id="authNote">Not logged in</small>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" id="loginBtn">Login with Google</button>
+      <button class="btn" id="logoutBtn" style="display:none">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="container grid">
+  <aside class="side">
+    <div class="menu">
+      <button class="btn" data-tab="dashboard">Overview</button>
+      <button class="btn" data-tab="posters">Posters</button>
+      <button class="btn" data-tab="users">Users</button>
+      <button class="btn" data-tab="requests">Service Requests</button>
+      <button class="btn" data-tab="assignments">Assignments</button>
+      <button class="btn" data-tab="recharges">Recharge Requests</button>
+      <hr/>
+      <button class="btn" data-tab="admins">Admins</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- KPIs -->
+    <section class="kpi" id="kpiWrap" style="display:none">
+      <div class="card"><div class="muted">Total Posters</div><div id="kpiPosters" style="font-size:22px;font-weight:800">0</div></div>
+      <div class="card"><div class="muted">Total Users</div><div id="kpiUsers" style="font-size:22px;font-weight:800">0</div></div>
+      <div class="card"><div class="muted">Open Requests</div><div id="kpiOpen" style="font-size:22px;font-weight:800">0</div></div>
+      <div class="card"><div class="muted">Pending Recharges</div><div id="kpiRech" style="font-size:22px;font-weight:800">0</div></div>
+    </section>
+
+    <!-- Dynamic tabs -->
+    <section class="card" id="tab-dashboard" style="display:none">
+      <h3>Overview</h3>
+      <p class="muted">High level stats of ZaraFix.</p>
+    </section>
+
+    <section class="card" id="tab-posters" style="display:none">
+      <div class="row"><h3>Posters</h3></div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Shop</th><th>Category</th><th>City</th><th>Wallet ₹</th><th>Phone</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="posterRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="tab-users" style="display:none">
+      <div class="row"><h3>Users</h3></div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>City</th><th>Total Requests</th></tr>
+          </thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="tab-requests" style="display:none">
+      <div class="row">
+        <h3>Service Requests</h3>
+        <div class="muted">Only open or in-progress items are shown.</div>
+      </div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr><th>Title</th><th>User</th><th>City</th><th>Status</th><th>Assigned Poster</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="reqRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="tab-assignments" style="display:none">
+      <div class="row"><h3>Assignments (Accepted Jobs)</h3></div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr><th>Request</th><th>Poster</th><th>Accepted At</th><th>Status</th></tr>
+          </thead>
+          <tbody id="asgnRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="tab-recharges" style="display:none">
+      <div class="row"><h3>Recharge Requests</h3></div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr><th>Poster</th><th>Amount</th><th>Note</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="rechRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="tab-admins" style="display:none">
+      <h3>Admin Access</h3>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="newAdminEmail" placeholder="admin@example.com" style="max-width:320px"/>
+        <button class="btn primary" id="addAdminBtn">Add Admin</button>
+      </div>
+      <div style="height:8px"></div>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Email</th><th>Action</th></tr></thead>
+          <tbody id="adminRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Firebase v10 modular -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  import { getDatabase, ref, onValue, get, set, update, remove, push, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+  // ==== CONFIG: fill with your project ====
+  const firebaseConfig = {
+    apiKey: "YOUR_KEY",
+    authDomain: "YOUR_DOMAIN",
+    databaseURL: "YOUR_DB_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_SENDER",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  // ===== helpers =====
+  const $ = (s,ctx=document)=>ctx.querySelector(s);
+  const $$ = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
+  const enc = (email)=>encodeURIComponent(email||'').toLowerCase();
+
+  let isAdmin=false, currentUser=null;
+  const provider = new GoogleAuthProvider();
+  $('#loginBtn').addEventListener('click', async ()=>{ try{ await signInWithPopup(auth, provider);}catch(e){ alert(e.message);} });
+  $('#logoutBtn').addEventListener('click', async ()=>{ await signOut(auth); });
+
+  async function checkAdmin(email){
+    if(!email) return false;
+    const snap = await get(ref(db, 'admins/'+enc(email)));
+    return !!snap.val();
+  }
+
+  onAuthStateChanged(auth, async (user)=>{
+    currentUser=user||null;
+    $('#authNote').textContent = user ? (user.email||user.uid) : 'Not logged in';
+    $('#loginBtn').style.display = user?'none':'inline-flex';
+    $('#logoutBtn').style.display = user?'inline-flex':'none';
+    isAdmin = await checkAdmin(user?.email);
+    const tabs = ['dashboard','posters','users','requests','assignments','recharges','admins'];
+    tabs.forEach(id=>$('#tab-'+id).style.display = isAdmin? 'block':'none');
+    $('#kpiWrap').style.display = isAdmin? 'grid':'none';
+    if(isAdmin){ loadAll(); bindMenu(); } else { if(user) alert('You are not an admin.'); }
+  });
+
+  function bindMenu(){
+    $$('.menu .btn').forEach(b=>{
+      b.onclick = ()=>{
+        const id = b.dataset.tab;
+        $$('.card[id^="tab-"]').forEach(x=>x.style.display='none');
+        $('#tab-'+id).style.display='block';
+      }
+    });
+    // default
+    $('#tab-dashboard').style.display='block';
+  }
+
+  // ===== data loaders =====
+  function loadAll(){
+    // posters
+    onValue(ref(db,'posters'), (snap)=>{
+      const posters = snap.val()||{};
+      $('#kpiPosters').textContent = Object.keys(posters).length;
+      const rows = Object.entries(posters).map(([id,p])=>{
+        return `<tr>
+          <td>${p.name||''}</td>
+          <td>${p.shop||''}</td>
+          <td>${p.category||''}</td>
+          <td>${p.city||''}</td>
+          <td>${Number(p.wallet||0)}</td>
+          <td>${p.phone||''}</td>
+          <td>
+            <button class="btn" data-act="view" data-id="${id}">View</button>
+            <button class="btn danger" data-act="delPoster" data-id="${id}">Delete</button>
+          </td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="7" class="muted">No posters.</td></tr>`;
+      $('#posterRows').innerHTML = rows;
+      $('#posterRows').querySelectorAll('button[data-act="delPoster"]').forEach(btn=>{
+        btn.onclick = async (e)=>{ const id = e.currentTarget.dataset.id; if(confirm('Delete poster?')) await remove(ref(db,'posters/'+id)); };
+      });
+    });
+
+    // users
+    onValue(ref(db,'users'), (snap)=>{
+      const users = snap.val()||{};
+      $('#kpiUsers').textContent = Object.keys(users).length;
+      const rows = Object.entries(users).map(([id,u])=>{
+        const total = Object.values(u.requests||{}).length;
+        return `<tr>
+          <td>${u.name||''}</td>
+          <td>${u.phone||''}</td>
+          <td>${u.city||''}</td>
+          <td>${total}</td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="4" class="muted">No users.</td></tr>`;
+      $('#userRows').innerHTML = rows;
+    });
+
+    // service requests
+    onValue(ref(db,'serviceRequests'), (snap)=>{
+      const reqs = snap.val()||{};
+      const list = Object.entries(reqs).map(([id,r])=>({id,...r}));
+      const openCount = list.filter(r=> (r.status||'open')!=='done').length;
+      $('#kpiOpen').textContent = openCount;
+      const rows = list.map(r=>{
+        return `<tr>
+          <td>${r.title||''}</td>
+          <td>${r.userName||''} (${r.userPhone||''})</td>
+          <td>${r.city||''}</td>
+          <td>${r.status||'open'}</td>
+          <td>${r.assignedPosterName||'-'}</td>
+          <td>
+            <button class="btn" data-act="assign" data-id="${r.id}">Assign</button>
+            <button class="btn green" data-act="markDone" data-id="${r.id}">Mark Done</button>
+            <button class="btn danger" data-act="deleteReq" data-id="${r.id}">Delete</button>
+          </td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="6" class="muted">No requests.</td></tr>`;
+      $('#reqRows').innerHTML = rows;
+
+      // actions
+      $('#reqRows').querySelectorAll('button[data-act="deleteReq"]').forEach(b=>{
+        b.onclick = async (e)=>{ const id=e.currentTarget.dataset.id; if(confirm('Delete request?')) await remove(ref(db,'serviceRequests/'+id)); };
+      });
+      $('#reqRows').querySelectorAll('button[data-act="markDone"]').forEach(b=>{
+        b.onclick = async (e)=>{ const id=e.currentTarget.dataset.id; await update(ref(db,'serviceRequests/'+id), {status:'done'}); };
+      });
+      $('#reqRows').querySelectorAll('button[data-act="assign"]').forEach(b=>{
+        b.onclick = async (e)=>{ 
+          const id=e.currentTarget.dataset.id; 
+          const postersSnap = await get(ref(db,'posters'));
+          const posters = postersSnap.val()||{};
+          const names = Object.entries(posters).map(([pid,p])=>`${pid}::${p.name} (${p.city})`);
+          const choice = prompt('Choose poster (enter ID from list):\n'+names.join('\n')+'\n\nType Poster ID:');
+          if(!choice) return;
+          const pid = choice.trim();
+          const p = posters[pid];
+          if(!p){ alert('Invalid poster id'); return; }
+          await update(ref(db,'serviceRequests/'+id), { assignedPosterId: pid, assignedPosterName: p.name||'Poster', status: 'assigned' });
+          const logRef = push(ref(db,'assignments'));
+          await set(logRef, { requestId:id, posterId:pid, posterName:p.name||'', acceptedAt: Date.now(), status:'assigned' });
+        };
+      });
+    });
+
+    // assignments
+    onValue(ref(db,'assignments'), (snap)=>{
+      const asgn = snap.val()||{};
+      const rows = Object.entries(asgn).map(([id,a])=>{
+        const dt = new Date(a.acceptedAt||Date.now()).toLocaleString();
+        return `<tr>
+          <td>${a.requestId}</td>
+          <td>${a.posterName||a.posterId}</td>
+          <td>${dt}</td>
+          <td>${a.status||'assigned'}</td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="4" class="muted">No assignments.</td></tr>`;
+      $('#asgnRows').innerHTML = rows;
+    });
+
+    // recharge requests
+    onValue(ref(db,'rechargeRequests'), (snap)=>{
+      const rec = snap.val()||{};
+      const pend = Object.values(rec).filter(r=>(r.status||'pending')==='pending').length;
+      $('#kpiRech').textContent = pend;
+      const rows = Object.entries(rec).map(([id,r])=>{
+        return `<tr>
+          <td>${r.posterName||r.posterId}</td>
+          <td>${Number(r.amount||0)}</td>
+          <td>${r.note||''}</td>
+          <td>${r.status||'pending'}</td>
+          <td>
+            ${r.status==='approved' ? '' : `<button class="btn green" data-act="approve" data-id="${id}">Approve</button>`}
+            <button class="btn danger" data-act="reject" data-id="${id}">Reject</button>
+          </td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="5" class="muted">No recharge requests.</td></tr>`;
+      $('#rechRows').innerHTML = rows;
+
+      // handlers
+      $('#rechRows').querySelectorAll('button[data-act="approve"]').forEach(b=>{
+        b.onclick = async (e)=>{
+          const id = e.currentTarget.dataset.id;
+          const snap = await get(ref(db,'rechargeRequests/'+id));
+          const r = snap.val(); if(!r){alert('Not found'); return;}
+          // credit wallet atomically
+          await runTransaction(ref(db,'posters/'+r.posterId+'/wallet'), (bal)=> Number(bal||0) + Number(r.amount||0));
+          await update(ref(db,'rechargeRequests/'+id), { status:'approved', approvedAt: Date.now(), admin: currentUser?.email||'admin' });
+          alert('Approved & wallet credited.');
+        };
+      });
+      $('#rechRows').querySelectorAll('button[data-act="reject"]').forEach(b=>{
+        b.onclick = async (e)=>{
+          const id = e.currentTarget.dataset.id;
+          await update(ref(db,'rechargeRequests/'+id), { status:'rejected', decidedAt: Date.now(), admin: currentUser?.email||'admin' });
+        };
+      });
+    });
+
+    // admins
+    onValue(ref(db,'admins'), (snap)=>{
+      const admins = snap.val()||{};
+      const rows = Object.keys(admins).map(k=>{
+        const email = decodeURIComponent(k);
+        return `<tr><td>${email}</td><td><button class="btn danger" data-act="rmAdmin" data-id="${k}">Remove</button></td></tr>`;
+      }).join('') || `<tr><td colspan="2" class="muted">No admins added.</td></tr>`;
+      $('#adminRows').innerHTML = rows;
+      $('#adminRows').querySelectorAll('button[data-act="rmAdmin"]').forEach(b=>{
+        b.onclick = async (e)=>{ const id=e.currentTarget.dataset.id; if(confirm('Remove admin?')) await remove(ref(db,'admins/'+id)); };
+      });
+    });
+
+    // add admin
+    $('#addAdminBtn').onclick = async ()=>{
+      const email = ($('#newAdminEmail').value||'').trim().toLowerCase();
+      if(!email || !email.includes('@')) return alert('Enter valid email');
+      await set(ref(db, 'admins/'+enc(email)), true);
+      $('#newAdminEmail').value='';
+    };
+  }
+</script>
+</body>
+</html>
