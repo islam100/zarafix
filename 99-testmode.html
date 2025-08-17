@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zara Property — Listings (Storage upload + Admin)</title>
+
+<!-- fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+<style>
+  :root{
+    --bg-1:#fff7ed; --bg-2:#fef3c7;
+    --card:#ffffff; --muted:#6b7280;
+    --accent1:#06b6d4; --accent2:#7c3aed; --accent3:#22c55e;
+    --shadow: 0 10px 30px rgba(2,6,23,0.08);
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;margin:0;background:linear-gradient(135deg,var(--bg-1),var(--bg-2));color:#0f172a}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;position:sticky;top:0;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+  .brand{display:flex;gap:12px;align-items:center}
+  /* Logo: Zara Property (3D raised) */
+  .logo-wrap {display:flex;align-items:center;gap:10px}
+  .logo-badge{
+    width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff,#f3e8ff);
+    display:grid;place-items:center;font-weight:900;color:#0b1220;font-size:18px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.18), inset 0 2px 6px rgba(255,255,255,0.6);
+    transform: translateY(-2px);
+  }
+  .logo-text{
+    display:flex;flex-direction:column;line-height:1;
+  }
+  .logo-title{font-weight:900;font-size:18px;letter-spacing:.3px;text-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .logo-sub{font-size:12px;opacity:.9}
+  .actions{display:flex;gap:8px;align-items:center}
+
+  .app-btn{border:0;padding:10px 14px;border-radius:12px;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 10px 30px rgba(2,6,23,.12);transition:transform .18s,box-shadow .18s}
+  .app-btn:active{transform:translateY(2px)}
+  .btn-login{background:linear-gradient(135deg,var(--accent1),var(--accent2))}
+  .btn-logout{background:linear-gradient(135deg,#ef4444,#dc2626)}
+  .btn-post{background:linear-gradient(135deg,var(--accent3),#16a34a)}
+  .btn-admin{background:linear-gradient(135deg,#f97316,#ef4444)}
+
+  .container{max-width:1100px;margin:18px auto;padding:0 16px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .search{display:flex;gap:8px;align-items:center;flex:1;min-width:240px}
+  input.search-in, select.search-in {padding:10px 12px;border-radius:12px;border:1px solid rgba(15,23,42,.06);min-width:150px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow);cursor:pointer;transition:transform .25s,box-shadow .25s}
+  .card:hover{transform:translateY(-6px);box-shadow:0 18px 50px rgba(2,6,23,.12)}
+  .card.expand{grid-column:1/-1;transform:none}
+  .thumb{height:200px;border-radius:10px;overflow:hidden;background:#f1f5f9}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .title{font-weight:800;margin:10px 0 6px}
+  .meta{color:var(--muted);font-size:13px}
+  .desc{margin-top:10px;color:#0f172a}
+  .foot{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .wa-btn{background:#25D366;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:700;box-shadow:0 8px 18px rgba(37,211,102,0.18)}
+  .s-btn{background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#fff;padding:8px 12px;border-radius:10px;border:none;font-weight:700}
+
+  /* skeleton */
+  .skeleton{background:linear-gradient(90deg,#eef2ff,#f5f7ff,#eef2ff);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* responsive */
+  @media (max-width:980px){ .grid{grid-template-columns:repeat(2,1fr)} .thumb{height:170px} }
+  @media (max-width:640px){ header{padding:12px} .grid{grid-template-columns:1fr} .thumb{height:180px} .topbar{flex-direction:column;align-items:stretch} }
+
+  /* Post sheet */
+  .panel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:80;padding:16px}
+  .panel.open{display:flex}
+  .sheet{width:min(760px,98vw);background:#fff;border-radius:12px;overflow:auto;box-shadow:0 30px 60px rgba(2,6,23,.25)}
+  .sheet header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #eef2ff}
+  .sheet .content{padding:14px}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+  .field{grid-column:span 6}
+  input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6edf3}
+  textarea{min-height:110px}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo-wrap">
+      <div class="logo-badge">ZP</div>
+      <div class="logo-text">
+        <div class="logo-title">Zara Property</div>
+        <div class="logo-sub">Post → Admin Approve → Live</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <div id="userEmail" style="color:rgba(255,255,255,.95);font-weight:700"></div>
+    <button id="btnPost" class="app-btn btn-post" style="display:none">Post Property</button>
+    <button id="btnAdmin" class="app-btn btn-admin" style="display:none">Admin</button>
+    <button id="btnLogin" class="app-btn btn-login">Login</button>
+    <button id="btnLogout" class="app-btn btn-logout" style="display:none">Logout</button>
+  </div>
+</header>
+
+<main class="container">
+  <div class="topbar">
+    <div class="search">
+      <input id="q" class="search-in" placeholder="Search title, city..." />
+      <select id="filterCity" class="search-in"><option value="">All Cities</option></select>
+      <button id="btnSearch" class="s-btn">Search</button>
+    </div>
+    <div id="countTxt" class="muted">Loading...</div>
+  </div>
+
+  <section id="listWrap">
+    <div id="grid" class="grid">
+      <!-- skeleton placeholders while loading -->
+      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div><div style="height:10px;width:40%" class="skeleton"></div></div>
+      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div><div style="height:10px;width:40%" class="skeleton"></div></div>
+      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div><div style="height:10px;width:40%" class="skeleton"></div></div>
+    </div>
+  </section>
+
+  <section id="adminPanel" style="margin-top:18px;display:none">
+    <h3>Admin — Pending Approvals</h3>
+    <div id="pendingList" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<!-- Post Panel -->
+<div id="postPanel" class="panel">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <header>
+      <strong id="panelTitle">Post Property</strong>
+      <div><button id="closePanel" class="app-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626)">Close</button></div>
+    </header>
+    <div class="content">
+      <div class="row">
+        <div class="field"><label>Title</label><input id="pTitle" /></div>
+        <div class="field"><label>City</label><input id="pCity" /></div>
+        <div class="field"><label>Type</label><select id="pType"><option>Flat</option><option>House</option><option>Plot</option><option>Shop</option></select></div>
+        <div class="field"><label>Price (₹)</label><input id="pPrice" type="number" /></div>
+        <div class="field"><label>WhatsApp (with country code, e.g. 9198...)</label><input id="pWA" placeholder="919876543210"/></div>
+        <div class="field"><label>Image (choose file)</label><input id="pFile" type="file" accept="image/*" /></div>
+        <div class="field" style="grid-column:span 12"><label>Description</label><textarea id="pDesc"></textarea></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <button id="submitPost" class="app-btn btn-post">Submit</button>
+        <button id="submitUpdate" class="app-btn" style="display:none;background:linear-gradient(135deg,#f59e0b,#ef4444)">Update</button>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:13px">Tip: Image will be uploaded to Firebase Storage automatically.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase & App Logic -->
+<script>
+  // ===== Firebase config (your provided) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
+
+  // ===== constants & elements =====
+  const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+  const btnLogin = document.getElementById('btnLogin');
+  const btnLogout = document.getElementById('btnLogout');
+  const btnPost = document.getElementById('btnPost');
+  const btnAdmin = document.getElementById('btnAdmin');
+  const userEmailEl = document.getElementById('userEmail');
+  const postPanel = document.getElementById('postPanel');
+  const closePanel = document.getElementById('closePanel');
+  const submitPostBtn = document.getElementById('submitPost');
+  const submitUpdateBtn = document.getElementById('submitUpdate');
+  const grid = document.getElementById('grid');
+  const pendingList = document.getElementById('pendingList');
+  const adminPanel = document.getElementById('adminPanel');
+  const filterCity = document.getElementById('filterCity');
+  const qInput = document.getElementById('q');
+  const btnSearch = document.getElementById('btnSearch');
+  const countTxt = document.getElementById('countTxt');
+
+  let currentUser = null;
+  let editingId = null;
+
+  // ===== auth =====
+  btnLogin.addEventListener('click', ()=> {
+    const p = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(p).catch(e=>alert(e.message));
+  });
+  btnLogout.addEventListener('click', ()=> auth.signOut());
+
+  auth.onAuthStateChanged(user=>{
+    currentUser = user;
+    if(user){
+      userEmailEl.textContent = user.email;
+      btnLogin.style.display = 'none';
+      btnLogout.style.display = 'inline-block';
+      btnPost.style.display = 'inline-block';
+      // admin controls
+      if(user.email === ADMIN_EMAIL){
+        btnAdmin.style.display = 'inline-block';
+        adminPanel.style.display = 'block';
+      } else {
+        btnAdmin.style.display = 'none';
+        adminPanel.style.display = 'none';
+      }
+    } else {
+      userEmailEl.textContent = '';
+      btnLogin.style.display = 'inline-block';
+      btnLogout.style.display = 'none';
+      btnPost.style.display = 'none';
+      btnAdmin.style.display = 'none';
+      adminPanel.style.display = 'none';
+    }
+  });
+
+  // open/close panel
+  btnPost.addEventListener('click', ()=> {
+    editingId = null;
+    document.getElementById('panelTitle').textContent = 'Post Property';
+    submitPostBtn.style.display = 'inline-block';
+    submitUpdateBtn.style.display = 'none';
+    postPanel.classList.add('open');
+  });
+  closePanel.addEventListener('click', ()=> postPanel.classList.remove('open'));
+
+  // submit -> upload image to storage, then push DB
+  submitPostBtn.addEventListener('click', async ()=>{
+    if(!currentUser){ alert('Login required to post'); return; }
+    const title = document.getElementById('pTitle').value.trim();
+    const city = document.getElementById('pCity').value.trim();
+    const type = document.getElementById('pType').value;
+    const price = Number(document.getElementById('pPrice').value||0);
+    const wa = document.getElementById('pWA').value.trim();
+    const desc = document.getElementById('pDesc').value.trim();
+    const file = document.getElementById('pFile').files[0];
+
+    if(!title || !city || !price || !wa){ alert('Please fill Title, City, Price, WhatsApp'); return; }
+
+    try{
+      // show small loader on button
+      submitPostBtn.disabled = true; submitPostBtn.textContent = 'Uploading...';
+
+      let imageUrl = '';
+      let imagePath = '';
+      if(file){
+        const path = `properties/${Date.now()}_${currentUser.uid}_${file.name}`;
+        const snap = await storage.ref(path).put(file);
+        imageUrl = await snap.ref.getDownloadURL();
+        imagePath = path;
+      }
+
+      const newRef = db.ref('properties').push();
+      await newRef.set({
+        title, city, type, price, whatsapp: wa, description: desc,
+        imageUrl, imagePath, postedBy: currentUser.email, approved: false, time: Date.now()
+      });
+
+      alert('Posted — waiting for admin approval');
+      postPanel.classList.remove('open');
+      resetForm();
+    }catch(err){
+      console.error(err); alert('Upload failed: '+err.message);
+    }finally{
+      submitPostBtn.disabled = false; submitPostBtn.textContent = 'Submit';
+    }
+  });
+
+  // update flow (admin)
+  submitUpdateBtn.addEventListener('click', async ()=>{
+    if(!editingId) return;
+    const title = document.getElementById('pTitle').value.trim();
+    const city = document.getElementById('pCity').value.trim();
+    const type = document.getElementById('pType').value;
+    const price = Number(document.getElementById('pPrice').value||0);
+    const wa = document.getElementById('pWA').value.trim();
+    const desc = document.getElementById('pDesc').value.trim();
+    const file = document.getElementById('pFile').files[0];
+
+    if(!title || !city || !price || !wa){ alert('Please fill Title, City, Price, WhatsApp'); return; }
+
+    try{
+      submitUpdateBtn.disabled = true; submitUpdateBtn.textContent = 'Updating...';
+      // get existing
+      const snap = await db.ref('properties/'+editingId).once('value');
+      const existing = snap.val() || {};
+      let imageUrl = existing.imageUrl || '';
+      let imagePath = existing.imagePath || '';
+
+      if(file){
+        // upload new
+        const path = `properties/${Date.now()}_${(currentUser?currentUser.uid:'anon')}_${file.name}`;
+        const s = await storage.ref(path).put(file);
+        const url = await s.ref.getDownloadURL();
+        // delete old
+        if(imagePath){
+          try{ await storage.ref(imagePath).delete(); }catch(e){ console.warn('old delete failed',e.message); }
+        }
+        imageUrl = url; imagePath = path;
+      }
+
+      await db.ref('properties/'+editingId).update({ title, city, type, price, whatsapp: wa, description: desc, imageUrl, imagePath, time: Date.now() });
+      alert('Updated');
+      postPanel.classList.remove('open');
+      resetForm();
+    }catch(e){ console.error(e); alert('Update failed: '+e.message); }
+    finally{ submitUpdateBtn.disabled = false; submitUpdateBtn.textContent = 'Update'; }
+  });
+
+  function resetForm(){
+    editingId = null;
+    document.getElementById('pTitle').value='';
+    document.getElementById('pCity').value='';
+    document.getElementById('pType').value='Flat';
+    document.getElementById('pPrice').value='';
+    document.getElementById('pWA').value='';
+    document.getElementById('pImg').value='';
+    document.getElementById('pDesc').value='';
+    document.getElementById('pFile').value='';
+  }
+
+  // listen DB and render approved & pending
+  db.ref('properties').on('value', snap=>{
+    const arr = [];
+    const pending = [];
+    snap.forEach(ch=>{
+      const v = ch.val(); const id = ch.key;
+      const item = { id, ...v };
+      if(v.approved) arr.push(item); else pending.push(item);
+    });
+    // sort newest first
+    arr.sort((a,b)=> (b.time||0)-(a.time||0));
+    renderGrid(arr);
+    renderPending(pending);
+  });
+
+  function renderGrid(items){
+    // fade-in animation: clear then append
+    grid.innerHTML = '';
+    const cities = new Set();
+    if(items.length===0){
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:20px;background:#fff;border-radius:10px">No listings found.</div>';
+      countTxt.textContent = '0 properties live';
+      filterCity.innerHTML = '<option value="">All Cities</option>';
+      return;
+    }
+    items.forEach(it=>{
+      const div = document.createElement('div'); div.className='card';
+      div.innerHTML = `
+        <div class="thumb"><img src="${it.imageUrl || 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}" loading="lazy" /></div>
+        <div class="title">${escapeHtml(it.title)}</div>
+        <div class="meta">${escapeHtml(it.city)} • ${escapeHtml(it.type)} • ₹${Number(it.price).toLocaleString('en-IN')}</div>
+        <div class="desc">${escapeHtml((it.description||'').slice(0,160))}${(it.description||'').length>160? '...':''}</div>
+        <div class="foot">
+          <a class="wa-btn" href="https://wa.me/${it.whatsapp}" target="_blank">WhatsApp</a>
+        </div>
+      `;
+      // expand on click
+      div.addEventListener('click', ()=> div.classList.toggle('expand'));
+      grid.appendChild(div);
+      if(it.city) cities.add(it.city);
+    });
+    countTxt.textContent = `${items.length} properties live`;
+    filterCity.innerHTML = '<option value="">All Cities</option>' + Array.from(cities).sort().map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+
+  // render pending (admin)
+  function renderPending(pending){
+    pendingList.innerHTML = '';
+    if(pending.length===0){ pendingList.innerHTML = '<p class="muted">No pending posts.</p>'; return; }
+    pending.forEach(p=>{
+      const el = document.createElement('div');
+      el.style = 'background:#fff;border-radius:10px;padding:10px;margin-bottom:10px;box-shadow:0 8px 20px rgba(2,6,23,.06);display:flex;gap:12px;align-items:center';
+      el.innerHTML = `
+        <img src="${p.imageUrl||'https://via.placeholder.com/120'}" style="width:110px;height:80px;object-fit:cover;border-radius:8px"/>
+        <div style="flex:1">
+          <div style="font-weight:800">${escapeHtml(p.title)}</div>
+          <div style="color:var(--muted);font-size:13px">${escapeHtml(p.city)} • ₹${Number(p.price||0).toLocaleString('en-IN')}</div>
+          <div style="color:var(--muted);font-size:13px">By: ${escapeHtml(p.postedBy||'')}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="app-btn" style="background:linear-gradient(135deg,#10b981,#059669)" data-act="approve" data-id="${p.id}">Approve</button>
+          <button class="app-btn" style="background:linear-gradient(135deg,#ef4444,#c026d3)" data-act="reject" data-id="${p.id}">Reject</button>
+          <button class="app-btn" style="background:linear-gradient(135deg,#06b6d4,#7c3aed)" data-act="edit" data-id="${p.id}">Edit</button>
+        </div>
+      `;
+      pendingList.appendChild(el);
+    });
+    // bind
+    pendingList.querySelectorAll('button[data-act]').forEach(b=>{
+      b.addEventListener('click', async (ev)=>{
+        const act = ev.currentTarget.dataset.act; const id = ev.currentTarget.dataset.id;
+        if(act==='approve'){
+          // only admin allowed client-side (server-side rules also enforced)
+          if(!currentUser || currentUser.email !== ADMIN_EMAIL){ return alert('Only admin can approve'); }
+          await db.ref('properties/'+id).update({ approved: true });
+          alert('Approved');
+        } else if(act==='reject'){
+          if(!confirm('Reject & delete this post?')) return;
+          // delete storage image as well
+          const snap = await db.ref('properties/'+id).once('value'); const v = snap.val() || {};
+          if(v.imagePath){ try{ await storage.ref(v.imagePath).delete(); }catch(e){ console.warn('image delete failed',e.message); } }
+          await db.ref('properties/'+id).remove();
+          alert('Deleted');
+        } else if(act==='edit'){
+          // load to panel
+          const snap = await db.ref('properties/'+id).once('value'); const v = snap.val() || {};
+          document.getElementById('pTitle').value = v.title||'';
+          document.getElementById('pCity').value = v.city||'';
+          document.getElementById('pType').value = v.type||'Flat';
+          document.getElementById('pPrice').value = v.price||'';
+          document.getElementById('pWA').value = v.whatsapp||'';
+          document.getElementById('pDesc').value = v.description||'';
+          // we cannot fill file input (browser security) — show existing image url in description note
+          editingId = id; document.getElementById('panelTitle').textContent = 'Edit Property';
+          submitPostBtn.style.display = 'none'; submitUpdateBtn.style.display = 'inline-block';
+          postPanel.classList.add('open');
+        }
+      });
+    });
+  }
+
+  // delete old images on DB remove (optional listener) - safety: already handled in admin reject
+  db.ref('properties').on('child_removed', async (snap)=>{
+    const v = snap.val() || {};
+    if(v.imagePath){
+      try{ await storage.ref(v.imagePath).delete(); }catch(e){ console.warn('cleanup fail',e.message); }
+    }
+  });
+
+  // search/filter
+  btnSearch.addEventListener('click', ()=> {
+    const q = qInput.value.trim().toLowerCase();
+    const city = filterCity.value;
+    db.ref('properties').once('value').then(snap=>{
+      const arr = []; snap.forEach(ch=> arr.push({id:ch.key,...ch.val()}));
+      let list = arr.filter(x=>x.approved===true);
+      if(q) list = list.filter(it=> (it.title||'').toLowerCase().includes(q) || (it.city||'').toLowerCase().includes(q));
+      if(city) list = list.filter(it=> (it.city||'')===city);
+      renderGrid(list);
+    });
+  });
+
+  // util
+  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
+
+  // initial reset
+  resetForm();
+</script>
+</body>
+</html>
