@@ -1,421 +1,516 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zara Property — 99acres-style Listing (No Map)</title>
-  <meta name="description" content="Zara Property: 99acres जैसा property listing पेज — बिना मैप के" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#0b0f14;          /* dark header */
-      --ink:#0f172a;         /* body text */
-      --muted:#64748b;       /* muted text */
-      --card:#ffffff;        /* card bg */
-      --soft:#f1f5f9;        /* soft bg */
-      --brand:#2563eb;       /* primary */
-      --brand-2:#1d4ed8;     /* primary darker */
-      --accent:#10b981;      /* accent green */
-      --warn:#f59e0b;        /* accent amber */
-      --danger:#ef4444;      /* red */
-      --radius:18px;
-      --shadow:0 8px 24px rgba(2,6,23,.08);
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:#f8fafc}
-    a{color:inherit;text-decoration:none}
-    .container{max-width:1200px;margin:0 auto;padding:0 16px}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zara Properties — 99acres जैसा</title>
 
-    /* Header */
-    header{
-      background:linear-gradient(180deg, var(--bg), #111827);
-      color:#fff;
-      position:sticky;top:0;z-index:50;
-      box-shadow:0 2px 12px rgba(0,0,0,.2);
-    }
-    .topbar{display:flex;align-items:center;gap:16px;justify-content:space-between;padding:14px 0}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{
-      width:42px;height:42px;border-radius:12px;
-      background: radial-gradient(60% 60% at 35% 35%, #60a5fa, #2563eb 60%, #0ea5e9);
-      box-shadow: inset 0 2px 10px rgba(255,255,255,.25), 0 10px 30px rgba(37,99,235,.35);
-    }
-    .brand h1{font-size:20px;letter-spacing:.3px;margin:0;font-weight:800}
-    .nav{display:flex;gap:14px;flex-wrap:wrap}
-    .nav a{opacity:.85;padding:8px 10px;border-radius:10px}
-    .nav a:hover{background:rgba(255,255,255,.08);opacity:1}
-    .actions{display:flex;align-items:center;gap:10px}
-    .btn{border:0;cursor:pointer;border-radius:14px;padding:10px 14px;font-weight:600}
-    .btn.primary{background:var(--brand);color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.35)}
-    .btn.primary:hover{background:var(--brand-2)}
-    .btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2)}
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
-    /* Search Bar */
-    .search-wrap{padding:14px 0 22px}
-    .search{
-      display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:10px;
-      background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:10px;
-    }
-    .field{display:flex;flex-direction:column;gap:6px}
-    .field label{font-size:12px;color:#cbd5e1}
-    .field input,.field select{
-      height:44px;border-radius:12px;border:1px solid #1f2937;background:#111827;color:#e5e7eb;padding:0 12px;outline:none
-    }
-    .search .btn{height:44px}
-
-    /* Filter Bar */
-    .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:14px 0}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{padding:8px 12px;border-radius:999px;background:#e2e8f0;border:1px solid #cbd5e1;font-size:13px;cursor:pointer}
-    .chip.active{background:#dbeafe;border-color:#93c5fd;color:#1e3a8a}
-    .sort{display:flex;gap:8px;align-items:center}
-    .sort select{height:40px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;padding:0 10px}
-
-    /* Cards */
-    .results-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    .card{
-      background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;position:relative
-    }
-    .card .img{position:relative;height:200px;background:#e2e8f0;overflow:hidden}
-    .card img{width:100%;height:100%;object-fit:cover;display:block}
-    .badge{position:absolute;top:10px;left:10px;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;opacity:.95}
-    .fav{position:absolute;top:10px;right:10px;background:#ffffff;border-radius:50%;width:38px;height:38px;border:1px solid #e2e8f0;display:grid;place-items:center;cursor:pointer}
-    .fav.active{background:#fee2e2;border-color:#fecaca}
-    .body{padding:14px}
-    .price{font-weight:800;font-size:18px}
-    .title{font-weight:700;margin:6px 0 2px}
-    .meta{color:var(--muted);font-size:13px}
-    .tags{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-    .tag{font-size:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px}
-    .foot{display:flex;gap:8px;margin-top:10px}
-    .btn.sm{padding:8px 10px;border-radius:10px;font-weight:600}
-    .btn.call{background:#e2e8f0}
-    .btn.wa{background:#dcfce7}
-    .btn.view{background:#eff6ff}
-
-    /* Pagination */
-    .pagination{display:flex;gap:8px;justify-content:center;margin:20px 0}
-    .page{padding:10px 14px;border-radius:10px;background:#fff;border:1px solid #e2e8f0;cursor:pointer}
-    .page.active{background:#1e293b;color:#fff;border-color:#1e293b}
-
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.open{display:flex}
-    .modal-card{width:min(880px,98vw);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(2,8,23,.35)}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e2e8f0}
-    .modal-body{padding:16px}
-
-    /* Footer */
-    footer{padding:26px 0 60px;color:#475569}
-
-    /* Responsive */
-    @media (max-width:1024px){
-      .grid{grid-template-columns:repeat(2,1fr)}
-      .search{grid-template-columns:1fr 1fr 1fr auto;}
-      .hide-md{display:none}
-    }
-    @media (max-width:680px){
-      .grid{grid-template-columns:1fr}
-      .search{grid-template-columns:1fr 1fr;}
-      .search .btn{grid-column:1/-1}
-      .nav{display:none}
-      .hide-sm{display:none}
-    }
-  </style>
+<!-- Simple styling, change as you like -->
+<style>
+:root{--brand:#2563eb;--muted:#64748b;--card:#fff;--radius:12px}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,Arial;margin:0;background:#f4f6fb;color:#0f172a}
+header{background:linear-gradient(180deg,#0b1220,#0d1530);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:10px}
+.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#60a5fa,#2563eb)}
+.container{max-width:1200px;margin:18px auto;padding:0 16px}
+.top-actions{display:flex;gap:8px;align-items:center}
+.btn{cursor:pointer;border-radius:10px;padding:8px 12px;border:0;background:var(--brand);color:white;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:#fff}
+.panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,.06);margin-bottom:14px}
+.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:10px}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e6edf3;width:100%}
+.chips{display:flex;gap:8px;margin-top:10px}
+.chip{padding:6px 10px;border-radius:999px;background:#eef2ff;border:1px solid #dbeafe;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.card{background:var(--card);border-radius:12px;overflow:hidden;border:1px solid #e8eef7;display:flex;flex-direction:column}
+.card .gallery{height:180px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;position:relative}
+.card .gallery img{width:100%;height:100%;object-fit:cover}
+.badge{position:absolute;top:8px;left:8px;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
+.featured{position:absolute;top:8px;right:8px;background:#f59e0b;color:#fff;padding:6px 10px;border-radius:6px;font-weight:700}
+.card-body{padding:12px;display:flex;flex-direction:column;min-height:160px}
+.meta{color:var(--muted);font-size:13px;margin-top:6px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px}
+.foot{margin-top:auto;display:flex;gap:8px;align-items:center}
+.small{padding:6px 8px;border-radius:8px;font-size:13px;background:#eef2ff;border:0}
+.admin-controls{display:flex;gap:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:60}
+.modal.open{display:flex}
+.modal-card{width:min(920px,98vw);background:#fff;border-radius:12px;overflow:hidden}
+.gallery-row{display:flex;gap:8px}
+.gallery-thumb{width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e6edf3}
+.pagination{display:flex;gap:8px;justify-content:center;margin:14px 0}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr 1fr 1fr auto}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}}
+</style>
 </head>
 <body>
-  <!-- Header -->
-  <header>
-    <div class="container topbar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <h1>Zara Property</h1>
-      </div>
-      <nav class="nav">
-        <a href="#">खरीदें</a>
-        <a href="#">किराये पर</a>
-        <a href="#">नया प्रोजेक्ट</a>
-        <a href="#">कमर्शियल</a>
-      </nav>
-      <div class="actions">
-        <button class="btn ghost hide-sm">हिंदी</button>
-        <button class="btn primary">लॉगिन</button>
-      </div>
-    </div>
-
-    <!-- Search Bar (No Map) -->
-    <div class="container search-wrap">
-      <div class="search" id="searchbar">
-        <div class="field">
-          <label>लोकेशन / एरिया</label>
-          <input type="text" id="qLocation" placeholder="जैसे: नालासोपारा, मीरा रोड" />
-        </div>
-        <div class="field">
-          <label>प्रॉपर्टी टाइप</label>
-          <select id="qType">
-            <option value="">सभी</option>
-            <option>फ्लैट</option>
-            <option>विला</option>
-            <option>प्लॉट</option>
-            <option>शॉप</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>कम से कम कीमत (₹)</label>
-          <input type="number" id="qMin" placeholder="0" min="0" />
-        </div>
-        <div class="field">
-          <label>अधिकतम कीमत (₹)</label>
-          <input type="number" id="qMax" placeholder="50000000" min="0" />
-        </div>
-        <button class="btn primary" id="btnSearch">खोजें</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="container">
-    <!-- Filter Bar (No Map) -->
-    <div class="filters">
-      <div class="chips" id="chips">
-        <div class="chip" data-key="ready">Ready to Move</div>
-        <div class="chip" data-key="new">New Launch</div>
-        <div class="chip" data-key="owner">Owner</div>
-        <div class="chip" data-key="verified">Verified</div>
-        <div class="chip" data-key="photos">Photos</div>
-      </div>
-      <div class="sort">
-        <span class="hide-sm" style="color:#475569">Sort:</span>
-        <select id="sort">
-          <option value="newest">Newest</option>
-          <option value="priceLow">Price — Low to High</option>
-          <option value="priceHigh">Price — High to Low</option>
-          <option value="area">Area — Large First</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="results-head">
-      <div><strong id="resultCount">0</strong> परिणाम मिले</div>
-      <div class="hide-sm" style="color:#475569">* यह पेज 99acres जैसा है, लेकिन मैप नहीं दिखाया गया है।</div>
-    </div>
-
-    <section class="grid" id="grid"></section>
-
-    <div class="pagination" id="pagination"></div>
-  </main>
-
-  <!-- Modal: Details -->
-  <div class="modal" id="modal">
-    <div class="modal-card">
-      <div class="modal-head">
-        <div style="font-weight:800">लिस्टिंग विवरण</div>
-        <button class="btn" id="modalClose">बंद करें</button>
-      </div>
-      <div class="modal-body" id="modalBody"></div>
-    </div>
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    <div><div style="font-weight:800">Zara Properties</div><div style="font-size:12px;color:#cbd5e1">99acres-style • No map</div></div>
   </div>
+  <div class="top-actions">
+    <div id="userEmail" style="color:#cbd5e1;margin-right:6px"></div>
+    <button id="loginBtn" class="btn ghost">Google Sign-in</button>
+    <button id="logoutBtn" class="btn" style="display:none;background:#ef4444">Logout</button>
+  </div>
+</header>
 
-  <footer class="container">
-    © <span id="y"></span> Zara Property • Built like 99acres (No Map) • Made for demo use
-  </footer>
+<main class="container">
+  <!-- Filters -->
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Search & Filters</strong>
+      <div style="color:#64748b">Search by title/location • Price • BHK</div>
+    </div>
+    <div style="margin-top:10px" class="filters">
+      <input id="qText" placeholder="जैसे: 2 BHK, मीरा रोड, दुकान" />
+      <select id="qLocation"><option value="">सभी लोकेशन</option></select>
+      <select id="qBHK"><option value="">सभी BHK</option><option value="1">1 BHK</option><option value="2">2 BHK</option><option value="3">3 BHK</option><option value="4">4+</option></select>
+      <input id="qMin" type="number" placeholder="Min ₹" />
+      <input id="qMax" type="number" placeholder="Max ₹" />
+      <select id="qSort"><option value="newest">Newest</option><option value="priceLow">Price Low→High</option><option value="priceHigh">Price High→Low</option></select>
+    </div>
+    <div class="chips" id="chips">
+      <div class="chip" data-key="verified">Verified</div>
+      <div class="chip" data-key="owner">Owner</div>
+      <div class="chip" data-key="builder">Builder</div>
+      <div class="chip" data-key="agent">Agent</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button id="btnApply" class="btn">Apply</button>
+      <button id="btnReset" class="btn ghost">Reset</button>
+    </div>
+  </section>
 
-  <script>
-    // ===== Mock Data (Demo) =====
-    const PROPERTIES = [
-      {id:1, title:"2 BHK Premium Flat", type:"फ्लैट", city:"मुंबई", areaName:"नालासोपारा ईस्ट", bhk:2, area:780, price:4200000, status:"ready", ownerType:"builder", verified:true, photos:6, postedAt:"2025-08-12", phone:"+919999900001", whatsapp:"919999900001", img:"https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1200&auto=format&fit=crop"},
-      {id:2, title:"1 RK Budget Home", type:"फ्लैट", city:"मुंबई", areaName:"मीरा रोड", bhk:1, area:310, price:1900000, status:"ready", ownerType:"owner", verified:false, photos:3, postedAt:"2025-08-10", phone:"+919999900002", whatsapp:"919999900002", img:"https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=1200&auto=format&fit=crop"},
-      {id:3, title:"Spacious 3 BHK", type:"फ्लैट", city:"मुंबई", areaName:"कांदिवली वेस्ट", bhk:3, area:1230, price:14500000, status:"ready", ownerType:"agent", verified:true, photos:12, postedAt:"2025-08-14", phone:"+919999900003", whatsapp:"919999900003", img:"https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop"},
-      {id:4, title:"Luxury Villa with Garden", type:"विला", city:"पुणे", areaName:"बानेर", bhk:4, area:2450, price:28500000, status:"new", ownerType:"builder", verified:true, photos:18, postedAt:"2025-08-09", phone:"+919999900004", whatsapp:"919999900004", img:"https://images.unsplash.com/photo-1613490493407-6f3ad1cbcf6e?q=80&w=1200&auto=format&fit=crop"},
-      {id:5, title:"Commercial Shop Corner", type:"शॉप", city:"मुंबई", areaName:"भायंदर ईस्ट", bhk:0, area:220, price:3800000, status:"ready", ownerType:"owner", verified:false, photos:4, postedAt:"2025-08-12", phone:"+919999900005", whatsapp:"919999900005", img:"https://images.unsplash.com/photo-1509395176047-4a66953fd231?q=80&w=1200&auto=format&fit=crop"},
-      {id:6, title:"Residential Plot 1000 sqft", type:"प्लॉट", city:"नालासोपारा", areaName:"आचा नगर", bhk:0, area:1000, price:1600000, status:"new", ownerType:"agent", verified:false, photos:2, postedAt:"2025-08-08", phone:"+919999900006", whatsapp:"919999900006", img:"https://images.unsplash.com/photo-1554995207-c18c203602cb?q=80&w=1200&auto=format&fit=crop"},
-      {id:7, title:"2 BHK Near Station", type:"फ्लैट", city:"ठाणे", areaName:"मुलुंड", bhk:2, area:840, price:9800000, status:"ready", ownerType:"agent", verified:true, photos:10, postedAt:"2025-08-15", phone:"+919999900007", whatsapp:"919999900007", img:"https://images.unsplash.com/photo-1460353581641-37baddab0fa2?q=80&w=1200&auto=format&fit=crop"},
-      {id:8, title:"1 BHK New Launch", type:"फ्लैट", city:"मुंबई", areaName:"वसई", bhk:1, area:460, price:3300000, status:"new", ownerType:"builder", verified:false, photos:5, postedAt:"2025-08-13", phone:"+919999900008", whatsapp:"919999900008", img:"https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1200&auto=format&fit=crop"},
-      {id:9, title:"Studio Apartment", type:"फ्लैट", city:"मुंबई", areaName:"बोरीवली ईस्ट", bhk:1, area:380, price:5200000, status:"ready", ownerType:"owner", verified:true, photos:7, postedAt:"2025-08-11", phone:"+919999900009", whatsapp:"919999900009", img:"https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200&auto=format&fit=crop"},
-      {id:10, title:"Budget Plot 750 sqft", type:"प्लॉट", city:"पालघर", areaName:"मनोर", bhk:0, area:750, price:900000, status:"new", ownerType:"agent", verified:false, photos:1, postedAt:"2025-08-05", phone:"+919999900010", whatsapp:"919999900010", img:"https://images.unsplash.com/photo-1560185127-6ed189bf02f4?q=80&w=1200&auto=format&fit=crop"},
-      {id:11, title:"3 BHK Park Facing", type:"फ्लैट", city:"मुंबई", areaName:"अंधेरी", bhk:3, area:1320, price:21000000, status:"ready", ownerType:"agent", verified:true, photos:14, postedAt:"2025-08-16", phone:"+919999900011", whatsapp:"919999900011", img:"https://images.unsplash.com/photo-1616596872535-6e1b646f7a87?q=80&w=1200&auto=format&fit=crop"},
-      {id:12, title:"Retail Shop Main Road", type:"शॉप", city:"मुंबई", areaName:"मीरा रोड", bhk:0, area:300, price:6000000, status:"ready", ownerType:"owner", verified:false, photos:9, postedAt:"2025-08-03", phone:"+919999900012", whatsapp:"919999900012", img:"https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200&auto=format&fit=crop"},
-    ];
+  <!-- Results -->
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div><strong id="resultCount">0</strong> परिणाम</div>
+      <div style="color:#64748b">Public listings — Admin can manage</div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="pagination" class="pagination"></div>
+  </section>
 
-    // ===== State =====
-    const state = {
-      query: {location:"", type:"", min:0, max:Infinity},
-      chips: {ready:false, new:false, owner:false, verified:false, photos:false},
-      sort:"newest",
-      page:1,
-      perPage:6,
-      favs: new Set(JSON.parse(localStorage.getItem('zpfavs')||'[]')),
-    };
+  <!-- Admin Panel -->
+  <section id="adminPanel" class="panel" style="display:none;margin-top:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Admin Panel — Add / Edit Listing</strong>
+      <div style="color:#64748b">Only `zarasamajiksevasanstha@gmail.com` can manage</div>
+    </div>
 
-    // ===== Utils =====
-    const el = sel => document.querySelector(sel);
-    const fmtINR = n => new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR', maximumFractionDigits:0}).format(n);
-    const daysAgo = d => {
-      const diff = (Date.now() - new Date(d).getTime())/86400000;
-      if (diff < 1) return 'आज';
-      if (diff < 2) return 'कल';
-      return `${Math.floor(diff)} दिन पहले`;
-    }
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <input id="fTitle" placeholder="Title (e.g., 2 BHK Flat)" />
+      <input id="fPrice" type="number" placeholder="Price (₹)" />
+      <input id="fLocation" placeholder="Location (e.g., Nalasopara)" />
+      <select id="fBHK"><option value="">BHK</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select>
+      <input id="fArea" placeholder="Area (sqft)" />
+      <input id="fPhone" placeholder="Phone (with country code, e.g. 919876543210)" />
+      <input id="fWhatsapp" placeholder="WhatsApp (number without +)" />
+    </div>
 
-    // ===== Render =====
-    function applyFilters(list){
-      const {location, type, min, max} = state.query;
-      return list.filter(it=>{
-        const inLoc = !location || `${it.city} ${it.areaName}`.toLowerCase().includes(location.toLowerCase());
-        const inType = !type || it.type === type;
-        const inPrice = it.price >= (isFinite(min)?min:0) && it.price <= (isFinite(max)?max:Infinity);
-        const c = state.chips;
-        const cReady = !c.ready || it.status==='ready';
-        const cNew = !c.new || it.status==='new';
-        const cOwner = !c.owner || it.ownerType==='owner';
-        const cVer = !c.verified || it.verified;
-        const cPho = !c.photos || it.photos>0;
-        return inLoc && inType && inPrice && cReady && cNew && cOwner && cVer && cPho;
-      });
-    }
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <input id="fImageUrl" placeholder="Image URL (optional)" />
+      <input id="fImageFiles" type="file" accept="image/*" multiple />
+    </div>
 
-    function applySort(list){
-      const arr = [...list];
-      switch(state.sort){
-        case 'priceLow': arr.sort((a,b)=>a.price-b.price); break;
-        case 'priceHigh': arr.sort((a,b)=>b.price-a.price); break;
-        case 'area': arr.sort((a,b)=>b.area-a.area); break;
-        default: arr.sort((a,b)=> new Date(b.postedAt)-new Date(a.postedAt));
-      }
-      return arr;
-    }
+    <div style="margin-top:10px">
+      <textarea id="fDesc" placeholder="Description" style="width:100%;min-height:100px"></textarea>
+    </div>
 
-    function paginate(list){
-      const start = (state.page-1)*state.perPage;
-      return list.slice(start, start+state.perPage);
-    }
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <label style="display:flex;align-items:center;gap:8px"><input id="fVerified" type="checkbox"/> Verified</label>
+      <label style="display:flex;align-items:center;gap:8px"><input id="fFeatured" type="checkbox"/> Featured</label>
+      <select id="fOwner" style="margin-left:8px"><option value="owner">owner</option><option value="builder">builder</option><option value="agent">agent</option></select>
+      <button id="btnAdd" class="btn">Upload Listing</button>
+      <button id="btnUpdate" class="btn" style="background:#059669;display:none">Update Listing</button>
+      <button id="btnCancelEdit" class="btn ghost" style="display:none">Cancel Edit</button>
+    </div>
+  </section>
+</main>
 
-    function render(){
-      const filtered = applyFilters(PROPERTIES);
-      const sorted = applySort(filtered);
-      const pageItems = paginate(sorted);
-      el('#resultCount').textContent = filtered.length;
+<!-- Gallery modal -->
+<div id="modal" class="modal"><div class="modal-card" id="modalCard"></div></div>
 
-      const grid = el('#grid');
-      grid.innerHTML = pageItems.map(cardHTML).join('');
+<script>
+/* =========================
+   Firebase config (yours)
+   ========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
 
-      renderPagination(Math.ceil(filtered.length/state.perPage));
+/* ====== Admin allowlist ====== */
+const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
 
-      // bind favs & view buttons
-      grid.querySelectorAll('.fav').forEach(btn=>{
-        btn.addEventListener('click',()=>{
-          const id = +btn.dataset.id;
-          if(state.favs.has(id)) state.favs.delete(id); else state.favs.add(id);
-          localStorage.setItem('zpfavs', JSON.stringify([...state.favs]));
-          btn.classList.toggle('active');
-          btn.title = state.favs.has(id)?'Saved to Favorites':'Save to Favorites';
-        })
-      });
-      grid.querySelectorAll('[data-view]').forEach(btn=>{
-        btn.addEventListener('click',()=>openModal(+btn.dataset.view));
-      });
-    }
+/* ====== state ====== */
+const state = { all:[], filtered:[], page:1, perPage:9, chips:{verified:false, owner:false, builder:false, agent:false}, query:{text:'', location:'', bhk:'', min:0, max:Infinity, sort:'newest'} };
 
-    function cardHTML(it){
-      const fav = state.favs.has(it.id)?' active':'';
-      return `
-      <article class="card">
-        <div class="img">
-          <img src="${it.img}" alt="${it.title}" loading="lazy" />
-          <span class="badge">${it.verified? 'Verified':'Posted'} • ${daysAgo(it.postedAt)}</span>
-          <button class="fav${fav}" data-id="${it.id}" title="${state.favs.has(it.id)?'Saved to Favorites':'Save to Favorites'}">❤</button>
-        </div>
-        <div class="body">
-          <div class="price">${fmtINR(it.price)}</div>
-          <div class="title">${it.title}</div>
-          <div class="meta">${it.bhk? (it.bhk+" BHK • ") : ''}${it.area} sqft • ${it.type}</div>
-          <div class="meta">${it.areaName}, ${it.city}</div>
-          <div class="tags">
-            ${it.status==='new'?'<span class="tag">New Launch</span>':''}
-            ${it.status==='ready'?'<span class="tag">Ready to Move</span>':''}
-            ${it.ownerType?`<span class="tag">${it.ownerType}</span>`:''}
-            <span class="tag">${it.photos} Photos</span>
-          </div>
-          <div class="foot">
-            <a class="btn sm call" href="tel:${it.phone}">कॉल</a>
-            <a class="btn sm wa" target="_blank" href="https://wa.me/${it.whatsapp}?text=${encodeURIComponent('Hi, Zara Property से आपकी लिस्टिंग देखी — '+it.title)}">WhatsApp</a>
-            <button class="btn sm view" data-view="${it.id}">विवरण</button>
-          </div>
-        </div>
-      </article>`;
-    }
+/* ====== helpers ====== */
+const $ = s => document.querySelector(s);
+const fmtINR = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
+const daysAgo = t => { const d = (Date.now() - (Number(t)||0))/86400000; if(d<1) return 'आज'; if(d<2) return 'कल'; return `${Math.floor(d)} दिन पहले`; };
 
-    function renderPagination(pages){
-      const pag = el('#pagination');
-      if (pages<=1){pag.innerHTML='';return}
-      let html='';
-      for(let i=1;i<=pages;i++){
-        html += `<button class="page ${i===state.page?'active':''}" data-p="${i}">${i}</button>`
-      }
-      pag.innerHTML = html;
-      pag.querySelectorAll('.page').forEach(b=>b.addEventListener('click',()=>{state.page=+b.dataset.p;render()}));
-    }
+/* ====== auth UI ====== */
+$('#loginBtn').addEventListener('click', ()=> {
+  const p = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).catch(e=>alert('Login error: '+e.message));
+});
+$('#logoutBtn').addEventListener('click', ()=> auth.signOut());
 
-    // ===== Modal =====
-    function openModal(id){
-      const it = PROPERTIES.find(x=>x.id===id);
-      if(!it) return;
-      const body = `
-        <div style="display:grid;grid-template-columns: 1fr 1fr; gap:16px; max-width:100%">
-          <img src="${it.img}" alt="${it.title}" style="width:100%;border-radius:14px"/>
-          <div>
-            <h2 style="margin:0 0 6px;font-size:22px">${it.title}</h2>
-            <div style="font-weight:800;font-size:18px;margin-bottom:8px">${fmtINR(it.price)}</div>
-            <div style="color:#475569">${it.area} sqft • ${it.type} • ${it.bhk? it.bhk+' BHK • ':''}${it.areaName}, ${it.city}</div>
-            <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">
-              ${it.status==='new'?'<span class="tag">New Launch</span>':''}
-              ${it.status==='ready'?'<span class="tag">Ready to Move</span>':''}
-              ${it.verified?'<span class="tag">Verified</span>':''}
-              ${it.ownerType?`<span class="tag">${it.ownerType}</span>`:''}
-            </div>
-            <p style="margin-top:8px">पोस्टेड: ${daysAgo(it.postedAt)} • फोटोज़: ${it.photos}</p>
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <a class="btn sm call" href="tel:${it.phone}">कॉल</a>
-              <a class="btn sm wa" target="_blank" href="https://wa.me/${it.whatsapp}?text=${encodeURIComponent('Hi, Zara Property से आपकी लिस्टिंग देखी — '+it.title)}">WhatsApp</a>
-            </div>
-          </div>
-        </div>`;
-      el('#modalBody').innerHTML = body;
-      el('#modal').classList.add('open');
-    }
+auth.onAuthStateChanged(user=>{
+  if(user){
+    $('#loginBtn').style.display='none';
+    $('#logoutBtn').style.display='inline-block';
+    $('#userEmail').textContent = user.email;
+    $('#adminPanel').style.display = (user.email === ADMIN_EMAIL) ? 'block' : 'none';
+  } else {
+    $('#loginBtn').style.display='inline-block';
+    $('#logoutBtn').style.display='none';
+    $('#userEmail').textContent = '';
+    $('#adminPanel').style.display = 'none';
+  }
+});
 
-    el('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') el('#modal').classList.remove('open') })
-    el('#modalClose').addEventListener('click',()=>el('#modal').classList.remove('open'))
-
-    // ===== Events =====
-    el('#btnSearch').addEventListener('click', ()=>{
-      state.query.location = el('#qLocation').value.trim();
-      state.query.type = el('#qType').value;
-      const min = parseInt(el('#qMin').value||'0',10);
-      const maxVal = el('#qMax').value.trim();
-      const max = maxVal? parseInt(maxVal,10) : Infinity;
-      state.query.min = isNaN(min)?0:min;
-      state.query.max = isNaN(max)?Infinity:max;
-      state.page = 1;
-      render();
+/* ====== load properties live ====== */
+const propsRef = db.ref('properties');
+propsRef.on('value', snap => {
+  const arr = [];
+  snap.forEach(ch => {
+    const v = ch.val();
+    arr.push({
+      id: ch.key,
+      title: v.title||'',
+      price: Number(v.price)||0,
+      location: v.location||'',
+      bhk: v.bhk||'',
+      area: v.area||'',
+      phone: v.phone||'',
+      whatsapp: v.whatsapp||'',
+      description: v.description||'',
+      imageUrls: v.imageUrls || [],        // array
+      imagePaths: v.imagePaths || [],      // array of storage paths
+      owner: v.owner||'owner',
+      verified: !!v.verified,
+      featured: !!v.featured,
+      time: v.time || 0
     });
+  });
+  state.all = arr.reverse(); // newest first
+  populateLocations();
+  applyAndRender();
+});
 
-    el('#chips').querySelectorAll('.chip').forEach(ch=>{
-      ch.addEventListener('click',()=>{
-        ch.classList.toggle('active');
-        state.chips[ch.dataset.key] = ch.classList.contains('active');
-        state.page = 1;
-        render();
-      })
-    });
+/* ====== populate locations ====== */
+function populateLocations(){
+  const sel = $('#qLocation');
+  const uniq = Array.from(new Set(state.all.map(x=>x.location).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">सभी लोकेशन</option>' + uniq.map(l=>`<option value="${l}">${l}</option>`).join('');
+}
 
-    el('#sort').addEventListener('change',e=>{state.sort=e.target.value; render();});
+/* ====== filters ====== */
+$('#btnApply').addEventListener('click', ()=> {
+  state.query.text = $('#qText').value.trim().toLowerCase();
+  state.query.location = $('#qLocation').value;
+  state.query.bhk = $('#qBHK').value;
+  const min = parseInt($('#qMin').value||'0',10);
+  const maxVal = $('#qMax').value.trim();
+  const max = maxVal ? parseInt(maxVal,10) : Infinity;
+  state.query.min = isNaN(min)?0:min;
+  state.query.max = isNaN(max)?Infinity:max;
+  state.query.sort = $('#qSort').value;
+  state.page = 1;
+  applyAndRender();
+});
+$('#btnReset').addEventListener('click', ()=> {
+  $('#qText').value=''; $('#qLocation').value=''; $('#qBHK').value=''; $('#qMin').value=''; $('#qMax').value=''; $('#qSort').value='newest';
+  state.query = {text:'', location:'', bhk:'', min:0, max:Infinity, sort:'newest'};
+  document.querySelectorAll('#chips .chip').forEach(c=>c.classList.remove('active'));
+  state.chips = {verified:false, owner:false, builder:false, agent:false};
+  state.page = 1;
+  applyAndRender();
+});
+document.querySelectorAll('#chips .chip').forEach(ch=> ch.addEventListener('click', ()=> {
+  ch.classList.toggle('active');
+  state.chips[ch.dataset.key] = ch.classList.contains('active');
+  state.page = 1;
+  applyAndRender();
+}));
 
-    // Boot
-    document.getElementById('y').textContent = new Date().getFullYear();
-    render();
-  </script>
+/* ====== apply filters/sort/paginate ====== */
+function applyFilters(list){
+  const q = state.query, c = state.chips;
+  return list.filter(it=>{
+    const s = `${it.title} ${it.location} ${it.description}`.toLowerCase();
+    const inText = !q.text || s.includes(q.text);
+    const inLoc = !q.location || it.location === q.location;
+    const inBhk = !q.bhk || (q.bhk === '4' ? (Number(it.bhk)>=4) : it.bhk==q.bhk);
+    const inPrice = it.price >= (isFinite(q.min)?q.min:0) && it.price <= (isFinite(q.max)?q.max:Infinity);
+    const cVerified = !c.verified || it.verified;
+    const cOwner = !c.owner || it.owner==='owner';
+    const cBuilder = !c.builder || it.owner==='builder';
+    const cAgent = !c.agent || it.owner==='agent';
+    return inText && inLoc && inBhk && inPrice && cVerified && cOwner && cBuilder && cAgent;
+  });
+}
+function applySort(list){
+  const arr = [...list];
+  switch(state.query.sort){
+    case 'priceLow': arr.sort((a,b)=>a.price-b.price); break;
+    case 'priceHigh': arr.sort((a,b)=>b.price-a.price); break;
+    default: arr.sort((a,b)=> (b.featured?1:0) - (a.featured?1:0) || (b.time||0) - (a.time||0)); // featured first then time
+  }
+  return arr;
+}
+function paginate(list){
+  const start = (state.page-1)*state.perPage;
+  return list.slice(start, start+state.perPage);
+}
+function applyAndRender(){
+  const filtered = applyFilters(state.all);
+  const sorted = applySort(filtered);
+  state.filtered = sorted;
+  $('#resultCount').textContent = filtered.length;
+  renderCards(paginate(sorted));
+  renderPagination(Math.ceil(sorted.length/state.perPage));
+}
+
+/* ====== render cards ====== */
+function renderCards(items){
+  const grid = $('#grid');
+  if(!items.length){ grid.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:#64748b;background:#fff;border-radius:12px">कोई परिणाम नहीं मिला</div>'; return; }
+  const user = auth.currentUser;
+  const isAdmin = user && user.email === ADMIN_EMAIL;
+  grid.innerHTML = items.map(it=>`
+    <div class="card">
+      <div class="gallery" data-urls='${JSON.stringify(it.imageUrls)}' onclick="openGallery(this)">
+        <img src="${it.imageUrls[0] || 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}" />
+        ${it.badge? '' : ''} 
+        ${it.featured ? '<div class="featured">FEATURED</div>' : ''}
+        <div class="badge">${it.verified ? 'Verified' : 'Posted'} • ${daysAgo(it.time)}</div>
+      </div>
+      <div class="card-body">
+        <div style="font-weight:800">${escapeHtml(it.title)}</div>
+        <div class="meta">${escapeHtml(it.location)} • ${escapeHtml(it.bhk)} BHK • ${escapeHtml(it.area)} sqft</div>
+        <div style="margin-top:8px;color:#334155;font-size:14px">${escapeHtml(it.description || '').slice(0,160)}${(it.description||'').length>160? '...':''}</div>
+        <div class="tags" style="margin-top:8px">
+          <div class="tag">${escapeHtml(it.owner)}</div>
+          <div class="tag">${fmtINR(it.price)}</div>
+        </div>
+        <div class="foot">
+          <button class="small" onclick="contactWhatsApp('${it.whatsapp}','${encodeURIComponent('Hi, I saw your listing: '+it.title)}')">WhatsApp</button>
+          ${isAdmin ? `<div class="admin-controls"><button class="small" data-edit="${it.id}">Edit</button><button class="small" data-del="${it.id}" style="background:#ef4444">Delete</button></div>` : `<a class="small" href="tel:${it.phone || ''}">Call</a>`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // bind delete/edit
+  grid.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(!confirm('क्या आप इस लिस्टिंग को डिलीट करना चाहते हैं?')) return;
+    const id = b.dataset.del;
+    try{
+      // delete images from storage (if any)
+      const snap = await db.ref('properties/'+id).once('value');
+      const data = snap.val() || {};
+      const paths = data.imagePaths || [];
+      for(const p of paths) {
+        try{ await storage.ref(p).delete(); }catch(e){ console.warn('Old image delete failed',p,e.message); }
+      }
+      await db.ref('properties/'+id).remove();
+      alert('Deleted');
+    }catch(err){ alert('Delete error: '+err.message) }
+  }));
+
+  grid.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> startEdit(b.dataset.edit)));
+}
+
+/* ====== pagination ====== */
+function renderPagination(pages){
+  const pag = $('#pagination');
+  if(pages<=1){ pag.innerHTML=''; return; }
+  let html='';
+  for(let i=1;i<=pages;i++) html += `<button class="small" data-p="${i}" style="${i===state.page? 'background:#111;color:#fff':''}">${i}</button>`;
+  pag.innerHTML = html;
+  pag.querySelectorAll('[data-p]').forEach(b=> b.addEventListener('click', ()=> { state.page = +b.dataset.p; applyAndRender(); }));
+}
+
+/* ====== gallery modal ====== */
+function openGallery(el){
+  const urls = JSON.parse(el.dataset.urls || '[]');
+  const modal = $('#modal'); const card = $('#modalCard');
+  if(!urls.length) return;
+  card.innerHTML = `<div style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><strong>Gallery</strong><button onclick="closeModal()" class="btn ghost">Close</button></div>
+    <div style="display:flex;gap:12px;margin-top:12px"><div style="flex:1"><img src="${urls[0]}" style="width:100%;height:420px;object-fit:contain;border-radius:8px" id="mainImg"/></div>
+    <div style="width:120px;display:flex;flex-direction:column;gap:8px;overflow:auto;height:420px">${urls.map(u=>`<img src="${u}" onclick="document.getElementById('mainImg').src='${u}'" style="width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer"/>`).join('')}</div></div></div>`;
+  modal.classList.add('open');
+}
+function closeModal(){ $('#modal').classList.remove('open'); }
+
+/* ====== contact WhatsApp ====== */
+function contactWhatsApp(num,text){
+  const base = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(base,'_blank');
+}
+
+/* ====== Add / Update listing (admin) ====== */
+$('#btnAdd').addEventListener('click', async ()=>{
+  const user = auth.currentUser;
+  if(!user || user.email !== ADMIN_EMAIL) { alert('You are not authorized'); return; }
+
+  // read fields
+  const title = $('#fTitle').value.trim();
+  const price = parseInt($('#fPrice').value||'0',10);
+  const location = $('#fLocation').value.trim();
+  const bhk = $('#fBHK').value;
+  const area = $('#fArea').value.trim();
+  const phone = $('#fPhone').value.trim();
+  const whatsapp = $('#fWhatsapp').value.trim();
+  const description = $('#fDesc').value.trim();
+  const owner = $('#fOwner').value;
+  const verified = $('#fVerified').checked;
+  const featured = $('#fFeatured').checked;
+  const urlInput = $('#fImageUrl').value.trim();
+  const files = $('#fImageFiles').files;
+
+  if(!title || !price || !location){ alert('Title, Price, Location ज़रूरी हैं'); return; }
+  // basic client-side validation for images
+  if(files.length > 5){ alert('Maximum 5 images allowed'); return; }
+
+  // upload files if provided
+  const imageUrls = [];
+  const imagePaths = [];
+  if(files && files.length){
+    for(let i=0;i<files.length;i++){
+      const file = files[i];
+      const path = `properties/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${file.name}`;
+      const task = await storage.ref(path).put(file).catch(e=>{ throw e; });
+      const url = await task.ref.getDownloadURL();
+      imageUrls.push(url); imagePaths.push(path);
+    }
+  } else if(urlInput){
+    imageUrls.push(urlInput); imagePaths.push(''); // no storage path
+  }
+
+  const payload = { title, price, location, bhk, area, phone, whatsapp, description, owner, verified, featured, imageUrls, imagePaths, time: Date.now() };
+  try{
+    await db.ref('properties').push(payload);
+    resetForm(); alert('Listing uploaded');
+  }catch(err){ alert('Upload error: '+err.message) }
+});
+
+/* ====== edit flow ====== */
+let editingId = null;
+async function startEdit(id){
+  const user = auth.currentUser;
+  if(!user || user.email !== ADMIN_EMAIL){ alert('Not allowed'); return; }
+  const snap = await db.ref('properties/'+id).once('value');
+  const v = snap.val(); if(!v) return alert('Not found');
+  editingId = id;
+  $('#fTitle').value = v.title||'';
+  $('#fPrice').value = v.price||'';
+  $('#fLocation').value = v.location||'';
+  $('#fBHK').value = v.bhk||'';
+  $('#fArea').value = v.area||'';
+  $('#fPhone').value = v.phone||'';
+  $('#fWhatsapp').value = v.whatsapp||'';
+  $('#fDesc').value = v.description||'';
+  $('#fImageUrl').value = (v.imageUrls && v.imageUrls[0]) || '';
+  $('#fOwner').value = v.owner||'owner';
+  $('#fVerified').checked = !!v.verified;
+  $('#fFeatured').checked = !!v.featured;
+  $('#btnAdd').style.display='none'; $('#btnUpdate').style.display='inline-block'; $('#btnCancelEdit').style.display='inline-block';
+  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+$('#btnCancelEdit').addEventListener('click', ()=> resetForm());
+$('#btnUpdate').addEventListener('click', async ()=>{
+  if(!editingId) return;
+  const user = auth.currentUser;
+  if(!user || user.email !== ADMIN_EMAIL){ alert('Not allowed'); return; }
+
+  const title = $('#fTitle').value.trim();
+  const price = parseInt($('#fPrice').value||'0',10);
+  const location = $('#fLocation').value.trim();
+  const bhk = $('#fBHK').value;
+  const area = $('#fArea').value.trim();
+  const phone = $('#fPhone').value.trim();
+  const whatsapp = $('#fWhatsapp').value.trim();
+  const description = $('#fDesc').value.trim();
+  const owner = $('#fOwner').value;
+  const verified = $('#fVerified').checked;
+  const featured = $('#fFeatured').checked;
+  const urlInput = $('#fImageUrl').value.trim();
+  const files = $('#fImageFiles').files;
+
+  if(!title || !price || !location){ alert('Title, Price, Location ज़रूरी हैं'); return; }
+
+  // get existing data to delete old images if replaced
+  const snap = await db.ref('properties/'+editingId).once('value');
+  const existing = snap.val() || {};
+  let imageUrls = existing.imageUrls || [];
+  let imagePaths = existing.imagePaths || [];
+
+  // if new files provided -> upload them and remove old storage files
+  if(files && files.length){
+    // upload new
+    const newUrls = []; const newPaths = [];
+    for(let i=0;i<files.length;i++){
+      const file = files[i];
+      const path = `properties/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${file.name}`;
+      const task = await storage.ref(path).put(file);
+      const url = await task.ref.getDownloadURL();
+      newUrls.push(url); newPaths.push(path);
+    }
+    // delete old storage paths if any
+    for(const p of imagePaths) {
+      if(p){ try{ await storage.ref(p).delete(); }catch(e){ console.warn('delete old failed',p,e.message); } }
+    }
+    imageUrls = newUrls; imagePaths = newPaths;
+  } else if(urlInput){
+    // if only URL entered, keep that (and optionally delete old storage)
+    imageUrls = [urlInput]; 
+    // delete old storage files
+    for(const p of imagePaths){ if(p){ try{ await storage.ref(p).delete(); }catch(e){ console.warn('delete old failed',p,e.message); } } }
+    imagePaths = [''];
+  }
+
+  const payload = { title, price, location, bhk, area, phone, whatsapp, description, owner, verified, featured, imageUrls, imagePaths, time: Date.now() };
+  try{
+    await db.ref('properties/'+editingId).update(payload);
+    resetForm(); alert('Updated');
+  }catch(err){ alert('Update error: '+err.message) }
+});
+
+/* ====== reset form ====== */
+function resetForm(){
+  editingId = null;
+  $('#fTitle').value=''; $('#fPrice').value=''; $('#fLocation').value=''; $('#fBHK').value=''; $('#fArea').value='';
+  $('#fPhone').value=''; $('#fWhatsapp').value=''; $('#fDesc').value=''; $('#fImageUrl').value=''; $('#fImageFiles').value='';
+  $('#fOwner').value='owner'; $('#fVerified').checked=false; $('#fFeatured').checked=false;
+  $('#btnAdd').style.display='inline-block'; $('#btnUpdate').style.display='none'; $('#btnCancelEdit').style.display='none';
+}
+
+/* ====== small utility ====== */
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
+</script>
 </body>
 </html>
