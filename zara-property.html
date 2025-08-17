@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZaraFix Real Estate</title>
+<style>
+body { font-family: Arial,sans-serif; margin:0; background:#f0f2f5; }
+header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#185a9d; color:white; box-shadow:0 3px 6px rgba(0,0,0,0.2); }
+header h1 { text-shadow:2px 2px 5px #000; font-weight:bold; }
+button { cursor:pointer; border:none; padding:10px 18px; border-radius:12px; background:linear-gradient(to right,#43cea2,#185a9d); color:white; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2); transition:0.2s; }
+button:hover { transform:translateY(-2px); }
+.container { max-width:1100px; margin:20px auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:15px; }
+.card { background:white; border-radius:12px; padding:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); position:relative; transition:0.3s; }
+.card.pending::before { content:''; width:12px; height:12px; background:yellow; border-radius:50%; position:absolute; top:10px; right:10px; animation:blink 1s infinite; }
+@keyframes blink { 0%,50%,100% {opacity:1;} 25%,75% {opacity:0;} }
+.card img { width:100%; border-radius:8px; margin:5px 0; cursor:pointer; }
+.fullscreen { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:999; }
+.fullscreen img { max-width:90%; max-height:90%; border-radius:12px; }
+.pagination { display:flex; justify-content:center; margin:20px 0; gap:10px; }
+</style>
+</head>
+<body>
+<header>
+<h1>ZaraFix Real Estate</h1>
+<div id="loginDiv"><button onclick="login()">Login</button></div>
+</header>
+<div id="uploadSection" class="container" style="display:none;">
+  <h2>Post Property</h2>
+  <input type="text" id="title" placeholder="Title" required><br>
+  <input type="number" id="price" placeholder="Price" required><br>
+  <input type="text" id="location" placeholder="Location" required><br>
+  <input type="file" id="images" multiple accept="image/*"><br>
+  <button onclick="postProperty()">Post</button>
+</div>
+<div class="container" id="postsContainer"></div>
+<div class="pagination">
+<button onclick="prevPage()">⬅ Prev</button>
+<button onclick="nextPage()">Next ➡</button>
+</div>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+const imgbbKey = "cad1f0dbfbd25346460789376cc2d7d5";
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let currentUser = null;
+let postsData = [];
+const postsPerPage = 10;
+let currentPage = 0;
+
+function login(){
+  const email = prompt('Email');
+  const password = prompt('Password');
+  firebase.auth().signInWithEmailAndPassword(email,password).then(res=>{
+    currentUser=res.user;
+    document.getElementById('loginDiv').innerHTML=`<button onclick="logout()">Logout</button>`;
+    document.getElementById('uploadSection').style.display='block';
+    loadPosts();
+  }).catch(err=>alert(err.message));
+}
+function logout(){
+  firebase.auth().signOut();
+  currentUser=null;
+  document.getElementById('loginDiv').innerHTML=`<button onclick="login()">Login</button>`;
+  document.getElementById('uploadSection').style.display='none';
+}
+
+async function postProperty(){
+  if(!currentUser){ alert('Login first'); return; }
+  const title=document.getElementById('title').value;
+  const price=document.getElementById('price').value;
+  const location=document.getElementById('location').value;
+  const files=document.getElementById('images').files;
+  if(files.length>5){ alert('Max 5 images'); return; }
+  let imageUrls=[];
+  for(let file of files){
+    let formData=new FormData();
+    formData.append('image',file);
+    let res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:'POST',body:formData});
+    let data=await res.json();
+    imageUrls.push(data.data.url);
+  }
+  const id=Date.now();
+  db.ref('properties/'+id).set({
+    title, price, location, images:imageUrls, posterId:currentUser.uid, posterWhatsApp:'911234567890', status:'Pending'
+  }).then(()=>{
+    alert('Posted!');
+    loadPosts();
+  });
+}
+
+function loadPosts(){
+  db.ref('properties').once('value').then(snap=>{
+    postsData=[];
+    snap.forEach(c=>postsData.push({id:c.key,...c.val()}));
+    currentPage=0;
+    renderPage();
+  });
+}
+
+function renderPage(){
+  const container=document.getElementById('postsContainer');
+  container.innerHTML='';
+  let start=currentPage*postsPerPage;
+  let end=start+postsPerPage;
+  postsData.slice(start,end).forEach(post=>{
+    let card=document.createElement('div');
+    card.className='card '+(post.status!=='Approved'?'pending':'');
+    card.innerHTML=`<h3>${post.title||''}</h3><p>₹${post.price||0}</p><p>${post.location||''}</p>`;
+    post.images?.forEach(img=>{let i=document.createElement('img'); i.src=img; i.onclick=()=>showFullscreen(img); card.appendChild(i);});
+    if(post.posterWhatsApp) card.innerHTML+=`<br><button onclick="window.open('https://wa.me/${post.posterWhatsApp}')">📞 WhatsApp</button>`;
+    if(currentUser && currentUser.email==='admin@example.com'){
+      card.innerHTML+=`<br><button onclick="approve('${post.id}')">Approve</button> <button onclick="reject('${post.id}')">Reject</button>`;
+    } else if(currentUser && currentUser.uid===post.posterId){
+      card.innerHTML+=`<br><button onclick="deletePost('${post.id}')">Delete</button>`;
+    }
+    container.appendChild(card);
+  });
+}
+
+function approve(id){ db.ref('properties/'+id).update({status:'Approved'}).then(loadPosts); }
+function reject(id){ db.ref('properties/'+id).update({status:'Rejected'}).then(loadPosts); }
+function deletePost(id){ db.ref('properties/'+id).remove().then(loadPosts); }
+
+function showFullscreen(src){
+  let div=document.createElement('div'); div.className='fullscreen';
+  let img=document.createElement('img'); img.src=src;
+  div.appendChild(img);
+  div.onclick=()=>div.remove();
+  document.body.appendChild(div);
+}
+
+function nextPage(){ if((currentPage+1)*postsPerPage<postsData.length){currentPage++; renderPage();} }
+function prevPage(){ if(currentPage>0){currentPage--; renderPage();} }
+</script>
+</body>
+</html>
+
