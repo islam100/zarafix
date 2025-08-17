@@ -1,132 +1,166 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Property Listing</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
-  body { font-family: sans-serif; background:#f0f0f0; padding:10px; margin:0;}
-  header{ display:flex; justify-content:space-between; align-items:center; padding:10px; background:#2563eb; color:#fff;}
-  button { padding:5px 10px; border:none; border-radius:6px; cursor:pointer; background:#fff; color:#2563eb; font-weight:bold; }
-  #cardContainer { display:flex; flex-wrap:wrap; justify-content:center; margin-top:10px;}
-  .card { background:#fff; border-radius:12px; padding:15px; margin:10px; width:200px; cursor:pointer;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; position:relative;}
-  .card:hover { transform: scale(1.05); box-shadow: 0 8px 12px rgba(0,0,0,0.2);}
-  .btn { padding:5px 10px; margin:5px; border:none; border-radius:6px; cursor:pointer; background:#2563eb; color:#fff;}
-  /* Modal */
-  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;}
-  .modal-content { background:#fff; padding:20px; border-radius:12px; max-width:90%; max-height:90%; overflow:auto; }
-  @media(max-width:600px){
-    .card { width:90%; margin:5px;}
-  }
+  body{ font-family:sans-serif; margin:0; padding:0; background:#f0f2f5;}
+  header{ background:#2563eb; color:white; padding:10px; display:flex; justify-content:space-between; align-items:center;}
+  button{ padding:8px 16px; border:none; background:#2563eb; color:white; border-radius:6px; box-shadow:0 4px #1e40af; cursor:pointer; transition:0.2s;}
+  button:active{ box-shadow:0 2px #1e40af; transform:translateY(2px);}
+  #property-list{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:10px; padding:10px;}
+  .card{ background:white; border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.2); cursor:pointer; transition:0.2s;}
+  .card img{ width:100%; height:200px; object-fit:cover;}
+  .card-content{ padding:10px;}
+  .modal{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10;}
+  .modal-content{ background:white; padding:20px; border-radius:10px; max-width:90%; max-height:90%; overflow:auto;}
+  .close{ float:right; cursor:pointer; font-size:20px; font-weight:bold;}
+  @media(max-width:600px){ .card img{ height:150px;} }
 </style>
 </head>
 <body>
 
 <header>
-  <h2>Property Listing</h2>
-  <button id="loginBtn">Login</button>
-  <button id="addPropertyBtn" style="display:none;">Add Property</button>
+  <h1>Property Listing</h1>
+  <div>
+    <button id="login-btn">Login with Google</button>
+    <button id="add-btn" style="display:none;">Add Property</button>
+  </div>
 </header>
 
-<div id="cardContainer"></div>
+<div id="property-list"></div>
 
 <!-- Modal -->
-<div id="modal" class="modal">
-  <div class="modal-content" id="modalContent"></div>
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="close" id="modal-close">&times;</span>
+    <div id="modal-body"></div>
+  </div>
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<!-- Add Property Form -->
+<div class="modal" id="add-modal">
+  <div class="modal-content">
+    <span class="close" id="add-close">&times;</span>
+    <h2>Add Property</h2>
+    <input type="text" id="title" placeholder="Title" style="width:100%; margin:5px 0;">
+    <input type="text" id="desc" placeholder="Description" style="width:100%; margin:5px 0;">
+    <input type="url" id="img" placeholder="Image URL" style="width:100%; margin:5px 0;">
+    <button id="submit-property">Submit</button>
+  </div>
+</div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-let currentUser = null;
+  let currentUser = null;
 
-// Google Login
-document.getElementById('loginBtn').addEventListener('click',()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(res=>{
-    currentUser = res.user;
-    document.getElementById('loginBtn').style.display='none';
-    document.getElementById('addPropertyBtn').style.display='inline-block';
-    alert("Logged in as "+currentUser.displayName);
-  });
-});
+  const loginBtn = document.getElementById('login-btn');
+  const addBtn = document.getElementById('add-btn');
+  const propertyList = document.getElementById('property-list');
+  const modal = document.getElementById('modal');
+  const modalBody = document.getElementById('modal-body');
+  const modalClose = document.getElementById('modal-close');
+  const addModal = document.getElementById('add-modal');
+  const addClose = document.getElementById('add-close');
+  const submitProperty = document.getElementById('submit-property');
 
-// Add Property Form
-document.getElementById('addPropertyBtn').addEventListener('click', ()=>{
-  const title = prompt("Property Title");
-  const city = prompt("City");
-  const type = prompt("Type (Flat/Plot/House)");
-  const poster = currentUser.displayName;
-  if(title && city && type){
-    const newProp = { title, city, type, poster, approved:false };
-    db.ref('properties').push(newProp);
-    alert("Property added! Waiting admin approval.");
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   }
-});
 
-// Fetch and Display Properties
-function fetchCards(){
-  db.ref('properties').on('value', snap=>{
-    const container = document.getElementById('cardContainer');
-    container.innerHTML = '';
-    snap.forEach(child=>{
-      const data = child.val();
-      const key = child.key;
-      if(data.approved){ // Only approved shows
-        const div = document.createElement('div');
-        div.className='card';
-        div.innerHTML=`
-          <h3>${data.title}</h3>
-          <p>${data.city} - ${data.type}</p>
-          <p>Poster: ${data.poster}</p>
-        `;
-        // Card click to zoom
-        div.addEventListener('click', ()=>{
-          document.getElementById('modalContent').innerHTML = `
-            <h2>${data.title}</h2>
-            <p>${data.city} - ${data.type}</p>
-            <p>Poster: ${data.poster}</p>
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      currentUser = user;
+      loginBtn.style.display='none';
+      addBtn.style.display='inline-block';
+    } else {
+      currentUser = null;
+      loginBtn.style.display='inline-block';
+      addBtn.style.display='none';
+    }
+  });
+
+  addBtn.onclick = () => { addModal.style.display='flex'; }
+  addClose.onclick = () => { addModal.style.display='none'; }
+
+  submitProperty.onclick = () => {
+    const title = document.getElementById('title').value;
+    const desc = document.getElementById('desc').value;
+    const img = document.getElementById('img').value;
+    if(title && desc && img){
+      const newKey = db.ref().child('properties').push().key;
+      db.ref('properties/'+newKey).set({
+        title, desc, img, poster: currentUser.displayName, posterId: currentUser.uid, approved:false
+      });
+      addModal.style.display='none';
+      alert('Property submitted for approval!');
+    }
+  }
+
+  // Fetch and render properties
+  function renderProperties(){
+    propertyList.innerHTML='';
+    db.ref('properties').on('value', snapshot=>{
+      propertyList.innerHTML='';
+      snapshot.forEach(child=>{
+        const p = child.val();
+        const id = child.key;
+        // Show only approved
+        if(p.approved){
+          const card = document.createElement('div');
+          card.className='card';
+          card.innerHTML=`
+            <img src="${p.img}" />
+            <div class="card-content">
+              <h3>${p.title}</h3>
+              <p>${p.desc}</p>
+              <p><b>Poster:</b> ${p.poster}</p>
+              <button class="delete-btn">Delete</button>
+            </div>
           `;
-          document.getElementById('modal').style.display='flex';
-        });
-        container.appendChild(div);
-      }
+          // Delete
+          card.querySelector('.delete-btn').onclick=()=>{
+            if(currentUser && (currentUser.uid===p.posterId || currentUser.email==='admin@admin.com')){
+              db.ref('properties/'+id).remove();
+            } else { alert('Only admin or poster can delete'); }
+          }
+          // Modal zoom
+          card.onclick=(e)=>{
+            if(e.target.className==='delete-btn') return;
+            modalBody.innerHTML=`<h2>${p.title}</h2><img src="${p.img}" style="width:100%;"><p>${p.desc}</p><p><b>Poster:</b> ${p.poster}</p>`;
+            modal.style.display='flex';
+          }
+          propertyList.appendChild(card);
+        }
+      });
     });
-  });
-}
-fetchCards();
-
-// Modal close
-document.getElementById('modal').addEventListener('click', ()=>{
-  document.getElementById('modal').style.display='none';
-});
-
-// Admin approval (for testing, simple alert)
-db.ref('properties').on('child_added', snap=>{
-  const data = snap.val();
-  if(!data.approved){
-    // Normally admin panel to approve
-    console.log("Admin: Approve property ", data.title, "Key:", snap.key);
   }
-});
-</script>
 
+  modalClose.onclick = ()=>{ modal.style.display='none'; }
+  window.onclick = e=>{
+    if(e.target==modal) modal.style.display='none';
+    if(e.target==addModal) addModal.style.display='none';
+  }
+
+  renderProperties();
+</script>
 </body>
 </html>
