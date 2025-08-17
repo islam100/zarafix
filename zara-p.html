@@ -1,164 +1,89 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Property Listing</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-  header { background: #2563eb; color: white; padding: 15px; text-align: center; }
-  #login-btn, #logout-btn, #add-btn { margin: 10px; padding: 10px 20px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; }
-  #login-btn { background: #34d399; }
-  #logout-btn { background: #f87171; }
-  #add-btn { background: #fbbf24; }
-  #properties { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; padding: 15px; }
-  .card { width: 250px; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); overflow: hidden; cursor: pointer; transition: transform 0.3s; }
-  .card:hover { transform: scale(1.05); }
-  .card img { width: 100%; height: 180px; object-fit: cover; }
-  .card .info { padding: 10px; }
-  /* Modal */
-  #modal { display: none; position: fixed; top: 0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
-  #modal img { max-width: 90%; max-height: 80%; border-radius: 10px; }
-  #modal span { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; }
-  /* Add Property Form */
-  #addForm { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; z-index: 10; width: 90%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-  #addForm input, #addForm textarea { width: 100%; margin-bottom: 10px; padding: 8px; }
-  #addForm button { background: #34d399; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 5px; }
-</style>
+  <title>Property Listing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f9f9f9; margin:0; padding:0; }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+    }
+    header img {
+      height: 40px;
+      margin-right: 10px;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    .container {
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card img { width: 100%; border-radius: 10px; }
+    .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+    .price { color: green; font-weight: bold; }
+    .status { padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+    .pending { background: orange; color: white; }
+    .approved { background: green; color: white; }
+  </style>
 </head>
 <body>
+  <header>
+    <img src="https://i.ibb.co/0hY2xKm/logo.png" alt="Logo">
+    <h1>Zara Property</h1>
+  </header>
+  <div class="container" id="propertyList">
+    <!-- Properties yahan load honge -->
+  </div>
 
-<header>
-  <h1>Zara Property Listing</h1>
-  <button id="login-btn">Login with Google</button>
-  <button id="logout-btn" style="display:none;">Logout</button>
-  <button id="add-btn" style="display:none;">Add Property</button>
-</header>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-<div id="properties"></div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "960442382448",
+      appId: "1:960442382448:web:d5c11f7bcf7aeb2cc1ff6d"
+    };
 
-<!-- Modal for full screen -->
-<div id="modal">
-  <span id="closeModal">&times;</span>
-  <img id="modalImg" src="">
-</div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-<!-- Add Property Form -->
-<div id="addForm">
-  <h2>Add Property</h2>
-  <input type="text" id="title" placeholder="Title" required>
-  <input type="text" id="image" placeholder="Image URL" required>
-  <textarea id="desc" placeholder="Description"></textarea>
-  <button id="submitProp">Submit</button>
-</div>
+    const propertyList = document.getElementById("propertyList");
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-<script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  const loginBtn = document.getElementById('login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
-  const addBtn = document.getElementById('add-btn');
-  const propertiesDiv = document.getElementById('properties');
-  const modal = document.getElementById('modal');
-  const modalImg = document.getElementById('modalImg');
-  const closeModal = document.getElementById('closeModal');
-  const addForm = document.getElementById('addForm');
-  const submitProp = document.getElementById('submitProp');
-
-  let currentUser = null;
-  const adminEmails = ["admin@example.com"]; // Admin email list
-
-  // Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-  logoutBtn.onclick = () => auth.signOut();
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      addBtn.style.display = 'inline-block';
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      addBtn.style.display = 'none';
+    function renderProperty(id, data) {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <img src="${data.images ? data.images[0] : ''}" alt="">
+        <div class="title">${data.title}</div>
+        <div class="price">${data.price}</div>
+        <div>${data.location}</div>
+        <div>${data.description}</div>
+        <span class="status ${data.status}">${data.status}</span>
+      `;
+      propertyList.appendChild(div);
     }
-  });
 
-  // Add Property Button
-  addBtn.onclick = () => addForm.style.display = 'block';
-  submitProp.onclick = () => {
-    const title = document.getElementById('title').value;
-    const image = document.getElementById('image').value;
-    const desc = document.getElementById('desc').value;
-    if(title && image){
-      const newProp = {
-        title, image, desc,
-        uid: currentUser.uid,
-        approved: false,
-        timestamp: Date.now()
-      };
-      db.ref('properties').push(newProp);
-      addForm.style.display = 'none';
-      document.getElementById('title').value='';
-      document.getElementById('image').value='';
-      document.getElementById('desc').value='';
-      alert("Property submitted! Admin approval pending.");
-    }
-  };
-
-  // Fetch Properties
-  db.ref('properties').on('value', snapshot => {
-    propertiesDiv.innerHTML = '';
-    const data = snapshot.val();
-    if(data){
-      Object.keys(data).forEach(key => {
-        const prop = data[key];
-        // Only show approved or if current user is admin
-        if(prop.approved || (currentUser && adminEmails.includes(currentUser.email))){
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <img src="${prop.image}" alt="${prop.title}">
-            <div class="info">
-              <h3>${prop.title}</h3>
-              <p>${prop.desc || ''}</p>
-            </div>
-          `;
-          card.onclick = () => {
-            modalImg.src = prop.image;
-            modal.style.display = 'flex';
-          };
-          propertiesDiv.appendChild(card);
-        }
+    const propertiesRef = ref(db, "properties");
+    onValue(propertiesRef, (snapshot) => {
+      propertyList.innerHTML = "";
+      snapshot.forEach((child) => {
+        renderProperty(child.key, child.val());
       });
-    }
-  });
-
-  // Modal close
-  closeModal.onclick = () => modal.style.display = 'none';
-  modal.onclick = e => { if(e.target === modal) modal.style.display='none'; };
-</script>
+    });
+  </script>
 </body>
 </html>
