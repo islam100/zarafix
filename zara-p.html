@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Cards</title>
+<style>
+  body { font-family: sans-serif; background:#f0f0f0; padding:20px; }
+  .card { background:#fff; border-radius:12px; padding:15px; margin:10px; display:inline-block; width:200px; cursor:pointer;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; }
+  .card:hover { transform: scale(1.05); box-shadow: 0 8px 12px rgba(0,0,0,0.2); }
+  .btn { padding:5px 10px; margin:5px; border:none; border-radius:6px; cursor:pointer; 
+         background:#2563eb; color:#fff; box-shadow: 0 4px #1d4ed8; transition: all 0.2s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px #1d4ed8; }
+</style>
+</head>
+<body>
+
+<h2>Property List</h2>
+<div id="cardContainer"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function fetchCards(){
+  db.ref('properties').on('value', snap => {
+    const container = document.getElementById('cardContainer');
+    container.innerHTML = '';
+    snap.forEach(child => {
+      const data = child.val();
+      const key = child.key;
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <h3>${data.title}</h3>
+        <p>${data.city} - ${data.type}</p>
+        <p>Poster: ${data.poster}</p>
+        <button class="btn deleteBtn">Delete</button>
+      `;
+      // Card click to enlarge
+      div.addEventListener('click', e=>{
+        if(!e.target.classList.contains('deleteBtn')){
+          div.style.transform = div.style.transform==='scale(1.2)' ? 'scale(1)' : 'scale(1.2)';
+        }
+      });
+      // Delete button
+      div.querySelector('.deleteBtn').addEventListener('click', ()=>{
+        db.ref('properties/'+key).remove();
+      });
+      container.appendChild(div);
+    });
+  });
+}
+
+// Initialize
+fetchCards();
+</script>
+</body>
+</html>
