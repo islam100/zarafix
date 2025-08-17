@@ -1,71 +1,120 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Property</title>
-</head>
-<body>
-  <h2>नया पोस्ट डालें</h2>
-  <input type="text" id="title" placeholder="शीर्षक लिखें"><br><br>
-  <input type="text" id="desc" placeholder="विवरण लिखें"><br><br>
-  <button onclick="addPost()">Post जोड़ें</button>
-
-  <h2>पोस्ट लिस्ट</h2>
-  <ul id="postList"></ul>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property Listing</title>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-  <script>
-    // 🔹 आपका Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "916859697394",
-      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-    };
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    h2 {
+      text-align: center;
+    }
+    .form-box {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px gray;
+    }
+    input, textarea {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border: 1px solid gray;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: darkgreen;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: white;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      box-shadow: 0 0 3px gray;
+    }
+  </style>
+</head>
+<body>
+  <h2>नया पोस्ट डालें</h2>
 
+  <div class="form-box">
+    <input type="text" id="title" placeholder="शीर्षक लिखें" />
+    <textarea id="description" placeholder="विवरण लिखें"></textarea>
+    <button onclick="addPost()">➕ Post जोड़ें</button>
+  </div>
+
+  <h2>पोस्ट लिस्ट</h2>
+  <ul id="postList"></ul>
+
+  <script>
+    // 🔹 Firebase Config (अपना config डालें)
+   const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+
+
+    // 🔹 Firebase Init
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 🔹 Add post
+    // ✅ नया पोस्ट जोड़ने का function
     function addPost() {
-      const title = document.getElementById("title").value;
-      const desc = document.getElementById("desc").value;
+      let title = document.getElementById("title").value;
+      let description = document.getElementById("description").value;
 
-      if(title.trim() === "" || desc.trim() === "") {
-        alert("कृपया दोनों फ़ील्ड भरें");
+      if (title === "" || description === "") {
+        alert("कृपया सभी फ़ील्ड भरें");
         return;
       }
 
-      const newPostKey = db.ref().child("posts").push().key;
-      db.ref("posts/" + newPostKey).set({
+      let newPostRef = db.ref("posts/").push();
+      newPostRef.set({
         title: title,
-        desc: desc,
-        approved: true,   // अभी default approved ताकि तुरंत दिखे
-        timestamp: Date.now()
+        description: description
       });
 
       document.getElementById("title").value = "";
-      document.getElementById("desc").value = "";
+      document.getElementById("description").value = "";
     }
 
-    // 🔹 Fetch posts
-    db.ref("posts").on("value", (snapshot) => {
-      const postList = document.getElementById("postList");
+    // ✅ Firebase से पोस्ट लिस्ट दिखाना
+    db.ref("posts/").on("value", (snapshot) => {
+      let postList = document.getElementById("postList");
       postList.innerHTML = "";
       snapshot.forEach((childSnapshot) => {
-        const post = childSnapshot.val();
-        if(post.approved){
-          const li = document.createElement("li");
-          li.textContent = post.title + " - " + post.desc;
-          postList.appendChild(li);
-        }
+        let post = childSnapshot.val();
+        let li = document.createElement("li");
+        li.textContent = post.title + " - " + post.description;
+        postList.appendChild(li);
       });
     });
   </script>
