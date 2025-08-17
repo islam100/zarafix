@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zara Property</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #ffe6f0, #ccf2ff);
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ff66cc;
+    padding: 10px 20px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.logo {
+    font-weight: bold;
+    font-size: 24px;
+    text-shadow: 2px 2px 5px #000;
+}
+button {
+    background: linear-gradient(45deg,#ff6699,#ffcc00);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px #666;
+    transition: transform 0.2s;
+}
+button:hover {
+    transform: scale(1.05);
+}
+.container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 10px;
+}
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+    transition: transform 0.3s;
+}
+.card:hover {
+    transform: scale(1.05);
+}
+.card img {
+    width: 100%;
+    border-radius: 10px;
+    object-fit: cover;
+}
+.card h3 {
+    margin: 5px 0;
+}
+input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+form {
+    background: #ffffffcc;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="logo">Zara Property</div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+</header>
+
+<div class="container">
+    <form id="postForm" style="display:none;">
+        <h2>नया पोस्ट डालें</h2>
+        <input type="text" id="title" placeholder="शीर्षक" required>
+        <textarea id="description" placeholder="विवरण" required></textarea>
+        <input type="text" id="phone" placeholder="आपका WhatsApp नंबर" required>
+        <input type="file" id="image" accept="image/*" required>
+        <button type="submit">Post जोड़ें</button>
+    </form>
+
+    <h2>पोस्ट लिस्ट</h2>
+    <div id="postList"></div>
+
+    <div id="adminDashboard" style="display:none;">
+        <h2>Admin Dashboard</h2>
+        <div id="pendingPosts"></div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
+
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const postForm = document.getElementById('postForm');
+const postList = document.getElementById('postList');
+const adminDashboard = document.getElementById('adminDashboard');
+const pendingPosts = document.getElementById('pendingPosts');
+
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+
+// Login
+loginBtn.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+    auth.signOut();
+});
+
+// Auth State
+auth.onAuthStateChanged(user => {
+    if(user){
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        postForm.style.display = 'block';
+        if(user.email === adminEmail){
+            adminDashboard.style.display = 'block';
+        } else {
+            adminDashboard.style.display = 'none';
+        }
+        loadPosts();
+        loadPendingPosts();
+    } else {
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        postForm.style.display = 'none';
+        adminDashboard.style.display = 'none';
+        postList.innerHTML = '';
+        pendingPosts.innerHTML = '';
+    }
+});
+
+// Submit Post
+postForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const phone = document.getElementById('phone').value;
+    const imageFile = document.getElementById('image').files[0];
+
+    const imageRef = storage.ref('posts/' + Date.now() + '_' + imageFile.name);
+    await imageRef.put(imageFile);
+    const imageUrl = await imageRef.getDownloadURL();
+
+    const newPostKey = db.ref('posts').push().key;
+    await db.ref('posts/' + newPostKey).set({
+        title, description, phone, imageUrl, posterEmail: auth.currentUser.email, approved: false
+    });
+
+    postForm.reset();
+    alert("Post submitted! Waiting for admin approval.");
+});
+
+// Load approved posts
+function loadPosts(){
+    postList.innerHTML = '';
+    db.ref('posts').orderByChild('approved').equalTo(true).on('value', snapshot => {
+        postList.innerHTML = '';
+        snapshot.forEach(postSnap => {
+            const post = postSnap.val();
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <h3>${post.title}</h3>
+                <p>${post.description}</p>
+                <img src="${post.imageUrl}" />
+                <button onclick="window.open('https://wa.me/${post.phone}','_blank')">WhatsApp</button>
+            `;
+            postList.appendChild(card);
+        });
+    });
+}
+
+// Admin pending posts
+function loadPendingPosts(){
+    if(auth.currentUser && auth.currentUser.email === adminEmail){
+        db.ref('posts').orderByChild('approved').equalTo(false).on('value', snapshot => {
+            pendingPosts.innerHTML = '';
+            snapshot.forEach(postSnap => {
+                const key = postSnap.key;
+                const post = postSnap.val();
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h3>${post.title}</h3>
+                    <p>${post.description}</p>
+                    <img src="${post.imageUrl}" />
+                    <p>Poster: ${post.phone}</p>
+                    <button onclick="approvePost('${key}')">Approve</button>
+                    <button onclick="deletePost('${key}')">Delete</button>
+                `;
+                pendingPosts.appendChild(card);
+            });
+        });
+    }
+}
+
+// Admin approve/delete
+window.approvePost = (key) => {
+    db.ref('posts/' + key).update({approved:true});
+};
+window.deletePost = (key) => {
+    db.ref('posts/' + key).remove();
+};
+</script>
+</body>
+</html>
