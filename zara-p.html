@@ -1,87 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Property Listing</title>
+  <title>Admin - Properties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background: #f9f9f9; margin:0; padding:0; }
+    body { margin:0; font-family:Arial; background:#f4f4f4; }
     header {
-      background: #007bff;
-      color: white;
-      padding: 15px;
-      display: flex;
-      align-items: center;
+      background:#0077cc; color:white; padding:15px; text-align:center;
+      display:flex; justify-content:center; align-items:center;
     }
-    header img {
-      height: 40px;
-      margin-right: 10px;
+    header img { height:40px; margin-right:10px; }
+    .container { padding:15px; }
+    .property-card {
+      background:white; margin-bottom:15px; padding:15px;
+      border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.1);
     }
-    header h1 { margin: 0; font-size: 20px; }
-    .container {
-      padding: 20px;
+    .property-card h3 { margin:0; color:#0077cc; }
+    .status {
+      font-size:12px; padding:4px 8px; border-radius:6px;
+      display:inline-block; margin-top:5px;
     }
-    .card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    .pending { background:#ffcc00; color:#000; }
+    .approved { background:#28a745; color:white; }
+    .images { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .images img { width:100px; height:80px; border-radius:6px; object-fit:cover; }
+    @media(max-width:600px) {
+      .images img { width:80px; height:60px; }
     }
-    .card img { width: 100%; border-radius: 10px; }
-    .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
-    .price { color: green; font-weight: bold; }
-    .status { padding: 5px 10px; border-radius: 5px; font-size: 12px; }
-    .pending { background: orange; color: white; }
-    .approved { background: green; color: white; }
   </style>
 </head>
 <body>
   <header>
-    <img src="https://i.ibb.co/0hY2xKm/logo.png" alt="Logo">
-    <h1>Zara Property</h1>
+    <img src="https://i.ibb.co/3Nq9YPr/logo.png" alt="Logo">
+    <h2>Admin Dashboard</h2>
   </header>
-  <div class="container" id="propertyList">
-    <!-- Properties yahan load honge -->
-  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+  <div class="container" id="propertyList">Loading...</div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
       authDomain: "property-20d6d.firebaseapp.com",
       databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
       projectId: "property-20d6d",
       storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "960442382448",
-      appId: "1:960442382448:web:d5c11f7bcf7aeb2cc1ff6d"
+      messagingSenderId: "797729859340",
+      appId: "1:797729859340:web:5c6427b9c123456789"
     };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     const propertyList = document.getElementById("propertyList");
-
-    function renderProperty(id, data) {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <img src="${data.images ? data.images[0] : ''}" alt="">
-        <div class="title">${data.title}</div>
-        <div class="price">${data.price}</div>
-        <div>${data.location}</div>
-        <div>${data.description}</div>
-        <span class="status ${data.status}">${data.status}</span>
-      `;
-      propertyList.appendChild(div);
-    }
-
-    const propertiesRef = ref(db, "properties");
-    onValue(propertiesRef, (snapshot) => {
+    db.ref("properties").on("value", snapshot => {
       propertyList.innerHTML = "";
-      snapshot.forEach((child) => {
-        renderProperty(child.key, child.val());
+      snapshot.forEach(child => {
+        const p = child.val();
+        const card = document.createElement("div");
+        card.className = "property-card";
+        card.innerHTML = `
+          <h3>${p.type} - ${p.category}</h3>
+          <p><b>Price:</b> ₹${p.price}</p>
+          <p><b>Address:</b> ${p.address} (${p.pincode})</p>
+          <p><b>Description:</b> ${p.description}</p>
+          <span class="status ${p.status}">${p.status}</span>
+          <div class="images">
+            ${p.images ? Object.values(p.images).map(url=>`<img src="${url}">`).join("") : ""}
+          </div>
+        `;
+        propertyList.appendChild(card);
       });
     });
   </script>
