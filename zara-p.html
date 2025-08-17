@@ -1,152 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Zara Property Listing</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Listings</title>
 <style>
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:#f0f2f5;
-}
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:10px 20px;
-  background:#2563eb;
-  color:white;
-}
-button{
-  padding:8px 12px;
-  border:none;
-  border-radius:4px;
-  background:#fff;
-  color:#2563eb;
-  font-weight:bold;
-  cursor:pointer;
-  transition:all 0.2s;
-}
-button:hover{
-  transform:scale(1.05);
-}
-#property-list{
-  display:flex;
-  flex-wrap:wrap;
-  gap:15px;
-  padding:20px;
-  justify-content:center;
-}
-.card{
-  width:250px;
-  background:white;
-  border-radius:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.2);
-  overflow:hidden;
-  cursor:pointer;
-  transition:transform 0.2s;
-}
-.card:hover{
-  transform:scale(1.05);
-}
-.card img{
-  width:100%;
-  height:180px;
-  object-fit:cover;
-}
-.card .info{
-  padding:10px;
-}
-.modal{
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.8);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  visibility:hidden;
-  opacity:0;
-  transition:opacity 0.2s;
-  z-index:1000;
-}
-.modal.active{
-  visibility:visible;
-  opacity:1;
-}
-.modal-content{
-  background:white;
-  padding:20px;
-  border-radius:10px;
-  max-width:90%;
-  max-height:90%;
-  overflow:auto;
-  text-align:center;
-}
-.modal-content img{
-  max-width:100%;
-  max-height:300px;
-  margin-bottom:15px;
-}
-.property-form{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-top:10px;
-}
-.property-form input, .property-form textarea{
-  padding:8px;
-  border-radius:4px;
-  border:1px solid #ccc;
-  width:100%;
-}
-.property-form button{
-  align-self:flex-start;
-}
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
+    header { background:#2563eb; color:#fff; padding:10px; text-align:center; font-size:24px; font-weight:bold; }
+    #addBtn { background:#34d399; color:#fff; padding:10px 20px; border:none; border-radius:10px; cursor:pointer; box-shadow:3px 3px 5px #999; margin:10px; }
+    #addBtn:hover { box-shadow:0 0 10px #34d399; }
+    .cards { display:flex; flex-wrap:wrap; justify-content:center; gap:15px; padding:10px; }
+    .card { background:#fff; padding:10px; border-radius:15px; width:300px; box-shadow:3px 3px 8px #999; cursor:pointer; transition:0.3s; position:relative; }
+    .card:hover { transform:scale(1.05); }
+    .card img { width:100%; border-radius:10px; }
+    .card h3 { margin:10px 0 5px; }
+    .card p { margin:0 0 5px; color:#555; }
+    .btn3d { background:#f87171; color:#fff; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; box-shadow:3px 3px 5px #999; margin-top:5px; }
+    .btn3d:hover { box-shadow:0 0 10px #f87171; }
+    #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
+    #modalContent { background:#fff; padding:20px; border-radius:15px; max-width:90%; max-height:90%; overflow:auto; position:relative; }
+    #closeModal { position:absolute; top:10px; right:10px; cursor:pointer; font-size:20px; font-weight:bold; }
+    @media(max-width:600px){ .card{width:90%;} }
 </style>
 </head>
 <body>
 
-<header>
-  <h2>Zara Property Listing</h2>
-  <div>
-    <button id="login-btn">Login</button>
-    <button id="logout-btn" style="display:none;">Logout</button>
-    <button id="add-btn" style="display:none;">Add Property</button>
-  </div>
-</header>
-
-<div id="property-list"></div>
-
-<!-- Modal -->
-<div class="modal" id="modal">
-  <div class="modal-content">
-    <span id="close-modal" style="cursor:pointer;float:right;font-size:20px;">&times;</span>
-    <img id="modal-img" src="" alt="Property">
-    <h3 id="modal-title"></h3>
-    <p id="modal-desc"></p>
-    <div id="modal-actions"></div>
-  </div>
+<header>Property Listings</header>
+<div style="text-align:center;">
+    <button id="addBtn">Add Property</button>
 </div>
+<div class="cards" id="cardsContainer"></div>
 
-<!-- Add Property Form -->
-<div id="add-form-container" style="display:none;padding:20px;">
-  <h3>Add New Property</h3>
-  <div class="property-form">
-    <input type="text" id="prop-title" placeholder="Title" />
-    <textarea id="prop-desc" placeholder="Description"></textarea>
-    <input type="text" id="prop-img" placeholder="Image URL" />
-    <button id="submit-prop">Submit</button>
-  </div>
+<!-- Modal for fullscreen card -->
+<div id="modal">
+    <div id="modalContent">
+        <span id="closeModal">&times;</span>
+        <div id="modalInner"></div>
+    </div>
 </div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
@@ -157,124 +55,69 @@ const firebaseConfig = {
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
 const db = firebase.database();
-const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const addBtn = document.getElementById('add-btn');
-const addFormContainer = document.getElementById('add-form-container');
-const propertyList = document.getElementById('property-list');
-const adminEmails = ["admin@example.com"]; // change to your admin emails
 
-let currentUser = null;
-let propertiesData = {};
-
-function renderProperties(){
-  propertyList.innerHTML = "";
-  Object.keys(propertiesData).forEach(key=>{
-    const prop = propertiesData[key];
-    if(!prop.approved && (!currentUser || !adminEmails.includes(currentUser.email))) return; // show only approved to general users
-    const card = document.createElement('div');
-    card.className="card";
-    card.innerHTML=`<img src="${prop.img}" /><div class="info"><h4>${prop.title}</h4></div>`;
-    
-    card.onclick = ()=>{
-      openModal(prop,key);
-    };
-    
-    propertyList.appendChild(card);
-  });
-}
-
-function openModal(prop,key){
-  document.getElementById('modal-img').src = prop.img;
-  document.getElementById('modal-title').textContent = prop.title;
-  document.getElementById('modal-desc').textContent = prop.desc || "";
-  
-  const actionsDiv = document.getElementById('modal-actions');
-  actionsDiv.innerHTML = "";
-  
-  // Delete button for poster or admin
-  if(currentUser && (currentUser.email === prop.poster || adminEmails.includes(currentUser.email))){
-    const delBtn = document.createElement('button');
-    delBtn.textContent="Delete";
-    delBtn.onclick = e=>{
-      e.stopPropagation();
-      db.ref('properties/'+key).remove();
-      document.getElementById('modal').classList.remove('active');
-    };
-    actionsDiv.appendChild(delBtn);
-  }
-  
-  // Approve button for admin if not approved
-  if(currentUser && adminEmails.includes(currentUser.email) && !prop.approved){
-    const approveBtn = document.createElement('button');
-    approveBtn.textContent="Approve";
-    approveBtn.onclick = e=>{
-      e.stopPropagation();
-      db.ref('properties/'+key+'/approved').set(true);
-      document.getElementById('modal').classList.remove('active');
-    };
-    actionsDiv.appendChild(approveBtn);
-  }
-  
-  document.getElementById('modal').classList.add('active');
-}
-
-document.getElementById('close-modal').onclick = ()=>{
-  document.getElementById('modal').classList.remove('active');
-};
-
-// Firebase listener
-db.ref('properties').on('value', snapshot=>{
-  propertiesData = snapshot.val() || {};
-  renderProperties();
+// Add Property
+document.getElementById('addBtn').addEventListener('click',()=>{
+    const title = prompt("Property Title:");
+    const desc = prompt("Property Description:");
+    const imageUrl = prompt("Image URL (Imgbb link):");
+    if(title && desc && imageUrl){
+        const newKey = db.ref('properties/').push().key;
+        db.ref('properties/'+newKey).set({
+            title: title,
+            description: desc,
+            image: imageUrl,
+            approved: false
+        });
+        alert("Property added! Waiting for admin approval.");
+    }
 });
 
-// Auth
-loginBtn.onclick = ()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-};
-logoutBtn.onclick = ()=>auth.signOut();
+// Fetch and display properties
+function fetchProperties(){
+    db.ref('properties/').on('value', snapshot=>{
+        const container = document.getElementById('cardsContainer');
+        container.innerHTML = '';
+        snapshot.forEach(child=>{
+            const prop = child.val();
+            const key = child.key;
+            // show all approved
+            if(prop.approved){
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${prop.image}" alt="Property Image">
+                    <h3>${prop.title}</h3>
+                    <p>${prop.description}</p>
+                    <button class="btn3d" onclick="deleteProp('${key}')">Delete</button>
+                `;
+                card.onclick = function(e){
+                    if(e.target.tagName!=='BUTTON'){
+                        document.getElementById('modalInner').innerHTML = card.innerHTML;
+                        document.getElementById('modal').style.display='flex';
+                    }
+                }
+                container.appendChild(card);
+            }
+        });
+    });
+}
 
-auth.onAuthStateChanged(user=>{
-  currentUser = user;
-  if(user){
-    loginBtn.style.display="none";
-    logoutBtn.style.display="inline-block";
-    addBtn.style.display="inline-block";
-  }else{
-    loginBtn.style.display="inline-block";
-    logoutBtn.style.display="none";
-    addBtn.style.display="none";
-  }
-  renderProperties();
-});
+// Delete Property
+function deleteProp(key){
+    if(confirm("Are you sure to delete this property?")){
+        db.ref('properties/'+key).remove();
+    }
+}
 
-// Add property
-addBtn.onclick=()=>{
-  addFormContainer.style.display = addFormContainer.style.display==="none"?"block":"none";
-};
+// Modal close
+document.getElementById('closeModal').onclick = function(){
+    document.getElementById('modal').style.display='none';
+}
 
-document.getElementById('submit-prop').onclick = ()=>{
-  const title = document.getElementById('prop-title').value.trim();
-  const desc = document.getElementById('prop-desc').value.trim();
-  const img = document.getElementById('prop-img').value.trim();
-  if(!title || !img) return alert("Title and Image are required");
-  
-  const newProp = {
-    title, desc, img,
-    poster: currentUser.email,
-    approved: adminEmails.includes(currentUser.email) ? true : false
-  };
-  db.ref('properties').push(newProp);
-  document.getElementById('prop-title').value="";
-  document.getElementById('prop-desc').value="";
-  document.getElementById('prop-img').value="";
-  addFormContainer.style.display="none";
-};
+fetchProperties();
 </script>
+
 </body>
 </html>
