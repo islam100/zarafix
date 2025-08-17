@@ -1,189 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zara Real Estate</title>
+<title>ZaraFix Property Listing</title>
 <style>
-  body { margin:0; font-family:sans-serif; background:#f5f5f5; }
-  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#0b1b2a; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.3);}
-  header h1 { font-size:24px; text-shadow: 2px 2px 5px #000; }
-  #loginBtn, #logoutBtn { background:#2563eb; border:none; padding:8px 15px; color:#fff; border-radius:8px; box-shadow:2px 2px 5px #000; cursor:pointer; }
-  #propertyContainer { display:flex; flex-wrap:wrap; justify-content:center; margin:20px; gap:20px; }
-  .card { background:#fff; width:300px; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.3); overflow:hidden; position:relative; cursor:pointer; transition: transform 0.3s; }
-  .card img { width:100%; height:200px; object-fit:cover; }
-  .card .info { padding:10px; }
-  .whatsappBtn { position:absolute; top:10px; right:10px; background:#25D366; color:#fff; padding:5px 10px; border-radius:5px; text-decoration:none; box-shadow:2px 2px 5px #000; }
-  .adminBtns { display:flex; gap:10px; margin-top:10px; }
-  .btn3D { padding:5px 10px; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; box-shadow: 2px 2px 5px #000, -2px -2px 5px #fff; }
-  .blink { animation: blink 1s infinite; }
-  @keyframes blink { 50% { background:yellow; } }
-  #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; }
-  #modal img { max-width:90%; max-height:90%; border-radius:10px; }
-  #pagination { display:flex; justify-content:center; gap:20px; margin:20px 0; }
+  body { font-family: Arial, sans-serif; background: #f0f2f5; margin:0; padding:0; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#2563eb; color:#fff; }
+  .logo { font-size:24px; font-weight:bold; }
+  .login-btn { background:#fff; color:#2563eb; border:none; padding:8px 16px; cursor:pointer; border-radius:5px; }
+
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:15px; padding:20px; }
+  .card { background:#fff; border-radius:10px; padding:10px; box-shadow:0 4px 6px rgba(0,0,0,0.1); position:relative; }
+  .card img { width:100%; height:200px; object-fit:cover; border-radius:10px; }
+  .card .blink { animation: blinkAnim 1s infinite; }
+  @keyframes blinkAnim { 0%,100% {opacity:1;} 50% {opacity:0.3;} }
+
+  .card h3 { margin:10px 0 5px; font-size:18px; }
+  .card p { margin:5px 0; font-size:14px; }
+  .card button { margin-top:5px; padding:5px 10px; cursor:pointer; border:none; border-radius:5px; }
+
+  /* Modal */
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); justify-content:center; align-items:center; }
+  .modal-content { background:#fff; padding:20px; border-radius:10px; width:90%; max-width:600px; max-height:90%; overflow-y:auto; }
+  .modal img { width:100%; max-height:300px; object-fit:contain; }
+  .modal .close { float:right; cursor:pointer; font-size:20px; font-weight:bold; }
 </style>
 </head>
 <body>
-
 <header>
-  <h1>Zara</h1>
-  <button id="loginBtn">Login</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
+  <div class="logo">ZaraFix</div>
+  <button class="login-btn" id="loginBtn">Login</button>
 </header>
+<div class="grid" id="postsGrid"></div>
 
-<div id="propertyContainer"></div>
-
-<div id="pagination">
-  <button id="prevPage" class="btn3D">Previous</button>
-  <button id="nextPage" class="btn3D">Next</button>
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="close" id="modalClose">&times;</span>
+    <div id="modalBody"></div>
+  </div>
 </div>
-
-<div id="modal"><img src="" alt="Full Image"></div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script>
+// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  databaseURL: "YOUR_DB_URL",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
 const db = firebase.database();
-
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const propertyContainer = document.getElementById('propertyContainer');
-const modal = document.getElementById('modal');
-const modalImg = modal.querySelector('img');
-const prevPage = document.getElementById('prevPage');
-const nextPage = document.getElementById('nextPage');
+const auth = firebase.auth();
 
 let currentUser = null;
-let properties = [];
-let currentPage = 0;
-const perPage = 10;
+let isAdmin = false;
+const admins = ["admin@example.com"]; // admin emails array
 
-loginBtn.addEventListener('click', () => {
+// Login
+document.getElementById('loginBtn').addEventListener('click', ()=>{
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider);
-});
-
-logoutBtn.addEventListener('click', () => {
-  auth.signOut();
 });
 
 auth.onAuthStateChanged(user => {
   if(user){
     currentUser = user;
-    loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'block';
-    loadProperties();
-  } else {
-    currentUser = null;
-    loginBtn.style.display = 'block';
-    logoutBtn.style.display = 'none';
-    propertyContainer.innerHTML = '';
+    document.getElementById('loginBtn').style.display='none';
+    isAdmin = admins.includes(user.email);
+    fetchPosts();
   }
 });
 
-function loadProperties(){
-  db.ref('properties').once('value').then(snapshot=>{
-    properties = [];
-    snapshot.forEach(snap=>{
-      properties.push({id:snap.key, ...snap.val()});
-    });
-    renderPage();
+// Fetch posts
+function fetchPosts(){
+  db.ref('posts').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    renderPosts(Object.entries(data));
   });
 }
 
-function renderPage(){
-  propertyContainer.innerHTML = '';
-  const start = currentPage*perPage;
-  const end = start+perPage;
-  const pageItems = properties.slice(start,end);
-
-  pageItems.forEach(p=>{
+// Render posts
+function renderPosts(posts){
+  const grid = document.getElementById('postsGrid');
+  grid.innerHTML='';
+  posts.forEach(([id, post])=>{
     const card = document.createElement('div');
-    card.className = 'card';
-    if(!p.approved) card.classList.add('blink');
+    card.className='card';
+    if(post.approved !== true) card.classList.add('blink');
 
-    const img = document.createElement('img');
-    img.src = p.images[0];
-    card.appendChild(img);
-
-    const info = document.createElement('div');
-    info.className='info';
-    info.innerHTML = `<h3>${p.title}</h3><p>${p.desc}</p>`;
-    card.appendChild(info);
-
-    const whatsappBtn = document.createElement('a');
-    whatsappBtn.href = `https://wa.me/${p.posterPhone}`;
-    whatsappBtn.target='_blank';
-    whatsappBtn.className='whatsappBtn';
-    whatsappBtn.textContent='WhatsApp';
-    card.appendChild(whatsappBtn);
-
-    if(currentUser && currentUser.uid === p.posterUID){
-      const delBtn = document.createElement('button');
-      delBtn.textContent='Delete';
-      delBtn.className='btn3D';
-      delBtn.onclick = e=>{
-        e.stopPropagation();
-        db.ref('properties/'+p.id).remove();
-        loadProperties();
-      }
-      info.appendChild(delBtn);
-    }
-
-    if(currentUser && currentUser.email === 'admin@example.com'){ // Admin login check
-      const adminDiv = document.createElement('div');
-      adminDiv.className='adminBtns';
-      const approveBtn = document.createElement('button');
-      approveBtn.textContent='Approve';
-      approveBtn.className='btn3D';
-      approveBtn.onclick = e=>{
-        e.stopPropagation();
-        db.ref('properties/'+p.id).update({approved:true});
-        loadProperties();
-      }
-      const rejectBtn = document.createElement('button');
-      rejectBtn.textContent='Reject';
-      rejectBtn.className='btn3D';
-      rejectBtn.onclick = e=>{
-        e.stopPropagation();
-        db.ref('properties/'+p.id).remove();
-        loadProperties();
-      }
-      adminDiv.appendChild(approveBtn);
-      adminDiv.appendChild(rejectBtn);
-      info.appendChild(adminDiv);
-    }
-
-    card.onclick = () => {
-      modal.style.display='flex';
-      modalImg.src=p.images[0];
-    }
-
-    propertyContainer.appendChild(card);
+    let images = post.images ? post.images.join(',') : '';
+    card.innerHTML=`
+      <img src="${post.images ? post.images[0] : ''}" alt="">
+      <h3>${post.title || ''}</h3>
+      <p>${post.description || ''}</p>
+      <p>Price: ${post.price || ''}</p>
+      <p>Location: ${post.location || ''}</p>
+      <p>Area: ${post.area || ''}, BHK: ${post.bhk || ''}</p>
+      <p>Floor: ${post.floor || ''}, Facing: ${post.facing || ''}</p>
+      <button onclick="openModal('${id}')">View</button>
+      ${isAdmin && !post.approved ? `<button onclick="approvePost('${id}')">Approve</button>` : ''}
+      ${currentUser && (currentUser.email===post.poster || isAdmin) ? `<button onclick="deletePost('${id}')">Delete</button>` : ''}
+      <a href="https://wa.me/${post.whatsapp}" target="_blank">WhatsApp</a>
+    `;
+    grid.appendChild(card);
   });
 }
 
-modal.onclick = () => { modal.style.display='none'; }
+// Approve post
+function approvePost(id){
+  db.ref('posts/'+id).update({approved:true});
+}
 
-nextPage.onclick = () => { if((currentPage+1)*perPage<properties.length){ currentPage++; renderPage(); } }
-prevPage.onclick = () => { if(currentPage>0){ currentPage--; renderPage(); } }
+// Delete post
+function deletePost(id){
+  if(confirm('Are you sure?')){
+    db.ref('posts/'+id).remove();
+  }
+}
 
+// Modal
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+document.getElementById('modalClose').onclick=()=>{ modal.style.display='none'; }
+window.onclick = function(event){ if(event.target==modal) modal.style.display='none'; }
+
+function openModal(id){
+  db.ref('posts/'+id).once('value').then(snap=>{
+    const post = snap.val();
+    if(!post) return;
+    let imgHTML = post.images ? post.images.map(src=>`<img src="${src}">`).join('') : '';
+    modalBody.innerHTML = `
+      ${imgHTML}
+      <h2>${post.title || ''}</h2>
+      <p>${post.description || ''}</p>
+      <p>Price: ${post.price || ''}</p>
+      <p>Location: ${post.location || ''}</p>
+      <p>Area: ${post.area || ''}, BHK: ${post.bhk || ''}</p>
+      <p>Floor: ${post.floor || ''}, Facing: ${post.facing || ''}</p>
+      <a href="https://wa.me/${post.whatsapp}" target="_blank">WhatsApp</a>
+    `;
+    modal.style.display='flex';
+  });
+}
 </script>
-
 </body>
 </html>
