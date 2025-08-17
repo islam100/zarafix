@@ -3,116 +3,201 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Property Listing</title>
+  <title>ZaraFix Property Listing</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f4f4f9;
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
+      margin: 0;
+      padding: 0;
+      text-align: center;
     }
-    h2 {
-      color: #333;
-    }
-    .form-box {
-      background: white;
+    header {
+      background: #ff5f6d;
+      color: white;
       padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      margin-bottom: 20px;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 8px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      font-size: 26px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
     }
     button {
-      background: #007BFF;
-      color: white;
-      padding: 10px 15px;
+      background: #ff7eb3;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      padding: 12px 20px;
+      margin: 10px;
+      border-radius: 10px;
+      color: white;
       font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 4px 4px 6px rgba(0,0,0,0.3);
+      transition: 0.2s;
     }
     button:hover {
-      background: #0056b3;
+      transform: scale(1.05);
     }
-    .post {
+    .card {
       background: white;
-      padding: 10px;
-      border-radius: 8px;
-      margin: 10px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      padding: 15px;
+      border-radius: 12px;
+      width: 80%;
+      max-width: 500px;
+      box-shadow: 4px 4px 10px rgba(0,0,0,0.2);
+    }
+    img {
+      width: 100%;
+      max-height: 250px;
+      object-fit: contain;
+      border-radius: 10px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <header>🏠 ZaraFix Property Listings</header>
+  <br>
+  <button onclick="googleLogin()">🔑 Login with Google</button>
+  <button onclick="logout()">🚪 Logout</button>
 
-  <h2>नया पोस्ट डालें</h2>
-  <div class="form-box">
-    <input type="text" id="title" placeholder="शीर्षक लिखें">
-    <textarea id="description" placeholder="विवरण लिखें"></textarea>
-    <button onclick="addPost()">Post जोड़ें</button>
+  <div id="uploadSection" style="display:none;">
+    <h2>📤 Upload Property (Max 5 Images)</h2>
+    <input type="text" id="title" placeholder="Title"><br><br>
+    <input type="text" id="price" placeholder="Price"><br><br>
+    <input type="text" id="contact" placeholder="Contact Number"><br><br>
+    <input type="file" id="images" multiple accept="image/*"><br><br>
+    <button onclick="uploadPost()">Submit Post</button>
   </div>
 
-  <h2>पोस्ट लिस्ट</h2>
-  <div id="posts"></div>
+  <h2>✅ Approved Listings</h2>
+  <div id="approvedPosts"></div>
 
-  <!-- Firebase -->
+  <div id="adminSection" style="display:none;">
+    <h2>🔎 Admin Approval Panel</h2>
+    <div id="pendingPosts"></div>
+  </div>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
   <script>
-    // Firebase Config (अपना config यहाँ लगाएँ)
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
       databaseURL: "https://YOUR_PROJECT.firebaseio.com",
       projectId: "YOUR_PROJECT",
       storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcdef"
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
-
-    // Firebase Initialize
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // Add Post
-    function addPost() {
-      const title = document.getElementById("title").value;
-      const description = document.getElementById("description").value;
+    let currentUser = null;
+    const adminEmail = "admin@gmail.com"; // यहाँ अपना Admin Email डालें
 
-      if (title.trim() === "" || description.trim() === "") {
-        alert("कृपया शीर्षक और विवरण भरें");
+    // Login
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then(res => {
+        currentUser = res.user;
+        alert("Welcome " + currentUser.displayName);
+        document.getElementById("uploadSection").style.display = "block";
+        if(currentUser.email === adminEmail){
+          document.getElementById("adminSection").style.display = "block";
+        }
+      });
+    }
+
+    // Logout
+    function logout(){
+      firebase.auth().signOut();
+      location.reload();
+    }
+
+    // Upload Post
+    async function uploadPost(){
+      if(!currentUser) return alert("Login first!");
+      let title = document.getElementById("title").value;
+      let price = document.getElementById("price").value;
+      let contact = document.getElementById("contact").value;
+      let files = document.getElementById("images").files;
+
+      if(files.length > 5){
+        alert("Max 5 images allowed!");
         return;
       }
 
-      const newPostRef = db.ref("posts").push();
-      newPostRef.set({
-        title: title,
-        description: description
+      let urls = [];
+      for(let i=0; i<files.length; i++){
+        let file = files[i];
+        let ref = firebase.storage().ref("pendingImages/"+Date.now()+"_"+file.name);
+        await ref.put(file);
+        let url = await ref.getDownloadURL();
+        urls.push(url);
+      }
+
+      let postId = Date.now();
+      firebase.database().ref("pendingPosts/"+postId).set({
+        title, price, contact, images: urls, poster: currentUser.email
       });
 
-      document.getElementById("title").value = "";
-      document.getElementById("description").value = "";
+      alert("Post submitted for admin approval!");
     }
 
-    // Fetch Posts
-    db.ref("posts").on("value", (snapshot) => {
-      const postsDiv = document.getElementById("posts");
-      postsDiv.innerHTML = "";
-      snapshot.forEach((child) => {
-        const post = child.val();
-        postsDiv.innerHTML += `
-          <div class="post">
-            <h3>${post.title}</h3>
-            <p>${post.description}</p>
-          </div>
-        `;
+    // Load Approved Posts
+    firebase.database().ref("approvedPosts").on("value", snap=>{
+      let container = document.getElementById("approvedPosts");
+      container.innerHTML = "";
+      snap.forEach(data=>{
+        let post = data.val();
+        let div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<h3>${post.title}</h3>
+                         <p>Price: ${post.price}</p>
+                         <p>Contact: <a href="https://wa.me/${post.contact}" target="_blank">WhatsApp</a></p>`;
+        post.images.forEach(img=>{
+          div.innerHTML += `<img src="${img}">`;
+        });
+        container.appendChild(div);
       });
     });
+
+    // Admin Pending Posts
+    firebase.database().ref("pendingPosts").on("value", snap=>{
+      if(!currentUser || currentUser.email !== adminEmail) return;
+      let container = document.getElementById("pendingPosts");
+      container.innerHTML = "";
+      snap.forEach(data=>{
+        let postId = data.key;
+        let post = data.val();
+        let div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `<h3>${post.title}</h3>
+                         <p>Price: ${post.price}</p>
+                         <p>Poster: ${post.poster}</p>`;
+        post.images.forEach(img=>{
+          div.innerHTML += `<img src="${img}">`;
+        });
+        div.innerHTML += `<button onclick="approvePost('${postId}')">Approve</button>
+                          <button onclick="rejectPost('${postId}')">Reject</button>`;
+        container.appendChild(div);
+      });
+    });
+
+    function approvePost(id){
+      firebase.database().ref("pendingPosts/"+id).once("value").then(snap=>{
+        let post = snap.val();
+        firebase.database().ref("approvedPosts/"+id).set(post);
+        firebase.database().ref("pendingPosts/"+id).remove();
+      });
+    }
+
+    function rejectPost(id){
+      firebase.database().ref("pendingPosts/"+id).remove();
+    }
   </script>
 </body>
 </html>
