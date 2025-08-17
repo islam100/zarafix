@@ -1,162 +1,73 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property</title>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-}
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  background: white;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-.logo {
-  font-size: 26px;
-  font-weight: bold;
-  color: #333;
-  text-transform: uppercase;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-.upload-section {
-  padding: 15px;
-  text-align: center;
-}
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 15px;
-  padding: 15px;
-}
-.card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
-}
-.card:hover {
-  transform: translateY(-5px) scale(1.02);
-}
-.card img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-.skeleton {
-  width: 100%;
-  height: 200px;
-  background: linear-gradient(90deg, #eee, #ddd, #eee);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zara Property</title>
 </head>
 <body>
+  <h2>नया पोस्ट डालें</h2>
+  <input type="text" id="title" placeholder="शीर्षक लिखें"><br><br>
+  <input type="text" id="desc" placeholder="विवरण लिखें"><br><br>
+  <button onclick="addPost()">Post जोड़ें</button>
 
-<header>
-  <div class="logo">ZARA PROPERTY</div>
-  <button onclick="login()">Login</button>
-</header>
+  <h2>पोस्ट लिस्ट</h2>
+  <ul id="postList"></ul>
 
-<div class="upload-section" id="uploadBox" style="display:none;">
-  <input type="file" id="propertyImage" accept="image/*"><br><br>
-  <button onclick="uploadImage()">Upload Property</button>
-</div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<div class="card-grid" id="propertyList">
-  <div class="skeleton"></div>
-  <div class="skeleton"></div>
-</div>
+  <script>
+    // 🔹 आपका Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+    };
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
+    // 🔹 Add post
+    function addPost() {
+      const title = document.getElementById("title").value;
+      const desc = document.getElementById("desc").value;
 
-let currentUser = null;
-
-// 🔑 Login
-function login(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider);
-}
-firebase.auth().onAuthStateChanged(user=>{
-  if(user){
-    currentUser = user;
-    document.getElementById("uploadBox").style.display = "block";
-  }
-});
-
-// 📤 Upload + Save
-function uploadImage(){
-  const file = document.getElementById("propertyImage").files[0];
-  if(!file) return alert("Select an image!");
-
-  const storageRef = firebase.storage().ref("properties/"+Date.now()+"_"+file.name);
-  const uploadTask = storageRef.put(file);
-
-  uploadTask.on("state_changed",
-    snap=>{ console.log("Uploading..."); },
-    err=>{ alert("Error: "+err); },
-    ()=>{
-      uploadTask.snapshot.ref.getDownloadURL().then(url=>{
-        firebase.database().ref("properties").push({
-          imageUrl: url,
-          user: currentUser.email,
-          timestamp: Date.now(),
-          approved: false
-        });
-        alert("Uploaded! Pending admin approval.");
-      });
-    }
-  );
-}
-
-// 📥 Fetch & Render
-function fetchProperties(){
-  const list = document.getElementById("propertyList");
-  firebase.database().ref("properties").on("value", snap=>{
-    list.innerHTML = "";
-    snap.forEach(item=>{
-      const data = item.val();
-      if(data.approved){  // only approved visible
-        const card = document.createElement("div");
-        card.className="card";
-        card.innerHTML = `<img src="${data.imageUrl}" alt="Property">`;
-        list.appendChild(card);
+      if(title.trim() === "" || desc.trim() === "") {
+        alert("कृपया दोनों फ़ील्ड भरें");
+        return;
       }
-    });
-  });
-}
-fetchProperties();
-</script>
 
+      const newPostKey = db.ref().child("posts").push().key;
+      db.ref("posts/" + newPostKey).set({
+        title: title,
+        desc: desc,
+        approved: true,   // अभी default approved ताकि तुरंत दिखे
+        timestamp: Date.now()
+      });
+
+      document.getElementById("title").value = "";
+      document.getElementById("desc").value = "";
+    }
+
+    // 🔹 Fetch posts
+    db.ref("posts").on("value", (snapshot) => {
+      const postList = document.getElementById("postList");
+      postList.innerHTML = "";
+      snapshot.forEach((childSnapshot) => {
+        const post = childSnapshot.val();
+        if(post.approved){
+          const li = document.createElement("li");
+          li.textContent = post.title + " - " + post.desc;
+          postList.appendChild(li);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
