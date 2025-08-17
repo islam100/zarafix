@@ -3,131 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Property Listing</title>
+<title>Zara Property Demo</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(to right, #ffecd2, #fcb69f);
-    margin: 0;
-    padding: 0;
-}
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background: #ff7e5f;
-    color: white;
-    font-weight: bold;
-    font-size: 24px;
-    text-shadow: 2px 2px #333;
-}
-button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(45deg,#6a11cb,#2575fc);
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 3px 3px 8px #333;
-    transition: transform 0.2s;
-}
-button:hover {
-    transform: translateY(-3px);
-}
-#posts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    padding: 20px;
-    justify-content: center;
-}
-.card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 3px 3px 12px #555;
-    width: 250px;
-    padding: 15px;
-    cursor: pointer;
-    transition: transform 0.2s, width 0.2s, height 0.2s;
-    position: relative;
-}
-.card img {
-    width: 100%;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-.card.fullview {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    height: 90%;
-    overflow-y: auto;
-    z-index: 1000;
-}
-.card .whatsapp-btn {
-    margin-top: 10px;
-    display: block;
-}
-#overlay {
-    display: none;
-    position: fixed;
-    top:0;
-    left:0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-}
-#postForm {
-    margin: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-#postForm input, #postForm textarea {
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    width: 100%;
-}
-#logoutBtn {
-    background: red;
-    position: absolute;
-    right: 10px;
-    top: 10px;
-}
+  body {font-family: Arial, sans-serif; margin:0; background: linear-gradient(to right, #ffecd2, #fcb69f);}
+  header {display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background: #ff7e5f; color:white;}
+  header h1 {font-size:24px; font-weight:bold; text-shadow:2px 2px 5px #000;}
+  button {padding:8px 15px; border:none; border-radius:5px; cursor:pointer; background:#4CAF50; color:white; font-weight:bold;}
+  .container {padding:20px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
+  .card {background:white; padding:15px; border-radius:10px; width:250px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: transform 0.3s ease; cursor:pointer; position:relative;}
+  .card:hover {transform: scale(1.05);}
+  .card img {width:100%; border-radius:10px;}
+  .card h3 {margin:10px 0 5px 0;}
+  .card p {margin:0 0 10px 0;}
+  .whatsapp-btn {position:absolute; bottom:10px; right:10px; background:#25D366; color:white; font-weight:bold; padding:5px 10px; border-radius:5px; text-decoration:none;}
+  .modal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;}
+  .modal-content {background:white; padding:20px; border-radius:10px; width:90%; max-width:500px;}
+  @media (max-width:600px) { .card {width:90%; } }
 </style>
-</head>
-<body>
-
-<header>
-    <div>ZARA</div>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-</header>
-
-<div id="overlay"></div>
-
-<div id="postForm" style="display:none;">
-    <input type="text" id="title" placeholder="Title">
-    <textarea id="desc" placeholder="Description"></textarea>
-    <input type="file" id="imageInput">
-    <button id="submitPost">Submit Post</button>
-</div>
-
-<div id="posts"></div>
-
-<!-- Firebase SDK -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+<header>
+  <h1>Zara</h1>
+  <button id="loginBtn">Login with Google</button>
+</header>
+<div class="container" id="postsContainer"></div>
+
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent">
+    <!-- Expanded card content -->
+  </div>
+</div>
 
 <script>
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
@@ -139,110 +50,57 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
-
 const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const postForm = document.getElementById('postForm');
-const postsDiv = document.getElementById('posts');
-const overlay = document.getElementById('overlay');
-
-const adminEmail = 'zarasamajiksevasanstha@gmail.com';
 let currentUser = null;
+const adminEmail = 'zarasamajiksevasanstha@gmail.com';
+const adminWhatsApp = '+917378342192';
 
-loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-};
-logoutBtn.onclick = () => {
-    auth.signOut();
-};
-
-auth.onAuthStateChanged(user=>{
-    if(user){
-        currentUser = user;
-        loginBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
-        if(user.email === adminEmail){
-            // Admin view
-            postForm.style.display = 'none';
-            fetchPosts(true);
-        } else {
-            postForm.style.display = 'flex';
-            fetchPosts(false);
-        }
-    } else {
-        loginBtn.style.display = 'inline-block';
-        logoutBtn.style.display = 'none';
-        postForm.style.display = 'none';
-        postsDiv.innerHTML = '';
-    }
+loginBtn.addEventListener('click', ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).then(result => {
+    currentUser = result.user;
+    loginBtn.textContent = 'Logout';
+    loadPosts();
+  }).catch(err=>alert(err.message));
 });
 
-// Post submission
-document.getElementById('submitPost').onclick = async () => {
-    const title = document.getElementById('title').value;
-    const desc = document.getElementById('desc').value;
-    const file = document.getElementById('imageInput').files[0];
+loginBtn.addEventListener('click', ()=>{
+  if(currentUser){ firebase.auth().signOut().then(()=>{ currentUser=null; loginBtn.textContent='Login with Google'; }); }
+});
 
-    if(!title || !desc || !file) return alert('All fields required');
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    const res = await fetch('https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5', {
-        method: 'POST',
-        body: formData
-    });
-    const data = await res.json();
-    const imageUrl = data.data.url;
-
-    const newPostRef = db.ref('posts').push();
-    newPostRef.set({
-        title, 
-        desc,
-        image: imageUrl,
-        poster: currentUser.phoneNumber || currentUser.email,
-        approved: false,
-        timestamp: Date.now()
-    });
-    alert('Post submitted for admin approval!');
-    document.getElementById('title').value='';
-    document.getElementById('desc').value='';
-    document.getElementById('imageInput').value='';
-};
-
-// Fetch posts
-function fetchPosts(isAdmin){
-    db.ref('posts').on('value', snapshot=>{
-        postsDiv.innerHTML='';
-        const posts = snapshot.val();
-        for(const key in posts){
-            const p = posts[key];
-            if(!p.approved && !isAdmin) continue;
-            const card = document.createElement('div');
-            card.className='card';
-            card.innerHTML=`
-                <img src="${p.image}" />
-                <h3>${p.title}</h3>
-                <p>${p.desc}</p>
-                <a class="whatsapp-btn" href="https://wa.me/917378342192" target="_blank">
-                  WhatsApp
-                </a>
-            `;
-            card.onclick = ()=>{
-                card.classList.add('fullview');
-                overlay.style.display='block';
-            };
-            overlay.onclick=()=>{
-                card.classList.remove('fullview');
-                overlay.style.display='none';
-            };
-            postsDiv.appendChild(card);
-        }
-    });
+function loadPosts(){
+  firebase.database().ref('posts').once('value').then(snapshot=>{
+    const posts = snapshot.val();
+    const container = document.getElementById('postsContainer');
+    container.innerHTML='';
+    for(let key in posts){
+      if(posts[key].approved){
+        const post = posts[key];
+        const card = document.createElement('div');
+        card.className='card';
+        card.innerHTML = `<h3>${post.title}</h3><p>${post.desc}</p>
+        <a class='whatsapp-btn' href='https://wa.me/${post.posterNumber}?text=Hello' target='_blank'>WhatsApp</a>`;
+        card.addEventListener('click', ()=>{
+          document.getElementById('modalContent').innerHTML=`<h2>${post.title}</h2><p>${post.desc}</p>`;
+          document.getElementById('modal').style.display='flex';
+        });
+        container.appendChild(card);
+      }
+    }
+  });
 }
+
+// Close modal on click outside
+document.getElementById('modal').addEventListener('click', e=>{
+  if(e.target.id==='modal') e.target.style.display='none';
+});
+
+// Example static posts
+firebase.database().ref('posts').set({
+  post1:{title:'2BHK Flat in Indore', desc:'Prime Location, Garden Facing', approved:true, posterNumber:'+919876543210'},
+  post2:{title:'Farm Land 5 Acre', desc:'Near Highway, Good for Investment', approved:true, posterNumber:'+919812345678'}
+});
+
 </script>
 </body>
 </html>
