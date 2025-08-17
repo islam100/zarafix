@@ -1,78 +1,163 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin - Properties</title>
+  <title>Property Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { margin:0; font-family:Arial; background:#f4f4f4; }
-    header {
-      background:#0077cc; color:white; padding:15px; text-align:center;
-      display:flex; justify-content:center; align-items:center;
-    }
-    header img { height:40px; margin-right:10px; }
-    .container { padding:15px; }
-    .property-card {
-      background:white; margin-bottom:15px; padding:15px;
-      border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.1);
-    }
-    .property-card h3 { margin:0; color:#0077cc; }
-    .status {
-      font-size:12px; padding:4px 8px; border-radius:6px;
-      display:inline-block; margin-top:5px;
-    }
-    .pending { background:#ffcc00; color:#000; }
-    .approved { background:#28a745; color:white; }
-    .images { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-    .images img { width:100px; height:80px; border-radius:6px; object-fit:cover; }
-    @media(max-width:600px) {
-      .images img { width:80px; height:60px; }
-    }
+    body { font-family: Arial; margin:0; background:#f4f4f4; }
+    .navbar { display:flex; gap:10px; padding:10px; background:#222; color:#fff; }
+    .navbar button { padding:10px 15px; border:none; border-radius:8px; cursor:pointer; background:#ff9800; color:#fff; }
+    .container { max-width:600px; margin:20px auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+    .property-card { border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px; background:#fafafa; }
+    .property-card img { width:100%; border-radius:8px; margin:5px 0; }
+    .approved { color:green; font-weight:bold; }
+    .pending { color:orange; font-weight:bold; }
   </style>
 </head>
 <body>
-  <header>
-    <img src="https://i.ibb.co/3Nq9YPr/logo.png" alt="Logo">
-    <h2>Admin Dashboard</h2>
-  </header>
 
-  <div class="container" id="propertyList">Loading...</div>
+  <div class="navbar">
+    <button onclick="showForm()">Post Property</button>
+    <button onclick="showDashboard()">My Dashboard</button>
+    <button onclick="showAdmin()">Admin Panel</button>
+  </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Form -->
+  <div id="formSection" class="container">
+    <h2>Post Your Property</h2>
+    <form id="propertyForm">
+      <label>Property Type:</label>
+      <select id="type" required>
+        <option value="Sell">Sell</option>
+        <option value="Rent">Rent</option>
+      </select><br><br>
+
+      <label>Title:</label>
+      <input type="text" id="title" required><br><br>
+
+      <label>Price:</label>
+      <input type="number" id="price" required><br><br>
+
+      <label>Location:</label>
+      <input type="text" id="location" required><br><br>
+
+      <label>Upload Images:</label>
+      <input type="file" id="images" multiple accept="image/*" required><br><br>
+
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboardSection" class="container" style="display:none;">
+    <h2>My Properties</h2>
+    <div id="myProperties"></div>
+  </div>
+
+  <!-- Admin -->
+  <div id="adminSection" class="container" style="display:none;">
+    <h2>Admin Approval Panel</h2>
+    <div id="adminProperties"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
   <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
       authDomain: "property-20d6d.firebaseapp.com",
       databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
       projectId: "property-20d6d",
       storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "797729859340",
-      appId: "1:797729859340:web:5c6427b9c123456789"
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
     };
-    firebase.initializeApp(firebaseConfig);
+    const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const propertyList = document.getElementById("propertyList");
-    db.ref("properties").on("value", snapshot => {
-      propertyList.innerHTML = "";
-      snapshot.forEach(child => {
-        const p = child.val();
-        const card = document.createElement("div");
-        card.className = "property-card";
-        card.innerHTML = `
-          <h3>${p.type} - ${p.category}</h3>
-          <p><b>Price:</b> ₹${p.price}</p>
-          <p><b>Address:</b> ${p.address} (${p.pincode})</p>
-          <p><b>Description:</b> ${p.description}</p>
-          <span class="status ${p.status}">${p.status}</span>
-          <div class="images">
-            ${p.images ? Object.values(p.images).map(url=>`<img src="${url}">`).join("") : ""}
-          </div>
-        `;
-        propertyList.appendChild(card);
+    const imgbbApiKey = "cad1f0dbfbd25346460789376cc2d7d5";
+
+    // Toggle Sections
+    function showForm(){ document.getElementById("formSection").style.display="block"; document.getElementById("dashboardSection").style.display="none"; document.getElementById("adminSection").style.display="none"; }
+    function showDashboard(){ document.getElementById("formSection").style.display="none"; document.getElementById("dashboardSection").style.display="block"; document.getElementById("adminSection").style.display="none"; loadMyProperties(); }
+    function showAdmin(){ document.getElementById("formSection").style.display="none"; document.getElementById("dashboardSection").style.display="none"; document.getElementById("adminSection").style.display="block"; loadAdminProperties(); }
+
+    // Handle Form Submit
+    document.getElementById("propertyForm").addEventListener("submit", async function(e){
+      e.preventDefault();
+      const type = document.getElementById("type").value;
+      const title = document.getElementById("title").value;
+      const price = document.getElementById("price").value;
+      const location = document.getElementById("location").value;
+      const files = document.getElementById("images").files;
+
+      let imageUrls = [];
+      for(let file of files){
+        let formData = new FormData();
+        formData.append("image", file);
+        let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+          method: "POST", body: formData
+        });
+        let data = await res.json();
+        imageUrls.push(data.data.url);
+      }
+
+      const id = Date.now();
+      db.ref("properties/"+id).set({
+        type, title, price, location, images:imageUrls, status:"Pending"
       });
+
+      alert("Property submitted for admin approval!");
+      document.getElementById("propertyForm").reset();
     });
+
+    // Load My Properties
+    function loadMyProperties(){
+      const container = document.getElementById("myProperties");
+      container.innerHTML = "";
+      db.ref("properties").once("value", snapshot=>{
+        snapshot.forEach(item=>{
+          let p = item.val();
+          let div = document.createElement("div");
+          div.className="property-card";
+          div.innerHTML = `<h3>${p.title}</h3>
+            <p>${p.type} - ₹${p.price}</p>
+            <p>${p.location}</p>
+            ${p.images.map(img=>`<img src="${img}">`).join("")}
+            <p>Status: <span class="${p.status=='Approved'?'approved':'pending'}">${p.status}</span></p>`;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    // Load Admin Properties
+    function loadAdminProperties(){
+      const container = document.getElementById("adminProperties");
+      container.innerHTML = "";
+      db.ref("properties").once("value", snapshot=>{
+        snapshot.forEach(item=>{
+          let key=item.key; let p=item.val();
+          let div=document.createElement("div");
+          div.className="property-card";
+          div.innerHTML = `<h3>${p.title}</h3>
+            <p>${p.type} - ₹${p.price}</p>
+            <p>${p.location}</p>
+            ${p.images.map(img=>`<img src="${img}">`).join("")}
+            <p>Status: <span class="${p.status=='Approved'?'approved':'pending'}">${p.status}</span></p>
+            ${p.status==="Pending"?`<button onclick="approveProperty('${key}')">Approve</button>`:""}`;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function approveProperty(id){
+      db.ref("properties/"+id).update({status:"Approved"});
+      alert("Approved!");
+      loadAdminProperties();
+    }
   </script>
 </body>
 </html>
