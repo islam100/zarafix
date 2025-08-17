@@ -9,7 +9,7 @@
     .navbar button { padding:10px 15px; border:none; border-radius:8px; cursor:pointer; background:#ff9800; color:#fff; }
     .container { max-width:600px; margin:20px auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
     .property-card { border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px; background:#fafafa; }
-    .property-card img { width:100%; border-radius:8px; margin:5px 0; }
+    .property-card img { width:100%; max-height:150px; object-fit:cover; border-radius:8px; margin:5px 0; }
     .approved { color:green; font-weight:bold; }
     .pending { color:orange; font-weight:bold; }
   </style>
@@ -61,8 +61,8 @@
   </div>
 
   <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
   <script>
     // Firebase Config
@@ -80,6 +80,8 @@
 
     const imgbbApiKey = "cad1f0dbfbd25346460789376cc2d7d5";
 
+    const currentUser = "user123"; // Replace with logged-in user ID
+
     // Toggle Sections
     function showForm(){ document.getElementById("formSection").style.display="block"; document.getElementById("dashboardSection").style.display="none"; document.getElementById("adminSection").style.display="none"; }
     function showDashboard(){ document.getElementById("formSection").style.display="none"; document.getElementById("dashboardSection").style.display="block"; document.getElementById("adminSection").style.display="none"; loadMyProperties(); }
@@ -95,18 +97,19 @@
       const files = document.getElementById("images").files;
 
       let imageUrls = [];
-      for(let file of files){
-        let formData = new FormData();
-        formData.append("image", file);
-        let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-          method: "POST", body: formData
-        });
-        let data = await res.json();
-        imageUrls.push(data.data.url);
-      }
+      try{
+        for(let file of files){
+          let formData = new FormData();
+          formData.append("image", file);
+          let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, { method: "POST", body: formData });
+          let data = await res.json();
+          if(data.success) imageUrls.push(data.data.url);
+        }
+      } catch(err){ alert("Image upload failed: "+err); return; }
 
       const id = Date.now();
       db.ref("properties/"+id).set({
+        userId: currentUser,
         type, title, price, location, images:imageUrls, status:"Pending"
       });
 
@@ -121,14 +124,16 @@
       db.ref("properties").once("value", snapshot=>{
         snapshot.forEach(item=>{
           let p = item.val();
-          let div = document.createElement("div");
-          div.className="property-card";
-          div.innerHTML = `<h3>${p.title}</h3>
-            <p>${p.type} - ₹${p.price}</p>
-            <p>${p.location}</p>
-            ${p.images.map(img=>`<img src="${img}">`).join("")}
-            <p>Status: <span class="${p.status=='Approved'?'approved':'pending'}">${p.status}</span></p>`;
-          container.appendChild(div);
+          if(p.userId === currentUser){
+            let div = document.createElement("div");
+            div.className="property-card";
+            div.innerHTML = `<h3>${p.title}</h3>
+              <p>${p.type} - ₹${p.price}</p>
+              <p>${p.location}</p>
+              ${p.images.map(img=>`<img src="${img}">`).join("")}
+              <p>Status: <span class="${p.status=='Approved'?'approved':'pending'}">${p.status}</span></p>`;
+            container.appendChild(div);
+          }
         });
       });
     }
