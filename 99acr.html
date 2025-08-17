@@ -1,339 +1,624 @@
+
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Zara Properties — 99acres-style (Final)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>99Acer – Find Homes, Flats, Plots</title>
+  <style>
+    :root{
+      --bg:#0b1b2a; --card:#ffffff; --muted:#6b7280; --brand:#2563eb; --brand2:#22c55e; --chip:#eef2ff;
+      --ink:#0f172a; --soft:#f1f5f9; --ring:rgba(37,99,235,.25)
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;color:var(--ink);}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1200px;margin-inline:auto;padding:0 16px}
+    .btn{display:inline-flex;gap:8px;align-items:center;border:1px solid transparent;background:var(--brand);color:#fff;padding:10px 14px;border-radius:999px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#fff;border-color:#e5e7eb;color:#111827}
+    .btn.ghost{background:transparent;border-color:#334155;color:#e2e8f0}
+    .btn.green{background:var(--brand2)}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#1e293b;font-size:12px}
+    .header{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,#071421,rgba(7,20,33,.85));backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 0;color:#e2e8f0}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#60a5fa,#22c55e);display:grid;place-items:center;color:#003; font-weight:900}
+    .nav-actions{display:flex;gap:10px;align-items:center}
+    .hero{background:radial-gradient(1200px 500px at 50% -10%, #0ea5e9 0%, transparent 60%),linear-gradient(180deg,#071421 0%, #0b1b2a 60%, #0f172a 100%);color:#e2e8f0}
+    .hero-wrap{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;padding:38px 0}
+    .headline{font-size:clamp(28px,3.2vw,46px);line-height:1.1;margin:0 0 10px}
+    .sub{color:#b6c2cf;margin:0 0 18px}
+    .search-card{background:#0b1220;border:1px solid #1f2a44;border-radius:16px;padding:14px;box-shadow:0 8px 30px rgba(2,6,23,.35)}
+    .tabs{display:flex;background:#0f172a;border-radius:12px;overflow:hidden;border:1px solid #1f2a44}
+    .tab{flex:1;text-align:center;padding:10px 12px;color:#94a3b8;cursor:pointer;font-weight:700}
+    .tab.active{background:#111827;color:#fff}
+    .form-row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;align-items:end;margin-top:12px}
+    .field{grid-column:span 3;background:#0f172a;border:1px solid #1f2a44;border-radius:12px;padding:10px}
+    .field label{display:block;color:#9ca3af;font-size:12px;margin-bottom:6px}
+    .field input,.field select{width:100%;background:transparent;border:none;outline:none;color:#e5e7eb;font-size:14px}
+    .go{grid-column:span 3;display:flex;gap:10px}
+    .go .btn{width:100%;justify-content:center}
+    .hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .hero-img{border-radius:18px;overflow:hidden;border:1px solid #1f2a44;box-shadow:0 20px 50px rgba(2,6,23,.5);min-height:280px;background:url('https://images.unsplash.com/photo-1505691723518-36a5ac3b2dba?q=80&w=1400&auto=format&fit=crop') center/cover}
 
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    .section{padding:26px 0;background:#fff}
+    .section.dark{background:linear-gradient(180deg,#f8fafc,#ffffff)}
 
-<style>
-:root{--brand:#2563eb;--muted:#64748b;--card:#fff;--radius:12px}
-*{box-sizing:border-box}
-body{font-family:Inter,system-ui,Arial;margin:0;background:#f5f7fb;color:#0f172a}
-header{background:linear-gradient(180deg,#071033,#0b1430);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
-.logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#60a5fa,#2563eb)}
-.container{max-width:1200px;margin:18px auto;padding:0 16px}
-.panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,.06);margin-bottom:14px}
-.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:10px}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e6edf3;width:100%}
-.chips{display:flex;gap:8px;margin-top:10px}
-.chip{padding:6px 10px;border-radius:999px;background:#eef2ff;border:1px solid #dbeafe;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-.card{background:var(--card);border-radius:12px;overflow:hidden;border:1px solid #e8eef7;display:flex;flex-direction:column}
-.gallery{height:180px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;position:relative}
-.gallery img{width:100%;height:100%;object-fit:cover}
-.badge{position:absolute;top:8px;left:8px;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
-.featured{position:absolute;top:8px;right:8px;background:#f59e0b;color:#fff;padding:6px 10px;border-radius:6px;font-weight:700}
-.card-body{padding:12px;display:flex;flex-direction:column;min-height:170px}
-.meta{color:var(--muted);font-size:13px;margin-top:6px}
-.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.tag{font-size:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px}
-.foot{margin-top:auto;display:flex;gap:8px;align-items:center}
-.small{padding:6px 8px;border-radius:8px;font-size:13px;background:#eef2ff;border:0}
-.admin-controls{display:flex;gap:6px}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:60}
-.modal.open{display:flex}
-.modal-card{width:min(920px,98vw);background:#fff;border-radius:12px;overflow:hidden}
-.pagination{display:flex;gap:8px;justify-content:center;margin:14px 0}
-.loading{opacity:.6;pointer-events:none}
-@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr 1fr 1fr auto}}
-@media (max-width:600px){.grid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}}
-</style>
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .sidebar{grid-column:span 3;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:sticky;top:86px;height:fit-content}
+    .listing{grid-column:span 9;display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{grid-column:span 6;background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+    .card .photo{aspect-ratio:4/3;background:#f1f5f9;position:relative}
+    .card .photo img{width:100%;height:100%;object-fit:cover;display:block}
+    .badge{position:absolute;left:10px;top:10px}
+    .tagbar{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+    .card .body{padding:12px}
+    .price{font-size:18px;font-weight:800}
+    .meta{color:#64748b;font-size:13px}
+    .meta b{color:#0f172a}
+    .card .foot{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid #e5e7eb}
+    .pill{padding:6px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-weight:700;font-size:12px}
+
+    .filter h4{margin:8px 0 6px}
+    .range{display:flex;gap:10px}
+    .range input{width:100%}
+    .checkboxes{display:flex;flex-wrap:wrap;gap:8px}
+
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .sort{display:flex;align-items:center;gap:8px}
+    .sort select{border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px}
+
+    .mapwrap{grid-column:span 12;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:14px;padding:16px;text-align:center}
+
+    .footer{background:#0b1b2a;color:#cbd5e1;padding:28px 0;margin-top:30px}
+    .footer .cols{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .col{grid-column:span 3}
+    .footnote{margin-top:16px;color:#94a3b8;font-size:13px}
+
+    .floating{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;flex-direction:column;gap:10px}
+
+    /* Panels */
+    .panel{position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.55);backdrop-filter:blur(4px);z-index:60}
+    .panel.show{display:grid}
+    .sheet{width:min(720px,92vw);max-height:86vh;overflow:auto;background:#fff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 30px 70px rgba(2,6,23,.3)}
+    .sheet header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e5e7eb}
+    .sheet .content{padding:16px}
+    .sheet .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    .sheet .field{grid-column:span 6;background:#f8fafc;border:1px solid #e5e7eb;color:#0f172a}
+    .sheet .field input,.sheet .field select,.sheet .field textarea{color:#0f172a}
+    .danger{background:#ef4444;color:white}
+    .muted{color:#64748b}
+
+    /* Responsive */
+    @media (max-width: 960px){
+      .hero-wrap{grid-template-columns:1fr}
+      .field{grid-column:span 6}
+      .go{grid-column:span 12}
+      .sidebar{grid-column:span 12;position:relative;top:0}
+      .listing{grid-column:span 12}
+      .card{grid-column:span 12}
+      .col{grid-column:span 6}
+    }
+    @media (max-width: 560px){
+      .form-row{grid-template-columns:repeat(6,1fr)}
+      .field{grid-column:span 6}
+      .nav .brand span{display:none}
+      .col{grid-column:span 12}
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div style="display:flex;gap:12px;align-items:center"><div class="logo"></div><div><strong>Zara Properties</strong><div style="font-size:12px;color:#cbd5e1">99acres-style • No map</div></div></div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <div id="userEmail" style="color:#cbd5e1"></div>
-    <button id="loginBtn" class="small" style="background:transparent;border:1px solid rgba(255,255,255,.12);color:#fff">Google Sign-in</button>
-    <button id="logoutBtn" class="small" style="display:none;background:#ef4444;color:#fff">Logout</button>
-  </div>
-</header>
-
-<main class="container">
-  <!-- Filters -->
-  <section class="panel">
-    <div style="display:flex;justify-content:space-between;align-items:center"><strong>Search & Filters</strong><div style="color:var(--muted)">Search by title/location • Price • BHK</div></div>
-    <div style="margin-top:10px" class="filters">
-      <input id="qText" placeholder="जैसे: 2 BHK, मीरा रोड, दुकान" />
-      <select id="qLocation"><option value="">सभी लोकेशन</option></select>
-      <select id="qBHK"><option value="">सभी BHK</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select>
-      <input id="qMin" type="number" placeholder="Min ₹" />
-      <input id="qMax" type="number" placeholder="Max ₹" />
-      <select id="qSort"><option value="newest">Newest</option><option value="priceLow">Price Low→High</option><option value="priceHigh">Price High→Low</option></select>
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav">
+      <div class="brand">
+        <div class="logo">99</div>
+        <div>
+          <div style="font-weight:900;letter-spacing:.3px">99Acer</div>
+          <small style="color:#93c5fd">Property Portal</small>
+        </div>
+      </div>
+      <nav class="nav-actions">
+        <a class="btn ghost" href="#" id="navBuy">Buy</a>
+        <a class="btn ghost" href="#" id="navRent">Rent</a>
+        <a class="btn ghost" href="#">Commercial</a>
+        <button class="btn" id="myListingsBtn">My Listings</button>
+        <button class="btn green" id="postPropBtn">Post Property – Free</button>
+        <button class="btn secondary" id="loginBtn">Login</button>
+        <button class="btn secondary" id="logoutBtn" style="display:none">Logout</button>
+        <button class="btn" id="adminBtn" style="display:none">Admin</button>
+      </nav>
     </div>
-    <div class="chips" id="chips"><div class="chip" data-key="verified">Verified</div><div class="chip" data-key="owner">Owner</div><div class="chip" data-key="builder">Builder</div><div class="chip" data-key="agent">Agent</div></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button id="btnApply" class="small" style="background:var(--brand);color:#fff">Apply</button><button id="btnReset" class="small">Reset</button></div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-wrap">
+      <div>
+        <h1 class="headline">Find your perfect home in seconds.</h1>
+        <p class="sub">Search verified flats, plots, and houses across India with smart filters, photos, and locality insights.</p>
+
+        <div class="search-card" role="search" aria-label="Property search">
+          <div class="tabs" id="dealTabs">
+            <div class="tab active" data-mode="buy">Buy</div>
+            <div class="tab" data-mode="rent">Rent</div>
+            <div class="tab" data-mode="pg">PG</div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>City / Locality</label>
+              <input id="qLocation" placeholder="e.g. Andheri West, Mumbai" />
+            </div>
+            <div class="field">
+              <label>Property Type</label>
+              <select id="qType">
+                <option value="">Any</option>
+                <option>Apartment</option>
+                <option>Independent House</option>
+                <option>Villa</option>
+                <option>Plot</option>
+                <option>Commercial</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Budget (₹ Lakhs)</label>
+              <input type="text" id="qBudget" placeholder="25-75" />
+            </div>
+            <div class="field">
+              <label>BHK</label>
+              <select id="qBhk">
+                <option value="">Any</option>
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4+</option>
+              </select>
+            </div>
+            <div class="go">
+              <button class="btn" id="searchBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
+                Search</button>
+              <button class="btn secondary" id="resetBtn">Reset</button>
+            </div>
+          </div>
+          <div class="hero-badges">
+            <span class="chip">🔒 Verified Listings</span>
+            <span class="chip">🧭 Near Metro</span>
+            <span class="chip">🌿 Vastu Friendly</span>
+            <span class="chip">📷 360° Photos</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-img" aria-hidden="true"></div>
+    </div>
   </section>
 
-  <!-- Results -->
-  <section>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong id="resultCount">0</strong> परिणाम</div><div style="color:var(--muted)">Public listings — Admin can manage</div></div>
-    <div id="grid" class="grid"></div>
-    <div id="pagination" class="pagination"></div>
+  <!-- Listings + Filters -->
+  <section class="section dark">
+    <div class="container grid">
+      <!-- Sidebar Filters -->
+      <aside class="sidebar" id="filters">
+        <div class="filter">
+          <h3 style="margin:0 0 8px">Filters</h3>
+          <div class="checkboxes" id="amenities">
+            <label class="chip"><input type="checkbox" value="Parking"> Parking</label>
+            <label class="chip"><input type="checkbox" value="Lift"> Lift</label>
+            <label class="chip"><input type="checkbox" value="Security"> Security</label>
+            <label class="chip"><input type="checkbox" value="Gym"> Gym</label>
+            <label class="chip"><input type="checkbox" value="Pool"> Pool</label>
+          </div>
+          <h4>Area (sqft)</h4>
+          <div class="range">
+            <input type="number" id="minArea" placeholder="Min" />
+            <input type="number" id="maxArea" placeholder="Max" />
+          </div>
+          <h4>Posted By</h4>
+          <div class="checkboxes">
+            <label class="chip"><input type="checkbox" value="Owner" class="postedBy"> Owner</label>
+            <label class="chip"><input type="checkbox" value="Dealer" class="postedBy"> Dealer</label>
+            <label class="chip"><input type="checkbox" value="Builder" class="postedBy"> Builder</label>
+          </div>
+          <h4>Furnishing</h4>
+          <div class="checkboxes">
+            <label class="chip"><input type="checkbox" value="Unfurnished" class="furnish"> Unfurnished</label>
+            <label class="chip"><input type="checkbox" value="Semi" class="furnish"> Semi</label>
+            <label class="chip"><input type="checkbox" value="Furnished" class="furnish"> Furnished</label>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Listing Grid -->
+      <main class="listing" id="listing">
+        <div class="topbar" style="grid-column:span 12">
+          <div id="resultCount">Loading…</div>
+          <div class="sort">
+            <label for="sortBy">Sort</label>
+            <select id="sortBy">
+              <option value="reco">Recommended</option>
+              <option value="priceAsc">Price: Low to High</option>
+              <option value="priceDesc">Price: High to Low</option>
+              <option value="new">Newest First</option>
+            </select>
+          </div>
+        </div>
+        <!-- Cards render here -->
+      </main>
+
+      <div class="mapwrap">
+        <strong>Map Preview</strong>
+        <p>Embed Google Maps or MapLibre here to show property pins by location.</p>
+      </div>
+    </div>
   </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="cols">
+        <div class="col">
+          <div class="brand"><div class="logo">99</div><span>99Acer</span></div>
+          <p class="footnote">India's trusted property portal. Buy, sell or rent homes with confidence.</p>
+        </div>
+        <div class="col">
+          <h4>Company</h4>
+          <p><a href="#">About</a><br><a href="#">Careers</a><br><a href="#">Contact</a></p>
+        </div>
+        <div class="col">
+          <h4>Services</h4>
+          <p><a href="#">Owner Plans</a><br><a href="#">Dealer Packages</a><br><a href="#">Home Loans</a></p>
+        </div>
+        <div class="col">
+          <h4>Legal</h4>
+          <p><a href="#">Terms</a><br><a href="#">Privacy</a><br><a href="#">Grievance</a></p>
+        </div>
+      </div>
+      <div class="footnote">© <span id="yr"></span> 99Acer. For demo use only.</div>
+    </div>
+  </footer>
+
+  <!-- Floating CTAs -->
+  <div class="floating">
+    <button class="btn green">Talk to Expert</button>
+    <button class="btn">Get Alerts</button>
+  </div>
+
+  <!-- Post Property Modal -->
+  <div class="panel" id="postPanel">
+    <div class="sheet">
+      <header>
+        <strong>Post Property</strong>
+        <button class="btn secondary" id="closePost">Close</button>
+      </header>
+      <div class="content">
+        <p class="muted">Logged in as: <span id="postUser"></span></p>
+        <div class="row">
+          <div class="field"><label>Title</label><input id="pTitle" placeholder="2BHK Flat for Sale"/></div>
+          <div class="field"><label>City</label><input id="pCity" placeholder="Mumbai"/></div>
+          <div class="field"><label>Deal Type</label>
+            <select id="pType"><option value="sale">Sale</option><option value="rent">Rent</option></select>
+          </div>
+          <div class="field"><label>Price (₹)</label><input id="pPrice" type="number" placeholder="5000000"/></div>
+          <div class="field" style="grid-column:span 12"><label>Description</label><textarea id="pDesc" rows="3" placeholder="Spacious flat near metro..."></textarea></div>
+          <div class="field" style="grid-column:span 6"><label>Image URL</label><input id="pImg" placeholder="https://..."/></div>
+          <div class="field" style="grid-column:span 6"><label>WhatsApp (countrycode+number)</label><input id="pWa" placeholder="919876543210"/></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn green" id="submitProperty">Submit for Approval</button>
+        </div>
+        <p class="muted" style="margin-top:8px">New listings need admin approval before going live.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Listings Panel -->
+  <div class="panel" id="myPanel">
+    <div class="sheet">
+      <header>
+        <strong>My Listings</strong>
+        <button class="btn secondary" id="closeMy">Close</button>
+      </header>
+      <div class="content">
+        <div id="myList"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Admin Panel -->
-  <section id="adminPanel" class="panel" style="display:none;margin-top:18px">
-    <div style="display:flex;justify-content:space-between;align-items:center"><strong>Admin Panel — Add / Edit Listing</strong><div style="color:var(--muted)">Only zarasamajiksevasanstha@gmail.com</div></div>
-
-    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <input id="fTitle" placeholder="Title (e.g., 2 BHK Flat)" />
-      <input id="fPrice" type="number" placeholder="Price (₹)" />
-      <input id="fLocation" placeholder="Location (e.g., Nalasopara)" />
-      <select id="fBHK"><option value="">BHK</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select>
-      <input id="fArea" placeholder="Area (sqft)" />
-      <input id="fPhone" placeholder="Phone (with country code e.g. 919999900001)" />
+  <div class="panel" id="adminPanel">
+    <div class="sheet">
+      <header>
+        <strong>Admin – Approvals</strong>
+        <button class="btn secondary" id="closeAdmin">Close</button>
+      </header>
+      <div class="content">
+        <div id="adminList"></div>
+      </div>
     </div>
+  </div>
 
-    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <input id="fWhatsapp" placeholder="WhatsApp (without + prefix)" />
-      <input id="fImageFiles" type="file" accept="image/*" multiple />
-    </div>
+  <!-- Firebase SDKs (v10 modular via CDN) -->
+  <script type="module">
+    // ===== Firebase Setup =====
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getDatabase, ref, onValue, push, set, query, orderByChild, equalTo, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-    <div style="margin-top:10px"><textarea id="fDesc" placeholder="Description" style="width:100%;min-height:100px"></textarea></div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+    };
 
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-      <label style="display:flex;align-items:center;gap:8px"><input id="fVerified" type="checkbox"/> Verified</label>
-      <label style="display:flex;align-items:center;gap:8px"><input id="fFeatured" type="checkbox"/> Featured</label>
-      <select id="fOwner" style="margin-left:8px"><option value="owner">owner</option><option value="builder">builder</option><option value="agent">agent</option></select>
-      <button id="btnAdd" class="small" style="background:var(--brand);color:#fff">Upload Listing</button>
-      <button id="btnUpdate" class="small" style="background:#059669;color:#fff;display:none">Update Listing</button>
-      <button id="btnCancelEdit" class="small" style="display:none">Cancel Edit</button>
-      <div id="adminLoader" style="margin-left:8px;color:var(--muted);display:none">Processing...</div>
-    </div>
-  </section>
-</main>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-<!-- Gallery modal -->
-<div id="modal" class="modal"><div class="modal-card" id="modalCard"></div></div>
+    // ===== Helpers =====
+    const $ = (sel,ctx=document)=>ctx.querySelector(sel);
+    const $$ = (sel,ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+    const fmtLakh = (n)=>{
+      const num = Number(n||0);
+      if(num>=10000000) return `₹ ${(num/10000000).toFixed(2)} Cr`;
+      if(num>=100000) return `₹ ${(num/100000).toFixed(2)} L`;
+      return `₹ ${num.toLocaleString('en-IN')}`;
+    };
 
-<script>
-/* ========== CONFIG ========== */
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth(), db = firebase.database(), storage = firebase.storage();
+    let allProps = []; // cached from DB (approved only for public view)
+    let state = { mode:'buy', qLocation:'', qType:'', qBudget:[0,999999999], qBhk:'',
+      amenities:new Set(), minArea:'', maxArea:'', postedBy:new Set(), furnish:new Set(), sort:'reco' };
 
-/* ========== ADMIN (only this email allowed in UI) ========== */
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+    function parseBudget(str){
+      if(!str) return [0,999999999];
+      const parts = str.replace(/[^0-9\-]/g,'').split('-').map(s=>Number(s||0));
+      return [parts[0]||0, parts[1]||999999999];
+    }
 
-/* ========== STATE & HELPERS ========== */
-const state = { all:[], filtered:[], page:1, perPage:9, chips:{verified:false, owner:false, builder:false, agent:false}, query:{text:'', location:'', bhk:'', min:0, max:Infinity, sort:'newest'} };
-const $ = s => document.querySelector(s);
-const fmtINR = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
-const daysAgo = t => { const d=(Date.now()-(Number(t)||0))/86400000; if(d<1) return 'आज'; if(d<2) return 'कल'; return `${Math.floor(d)} दिन पहले`; };
+    function applyFilters(){
+      const data = allProps.filter(p=>
+        ((state.mode==='buy' && p.type==='sale') || (state.mode==='rent' && p.type==='rent') || (state.mode==='pg' && p.type==='pg')) &&
+        (!state.qType || (p.kind||'').toLowerCase()===state.qType.toLowerCase() || (p.propertyType||'').toLowerCase()===state.qType.toLowerCase()) &&
+        (!state.qBhk || (state.qBhk==='4+'? (p.bhk||0)>=4 : (p.bhk||0)==Number(state.qBhk))) &&
+        (Number(p.price)>=state.qBudget[0] && Number(p.price)<=state.qBudget[1]) &&
+        (!state.qLocation || (`${p.city||''} ${p.locality||''}`.toLowerCase().includes(state.qLocation.toLowerCase()))) &&
+        (!state.minArea || (p.area||0) >= Number(state.minArea)) &&
+        (!state.maxArea || (p.area||0) <= Number(state.maxArea))
+      );
 
-/* ========== AUTH UI ========== */
-$('#loginBtn').addEventListener('click', ()=> {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(e=>alert('Login error: '+e.message));
-});
-$('#logoutBtn').addEventListener('click', ()=> auth.signOut());
+      const sorted = [...data].sort((a,b)=>{
+        if(state.sort==='priceAsc') return Number(a.price)-Number(b.price);
+        if(state.sort==='priceDesc') return Number(b.price)-Number(a.price);
+        if(state.sort==='new') return Number(b.timestamp||0)-Number(a.timestamp||0);
+        return (b.verified?1:0)-(a.verified?1:0);
+      });
 
-auth.onAuthStateChanged(user=>{
-  if(user){
-    $('#loginBtn').style.display='none'; $('#logoutBtn').style.display='inline-block';
-    $('#userEmail').textContent = user.email;
-    $('#adminPanel').style.display = (user.email === ADMIN_EMAIL) ? 'block' : 'none';
-  } else {
-    $('#loginBtn').style.display='inline-block'; $('#logoutBtn').style.display='none';
-    $('#userEmail').textContent = ''; $('#adminPanel').style.display = 'none';
-  }
-});
+      renderCards(sorted);
+      $('#resultCount').textContent = `Showing ${sorted.length} ${state.mode==='buy'?'sale':state.mode} results`;
+    }
 
-/* ========== LIVE LOAD PROPERTIES ========== */
-const propsRef = db.ref('properties');
-propsRef.on('value', snap=>{
-  const arr = [];
-  snap.forEach(ch=>{
-    const v = ch.val();
-    arr.push({
-      id: ch.key,
-      title: v.title||'',
-      price: Number(v.price)||0,
-      location: v.location||'',
-      bhk: v.bhk||'',
-      area: v.area||'',
-      phone: v.phone||'',
-      whatsapp: v.whatsapp||'',
-      description: v.description||'',
-      imageUrls: v.imageUrls || [],
-      imagePaths: v.imagePaths || [],
-      owner: v.owner||'owner',
-      verified: !!v.verified,
-      featured: !!v.featured,
-      time: v.time || 0
-    });
-  });
-  state.all = arr.reverse();
-  populateLocations(); applyAndRender();
-});
+    function cardHTML(p){
+      const img = p.imageUrl || 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=1200&auto=format&fit=crop';
+      const bhk = (p.bhk||0)>0? `${p.bhk} BHK` : (p.kind||'Plot');
+      return `<article class="card">
+        <div class="photo">
+          <img loading="lazy" src="${img}" alt="${p.title||'Property'}">
+          ${p.verified?`<span class="chip badge">✅ Verified</span>`:''}
+          <div class="tagbar">
+            <span class="pill">${bhk}</span>
+            <span class="pill">${(p.propertyType||'').toString().slice(0,14) || 'Property'}</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="price">${fmtLakh(p.price)}</div>
+          <div class="meta">${p.title||''}</div>
+          <div class="meta"><b>${p.locality||''}</b>, ${p.city||''} ${p.area?`• ${p.area} sqft`:''}</div>
+          ${p.amenities?`<div class="hero-badges" style="margin-top:8px">${(p.amenities||[]).map(a=>`<span class='chip'>${a}</span>`).join('')}</div>`:''}
+        </div>
+        <div class="foot">
+          <a class="btn" href="https://wa.me/${p.whatsapp||''}" target="_blank" rel="noopener">WhatsApp</a>
+          <div style="display:flex;gap:8px">
+            <button class="btn secondary" onclick="navigator.clipboard.writeText(location.href);alert('Link copied!')">Share</button>
+          </div>
+        </div>
+      </article>`
+    }
 
-/* ========== LOCATIONS ========== */
-function populateLocations(){
-  const sel = $('#qLocation');
-  const uniq = Array.from(new Set(state.all.map(x=>x.location).filter(Boolean))).sort();
-  sel.innerHTML = '<option value="">सभी लोकेशन</option>' + uniq.map(l=>`<option value="${l}">${l}</option>`).join('');
-}
+    function renderCards(list){
+      const root = document.querySelector('#listing');
+      root.querySelectorAll('.card').forEach(n=>n.remove());
+      const html = list.map(cardHTML).join('');
+      root.insertAdjacentHTML('beforeend', html || '<p class="muted" style="grid-column:span 12">No results.</p>');
+    }
 
-/* ========== FILTERS ========== */
-$('#btnApply').addEventListener('click', ()=> {
-  state.query.text = $('#qText').value.trim().toLowerCase(); state.query.location = $('#qLocation').value; state.query.bhk = $('#qBHK').value;
-  const min = parseInt($('#qMin').value||'0',10); const maxVal = $('#qMax').value.trim(); const max = maxVal ? parseInt(maxVal,10) : Infinity;
-  state.query.min = isNaN(min)?0:min; state.query.max = isNaN(max)?Infinity:max; state.query.sort = $('#qSort').value; state.page=1; applyAndRender();
-});
-$('#btnReset').addEventListener('click', ()=> { $('#qText').value=''; $('#qLocation').value=''; $('#qBHK').value=''; $('#qMin').value=''; $('#qMax').value=''; $('#qSort').value='newest'; state.query={text:'',location:'',bhk:'',min:0,max:Infinity,sort:'newest'}; document.querySelectorAll('#chips .chip').forEach(c=>c.classList.remove('active')); state.chips={verified:false,owner:false,builder:false,agent:false}; state.page=1; applyAndRender(); });
-document.querySelectorAll('#chips .chip').forEach(ch=> ch.addEventListener('click', ()=> { ch.classList.toggle('active'); state.chips[ch.dataset.key] = ch.classList.contains('active'); state.page=1; applyAndRender(); }));
+    // ===== Auth =====
+    const provider = new GoogleAuthProvider();
+    $('#loginBtn').addEventListener('click', async ()=>{ try{ await signInWithPopup(auth, provider);}catch(e){ alert(e.message); } });
+    $('#logoutBtn').addEventListener('click', async ()=>{ await signOut(auth); });
 
-/* ========== APPLY / RENDER ========== */
-function applyFilters(list){
-  const q=state.query, c=state.chips;
-  return list.filter(it=>{
-    const s = `${it.title} ${it.location} ${it.description}`.toLowerCase();
-    const inText = !q.text || s.includes(q.text);
-    const inLoc = !q.location || it.location === q.location;
-    const inBhk = !q.bhk || (q.bhk === '4' ? (Number(it.bhk)>=4) : it.bhk==q.bhk);
-    const inPrice = it.price >= (isFinite(q.min)?q.min:0) && it.price <= (isFinite(q.max)?q.max:Infinity);
-    const cVerified = !c.verified || it.verified;
-    const cOwner = !c.owner || it.owner==='owner';
-    const cBuilder = !c.builder || it.owner==='builder';
-    const cAgent = !c.agent || it.owner==='agent';
-    return inText && inLoc && inBhk && inPrice && cVerified && cOwner && cBuilder && cAgent;
-  });
-}
-function applySort(list){
-  const arr = [...list];
-  switch(state.query.sort){
-    case 'priceLow': arr.sort((a,b)=>a.price-b.price); break;
-    case 'priceHigh': arr.sort((a,b)=>b.price-a.price); break;
-    default: arr.sort((a,b)=> (b.featured?1:0) - (a.featured?1:0) || (b.time||0) - (a.time||0));
-  }
-  return arr;
-}
-function paginate(list){ const start=(state.page-1)*state.perPage; return list.slice(start,start+state.perPage); }
-function applyAndRender(){ const filtered=applyFilters(state.all); const sorted=applySort(filtered); state.filtered=sorted; $('#resultCount').textContent=filtered.length; renderCards(paginate(sorted)); renderPagination(Math.ceil(sorted.length/state.perPage)); }
+    let isAdmin = false;
+    async function checkAdmin(email){
+      if(!email) return false;
+      const snap = await get(ref(db, `admins/${encodeURIComponent(email)}`));
+      return !!snap.val();
+    }
 
-/* ========== RENDER CARDS ========== */
-function renderCards(items){
-  const grid = $('#grid'); if(!items.length){ grid.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:#64748b;background:#fff;border-radius:12px">कोई परिणाम नहीं मिला</div>'; return; }
-  const user = auth.currentUser; const isAdmin = user && user.email === ADMIN_EMAIL;
-  grid.innerHTML = items.map(it=>`
-    <div class="card">
-      <div class="gallery" data-urls='${JSON.stringify(it.imageUrls)}' onclick="openGallery(this)"><img src="${it.imageUrls[0] || 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}" /><div class="badge">${it.verified ? 'Verified' : 'Posted'} • ${daysAgo(it.time)}</div>${it.featured ? '<div class="featured">FEATURED</div>' : ''}</div>
-      <div class="card-body"><div style="font-weight:800">${escapeHtml(it.title)}</div><div class="meta">${escapeHtml(it.location)} • ${escapeHtml(it.bhk)} BHK • ${escapeHtml(it.area)} sqft</div><div style="margin-top:8px;color:#334155;font-size:14px">${escapeHtml(it.description||'').slice(0,160)}${(it.description||'').length>160?'...':''}</div><div class="tags" style="margin-top:8px"><div class="tag">${escapeHtml(it.owner)}</div><div class="tag">${fmtINR(it.price)}</div></div><div class="foot"><button class="small" onclick="contactWhatsApp('${it.whatsapp}','${encodeURIComponent('Hi, I saw your listing: '+it.title)}')">WhatsApp</button>${isAdmin?`<div class="admin-controls"><button class="small" data-edit="${it.id}">Edit</button><button class="small" data-del="${it.id}" style="background:#ef4444">Delete</button></div>`:`<a class="small" href="tel:${it.phone||''}">Call</a>`}</div></div>
-    </div>
-  `).join('');
-
-  // bind delete/edit
-  grid.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
-    if(!confirm('क्या आप इस लिस्टिंग को डिलीट करना चाहते हैं?')) return;
-    const id = b.dataset.del;
-    const user = auth.currentUser; if(!user || user.email !== ADMIN_EMAIL){ alert('Not authorized'); return; }
-    try{
-      const snap = await db.ref('properties/'+id).once('value'); const data = snap.val() || {};
-      const paths = data.imagePaths || [];
-      for(const p of paths){ if(p){ try{ await storage.ref(p).delete(); }catch(e){ console.warn('delete failed',p,e.message); } } }
-      await db.ref('properties/'+id).remove(); alert('Deleted');
-    }catch(err){ alert('Delete error: '+err.message) }
-  }));
-
-  grid.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> startEdit(b.dataset.edit)));
-}
-
-/* ========== PAGINATION ====== */
-function renderPagination(pages){
-  const pag = $('#pagination'); if(pages<=1){ pag.innerHTML=''; return; } let html=''; for(let i=1;i<=pages;i++) html += `<button class="small" data-p="${i}" style="${i===state.page?'background:#111;color:#fff':''}">${i}</button>`; pag.innerHTML=html; pag.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click', ()=> { state.page = +b.dataset.p; applyAndRender(); }));
-}
-
-/* ========== GALLERY MODAL ====== */
-function openGallery(el){ const urls = JSON.parse(el.dataset.urls||'[]'); const modal = $('#modal'); const card = $('#modalCard'); if(!urls.length) return; card.innerHTML = `<div style="padding:12px"><div style="display:flex;justify-content:space-between;align-items:center"><strong>Gallery</strong><button onclick="closeModal()" class="small">Close</button></div><div style="display:flex;gap:12px;margin-top:12px"><div style="flex:1"><img id="mainImg" src="${urls[0]}" style="width:100%;height:420px;object-fit:contain;border-radius:8px"/></div><div style="width:120px;display:flex;flex-direction:column;gap:8px;overflow:auto;height:420px">${urls.map(u=>`<img src="${u}" onclick="document.getElementById('mainImg').src='${u}'" style="width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer"/>`).join('')}</div></div></div>`; modal.classList.add('open'); }
-function closeModal(){ $('#modal').classList.remove('open'); }
-
-/* ========== CONTACT WHATSAPP ====== */
-function contactWhatsApp(num,text){ const base = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`; window.open(base,'_blank'); }
-
-/* ========== ADD / UPDATE (ADMIN) ========== */
-$('#btnAdd').addEventListener('click', async ()=>{
-  const user = auth.currentUser; if(!user || user.email !== ADMIN_EMAIL){ alert('You are not authorized'); return; }
-  $('#adminLoader').style.display='inline'; $('#btnAdd').disabled=true;
-  try{
-    const title = $('#fTitle').value.trim(); const price = parseInt($('#fPrice').value||'0',10); const location = $('#fLocation').value.trim();
-    const bhk = $('#fBHK').value; const area = $('#fArea').value.trim(); const phone = $('#fPhone').value.trim(); const whatsapp = $('#fWhatsapp').value.trim();
-    const desc = $('#fDesc').value.trim(); const owner = $('#fOwner').value; const verified = $('#fVerified').checked; const featured = $('#fFeatured').checked;
-    const files = $('#fImageFiles').files;
-    if(!title || !price || !location){ alert('Title, Price, Location required'); return; }
-    if(files.length > 5){ alert('Max 5 images allowed'); return; }
-    const imageUrls=[]; const imagePaths=[];
-    if(files.length){
-      for(let i=0;i<files.length;i++){
-        const f = files[i]; if(f.size > 5*1024*1024){ alert('Each image max 5MB'); throw new Error('file too large'); }
-        const path = `properties/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${f.name}`;
-        const task = await storage.ref(path).put(f); const url = await task.ref.getDownloadURL(); imageUrls.push(url); imagePaths.push(path);
+    onAuthStateChanged(auth, async (user)=>{
+      $('#yr').textContent = new Date().getFullYear();
+      if(user){
+        $('#loginBtn').style.display='none';
+        $('#logoutBtn').style.display='inline-flex';
+        $('#postUser').textContent = user.email || user.uid;
+        isAdmin = await checkAdmin(user.email);
+        $('#adminBtn').style.display = isAdmin? 'inline-flex':'none';
+      }else{
+        $('#loginBtn').style.display='inline-flex';
+        $('#logoutBtn').style.display='none';
+        $('#adminBtn').style.display='none';
       }
+    });
+
+    // ===== Data: public feed (approved only) =====
+    function subscribeApproved(){
+      const propertiesRef = ref(db, 'properties');
+      onValue(propertiesRef, (snap)=>{
+        const data = snap.val() || {};
+        const list = Object.entries(data).map(([id, v])=>({ id, ...v }))
+          .filter(p=>p.approved===true);
+        allProps = list;
+        applyFilters();
+      });
     }
-    const payload = { title, price, location, bhk, area, phone, whatsapp, description:desc, owner, verified, featured, imageUrls, imagePaths, time: Date.now() };
-    await db.ref('properties').push(payload);
-    resetForm(); alert('Listing uploaded');
-  }catch(err){ console.error(err); if(err.message) alert('Error: '+err.message); }
-  $('#adminLoader').style.display='none'; $('#btnAdd').disabled=false;
-});
+    subscribeApproved();
 
-/* ========== EDIT FLOW ========== */
-let editingId = null;
-async function startEdit(id){
-  const user = auth.currentUser; if(!user || user.email !== ADMIN_EMAIL){ alert('Not authorized'); return; }
-  const snap = await db.ref('properties/'+id).once('value'); const v = snap.val(); if(!v){ alert('Not found'); return; }
-  editingId = id; $('#fTitle').value=v.title||''; $('#fPrice').value=v.price||''; $('#fLocation').value=v.location||''; $('#fBHK').value=v.bhk||''; $('#fArea').value=v.area||''; $('#fPhone').value=v.phone||''; $('#fWhatsapp').value=v.whatsapp||''; $('#fDesc').value=v.description||''; $('#fOwner').value=v.owner||'owner'; $('#fVerified').checked=!!v.verified; $('#fFeatured').checked=!!v.featured; $('#btnAdd').style.display='none'; $('#btnUpdate').style.display='inline-block'; $('#btnCancelEdit').style.display='inline-block'; window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-}
-$('#btnCancelEdit').addEventListener('click', ()=> resetForm());
-$('#btnUpdate').addEventListener('click', async ()=>{
-  if(!editingId) return; const user = auth.currentUser; if(!user || user.email !== ADMIN_EMAIL){ alert('Not allowed'); return; }
-  $('#adminLoader').style.display='inline'; $('#btnUpdate').disabled=true;
-  try{
-    const title = $('#fTitle').value.trim(); const price = parseInt($('#fPrice').value||'0',10); const location = $('#fLocation').value.trim();
-    const bhk = $('#fBHK').value; const area = $('#fArea').value.trim(); const phone = $('#fPhone').value.trim(); const whatsapp = $('#fWhatsapp').value.trim();
-    const desc = $('#fDesc').value.trim(); const owner = $('#fOwner').value; const verified = $('#fVerified').checked; const featured = $('#fFeatured').checked;
-    const files = $('#fImageFiles').files; const urlInput = $('#fImageUrl') ? $('#fImageUrl').value.trim() : '';
-    if(!title || !price || !location){ alert('Title, Price, Location required'); return; }
-    const snap = await db.ref('properties/'+editingId).once('value'); const existing = snap.val() || {};
-    let imageUrls = existing.imageUrls || []; let imagePaths = existing.imagePaths || [];
-    if(files.length){
-      const newUrls=[]; const newPaths=[];
-      for(let i=0;i<files.length;i++){ const f = files[i]; if(f.size > 5*1024*1024){ alert('Each image max 5MB'); throw new Error('file too large'); } const path = `properties/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${f.name}`; const task = await storage.ref(path).put(f); const url = await task.ref.getDownloadURL(); newUrls.push(url); newPaths.push(path); }
-      // delete old storage files
-      for(const p of imagePaths){ if(p){ try{ await storage.ref(p).delete(); }catch(e){ console.warn('delete old failed',p,e.message); } } }
-      imageUrls = newUrls; imagePaths = newPaths;
-    } else if(urlInput){
-      // use url input (replace existing storage files)
-      for(const p of imagePaths){ if(p){ try{ await storage.ref(p).delete(); }catch(e){ console.warn('delete old failed',p,e.message); } } }
-      imageUrls = [urlInput]; imagePaths = [''];
+    // ===== Search & Filters (UI events) =====
+    $('#dealTabs').addEventListener('click', (e)=>{
+      const t = e.target.closest('.tab'); if(!t) return;
+      $$('#dealTabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      state.mode = t.dataset.mode;
+      applyFilters();
+    });
+    $('#navBuy').addEventListener('click', (e)=>{e.preventDefault();state.mode='buy'; $$('#dealTabs .tab').forEach(x=>x.classList.remove('active')); $$('#dealTabs .tab')[0].classList.add('active'); applyFilters();});
+    $('#navRent').addEventListener('click', (e)=>{e.preventDefault();state.mode='rent'; $$('#dealTabs .tab').forEach(x=>x.classList.remove('active')); $$('#dealTabs .tab')[1].classList.add('active'); applyFilters();});
+
+    $('#searchBtn').addEventListener('click', ()=>{
+      state.qLocation = $('#qLocation').value.trim();
+      state.qType = $('#qType').value;
+      state.qBudget = parseBudget($('#qBudget').value);
+      state.qBhk = $('#qBhk').value;
+      applyFilters();
+    });
+
+    $('#resetBtn').addEventListener('click', ()=>{
+      $('#qLocation').value=''; $('#qType').value=''; $('#qBudget').value=''; $('#qBhk').value='';
+      state = {...state, qLocation:'', qType:'', qBudget:[0,999999999], qBhk:''};
+      $$('#filters input[type="checkbox"]').forEach(c=>c.checked=false);
+      $('#minArea').value=''; $('#maxArea').value='';
+      state.amenities.clear(); state.postedBy.clear(); state.furnish.clear(); state.minArea=''; state.maxArea='';
+      $('#sortBy').value='reco'; state.sort='reco';
+      applyFilters();
+    });
+
+    $('#sortBy').addEventListener('change', (e)=>{ state.sort=e.target.value; applyFilters(); });
+
+    $('#amenities').addEventListener('change', (e)=>{ const c = e.target; if(c.tagName!=='INPUT') return; c.checked? state.amenities.add(c.value) : state.amenities.delete(c.value); applyFilters(); });
+
+    $$('.postedBy').forEach(cb=>cb.addEventListener('change', e=>{ const c = e.target; c.checked? state.postedBy.add(c.value): state.postedBy.delete(c.value); applyFilters(); }));
+    $$('.furnish').forEach(cb=>cb.addEventListener('change', e=>{ const c = e.target; c.checked? state.furnish.add(c.value): state.furnish.delete(c.value); applyFilters(); }));
+    $('#minArea').addEventListener('input', e=>{state.minArea=e.target.value;});
+    $('#maxArea').addEventListener('input', e=>{state.maxArea=e.target.value;});
+    ['minArea','maxArea'].forEach(id=>$('#'+id).addEventListener('change', applyFilters));
+
+    // ===== Post Property =====
+    function openPanel(p){ p.classList.add('show'); document.body.style.overflow='hidden'; }
+    function closePanel(p){ p.classList.remove('show'); document.body.style.overflow=''; }
+
+    $('#postPropBtn').addEventListener('click', ()=>{
+      if(!auth.currentUser){ alert('Please login first'); return; }
+      openPanel($('#postPanel'));
+    });
+    $('#closePost').addEventListener('click', ()=> closePanel($('#postPanel')) );
+
+    $('#submitProperty').addEventListener('click', async ()=>{
+      const user = auth.currentUser; if(!user){ alert('Please login first'); return; }
+      const title = $('#pTitle').value.trim();
+      const city = $('#pCity').value.trim();
+      const type = $('#pType').value; // sale/rent
+      const price = Number($('#pPrice').value||0);
+      const description = $('#pDesc').value.trim();
+      const imageUrl = $('#pImg').value.trim();
+      const whatsapp = $('#pWa').value.trim();
+      if(!title || !city || !type || !price || !whatsapp){ alert('Please fill Title, City, Type, Price, WhatsApp'); return; }
+
+      const propertiesRef = ref(db, 'properties');
+      const newRef = push(propertiesRef);
+      const payload = { title, city, type, price, description, imageUrl, whatsapp,
+        userId: user.uid, userEmail: user.email, approved: false, timestamp: Date.now() };
+      try{
+        await set(newRef, payload);
+        alert('Submitted! Waiting for admin approval.');
+        closePanel($('#postPanel'));
+        // clear form
+        ['pTitle','pCity','pPrice','pDesc','pImg','pWa'].forEach(id=>$('#'+id).value='');
+      }catch(err){ alert(err.message); }
+    });
+
+    // ===== My Listings =====
+    $('#myListingsBtn').addEventListener('click', async ()=>{
+      if(!auth.currentUser){ alert('Please login first'); return; }
+      openPanel($('#myPanel'));
+      await loadMyListings();
+    });
+    $('#closeMy').addEventListener('click', ()=> closePanel($('#myPanel')) );
+
+    async function loadMyListings(){
+      const user = auth.currentUser; if(!user) return;
+      const q = query(ref(db, 'properties'), orderByChild('userId'), equalTo(user.uid));
+      const snap = await get(q);
+      const data = snap.val()||{};
+      const rows = Object.entries(data).map(([id,p])=>{
+        return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:8px 0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+            <div>
+              <div style="font-weight:700">${p.title}</div>
+              <div class="muted">${p.city} • ${fmtLakh(p.price)} • ${p.type.toUpperCase()}</div>
+              <div class="muted">Status: ${p.approved? '✅ Approved':'⏳ Pending'}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              ${!p.approved? `<button class="btn" data-act="promote" data-id="${id}">Edit</button>`:''}
+              <button class="btn danger" data-act="del" data-id="${id}">Delete</button>
+            </div>
+          </div>
+        </div>`
+      }).join('') || '<p class="muted">No listings yet.</p>';
+      $('#myList').innerHTML = rows;
+      // delete handler
+      $('#myList').querySelectorAll('button[data-act="del"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id;
+        if(confirm('Delete this listing?')){ await remove(ref(db, `properties/${id}`)); await loadMyListings(); }
+      }));
     }
-    const payload = { title, price, location, bhk, area, phone, whatsapp, description:desc, owner, verified, featured, imageUrls, imagePaths, time: Date.now() };
-    await db.ref('properties/'+editingId).update(payload); resetForm(); alert('Updated');
-  }catch(err){ console.error(err); alert('Update error: '+(err.message||err)); }
-  $('#adminLoader').style.display='none'; $('#btnUpdate').disabled=false;
-});
 
-/* ========== reset form ========== */
-function resetForm(){
-  editingId=null; $('#fTitle').value=''; $('#fPrice').value=''; $('#fLocation').value=''; $('#fBHK').value=''; $('#fArea').value=''; $('#fPhone').value=''; $('#fWhatsapp').value=''; $('#fDesc').value=''; $('#fImageFiles').value=''; $('#fOwner').value='owner'; $('#fVerified').checked=false; $('#fFeatured').checked=false; $('#btnAdd').style.display='inline-block'; $('#btnUpdate').style.display='none'; $('#btnCancelEdit').style.display='none';
-}
+    // ===== Admin Panel =====
+    $('#adminBtn').addEventListener('click', async ()=>{
+      if(!isAdmin){ alert('Not an admin'); return; }
+      openPanel($('#adminPanel'));
+      await loadAdminList();
+    });
+    $('#closeAdmin').addEventListener('click', ()=> closePanel($('#adminPanel')) );
 
-/* ========== utils ========= */
-function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
-</script>
+    async function loadAdminList(){
+      const snap = await get(ref(db, 'properties'));
+      const data = snap.val()||{};
+      const pending = Object.entries(data).filter(([id,p])=>p.approved!==true);
+      const rows = pending.map(([id,p])=>{
+        return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:8px 0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+            <div>
+              <div style="font-weight:700">${p.title}</div>
+              <div class="muted">${p.city} • ${fmtLakh(p.price)} • ${p.type?.toUpperCase()}</div>
+              <div class="muted">By: ${p.userEmail||p.userId}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <a class="btn secondary" href="${p.imageUrl||'#'}" target="_blank">Image</a>
+              <button class="btn green" data-act="approve" data-id="${id}">Approve</button>
+              <button class="btn danger" data-act="reject" data-id="${id}">Reject</button>
+            </div>
+          </div>
+        </div>`
+      }).join('') || '<p class="muted">No pending approvals.</p>';
+      $('#adminList').innerHTML = rows;
+      $('#adminList').querySelectorAll('button[data-act="approve"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id; await update(ref(db, `properties/${id}`), { approved: true }); await loadAdminList(); }));
+      $('#adminList').querySelectorAll('button[data-act="reject"]').forEach(b=>b.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.dataset.id; if(confirm('Reject & delete listing?')){ await remove(ref(db, `properties/${id}`)); await loadAdminList(); }
+      }));
+    }
+
+  </script>
 </body>
 </html>
