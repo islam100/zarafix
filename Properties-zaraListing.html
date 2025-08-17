@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🏠 Properties</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+  <style>
+    body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 10px; }
+    h2 { text-align: center; }
+
+    .filters {
+      display: flex; gap: 10px; margin: 10px auto; max-width: 700px;
+      justify-content: center; flex-wrap: wrap;
+    }
+
+    select {
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: white; padding: 10px; border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;
+    }
+
+    .card img {
+      width: 100%; height: 270px; object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .card h3, .card p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center;
+    }
+
+    .modal-content {
+      background: white; padding: 20px; max-width: 90%; width: 500px;
+      border-radius: 10px; position: relative;
+    }
+
+    .close-btn {
+      position: absolute; top: 5px; right: 10px; font-size: 20px; cursor: pointer;
+    }
+
+    .swiper {
+      width: 100%;
+      height: 250px;
+      border-radius: 10px;
+    }
+
+    .swiper img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+    }
+
+    .whatsapp-btn {
+      margin-top: 10px;
+      display: block;
+      padding: 10px;
+      background: #25D366;
+      color: white;
+      text-align: center;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🏠 Property Listings</h2>
+
+<div class="filters">
+  <select id="filterType">
+    <option value="">All Types</option>
+    <option value="Sell">Sell</option>
+    <option value="Rent">Rent</option>
+    <option value="Lease">Lease</option>
+  </select>
+
+  <select id="filterBhk">
+    <option value="">All BHK</option>
+    <option value="1 BHK">1 BHK</option>
+    <option value="2 BHK">2 BHK</option>
+    <option value="3 BHK">3 BHK</option>
+    <option value="4+ BHK">4+ BHK</option>
+  </select>
+
+  <select id="filterLocation">
+    <option value="">All Locations</option>
+  </select>
+</div>
+
+<div class="grid" id="propertyGrid"></div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="close-btn" onclick="modal.style.display='none'">&#10060;</div>
+    <div class="swiper mySwiper">
+      <div class="swiper-wrapper" id="sliderImages"></div>
+      <div class="swiper-pagination"></div>
+      <div class="swiper-button-next"></div>
+      <div class="swiper-button-prev"></div>
+    </div>
+    <p id="modalLocation"></p>
+    <p id="modalPrice"></p>
+    <a id="whatsappBtn" target="_blank" class="whatsapp-btn">📞 Contact on WhatsApp</a>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<!-- SwiperJS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAECm7wnfSy9PAb_-7wAPk4yqHFZlkuVs8",
+    authDomain: "real-estate-27f31.firebaseapp.com",
+    projectId: "real-estate-27f31"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  const grid = document.getElementById("propertyGrid");
+  const modal = document.getElementById("modal");
+
+  const filterType = document.getElementById("filterType");
+  const filterBhk = document.getElementById("filterBhk");
+  const filterLocation = document.getElementById("filterLocation");
+
+  let allProperties = [];
+
+  async function loadProperties() {
+const snapshot = await db.collection("sell_posts")
+  .where("approved", "==", true)
+  .orderBy("createdAt", "desc")
+  .get();
+    allProperties = snapshot.docs.map(doc => doc.data());
+    showProperties();
+    populateLocations();
+  }
+
+  function populateLocations() {
+    const locations = [...new Set(allProperties.map(p => p.location))];
+    locations.forEach(loc => {
+      const opt = document.createElement("option");
+      opt.value = loc;
+      opt.textContent = loc;
+      filterLocation.appendChild(opt);
+    });
+  }
+
+  function showProperties() {
+    grid.innerHTML = "";
+
+    const type = filterType.value;
+    const bhk = filterBhk.value;
+    const location = filterLocation.value;
+
+    const filtered = allProperties.filter(p =>
+      (!type || p.type === type) &&
+      (!bhk || p.bhk === bhk) &&
+      (!location || p.location === location)
+    );
+
+    filtered.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <img src="${p.images?.[0] || ''}">
+        <h3>₹${p.price}</h3>
+        <p>${p.location}</p>
+      `;
+      div.onclick = () => openModal(p);
+      grid.appendChild(div);
+    });
+  }
+
+  function openModal(p) {
+    document.getElementById("modalLocation").textContent = "📍 " + p.location;
+    document.getElementById("modalPrice").textContent = "💰 ₹" + p.price;
+    document.getElementById("whatsappBtn").href = `https://wa.me/91${p.whatsapp}`;
+
+    const sliderImages = document.getElementById("sliderImages");
+    sliderImages.innerHTML = "";
+    (p.images || []).forEach(imgUrl => {
+      const slide = document.createElement("div");
+      slide.className = "swiper-slide";
+      slide.innerHTML = `<img src="${imgUrl}">`;
+      sliderImages.appendChild(slide);
+    });
+
+    modal.style.display = "flex";
+
+    new Swiper(".mySwiper", {
+      loop: true,
+      pagination: { el: ".swiper-pagination" },
+      navigation: {
+        nextEl: ".swiper-button-next",
+        prevEl: ".swiper-button-prev"
+      }
+    });
+  }
+
+  // Filter change listeners
+  filterType.onchange = showProperties;
+  filterBhk.onchange = showProperties;
+  filterLocation.onchange = showProperties;
+
+  loadProperties();
+</script>
+</body>
+</html>
