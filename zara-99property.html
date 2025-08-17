@@ -1,414 +1,150 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Zara Property — Upload & Admin Approve</title>
-
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZaraFix Posts</title>
 <style>
-  :root{
-    --bg1: #fff7ed; --bg2:#fde68a;
-    --card:#ffffff; --muted:#6b7280;
-    --acc1:#06b6d4; --acc2:#7c3aed; --green:#22c55e;
-    --btn-shadow: 0 12px 28px rgba(12,18,36,0.12);
+  body{font-family:sans-serif;background:#f0f2f5;margin:0;padding:0;}
+  .container{width:90%;max-width:1200px;margin:auto;padding:20px;}
+  .post-card{
+    background:#fff;padding:15px;margin:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);
+    border-radius:10px;transition:all 0.3s;cursor:pointer;position:relative;
   }
-  *{box-sizing:border-box}
-  body{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;margin:0;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:#0b1220}
-  header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;position:sticky;top:0;z-index:50;background:linear-gradient(90deg,var(--acc1),var(--acc2));color:#fff;box-shadow:0 8px 30px rgba(2,6,23,0.12)}
-  .brand{display:flex;align-items:center;gap:12px}
-  /* logo 3D */
-  .logo-badge{width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,#fff,#efe6ff);display:grid;place-items:center;font-weight:900;color:#0b1220;font-size:20px;box-shadow:0 12px 30px rgba(2,6,23,0.18), inset 0 3px 10px rgba(255,255,255,0.7);transform:translateY(-2px)}
-  .logo-text{display:flex;flex-direction:column;line-height:1}
-  .logo-title{font-weight:900;font-size:18px;letter-spacing:.2px;text-shadow:0 3px 8px rgba(0,0,0,0.12)}
-  .logo-sub{font-size:12px;opacity:.95}
-  .hdr-actions{display:flex;gap:8px;align-items:center}
-  .btn{border:0;padding:10px 14px;border-radius:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:var(--btn-shadow);transition:transform .14s,box-shadow .14s}
-  .btn:active{transform:translateY(2px)}
-  .btn-login{background:linear-gradient(135deg,#06b6d4,#7c3aed)}
-  .btn-logout{background:linear-gradient(135deg,#ef4444,#dc2626)}
-  .btn-post{background:linear-gradient(135deg,#22c55e,#16a34a)}
-  .btn-admin{background:linear-gradient(135deg,#f97316,#ef4444)}
-
-  .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-  .search{display:flex;gap:8px;align-items:center;flex:1;min-width:220px}
-  input.search-in, select.search-in {padding:10px 12px;border-radius:12px;border:1px solid rgba(15,23,42,.06);min-width:140px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-  .card{background:var(--card);border-radius:14px;padding:12px;box-shadow:0 14px 40px rgba(2,6,23,.06);transition:transform .22s}
-  .card:hover{transform:translateY(-8px)}
-  .thumb{height:200px;border-radius:10px;overflow:hidden;background:#f1f5f9}
-  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .title{font-weight:800;margin:10px 0 6px}
-  .meta{color:var(--muted);font-size:13px}
-  .desc{margin-top:8px;color:#0f172a}
-  .foot{display:flex;gap:8px;align-items:center;margin-top:12px}
-  .wa-btn{background:#25D366;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:700;box-shadow:0 10px 24px rgba(37,211,102,0.14)}
-  .approve-pill{background:linear-gradient(135deg,#fef3c7,#fecaca);padding:6px 10px;border-radius:999px;font-weight:800}
-
-  /* panel/modal */
-  .panel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.45);z-index:90;padding:16px}
-  .panel.open{display:flex}
-  .sheet{width:min(920px,98vw);background:#fff;border-radius:12px;overflow:auto;box-shadow:0 30px 70px rgba(2,6,23,.25)}
-  .sheet header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #eef2ff}
-  .sheet .content{padding:16px}
-  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
-  .field{grid-column:span 6}
-  input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6edf3}
-  textarea{min-height:110px}
-
-  .admin-panel{margin-top:18px;background:rgba(255,255,255,.6);padding:12px;border-radius:10px}
-  .pending-item{background:#fff;border-radius:10px;padding:10px;margin-bottom:10px;box-shadow:0 6px 20px rgba(2,6,23,.06);display:flex;gap:12px;align-items:center}
-
-  /* skeleton */
-  .skeleton{background:linear-gradient(90deg,#eef2ff,#f5f7ff,#eef2ff);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-radius:8px}
-  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
-  /* responsive */
-  @media (max-width:980px){ .grid{grid-template-columns:repeat(2,1fr)} .thumb{height:170px} .field{grid-column:span 12} }
-  @media (max-width:640px){ header{flex-direction:column;gap:8px;align-items:flex-start} .grid{grid-template-columns:1fr} .thumb{height:180px} .topbar{flex-direction:column;align-items:stretch} }
+  .post-card:hover{transform:scale(1.05);}
+  .btn{
+    padding:6px 12px;margin:2px;border:none;border-radius:5px;
+    background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;
+    box-shadow:0 4px #1e40af;
+    transition:0.2s;
+  }
+  .btn:active{transform:translateY(2px);box-shadow:0 2px #1e40af;}
+  .checkbox{margin-right:8px;}
+  #pendingSection{margin-top:30px;}
+  h3{margin-bottom:10px;}
 </style>
 </head>
 <body>
+<div class="container">
+  <h2>All Posts</h2>
+  <div id="postsList"></div>
 
-<header>
-  <div class="brand">
-    <div class="logo-badge">ZP</div>
-    <div class="logo-text">
-      <div class="logo-title">Zara <span style="color:#7c3aed">Property</span></div>
-      <div class="logo-sub">Post → Admin Approve → Live</div>
+  <!-- Admin Pending Section -->
+  <div id="pendingSection">
+    <h3>Pending Posts</h3>
+    <div style="margin-bottom:10px;">
+      <button id="massApprove" class="btn">Approve All Selected</button>
+      <button id="massDelete" class="btn">Delete All Selected</button>
     </div>
-  </div>
-
-  <div class="hdr-actions">
-    <div id="userEmail" style="color:rgba(255,255,255,.95);font-weight:700;min-width:160px;text-align:right"></div>
-    <button id="btnPostOpen" class="btn btn-post" style="display:none">Post Property</button>
-    <button id="btnAdmin" class="btn btn-admin" style="display:none">Admin Dashboard</button>
-    <button id="btnLogin" class="btn btn-login">Login</button>
-    <button id="btnLogout" class="btn btn-logout" style="display:none">Logout</button>
-  </div>
-</header>
-
-<main class="container">
-  <div class="topbar">
-    <div class="search">
-      <input id="q" class="search-in" placeholder="Search title, city..." />
-      <select id="filterCity" class="search-in"><option value="">All Cities</option></select>
-      <button id="btnSearch" class="btn" style="background:linear-gradient(135deg,var(--acc1),var(--acc2))">Search</button>
-    </div>
-    <div id="countTxt" style="font-weight:700;color:#0b1220">Loading…</div>
-  </div>
-
-  <!-- Approved listings -->
-  <section>
-    <div id="grid" class="grid">
-      <!-- skeletons -->
-      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div></div>
-      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div></div>
-      <div class="card"><div class="thumb skeleton" style="height:160px"></div><div style="height:12px;width:60%;margin:10px 0" class="skeleton"></div></div>
-    </div>
-  </section>
-
-  <!-- admin pending panel (visible to admin) -->
-  <section id="adminPanel" class="admin-panel" style="display:none">
-    <h3 style="margin:0 0 8px">Admin — Pending Approvals</h3>
     <div id="pendingList"></div>
-  </section>
-</main>
-
-<!-- Post Modal -->
-<div id="postPanel" class="panel" aria-hidden="true">
-  <div class="sheet" role="dialog">
-    <header>
-      <strong id="panelTitle">Post Property</strong>
-      <div><button id="closePanel" class="btn" style="background:linear-gradient(135deg,#ef4444,#dc2626)">Close</button></div>
-    </header>
-    <div class="content">
-      <div class="row">
-        <div class="field"><label>Title</label><input id="pTitle" placeholder="2BHK Flat near metro" /></div>
-        <div class="field"><label>City</label><input id="pCity" placeholder="Mumbai" /></div>
-        <div class="field"><label>Type</label><select id="pType"><option>Flat</option><option>House</option><option>Plot</option><option>Shop</option></select></div>
-        <div class="field"><label>Price (₹)</label><input id="pPrice" type="number" /></div>
-        <div class="field"><label>WhatsApp (with country, e.g. 9198...)</label><input id="pWA" placeholder="919876543210"/></div>
-        <div class="field"><label>Images (max 5)</label><input id="pFiles" type="file" accept="image/*" multiple /></div>
-        <div class="field" style="grid-column:span 12"><label>Description</label><textarea id="pDesc"></textarea></div>
-      </div>
-
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
-        <button id="submitPost" class="btn btn-post">Submit for Approval</button>
-      </div>
-      <p style="margin-top:10px;color:var(--muted)">Images will be uploaded to ImgBB automatically. Max 5 images per post.</p>
-    </div>
   </div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
 <script>
-  // ====== Firebase config you provided ======
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 
-  // ======= Config / constants =======
-  const IMGBB_KEY = "cad1f0dbfbd25346460789376cc2d7d5"; // your imgbb key provided
-  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-  const MAX_IMAGES = 5;
 
-  // ====== UI elements ======
-  const btnLogin = document.getElementById('btnLogin');
-  const btnLogout = document.getElementById('btnLogout');
-  const btnPostOpen = document.getElementById('btnPostOpen');
-  const btnAdmin = document.getElementById('btnAdmin');
-  const userEmailEl = document.getElementById('userEmail');
-  const postPanel = document.getElementById('postPanel');
-  const closePanel = document.getElementById('closePanel');
-  const submitPost = document.getElementById('submitPost');
-  const grid = document.getElementById('grid');
-  const pendingList = document.getElementById('pendingList');
-  const adminPanel = document.getElementById('adminPanel');
-  const filterCity = document.getElementById('filterCity');
-  const qInput = document.getElementById('q');
-  const btnSearch = document.getElementById('btnSearch');
-  const countTxt = document.getElementById('countTxt');
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+const ADMIN_EMAIL = "admin@example.com"; // अपनी admin email डालें
 
-  let currentUser = null;
-
-  // ====== Auth handlers ======
-  btnLogin.addEventListener('click', ()=> {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e=> alert(e.message));
-  });
-  btnLogout.addEventListener('click', ()=> auth.signOut());
-
-  auth.onAuthStateChanged(user=>{
-    currentUser = user;
-    if(user){
-      userEmailEl.textContent = user.email;
-      btnLogin.style.display = 'none';
-      btnLogout.style.display = 'inline-block';
-      btnPostOpen.style.display = 'inline-block';
-      // admin controls
-      if(user.email === ADMIN_EMAIL){
-        btnAdmin.style.display = 'inline-block';
-        adminPanel.style.display = 'block';
-      } else {
-        btnAdmin.style.display = 'none';
-        adminPanel.style.display = 'none';
-      }
-    } else {
-      userEmailEl.textContent = '';
-      btnLogin.style.display = 'inline-block';
-      btnLogout.style.display = 'none';
-      btnPostOpen.style.display = 'none';
-      btnAdmin.style.display = 'none';
-      adminPanel.style.display = 'none';
-    }
-  });
-
-  // open/close post panel
-  btnPostOpen.addEventListener('click', ()=> {
-    document.getElementById('panelTitle').textContent = 'Post Property';
-    postPanel.classList.add('open');
-  });
-  closePanel.addEventListener('click', ()=> postPanel.classList.remove('open'));
-
-  // ====== Helper: convert file to base64 ======
-  function fileToBase64(file){
-    return new Promise((resolve,reject)=>{
-      const reader = new FileReader();
-      reader.onload = ()=> {
-        const dataUrl = reader.result; // "data:image/..;base64,...."
-        const base64 = dataUrl.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // ====== Upload images to ImgBB (returns array of urls) ======
-  async function uploadImagesToImgBB(files){
-    const urls = [];
-    for(let i=0;i<files.length;i++){
-      const file = files[i];
-      const b64 = await fileToBase64(file);
-      const form = new FormData();
-      form.append('image', b64);
-      // optional: name or expiration can be appended
-      const res = await fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_KEY, { method:'POST', body: form });
-      const data = await res.json();
-      if(data && data.data && data.data.url) urls.push({ url: data.data.url, thumb: data.data.thumb && data.data.thumb.url ? data.data.thumb.url : data.data.url });
-      else throw new Error('ImgBB upload failed');
-    }
-    return urls;
-  }
-
-  // ====== Submit new post (pending) ======
-  submitPost.addEventListener('click', async ()=>{
-    if(!currentUser){ alert('Please login to post'); return; }
-    const title = document.getElementById('pTitle').value.trim();
-    const city = document.getElementById('pCity').value.trim();
-    const type = document.getElementById('pType').value;
-    const price = Number(document.getElementById('pPrice').value||0);
-    const wa = document.getElementById('pWA').value.trim();
-    const desc = document.getElementById('pDesc').value.trim();
-    const filesInput = document.getElementById('pFiles');
-    const files = filesInput.files || [];
-
-    if(!title || !city || !price || !wa){ alert('Please fill Title, City, Price, WhatsApp'); return; }
-    if(files.length === 0){ alert('Please select at least one image'); return; }
-    if(files.length > MAX_IMAGES){ alert('Max ' + MAX_IMAGES + ' images allowed'); return; }
-
-    try{
-      submitPost.disabled = true; submitPost.textContent = 'Uploading...';
-      // upload images to imgbb
-      const imgs = await uploadImagesToImgBB(Array.from(files));
-      const urls = imgs.map(x=>x.url);
-      // save pending post
-      const newRef = db.ref('pendingPosts').push();
-      await newRef.set({
-        title, city, type, price, whatsapp: wa, description: desc,
-        images: urls, poster: currentUser.email, time: Date.now()
-      });
-      alert('Posted — waiting for admin approval');
-      postPanel.classList.remove('open');
-      // reset
-      document.getElementById('pTitle').value=''; document.getElementById('pCity').value=''; document.getElementById('pPrice').value='';
-      document.getElementById('pWA').value=''; document.getElementById('pDesc').value=''; filesInput.value='';
-    }catch(err){
-      console.error(err); alert('Upload failed: ' + (err.message || err));
-    }finally{
-      submitPost.disabled = false; submitPost.textContent = 'Submit for Approval';
-    }
-  });
-
-  // ====== Render approved posts grid ======
-  function renderGrid(items){
-    grid.innerHTML = '';
-    const cities = new Set();
-    if(items.length === 0){
-      grid.innerHTML = '<div style="grid-column:1/-1;padding:20px;background:#fff;border-radius:10px">No listings yet.</div>';
-      countTxt.textContent = '0 properties live';
-      filterCity.innerHTML = '<option value="">All Cities</option>';
-      return;
-    }
-    items.forEach(it=>{
-      const div = document.createElement('div'); div.className='card';
-      div.innerHTML = `
-        <div class="thumb"><img src="${it.images && it.images[0] ? it.images[0] : 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}" loading="lazy" /></div>
-        <div class="title">${escapeHtml(it.title)}</div>
-        <div class="meta">${escapeHtml(it.city)} • ${escapeHtml(it.type)} • ₹${Number(it.price).toLocaleString('en-IN')}</div>
-        <div class="desc">${escapeHtml((it.description||'').slice(0,160))}${(it.description||'').length>160?'...':''}</div>
-        <div class="foot">
-          <a class="wa-btn" href="https://wa.me/${it.whatsapp}" target="_blank">WhatsApp</a>
-          <div style="flex:1"></div>
-          ${it.poster? `<div style="font-size:12px;color:var(--muted)">By ${escapeHtml(it.poster)}</div>`:''}
-        </div>
-      `;
-      div.addEventListener('click', ()=> div.classList.toggle('expand'));
-      grid.appendChild(div);
-      if(it.city) cities.add(it.city);
-    });
-    countTxt.textContent = `${items.length} properties live`;
-    filterCity.innerHTML = '<option value="">All Cities</option>' + Array.from(cities).sort().map(c=>`<option value="${c}">${c}</option>`).join('');
-  }
-
-  // ====== Subscribe approved posts ======
+// Function to render posts
+function renderPosts(){
+  const postsList = document.getElementById('postsList');
+  postsList.innerHTML = '';
   db.ref('approvedPosts').on('value', snap=>{
-    const arr = [];
-    snap.forEach(ch=> arr.push({ id: ch.key, ...ch.val() }));
-    arr.sort((a,b)=> (b.time||0)-(a.time||0));
-    renderGrid(arr);
-  });
-
-  // ====== Admin: render pending list ======
-  function renderPending(pending){
-    pendingList.innerHTML = '';
-    if(pending.length===0){ pendingList.innerHTML = '<p style="color:var(--muted)">No pending posts.</p>'; return; }
-    pending.forEach(p=>{
-      const el = document.createElement('div'); el.className='pending-item';
-      el.innerHTML = `
-        <img src="${p.images && p.images[0] ? p.images[0] : 'https://via.placeholder.com/120'}" style="width:110px;height:80px;object-fit:cover;border-radius:8px" />
-        <div style="flex:1">
-          <div style="font-weight:800">${escapeHtml(p.title)}</div>
-          <div style="color:var(--muted);font-size:13px">${escapeHtml(p.city)} • ₹${Number(p.price||0).toLocaleString('en-IN')}</div>
-          <div style="color:var(--muted);font-size:13px">By: ${escapeHtml(p.poster||'')}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn" data-act="approve" data-id="${p.id}" style="background:linear-gradient(135deg,#10b981,#059669)">Approve</button>
-          <button class="btn" data-act="reject" data-id="${p.id}" style="background:linear-gradient(135deg,#ef4444,#c026d3)">Reject</button>
-          <button class="btn" data-act="delete" data-id="${p.id}" style="background:linear-gradient(135deg,#06b6d4,#7c3aed)">Delete</button>
+    snap.forEach(c=>{
+      const item = c.val();
+      const div = document.createElement('div');
+      div.className='post-card';
+      div.innerHTML=`
+        <strong>${item.title}</strong><br>
+        <small>${item.city} | ${item.type}</small>
+        <div style="position:absolute;top:10px;right:10px;">
+          <button class="btn deleteBtn">Delete</button>
         </div>
       `;
-      pendingList.appendChild(el);
-    });
-    // bind actions
-    pendingList.querySelectorAll('button[data-act]').forEach(b=>{
-      b.addEventListener('click', async (e)=>{
-        const act = e.currentTarget.dataset.act; const id = e.currentTarget.dataset.id;
-        if(act==='approve'){
-          const snap = await db.ref('pendingPosts/'+id).once('value'); const v = snap.val();
-          if(!v) return alert('Post not found');
-          await db.ref('approvedPosts/'+id).set(v);
-          await db.ref('pendingPosts/'+id).remove();
-          alert('Approved');
-        } else if(act==='reject' || act==='delete'){
-          if(!confirm('Delete this pending post?')) return;
-          await db.ref('pendingPosts/'+id).remove();
-          alert('Deleted');
+      div.querySelector('.deleteBtn').addEventListener('click', ()=>{
+        if(auth.currentUser?.email===ADMIN_EMAIL || auth.currentUser?.email===item.posterEmail){
+          db.ref('approvedPosts/'+c.key).remove();
+        } else {
+          alert('You cannot delete this post.');
         }
       });
+      div.addEventListener('click', ()=>div.style.transform='scale(1.1)');
+      postsList.appendChild(div);
     });
-  }
+  });
+}
 
-  // subscribe pending (admin will see)
+// Pending section (Admin only)
+const pendingList = document.getElementById('pendingList');
+if(auth.currentUser?.email===ADMIN_EMAIL){
   db.ref('pendingPosts').on('value', snap=>{
-    const arr = [];
-    snap.forEach(ch=> arr.push({ id: ch.key, ...ch.val() }));
-    arr.sort((a,b)=> (b.time||0)-(a.time||0));
-    // only render if current user is admin
-    if(currentUser && currentUser.email === ADMIN_EMAIL){
-      renderPending(arr);
-    }
-  });
-
-  // Admin dashboard button scroll
-  document.getElementById('btnAdmin').addEventListener('click', ()=> {
-    window.scrollTo({ top: document.getElementById('adminPanel').offsetTop - 80, behavior: 'smooth' });
-  });
-
-  // search/filter
-  btnSearch.addEventListener('click', ()=> {
-    const q = qInput.value.trim().toLowerCase();
-    const city = filterCity.value;
-    db.ref('approvedPosts').once('value').then(snap=>{
-      const arr = []; snap.forEach(ch=> arr.push({id:ch.key,...ch.val()}));
-      let list = arr;
-      if(q) list = list.filter(it=> (it.title||'').toLowerCase().includes(q) || (it.city||'').toLowerCase().includes(q));
-      if(city) list = list.filter(it=> (it.city||'')===city);
-      renderGrid(list);
+    pendingList.innerHTML='';
+    snap.forEach(c=>{
+      const item=c.val();
+      const div=document.createElement('div'); 
+      div.className='post-card';
+      div.innerHTML=`
+        <input type="checkbox" class="checkbox select-post" data-id="${c.key}"/>
+        <strong>${item.title}</strong> (${item.city} | ${item.type})
+        <div style="margin-left:auto; display:inline-block;">
+          <button class="btn approve">Approve</button>
+          <button class="btn reject">Reject</button>
+        </div>
+      `;
+      
+      div.querySelector('.approve').addEventListener('click', async ()=>{
+        await db.ref('approvedPosts/'+c.key).set(item); 
+        await c.ref.remove();
+      });
+      div.querySelector('.reject').addEventListener('click', ()=>c.ref.remove());
+      pendingList.appendChild(div);
     });
   });
 
-  // helper escape
-  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
+  // Mass Approve
+  document.getElementById('massApprove').addEventListener('click', async ()=>{
+    const selected = document.querySelectorAll('.select-post:checked');
+    for(const checkbox of selected){
+      const key = checkbox.dataset.id;
+      const snap = await db.ref('pendingPosts/'+key).get();
+      if(snap.exists()){
+        await db.ref('approvedPosts/'+key).set(snap.val());
+        await db.ref('pendingPosts/'+key).remove();
+      }
+    }
+    alert('Selected posts approved!');
+  });
 
-  // initial: nothing to do (subscriptions above handle)
+  // Mass Delete
+  document.getElementById('massDelete').addEventListener('click', async ()=>{
+    const selected = document.querySelectorAll('.select-post:checked');
+    for(const checkbox of selected){
+      const key = checkbox.dataset.id;
+      await db.ref('pendingPosts/'+key).remove();
+    }
+    alert('Selected posts deleted!');
+  });
+}
+
+// Render posts on load
+renderPosts();
 </script>
 </body>
 </html>
