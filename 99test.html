@@ -2,71 +2,73 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Property Listing</title>
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
-  margin: 0;
-  padding: 0;
+    font-family: Arial, sans-serif;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 0;
 }
-
-/* Card style */
-.post-card {
-  background-color: white; /* card सफेद */
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  margin: 20px auto;
-  padding: 15px;
-  max-width: 500px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  cursor: pointer;
+header {
+    background-color: #1e3dff;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
-
-.post-card.enlarged {
-  transform: scale(1.05);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px;
+    gap: 20px;
 }
-
-/* Card header */
-.post-card-header {
-  background-color: #1E90FF;  /* नीला header */
-  color: white;
-  padding: 10px;
-  font-weight: bold;
-  font-size: 18px;
-  border-radius: 8px 8px 0 0;
-  text-align: center;
+.card {
+    background-color: white;
+    width: 300px;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    position: relative;
 }
-
-/* WhatsApp button */
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+.card h3 {
+    margin-top: 0;
+}
 .whatsapp-btn {
-  background-color: #25D366;
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-top: 10px;
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: #25D366;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .whatsapp-btn:hover {
-  background-color: #1DA851;
-  transition: 0.3s;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.3);
 }
 </style>
 </head>
 <body>
-
-<div id="postsContainer"></div>
+<header>Property Listings</header>
+<div class="container" id="postsContainer"></div>
 
 <script>
-// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
@@ -76,50 +78,31 @@ const firebaseConfig = {
   messagingSenderId: "916859697394",
   appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
-
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+
 const db = firebase.database();
+const postsContainer = document.getElementById("postsContainer");
 
-// Function to open WhatsApp
-function openWhatsApp(number) {
-  window.open(`https://wa.me/${number}`, '_blank');
-}
-
-// Fetch approved posts
-db.ref('posts').on('value', snapshot => {
-  const posts = snapshot.val();
-  const container = document.getElementById('postsContainer');
-  container.innerHTML = ''; // Clear previous
-  for (let key in posts) {
-    const post = posts[key];
-    if(post.approved) {
-      const card = document.createElement('div');
-      card.className = 'post-card';
-
-      const header = document.createElement('div');
-      header.className = 'post-card-header';
-      header.innerText = post.title;
-      card.appendChild(header);
-
-      const desc = document.createElement('p');
-      desc.innerText = post.desc;
-      card.appendChild(desc);
-
-      const btn = document.createElement('button');
-      btn.className = 'whatsapp-btn';
-      btn.innerText = 'WhatsApp';
-      btn.onclick = () => openWhatsApp('917378342192'); // always poster/admin number
-      card.appendChild(btn);
-
-      // Click to enlarge
-      card.addEventListener('click', () => {
-        card.classList.toggle('enlarged');
-      });
-
-      container.appendChild(card);
+db.ref("posts").on("value", (snapshot) => {
+    postsContainer.innerHTML = "";
+    const posts = snapshot.val();
+    for (let key in posts) {
+        const post = posts[key];
+        if(post.approved) {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+                <h3>${post.title}</h3>
+                <p>${post.desc}</p>
+                <a class="whatsapp-btn" href="https://wa.me/${post.phone}" target="_blank">WhatsApp</a>
+            `;
+            card.addEventListener("click", () => {
+                card.style.transform = "scale(1.2)";
+                card.style.zIndex = "999";
+            });
+            postsContainer.appendChild(card);
+        }
     }
-  }
 });
 </script>
 </body>
