@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📤 Post Property</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      max-width: 420px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input, select, textarea, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    button.submit {
+      background: #28a745;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.submit:hover {
+      background: #218838;
+    }
+    .preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .preview img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .progress {
+      font-size: 12px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2 style="text-align:center;">📤 Post Property</h2>
+  <form id="form">
+
+    <select id="postType" required>
+      <option value="">Sell / Rent</option>
+      <option>Sell</option>
+      <option>Rent</option>
+    </select>
+
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+    
+    <select id="propertyType" required>
+      <option value="">Property Type</option>
+      <option>Building</option>
+      <option>Villa</option>
+    </select>
+
+    <select id="bhk" required>
+      <option value="">BHK</option>
+      <option>1 BHK</option>
+      <option>2 BHK</option>
+      <option>3 BHK</option>
+      <option>4+ BHK</option>
+    </select>
+
+    <select id="floor" required>
+      <option value="">Floor No.</option>
+      <option>Ground</option>
+      <option>1st</option>
+      <option>2nd</option>
+      <option>3rd</option>
+      <option>4th</option>
+      <option>5th</option>
+      <option>6th</option>
+      <option>7th</option>
+      <option>8th</option>
+      <option>9th</option>
+      <option>10th</option>
+    </select>
+
+    <input type="text" id="roomNo" placeholder="Room No." required>
+    <input type="text" id="buildingName" placeholder="Building Name" required>
+    <input type="text" id="houseArea" placeholder="Area (sq. ft.)" required>
+    <input type="text" id="title" placeholder="Property Title" required>
+    <textarea id="description" placeholder="Property Description" rows="3" required></textarea>
+    <input type="text" id="location" placeholder="Location / Address" required>
+    <input type="text" id="price" placeholder="Price ₹" required>
+
+    <input type="file" id="imageInput" accept="image/*" multiple required>
+    <div class="progress" id="uploadStatus"></div>
+    <div class="preview" id="preview"></div>
+    <textarea id="images" placeholder="Image URLs" readonly style="display:none;"></textarea>
+
+    <button type="submit" class="submit">✅ Submit</button>
+  </form>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+  // Firebase init
+  const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  const db = firebase.firestore();
+
+  const imgbbKey = "790bf2ba8efe2087e17814738ff968fd";
+  const preview = document.getElementById('preview');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const imagesField = document.getElementById('images');
+  let imgs = [];
+
+  document.getElementById('imageInput').addEventListener('change', async e => {
+    const files = [...e.target.files];
+    for (let i=0; i<files.length; i++) {
+      uploadStatus.innerText = `Uploading ${i+1}/${files.length}...`;
+      const fd = new FormData();
+      fd.append('image', files[i]);
+      try {
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+          method:'POST', body: fd
+        });
+        const j = await res.json();
+        if (j.success){
+          imgs.push(j.data.url);
+          const imgEl = document.createElement('img');
+          imgEl.src = j.data.thumb.url;
+          preview.appendChild(imgEl);
+        }
+      } catch {
+        uploadStatus.innerText = 'Upload error';
+        return;
+      }
+    }
+    imagesField.style.display='block';
+    imagesField.value = imgs.join(',');
+    uploadStatus.innerText = `✅ ${imgs.length} uploaded`;
+  });
+
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = {
+      type: document.getElementById('postType').value,
+      name: document.getElementById('name').value,
+      whatsapp: document.getElementById('whatsapp').value,
+      propertyType: document.getElementById('propertyType').value,
+      bhk: document.getElementById('bhk').value,
+      floor: document.getElementById('floor').value,
+      roomNo: document.getElementById('roomNo').value,
+      buildingName: document.getElementById('buildingName').value,
+      houseArea: document.getElementById('houseArea').value,
+      title: document.getElementById('title').value,
+      description: document.getElementById('description').value,
+      location: document.getElementById('location').value,
+      price: document.getElementById('price').value,
+      images: imgs,
+      approved: false, // ✅ Admin will approve later
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+      await db.collection('sell_posts').add(data);
+      alert('✅ Property Submitted! Awaiting admin approval.');
+      document.getElementById('form').reset();
+      preview.innerHTML=''; imgs=[];
+      imagesField.value=''; imagesField.style.display='none';
+      uploadStatus.innerText='';
+    } catch (err) {
+      alert('❌ Error: '+err.message);
+    }
+  });
+</script>
+
+</body>
+</html>
