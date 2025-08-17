@@ -1,102 +1,95 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zara Property Listing</title>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f2f2f2;
+      margin: 20px;
+      background: #f4f4f9;
     }
     h2 {
-      text-align: center;
+      color: #333;
     }
     .form-box {
       background: white;
       padding: 15px;
-      margin-bottom: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 5px gray;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
     }
     input, textarea {
       width: 100%;
+      padding: 8px;
       margin: 8px 0;
-      padding: 10px;
-      border: 1px solid gray;
+      border: 1px solid #ccc;
       border-radius: 5px;
     }
     button {
-      padding: 10px 15px;
-      background: green;
+      background: #007BFF;
       color: white;
+      padding: 10px 15px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
     }
     button:hover {
-      background: darkgreen;
+      background: #0056b3;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
+    .post {
       background: white;
       padding: 10px;
-      margin: 8px 0;
-      border-radius: 5px;
-      box-shadow: 0 0 3px gray;
+      border-radius: 8px;
+      margin: 10px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
-  <h2>नया पोस्ट डालें</h2>
 
+  <h2>नया पोस्ट डालें</h2>
   <div class="form-box">
-    <input type="text" id="title" placeholder="शीर्षक लिखें" />
+    <input type="text" id="title" placeholder="शीर्षक लिखें">
     <textarea id="description" placeholder="विवरण लिखें"></textarea>
-    <button onclick="addPost()">➕ Post जोड़ें</button>
+    <button onclick="addPost()">Post जोड़ें</button>
   </div>
 
   <h2>पोस्ट लिस्ट</h2>
-  <ul id="postList"></ul>
+  <div id="posts"></div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script>
-    // 🔹 Firebase Config (अपना config डालें)
-   const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
+    // Firebase Config (अपना config यहाँ लगाएँ)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef"
+    };
 
-
-    // 🔹 Firebase Init
+    // Firebase Initialize
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ✅ नया पोस्ट जोड़ने का function
+    // Add Post
     function addPost() {
-      let title = document.getElementById("title").value;
-      let description = document.getElementById("description").value;
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
 
-      if (title === "" || description === "") {
-        alert("कृपया सभी फ़ील्ड भरें");
+      if (title.trim() === "" || description.trim() === "") {
+        alert("कृपया शीर्षक और विवरण भरें");
         return;
       }
 
-      let newPostRef = db.ref("posts/").push();
+      const newPostRef = db.ref("posts").push();
       newPostRef.set({
         title: title,
         description: description
@@ -106,15 +99,18 @@
       document.getElementById("description").value = "";
     }
 
-    // ✅ Firebase से पोस्ट लिस्ट दिखाना
-    db.ref("posts/").on("value", (snapshot) => {
-      let postList = document.getElementById("postList");
-      postList.innerHTML = "";
-      snapshot.forEach((childSnapshot) => {
-        let post = childSnapshot.val();
-        let li = document.createElement("li");
-        li.textContent = post.title + " - " + post.description;
-        postList.appendChild(li);
+    // Fetch Posts
+    db.ref("posts").on("value", (snapshot) => {
+      const postsDiv = document.getElementById("posts");
+      postsDiv.innerHTML = "";
+      snapshot.forEach((child) => {
+        const post = child.val();
+        postsDiv.innerHTML += `
+          <div class="post">
+            <h3>${post.title}</h3>
+            <p>${post.description}</p>
+          </div>
+        `;
       });
     });
   </script>
