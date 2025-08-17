@@ -1,123 +1,89 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Property Listings</title>
-<style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
-    header { background:#2563eb; color:#fff; padding:10px; text-align:center; font-size:24px; font-weight:bold; }
-    #addBtn { background:#34d399; color:#fff; padding:10px 20px; border:none; border-radius:10px; cursor:pointer; box-shadow:3px 3px 5px #999; margin:10px; }
-    #addBtn:hover { box-shadow:0 0 10px #34d399; }
-    .cards { display:flex; flex-wrap:wrap; justify-content:center; gap:15px; padding:10px; }
-    .card { background:#fff; padding:10px; border-radius:15px; width:300px; box-shadow:3px 3px 8px #999; cursor:pointer; transition:0.3s; position:relative; }
-    .card:hover { transform:scale(1.05); }
-    .card img { width:100%; border-radius:10px; }
-    .card h3 { margin:10px 0 5px; }
-    .card p { margin:0 0 5px; color:#555; }
-    .btn3d { background:#f87171; color:#fff; padding:5px 10px; border:none; border-radius:5px; cursor:pointer; box-shadow:3px 3px 5px #999; margin-top:5px; }
-    .btn3d:hover { box-shadow:0 0 10px #f87171; }
-    #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
-    #modalContent { background:#fff; padding:20px; border-radius:15px; max-width:90%; max-height:90%; overflow:auto; position:relative; }
-    #closeModal { position:absolute; top:10px; right:10px; cursor:pointer; font-size:20px; font-weight:bold; }
-    @media(max-width:600px){ .card{width:90%;} }
-</style>
+  <title>Property Listing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #f9f9f9; margin:0; padding:0; }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+    }
+    header img {
+      height: 40px;
+      margin-right: 10px;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    .container {
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card img { width: 100%; border-radius: 10px; }
+    .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+    .price { color: green; font-weight: bold; }
+    .status { padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+    .pending { background: orange; color: white; }
+    .approved { background: green; color: white; }
+  </style>
 </head>
 <body>
+  <header>
+    <img src="https://i.ibb.co/0hY2xKm/logo.png" alt="Logo">
+    <h1>Zara Property</h1>
+  </header>
+  <div class="container" id="propertyList">
+    <!-- Properties yahan load honge -->
+  </div>
 
-<header>Property Listings</header>
-<div style="text-align:center;">
-    <button id="addBtn">Add Property</button>
-</div>
-<div class="cards" id="cardsContainer"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-<!-- Modal for fullscreen card -->
-<div id="modal">
-    <div id="modalContent">
-        <span id="closeModal">&times;</span>
-        <div id="modalInner"></div>
-    </div>
-</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "960442382448",
+      appId: "1:960442382448:web:d5c11f7bcf7aeb2cc1ff6d"
+    };
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-<script>
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    const propertyList = document.getElementById("propertyList");
 
-// Add Property
-document.getElementById('addBtn').addEventListener('click',()=>{
-    const title = prompt("Property Title:");
-    const desc = prompt("Property Description:");
-    const imageUrl = prompt("Image URL (Imgbb link):");
-    if(title && desc && imageUrl){
-        const newKey = db.ref('properties/').push().key;
-        db.ref('properties/'+newKey).set({
-            title: title,
-            description: desc,
-            image: imageUrl,
-            approved: false
-        });
-        alert("Property added! Waiting for admin approval.");
+    function renderProperty(id, data) {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <img src="${data.images ? data.images[0] : ''}" alt="">
+        <div class="title">${data.title}</div>
+        <div class="price">${data.price}</div>
+        <div>${data.location}</div>
+        <div>${data.description}</div>
+        <span class="status ${data.status}">${data.status}</span>
+      `;
+      propertyList.appendChild(div);
     }
-});
 
-// Fetch and display properties
-function fetchProperties(){
-    db.ref('properties/').on('value', snapshot=>{
-        const container = document.getElementById('cardsContainer');
-        container.innerHTML = '';
-        snapshot.forEach(child=>{
-            const prop = child.val();
-            const key = child.key;
-            // show all approved
-            if(prop.approved){
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <img src="${prop.image}" alt="Property Image">
-                    <h3>${prop.title}</h3>
-                    <p>${prop.description}</p>
-                    <button class="btn3d" onclick="deleteProp('${key}')">Delete</button>
-                `;
-                card.onclick = function(e){
-                    if(e.target.tagName!=='BUTTON'){
-                        document.getElementById('modalInner').innerHTML = card.innerHTML;
-                        document.getElementById('modal').style.display='flex';
-                    }
-                }
-                container.appendChild(card);
-            }
-        });
+    const propertiesRef = ref(db, "properties");
+    onValue(propertiesRef, (snapshot) => {
+      propertyList.innerHTML = "";
+      snapshot.forEach((child) => {
+        renderProperty(child.key, child.val());
+      });
     });
-}
-
-// Delete Property
-function deleteProp(key){
-    if(confirm("Are you sure to delete this property?")){
-        db.ref('properties/'+key).remove();
-    }
-}
-
-// Modal close
-document.getElementById('closeModal').onclick = function(){
-    document.getElementById('modal').style.display='none';
-}
-
-fetchProperties();
-</script>
-
+  </script>
 </body>
 </html>
