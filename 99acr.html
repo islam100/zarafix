@@ -1,145 +1,137 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zara Property Listing</title>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix Property Listing</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    .form-container, .list-container {
-      max-width: 600px;
-      margin: 20px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      background: #007bff;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .property {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      background: #fdfdfd;
-    }
-    .whatsapp {
-      background: #25D366;
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 4px;
-      text-decoration: none;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    header { background: #4CAF50; color: white; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; }
+    .container { max-width: 800px; margin: 20px auto; padding: 10px; }
+    .card { background: white; border-radius: 10px; margin: 10px 0; padding: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s; cursor: pointer; overflow: hidden; }
+    .card img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; }
+    .card.expanded img { max-height: none; }
+    .card h3 { margin: 10px 0; }
+    .btn { background: #4CAF50; color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; margin-top: 8px; }
+    .btn:hover { background: #45a049; }
+    .form-box { display: none; background: white; padding: 15px; border-radius: 10px; margin-top: 20px; }
+    #loginBtn { position: fixed; top: 10px; right: 10px; background: #333; }
   </style>
 </head>
 <body>
-  <h1>🏠 Zara Property Listing</h1>
 
-  <div class="form-container">
-    <h2>नई प्रॉपर्टी जोड़ें</h2>
-    <input type="text" id="title" placeholder="Title" />
-    <input type="text" id="city" placeholder="City" />
-    <select id="type">
-      <option value="">Select Type</option>
-      <option value="Plot">Plot</option>
-      <option value="Flat">Flat</option>
-      <option value="House">House</option>
-      <option value="Shop">Shop</option>
-    </select>
-    <input type="number" id="price" placeholder="Price" />
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" />
-    <button onclick="addProperty()">Add Property</button>
+<header>ZaraFix Property Listing</header>
+
+<button id="loginBtn" class="btn">Login to Post</button>
+
+<div class="container">
+  <!-- Post Form -->
+  <div id="postForm" class="form-box">
+    <h3>नई लिस्टिंग जोड़ें</h3>
+    <input type="text" id="title" placeholder="Title" style="width:100%;padding:8px;margin:5px 0;">
+    <input type="text" id="desc" placeholder="Description" style="width:100%;padding:8px;margin:5px 0;">
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" style="width:100%;padding:8px;margin:5px 0;">
+    <input type="file" id="image" style="margin:5px 0;">
+    <button class="btn" onclick="submitPost()">Submit for Approval</button>
   </div>
 
-  <div class="list-container">
-    <h2>📋 Property List</h2>
-    <div id="propertyList"></div>
-  </div>
+  <!-- Listing -->
+  <div id="listing"></div>
+</div>
 
-  <script>
-    // 🔥 Firebase Config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
-    // ✅ Add Property Function
-    function addProperty() {
-      let title = document.getElementById("title").value;
-      let city = document.getElementById("city").value;
-      let type = document.getElementById("type").value;
-      let price = document.getElementById("price").value;
-      let whatsapp = document.getElementById("whatsapp").value;
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 
-      if (!title || !city || !type || !price || !whatsapp) {
-        alert("⚠️ Please fill Title, City, Type, Price, WhatsApp");
-        return;
-      }
+  firebase.initializeApp(firebaseConfig);
 
-      let newRef = db.ref("properties").push();
-      newRef.set({
-        title, city, type, price, whatsapp
-      });
+  const db = firebase.database();
+  const auth = firebase.auth();
 
-      document.getElementById("title").value = "";
-      document.getElementById("city").value = "";
-      document.getElementById("type").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("whatsapp").value = "";
+  const loginBtn = document.getElementById("loginBtn");
+  const postForm = document.getElementById("postForm");
+
+  // Google Login
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(() => {
+      postForm.style.display = "block";
+      loginBtn.style.display = "none";
+    });
+  });
+
+  // Submit Post
+  async function submitPost() {
+    const title = document.getElementById("title").value;
+    const desc = document.getElementById("desc").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const file = document.getElementById("image").files[0];
+
+    if (!title || !desc || !whatsapp || !file) {
+      alert("कृपया सभी फ़ील्ड भरें");
+      return;
     }
 
-    // ✅ Display Properties
-    db.ref("properties").on("value", snapshot => {
-      let list = document.getElementById("propertyList");
-      list.innerHTML = "";
-      snapshot.forEach(child => {
-        let data = child.val();
-        list.innerHTML += `
-          <div class="property">
-            <h3>${data.title}</h3>
-            <p>City: ${data.city}</p>
-            <p>Type: ${data.type}</p>
-            <p>Price: ₹${data.price}</p>
-            <a class="whatsapp" href="https://wa.me/${data.whatsapp}" target="_blank">WhatsApp</a>
-          </div>
-        `;
-      });
+    // Upload image to ImgBB
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
+      method: "POST",
+      body: formData
     });
-  </script>
+    const data = await res.json();
+    const imageUrl = data.data.url;
+
+    const postRef = db.ref("posts").push();
+    await postRef.set({
+      title, desc, whatsapp, imageUrl, approved: false, timestamp: Date.now()
+    });
+
+    alert("आपकी पोस्ट admin approval के लिए भेज दी गई है!");
+    document.getElementById("title").value = "";
+    document.getElementById("desc").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("image").value = "";
+  }
+
+  // Fetch Approved Posts
+  db.ref("posts").on("value", (snapshot) => {
+    const listing = document.getElementById("listing");
+    listing.innerHTML = "";
+    snapshot.forEach(child => {
+      const post = child.val();
+      if (post.approved) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${post.imageUrl}" alt="Property">
+          <h3>${post.title}</h3>
+          <p>${post.desc}</p>
+          <a href="https://wa.me/${post.whatsapp}" target="_blank">
+            <button class="btn">WhatsApp</button>
+          </a>
+        `;
+        card.addEventListener("click", () => {
+          card.classList.toggle("expanded");
+        });
+        listing.appendChild(card);
+      }
+    });
+  });
+</script>
+
 </body>
 </html>
