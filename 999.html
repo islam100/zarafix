@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zara Property Listing</title>
+</head>
+<body>
+  <h2>Zara Property Listing</h2>
+
+  <!-- Input form -->
+  <div>
+    <input type="text" id="title" placeholder="Property Title" />
+    <input type="text" id="price" placeholder="Price" />
+    <input type="text" id="location" placeholder="Location" />
+    <button onclick="postProperty()">Post</button>
+  </div>
+
+  <hr/>
+
+  <!-- Display properties -->
+  <h3>All Properties</h3>
+  <ul id="propertyList"></ul>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    // ✅ Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyXXXXXXX",
+      authDomain: "your-app.firebaseapp.com",
+      databaseURL: "https://your-app.firebaseio.com",
+      projectId: "your-app",
+      storageBucket: "your-app.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef"
+    };
+
+    // ✅ Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ✅ Post Property
+    function postProperty() {
+      let title = document.getElementById("title").value;
+      let price = document.getElementById("price").value;
+      let location = document.getElementById("location").value;
+
+      if(title=="" || price=="" || location==""){
+        alert("कृपया सभी फ़ील्ड भरें");
+        return;
+      }
+
+      let newPostRef = db.ref("properties").push();
+      newPostRef.set({
+        title: title,
+        price: price,
+        location: location
+      });
+
+      document.getElementById("title").value="";
+      document.getElementById("price").value="";
+      document.getElementById("location").value="";
+    }
+
+    // ✅ Realtime Fetch Properties
+    db.ref("properties").on("value", function(snapshot) {
+      let list = document.getElementById("propertyList");
+      list.innerHTML = "";
+      snapshot.forEach(function(childSnapshot) {
+        let data = childSnapshot.val();
+        let li = document.createElement("li");
+        li.innerText = `${data.title} – ₹${data.price} – ${data.location}`;
+        list.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>
