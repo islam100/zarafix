@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZARA FIX – Products (Firebase Realtime DB)</title>
+  <title>ZARA FIX – Products (Realtime DB, WhatsApp Contact)</title>
   <style>
     :root{
       --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --text:#e5e7eb;
@@ -139,6 +139,10 @@
   <main>
     <!-- PUBLIC -->
     <section id="public" class="panel active">
+      <div class="row" style="margin-bottom:10px">
+        <label>Category Filter</label>
+        <select id="catFilter"></select>
+      </div>
       <p class="muted">ग्राहक बिना login सभी products देखते हैं। Pending products पर "WAIT FOR APPROVAL" दिखेगा (red)। Card पर क्लिक करने से बड़ा, बाहर क्लिक से छोटा।</p>
       <div id="publicGrid" class="grid"></div>
     </section>
@@ -159,6 +163,10 @@
             <input id="pdName" placeholder="Product Name" required>
             <input id="pdPrice" type="number" placeholder="Price (₹)" required>
             <input id="pdDiscount" placeholder="Discount (10% / ₹200)">
+          </div>
+          <div class="row">
+            <label>Category</label>
+            <select id="pdCategory" required></select>
           </div>
           <div class="row">
             <label>Images (1–5)</label>
@@ -202,7 +210,7 @@
 
         <h3 style="margin-top:16px">All Products</h3>
         <table class="table" id="adminTable">
-          <thead><tr><th>When</th><th>Product</th><th>Price</th><th>Discount</th><th>Shop</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>When</th><th>Product</th><th>Category</th><th>Price</th><th>Discount</th><th>Shop</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -260,6 +268,21 @@
     const DEFAULT_ADMIN_WHATS = '917378342192';
     const IMGBB_API_KEY = 'ff05d1b5c3b3e139253856f0ad1123df';
 
+    // Single source of truth for categories (form + filter)
+    const CATEGORIES = [
+      'All',
+      'Electronics',
+      'Clothing',
+      'Home',
+      'Services',
+      'Automobile',
+      'Food',
+      'Health',
+      'Real Estate',
+      'Education',
+      'Other'
+    ];
+
     /***********************
      * 2) Tabs (unchanged)
      ***********************/
@@ -297,6 +320,7 @@
         currentUser = { email, uid:user.uid, isAdmin, isShop, shopRecord };
       }
       updateGuards();
+      populateCategories();
       subscribePublic();
       subscribeShop();
       subscribeAdmin();
@@ -318,17 +342,36 @@
     }
 
     /***********************
-     * 4) PUBLIC (Realtime listing)
+     * 4) Categories (form + public filter)
+     ***********************/
+    function populateCategories(){
+      const catSel = document.getElementById('pdCategory');
+      const catFilter = document.getElementById('catFilter');
+      if(catSel && !catSel.dataset.ready){
+        CATEGORIES.filter(c=>c!=='All').forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o) });
+        catSel.dataset.ready = '1';
+      }
+      if(catFilter && !catFilter.dataset.ready){
+        CATEGORIES.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catFilter.appendChild(o) });
+        catFilter.value='All';
+        catFilter.onchange = ()=> subscribePublic(); // re-render on change
+        catFilter.dataset.ready = '1';
+      }
+    }
+
+    /***********************
+     * 5) PUBLIC (Realtime listing)
      ***********************/
     const overlay = document.getElementById('overlay');
     let publicUnsub = null;
 
     function subscribePublic(){
       if(publicUnsub){ db.ref('products').off('value', publicUnsub); publicUnsub=null }
+      const selected = (document.getElementById('catFilter')||{}).value || 'All';
       publicUnsub = db.ref('products').on('value', (snapshot)=>{
         const list=[]; snapshot.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
-        // filter: hide deleted; show approved & pending; show rejected? (we will hide rejected from public)
-        const filtered = list.filter(x=> !x.deleted && (x.status==='approved' || x.status==='pending'));
+        const filtered = list.filter(x=> !x.deleted && (x.status==='approved' || x.status==='pending'))
+          .filter(x=> selected==='All' ? true : (x.category===selected));
         filtered.sort((a,b)=> Number(b.createdAt||0)-Number(a.createdAt||0)); // new on top
         renderPublic(filtered);
         syncAdminStats(list);
@@ -343,7 +386,6 @@
       const dotEls = images.map((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===0?' active':''); dots.appendChild(d); d.addEventListener('click', (e)=>{ e.stopPropagation(); idx=i; img.src=images[idx]; updateDots() }); return d });
       function updateDots(){ dotEls.forEach((d,i)=> d.classList.toggle('active', i===idx)) }
       container.appendChild(img); container.appendChild(dots);
-      // swipe / auto next on click left/right
       container.addEventListener('click', (e)=>{ idx=(idx+1)%images.length; img.src=images[idx]; updateDots() })
     }
 
@@ -354,7 +396,7 @@
         const card = document.createElement('div');
         card.className = 'card ' + (p.status==='pending' ? 'pending' : '') + (p.status==='rejected' ? 'rejected' : '');
         card.innerHTML = `
-          <span class=\"badge\">${p.status==='approved' ? 'LIVE' : 'WAIT'}</span>
+          <span class=\"badge\">${p.category||'-'}</span>
           <div class=\"gallery\"></div>
           <div class=\"title\">${p.name||''}</div>
           <div class=\"price\">₹${p.price||0} <span class=\"muted\">• Discount: ${p.discount||'-'}</span></div>
@@ -362,16 +404,13 @@
             <button class=\"btn\" data-act=\"whatsapp\">WhatsApp Shop</button>
           </div>
         `;
-        // gallery
         renderGallery(card.querySelector('.gallery'), (p.images||[]).slice(0,5));
-        // enlarge on click (outside buttons)
         card.addEventListener('click', (e)=>{ if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show') })
         overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
-        // whatsapp
         card.querySelector('[data-act=whatsapp]').addEventListener('click', (e)=>{
           e.stopPropagation();
           const shopPhone = (p.shopPhone && String(p.shopPhone).replace(/\D/g,'')) || DEFAULT_ADMIN_WHATS;
-          const msg = encodeURIComponent(`हमें आपका product \"${p.name}\" (₹${p.price}) पसंद आया है, कृपया पूरी जानकारी दें।`);
+          const msg = encodeURIComponent(`Hame aapka product pasand aaya hai.\nProduct: ${p.name} (₹${p.price})\nCategory: ${p.category||'-'}\nKripya puri jankari de.`);
           window.open(`https://wa.me/${shopPhone}?text=${msg}`, '_blank');
         })
         grid.appendChild(card);
@@ -379,7 +418,7 @@
     }
 
     /***********************
-     * 5) SHOPKEEPER view (Realtime + Create Product)
+     * 6) SHOPKEEPER view (Realtime + Create Product)
      ***********************/
     let shopUnsub = null;
     function subscribeShop(){
@@ -404,6 +443,7 @@
         const card = document.createElement('div');
         card.className = 'card ' + (pr.status==='pending' ? 'pending' : (pr.status==='rejected'? 'rejected':''));
         card.innerHTML = `
+          <span class=\"badge\">${pr.category||'-'}</span>
           <div class=\"gallery\"></div>
           <div class=\"title\">${pr.name||''}</div>
           <div class=\"price\">₹${pr.price||0} <span class=\"muted\">• ${pr.discount||'-'}</span></div>
@@ -441,9 +481,16 @@
           urls.push(data.data.display_url);
         }
         const payload = {
-          name: pdName.value.trim(), price: Number(pdPrice.value), discount: pdDiscount.value.trim(),
-          images: urls, shopEmail: currentUser.shopRecord.email, shopPhone: currentUser.shopRecord.phone||DEFAULT_ADMIN_WHATS,
-          status: 'pending', createdAt: Date.now(), deleted:false
+          name: pdName.value.trim(),
+          price: Number(pdPrice.value),
+          discount: pdDiscount.value.trim(),
+          category: pdCategory.value,
+          images: urls,
+          shopEmail: currentUser.shopRecord.email,
+          shopPhone: currentUser.shopRecord.phone||DEFAULT_ADMIN_WHATS,
+          status: 'pending',
+          createdAt: Date.now(),
+          deleted:false
         };
         await db.ref('products').push(payload);
         alert('Product submitted. Wait for approval.');
@@ -452,7 +499,7 @@
     })
 
     /***********************
-     * 6) ADMIN view (Realtime + Approve/Reject)
+     * 7) ADMIN view (Realtime + Approve/Reject)
      ***********************/
     let adminProductsUnsub = null, adminShopsUnsub = null;
     function subscribeAdmin(){
@@ -460,7 +507,7 @@
       if(adminShopsUnsub){ db.ref('shopkeepers').off('value', adminShopsUnsub); adminShopsUnsub=null }
       if(!(currentUser && currentUser.isAdmin)) return;
 
-      adminShopsUnsub = db.ref('shopkeepers').on('value', snap=>{ /* just to ensure we have shop metadata */ });
+      adminShopsUnsub = db.ref('shopkeepers').on('value', snap=>{ /* keep cache */ });
 
       adminProductsUnsub = db.ref('products').on('value', snap=>{
         const list=[]; snap.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
@@ -476,7 +523,7 @@
       list.forEach(p=>{
         const tr=document.createElement('tr');
         const when = new Date(p.createdAt||Date.now()).toLocaleString();
-        tr.innerHTML = `<td>${when}</td><td>${p.name||''}</td><td>₹${p.price||0}</td><td>${p.discount||'-'}</td><td>${p.shopEmail||''}</td><td>${p.status}</td><td></td>`;
+        tr.innerHTML = `<td>${when}</td><td>${p.name||''}</td><td>${p.category||'-'}</td><td>₹${p.price||0}</td><td>${p.discount||'-'}</td><td>${p.shopEmail||''}</td><td>${p.status}</td><td></td>`;
         const tdAct = tr.lastElementChild;
         const btnApprove = document.createElement('button'); btnApprove.className='btn'; btnApprove.textContent='Approve';
         const btnReject  = document.createElement('button'); btnReject.className='btn btn-amber'; btnReject.style.marginLeft='6px'; btnReject.textContent='Reject';
@@ -496,7 +543,7 @@
     }
 
     /***********************
-     * 7) Header Menus Links (DB + admin popup)
+     * 8) Header Menus Links (DB + admin popup)
      ***********************/
     const linkNodes = {
       property: document.getElementById('lnkProperty'),
@@ -537,7 +584,7 @@
     function readLinksFromForm(){ return { property:uProperty.value.trim(), ambulance:uAmbulance.value.trim(), all:uAll.value.trim(), provider:uProvider.value.trim(), about:uAbout.value.trim(), contact:uContact.value.trim(), privacy:uPrivacy.value.trim() } }
 
     /***********************
-     * 8) Admin: Add Shopkeeper (with WhatsApp phone)
+     * 9) Admin: Add Shopkeeper (with WhatsApp phone)
      ***********************/
     document.getElementById('shopForm').addEventListener('submit', (e)=>{
       e.preventDefault();
@@ -547,8 +594,8 @@
     })
 
     /***********************
-     * 9) Notes (Security Rules Suggestion)
-     * - products: write by owner (shopEmail) for create; approve/reject only admin; delete by owner (soft delete)
+     * 10) Notes (Security Rules Suggestion)
+     * - products: create by shop owner; approve/reject only admin; delete by owner (soft delete)
      * - menuLinks: admin only
      * - shopkeepers: admin only
      ***********************/
