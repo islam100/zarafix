@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupons Platform – Public | Shop | Admin</title>
+  <style>
+    :root{
+      --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --text:#e5e7eb;
+      --accent:#22c55e; --accent-dark:#15803d; --danger:#ef4444; --ring:#334155;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:radial-gradient(1200px 600px at 70% -10%, #1e293b 0, var(--bg) 55%);color:var(--text);min-height:100vh;}
+
+    /* Layout */
+    header{display:flex;gap:12px;align-items:center;justify-content:center;padding:14px;position:sticky;top:0;background:rgba(2,6,23,0.7);backdrop-filter: blur(8px);border-bottom:1px solid #1f2937;z-index:50}
+    .tab{padding:10px 14px;border-radius:999px;border:1px solid #1f2937;background:#0b1220;color:#cbd5e1;font-weight:600;cursor:pointer}
+    .tab.active{border-color:#14532d;background:#052e16;color:#bbf7d0}
+
+    main{max-width:1100px;margin:0 auto;padding:16px;}
+
+    /* Grid for cards: on small screens 2 per row */
+    .grid{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+    @media(min-width:760px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:1040px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:10px;transition:transform .2s ease, box-shadow .2s ease;position:relative;overflow:hidden;cursor:pointer}
+    .card:hover{transform:translateY(-3px)}
+    .card img{width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:8px}
+    .title{font-weight:700;font-size:15px}
+    .muted{color:var(--muted);font-size:12px}
+    .info{font-size:12px;margin:6px 0}
+    .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin:6px 0}
+    .badge{position:absolute;top:8px;right:8px;padding:4px 8px;border-radius:999px;font-size:11px;border:1px solid #1f2937;background:#0b1220}
+    .sold::after{content:"SOLD";position:absolute;inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:white;padding:6px 10px;border-radius:8px;font-weight:800;letter-spacing:.5px;box-shadow:0 6px 18px rgba(239,68,68,.4)}
+
+    /* 3D Buttons */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:12px;border:1px solid #14532d;background:#052e16;color:#bbf7d0;font-weight:700;cursor:pointer;box-shadow:0 6px 0 #0c2c19;transition:transform .06s ease, box-shadow .06s ease}
+    .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c2c19}
+    .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
+    .btn-danger{border-color:#7f1d1d;background:#450a0a;color:#fecaca;box-shadow:0 6px 0 #2a0a0a}
+
+    /* Expanded Card + Overlay */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:80}
+    .overlay.show{display:block}
+    .card.expanded{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.02);width:min(92vw,460px)}
+
+    /* Panels */
+    .panel{display:none}
+    .panel.active{display:block}
+
+    /* Forms */
+    form{display:grid;gap:10px}
+    input,select{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0a0f1a;color:#e5e7eb}
+    label{font-size:12px;color:#a3b3cf}
+
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .stats{display:flex;gap:12px;flex-wrap:wrap}
+    .stat{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px 12px}
+    .table{width:100%;border-collapse:collapse;font-size:13px}
+    .table th,.table td{border-bottom:1px solid #1f2937;padding:8px;text-align:left}
+
+    .whats-btn{position:fixed;right:16px;bottom:16px}
+  </style>
+</head>
+<body>
+  <header>
+    <button class="tab active" data-target="public">Public (Customers)</button>
+    <button class="tab" data-target="shop">Shopkeeper</button>
+    <button class="tab" data-target="admin">Admin</button>
+  </header>
+  <main>
+    <!-- PUBLIC -->
+    <section id="public" class="panel active">
+      <p class="muted">सब ग्राहक बिना login सभी cards देख सकते हैं। Code submit करने पर card SOLD नहीं होगा; shop accept करने के बाद ही SOLD दिखाई देगा। कार्ड पर क्लिक करने से बड़ा होगा, बाहर क्लिक करने से छोटा।</p>
+      <div id="publicGrid" class="grid"></div>
+    </section>
+
+    <!-- SHOPKEEPER -->
+    <section id="shop" class="panel">
+      <div class="row">
+        <input id="shopEmail" placeholder="Shopkeeper Email" />
+        <button class="btn" id="shopLogin">Login</button>
+      </div>
+      <div id="shopPanel" style="display:none;margin-top:12px">
+        <div class="row stats">
+          <div class="stat">Pending: <span id="shopPending">0</span></div>
+          <div class="stat">Accepted: <span id="shopAccepted">0</span></div>
+        </div>
+        <h3>मेरे Coupons</h3>
+        <div id="shopGrid" class="grid"></div>
+        <button class="btn whats-btn" id="whatsBtn">WhatsApp Admin</button>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="admin" class="panel">
+      <div class="row">
+        <input id="adminEmail" placeholder="Admin Email" />
+        <button class="btn" id="adminLogin">Login</button>
+        <span class="muted">(Fixed admin: zarasamajiksevasanstha@gmail.com)</span>
+      </div>
+
+      <div id="adminPanel" style="display:none;margin-top:14px">
+        <div class="row stats">
+          <div class="stat">Total Cards: <span id="statTotal">0</span></div>
+          <div class="stat">SOLD: <span id="statSold">0</span></div>
+          <div class="stat">Available: <span id="statAvail">0</span></div>
+        </div>
+
+        <h3>Shopkeeper जोड़ें</h3>
+        <form id="shopForm">
+          <div class="row">
+            <input id="sEmail" placeholder="Email" required>
+            <input id="sName" placeholder="Shop Name" required>
+          </div>
+          <div class="row">
+            <input id="sAddr" placeholder="Shop Address" required>
+            <input id="sExpiry" type="date" required>
+          </div>
+          <button class="btn" type="submit">Add Shop</button>
+        </form>
+
+        <h3 style="margin-top:16px">Card (Coupon) जोड़ें</h3>
+        <form id="cardForm">
+          <div class="row">
+            <input id="pName" placeholder="Product Name" required>
+            <input id="pValue" type="number" placeholder="Value (₹)" required>
+            <input id="pDiscount" placeholder="Discount (e.g., 10% / ₹200)" required>
+          </div>
+          <div class="row">
+            <input id="pExpiry" type="date" required>
+            <select id="pShop" required></select>
+          </div>
+          <div class="row">
+            <label>Image (upload to imgbb):</label>
+            <input id="imgFile" type="file" accept="image/*" required>
+          </div>
+          <div class="row">
+            <input id="imgbbKey" placeholder="IMGBB API KEY" required>
+            <button class="btn" type="submit">Create Card</button>
+          </div>
+        </form>
+
+        <h3 style="margin-top:16px">All Cards</h3>
+        <table class="table" id="adminTable">
+          <thead><tr><th>Code</th><th>Product</th><th>Value</th><th>Discount</th><th>Expiry</th><th>Shop</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="overlay" class="overlay"></div>
+
+  <script>
+    /***********************
+     * Minimal Client Store (localStorage)
+     ***********************/
+    const LS = {
+      load(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch{ return fallback } },
+      save(key, val){ localStorage.setItem(key, JSON.stringify(val)) }
+    }
+
+    // Seed only once
+    const seed = LS.load('__seeded__', false);
+    if(!seed){
+      const shops=[{email:'shop1@example.com',name:'ABC Store',address:'Delhi',expiry:'2026-12-31'},{email:'shop2@example.com',name:'MNO Mart',address:'Jaipur',expiry:'2026-12-31'}];
+      const coupons=[
+        mkCoupon({product:'Rice Bag', value:1000, discount:'10%', expiry:'2025-12-31', shopEmail:'shop1@example.com', img:'https://images.unsplash.com/photo-1604908554027-7742f2b57502?q=80&w=600'}),
+        mkCoupon({product:'Wheat Flour', value:500, discount:'₹200', expiry:'2025-10-15', shopEmail:'shop1@example.com', img:'https://images.unsplash.com/photo-1590166223826-6ad1b4f6a8d2?q=80&w=600'}),
+        mkCoupon({product:'Milk Pack', value:100, discount:'50%', expiry:'2025-08-30', shopEmail:'shop2@example.com', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=600'})
+      ];
+      LS.save('shops', shops); LS.save('coupons', coupons); LS.save('__seeded__', true);
+    }
+
+    function mkCoupon({product,value,discount,expiry,shopEmail,img}){
+      return {
+        id: crypto.randomUUID(),
+        code: genCode(), product, value: Number(value), discount, expiry, shopEmail,
+        img, submitted:false, accepted:false, submittedBy:null, createdAt: Date.now()
+      }
+    }
+    function genCode(){ return Math.random().toString(36).slice(2,10).toUpperCase() }
+
+    const state = {
+      get shops(){ return LS.load('shops', []) },
+      set shops(v){ LS.save('shops', v) },
+      get coupons(){ return LS.load('coupons', []) },
+      set coupons(v){ LS.save('coupons', v) }
+    }
+
+    /******** Tabs ********/
+    document.querySelectorAll('.tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.target).classList.add('active');
+        if(btn.dataset.target==='public') renderPublic();
+        if(btn.dataset.target==='shop') syncShopView();
+        if(btn.dataset.target==='admin') syncAdminView();
+      })
+    })
+
+    /******** PUBLIC (Customers) ********/
+    const overlay = document.getElementById('overlay');
+    function renderPublic(){
+      const grid = document.getElementById('publicGrid');
+      grid.innerHTML='';
+      state.coupons
+        .sort((a,b)=> (a.accepted - b.accepted) || (b.createdAt - a.createdAt)) // new cards higher; sold sink
+        .forEach(c=>{
+          const card = document.createElement('div');
+          card.className = 'card' + (c.accepted ? ' sold' : '');
+          card.innerHTML = `
+            <span class="badge">${c.accepted? 'SOLD' : (c.submitted? 'SUBMITTED' : 'AVAILABLE')}</span>
+            <img src="${c.img}" alt="${c.product}">
+            <div class="title">${c.product}</div>
+            <div class="info">Value: ₹${c.value} • Discount: ${c.discount}</div>
+            <div class="info">Expiry: ${c.expiry}</div>
+            <div class="code">Code: ${c.code}</div>
+            <button class="btn" ${c.accepted? 'disabled' : ''}>${c.submitted? 'Submitted' : 'Submit Code'}</button>
+          `;
+          // Expand/collapse
+          card.addEventListener('click', (e)=>{
+            if(e.target.tagName.toLowerCase()==='button') return; // ignore button click
+            card.classList.add('expanded'); overlay.classList.add('show');
+          });
+          overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
+          // Submit Code
+          card.querySelector('button').addEventListener('click', (e)=>{
+            e.stopPropagation();
+            if(c.accepted) return;
+            c.submitted = true; c.submittedBy = 'guest';
+            state.coupons = state.coupons.map(x=> x.id===c.id? c : x);
+            renderPublic();
+          });
+          grid.appendChild(card);
+        })
+    }
+
+    /******** SHOPKEEPER ********/
+    const shopEmailInput = document.getElementById('shopEmail');
+    document.getElementById('shopLogin').addEventListener('click', ()=>{
+      const em = shopEmailInput.value.trim().toLowerCase();
+      const ok = state.shops.find(s=>s.email.toLowerCase()===em);
+      document.getElementById('shopPanel').style.display = ok? 'block':'none';
+      if(!ok){ alert('Shop not found. पहले admin से shop add कराएँ.'); return }
+      localStorage.setItem('__shop__', em);
+      syncShopView();
+    })
+
+    function syncShopView(){
+      const em = localStorage.getItem('__shop__');
+      const panel = document.getElementById('shopPanel');
+      if(!em){ panel.style.display='none'; return }
+      panel.style.display='block';
+      const mine = state.coupons.filter(c=> c.shopEmail.toLowerCase()===em);
+      const grid = document.getElementById('shopGrid'); grid.innerHTML='';
+      let pending=0, accepted=0;
+      mine.sort((a,b)=> (a.accepted - b.accepted) || (b.createdAt - a.createdAt)).forEach(c=>{
+        if(c.accepted) accepted++; else if(c.submitted) pending++;
+        const card = document.createElement('div');
+        card.className = 'card' + (c.accepted? ' sold':'');
+        card.innerHTML = `
+          <img src="${c.img}" alt="${c.product}">
+          <div class="title">${c.product}</div>
+          <div class="info">Value: ₹${c.value} • Discount: ${c.discount}</div>
+          <div class="info">Expiry: ${c.expiry}</div>
+          <div class="code">${c.code}</div>
+          <div class="row">
+            <button class="btn" data-act="accept" ${c.accepted||!c.submitted? 'disabled':''}>Accept</button>
+            <button class="btn btn-danger" data-act="reject" ${c.accepted||!c.submitted? 'disabled':''}>Reject</button>
+          </div>
+        `;
+        card.addEventListener('click', (e)=>{
+          if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show');
+        })
+        overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
+        card.querySelectorAll('button').forEach(btn=>{
+          btn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            if(btn.dataset.act==='accept'){ c.accepted=true }
+            if(btn.dataset.act==='reject'){ c.submitted=false; c.submittedBy=null }
+            state.coupons = state.coupons.map(x=> x.id===c.id? c : x);
+            syncShopView(); renderPublic(); syncAdminStats();
+          })
+        })
+        grid.appendChild(card);
+      })
+      document.getElementById('shopPending').textContent = pending;
+      document.getElementById('shopAccepted').textContent = accepted;
+
+      // WhatsApp button → message with code
+      document.getElementById('whatsBtn').onclick = ()=>{
+        const msg = encodeURIComponent(`Shop: ${em}\nI want to give a coupon. Pending: ${pending}, Accepted: ${accepted}`);
+        window.open(`https://wa.me/917378342192?text=${msg}`, '_blank');
+      }
+    }
+
+    /******** ADMIN ********/
+    const FIXED_ADMIN = 'zarasamajiksevasanstha@gmail.com';
+    document.getElementById('adminLogin').addEventListener('click', ()=>{
+      const em = document.getElementById('adminEmail').value.trim().toLowerCase();
+      const ok = (em===FIXED_ADMIN.toLowerCase());
+      document.getElementById('adminPanel').style.display = ok? 'block' : 'none';
+      if(!ok) { alert('Not authorized.'); return }
+      localStorage.setItem('__admin__', em);
+      syncAdminView();
+    })
+
+    function syncAdminView(){
+      // Shops dropdown
+      const sel = document.getElementById('pShop'); sel.innerHTML='';
+      state.shops.forEach(s=>{
+        const opt=document.createElement('option');
+        opt.value=s.email; opt.textContent=`${s.name} (${s.email})`; sel.appendChild(opt);
+      })
+      // Table + stats
+      renderAdminTable(); syncAdminStats();
+    }
+
+    function renderAdminTable(){
+      const tbody=document.querySelector('#adminTable tbody'); tbody.innerHTML='';
+      state.coupons.sort((a,b)=> b.createdAt-a.createdAt).forEach(c=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${c.code}</td><td>${c.product}</td><td>₹${c.value}</td><td>${c.discount}</td><td>${c.expiry}</td><td>${c.shopEmail}</td><td>${c.accepted? 'SOLD' : (c.submitted? 'SUBMITTED' : 'AVAILABLE')}</td>`;
+        tbody.appendChild(tr);
+      })
+    }
+    function syncAdminStats(){
+      const total=state.coupons.length; const sold=state.coupons.filter(x=>x.accepted).length; const avail=total-sold;
+      document.getElementById('statTotal').textContent=total;
+      document.getElementById('statSold').textContent=sold;
+      document.getElementById('statAvail').textContent=avail;
+    }
+
+    // Add shop
+    document.getElementById('shopForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const s={ email: sEmail.value.trim(), name:sName.value.trim(), address:sAddr.value.trim(), expiry:sExpiry.value };
+      const shops = state.shops; shops.push(s); state.shops = shops;
+      alert('Shop added'); e.target.reset(); syncAdminView();
+    })
+
+    // Create card with imgbb upload
+    document.getElementById('cardForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const file = document.getElementById('imgFile').files[0];
+      const key = document.getElementById('imgbbKey').value.trim();
+      if(!key){ alert('IMGBB key required'); return }
+      const fd = new FormData(); fd.append('image', file);
+      const url = `https://api.imgbb.com/1/upload?key=${encodeURIComponent(key)}`;
+      try{
+        const res = await fetch(url, { method:'POST', body: fd });
+        const data = await res.json();
+        if(!data.success){ throw new Error('Upload failed') }
+        const img = data.data.display_url;
+        const coupon = mkCoupon({
+          product: pName.value.trim(), value: pValue.value, discount: pDiscount.value.trim(), expiry: pExpiry.value,
+          shopEmail: pShop.value, img
+        });
+        const list = state.coupons; list.unshift(coupon); state.coupons = list;
+        alert('Card created'); e.target.reset(); renderPublic(); renderAdminTable(); syncAdminStats();
+      }catch(err){
+        alert('Image upload error: '+err.message)
+      }
+    })
+
+    // Initial render
+    renderPublic();
+  </script>
+</body>
+</html>
