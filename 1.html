@@ -1,261 +1,259 @@
-<!doctype html>
-<html lang="hi">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zara Property — Compact Cards</title>
-
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <meta charset="UTF-8" />
+  <title>Property Listings</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
 
   <style>
-    :root{
-      --bg:#071022;--card:#0b1220;--muted:#9aa4b2;
-      --accent:#2563eb;--glass:rgba(255,255,255,0.04);--white:#fff
+    :root {
+      --bg:#0f172a;
+      --text:#f8fafc;
+      --card:#1e293b;
+      --muted:#94a3b8;
     }
-    body.light{
-      --bg:#f8fafc;--card:#ffffff;--muted:#475569;
-      --accent:#2563eb;--glass:rgba(0,0,0,0.05);--white:#000
+    [data-theme="light"] {
+      --bg:#f1f5f9;
+      --text:#0f172a;
+      --card:#ffffff;
+      --muted:#475569;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;font-family:Inter,system-ui,Arial;
-      color:var(--white);
-      background:var(--bg);
-      padding:14px;
-      transition:all .3s ease;
+    body {
+      margin:0;font-family:sans-serif;
+      background:var(--bg);color:var(--text);
     }
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-    .logo{padding:10px 16px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#06b6d4);font-weight:900;font-size:22px;letter-spacing:0.6px;color:#fff}
-    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .btn{background:var(--glass);border:0;padding:10px 12px;border-radius:12px;color:var(--white);cursor:pointer;backdrop-filter:blur(6px)}
-    .btn:active{transform:translateY(2px)}
-    .wrap{display:flex;gap:18px}
-    .left{flex:1}
-    .right{width:340px}
-    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
-    input,select{width:100%;padding:10px;margin-top:8px;border-radius:10px;border:0;background:rgba(255,255,255,0.05);color:var(--white)}
+    header {
+      display:flex;justify-content:space-between;align-items:center;
+      padding:10px;background:var(--card);
+    }
+    header h2 {margin:0;font-size:18px;}
+    .actions {display:flex;gap:10px;align-items:center;}
+    button, select {
+      padding:6px 12px;border:none;border-radius:6px;
+      cursor:pointer;background:var(--muted);color:var(--text);
+      transition:transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {transform:translateY(-2px);box-shadow:0 4px 6px rgba(0,0,0,0.2);}
+    .postBtn {
+      background:linear-gradient(145deg,#4ade80,#22c55e);
+      color:#fff;font-weight:bold;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:14px;padding:14px;
+    }
+    .card {
+      position:relative;background:var(--card);border-radius:10px;
+      overflow:hidden;cursor:pointer;transition:transform 0.2s;
+    }
+    .card:hover{transform:translateY(-3px);}
+    .card img.thumb{width:100%;height:120px;object-fit:cover;}
+    .card h4{font-size:14px;margin:6px;}
+    .desc{font-size:12px;margin:0 6px 6px;color:var(--muted);}
+    .badge{position:absolute;top:6px;left:6px;padding:2px 6px;font-size:10px;
+      border-radius:4px;background:#444;color:#fff;}
+    .badge.approved{background:green;}
+    .badge.pending{background:orange;}
+    .badge.rejected{background:red;}
 
-    /* cards grid */
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-    .card{background:var(--card);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);overflow:hidden;cursor:pointer;transition:.15s}
-    .card:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(0,0,0,0.4)}
-    .card img.thumb{width:100%;height:120px;object-fit:cover;border-radius:8px}
-    .card h4{font-size:14px;margin:6px 0 2px 0}
-    .desc{font-size:12px;color:var(--muted);line-height:1.3}
-    .badge{position:absolute;top:10px;left:10px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700}
-    .badge.approved{background:linear-gradient(90deg,#059669,#10b981);color:#022c1b}
-    .badge.pending{background:linear-gradient(90deg,#f59e0b,#f97316);color:#2b1600}
-
-    /* modal */
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);z-index:1000;padding:18px}
-    .modal.open{display:flex}
-    .modal .box{background:var(--card);padding:16px;border-radius:14px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
-    .gallery{position:relative;text-align:center}
-    .gallery img{width:100%;max-height:500px;object-fit:contain;border-radius:8px}
-    .arrow{position:absolute;top:50%;transform:translateY(-50%);font-size:26px;background:rgba(0,0,0,0.4);padding:6px 10px;border-radius:50%;cursor:pointer}
-    .arrow.left{left:10px}
-    .arrow.right{right:10px}
-    .whatsapp-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:linear-gradient(180deg,#34d058,#10b981);color:#04201a;font-weight:700;text-decoration:none}
-    .delete-btn{background:#ef4444;padding:8px 12px;border-radius:10px;border:0;color:#fff;cursor:pointer}
-    @media(max-width:900px){.wrap{flex-direction:column}.right{width:100%}}
+    /* modal base */
+    #modal,#formModal {
+      position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.7);display:none;
+      align-items:center;justify-content:center;z-index:1000;
+    }
+    #modal.open,#formModal.open{display:flex;}
+    .box {
+      background:var(--card);padding:16px;border-radius:10px;
+      max-width:800px;width:100%;max-height:90vh;overflow-y:auto;
+    }
+    #modal h3,#formModal h3{margin-top:0;}
+    .gallery img{width:100%;max-height:400px;object-fit:contain;margin-bottom:6px;}
+    .whatsapp-btn {
+      background:#25D366;color:#fff;padding:6px 10px;border-radius:6px;
+      text-decoration:none;display:inline-block;
+    }
+    form label{display:block;margin:8px 0 4px;}
+    form input,form textarea,form select {
+      width:100%;padding:6px;border-radius:6px;border:1px solid var(--muted);
+      margin-bottom:8px;background:var(--bg);color:var(--text);
+    }
   </style>
 </head>
-<body>
+<body data-theme="dark">
   <header>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div class="logo">Zara</div>
-      <input id="search" placeholder="Search title, phone, location..." style="padding:8px;border-radius:10px;border:0;background:rgba(255,255,255,0.05);color:var(--white);min-width:220px">
-      <select id="priceFilter" class="btn">
-        <option value="">Sort by Price</option>
-        <option value="low-high">Low → High</option>
-        <option value="high-low">High → Low</option>
+    <h2>🏠 Property Listings</h2>
+    <div class="actions">
+      <select id="priceFilter">
+        <option value="default">Sort by Price</option>
+        <option value="low">Low → High</option>
+        <option value="high">High → Low</option>
       </select>
-    </div>
-    <div class="controls">
-      <button id="themeToggle" class="btn">🌙 Dark/Light</button>
-      <div id="auth-area"></div>
-      <button id="propertyBtn" class="btn" style="display:none">+ Post Property</button>
+      <button id="themeToggle">🌙</button>
+      <button id="postBtn" class="postBtn" style="display:none">+ Post Property</button>
+      <button id="loginBtn">Login</button>
+      <button id="logoutBtn" style="display:none">Logout</button>
     </div>
   </header>
 
-  <div class="wrap">
-    <main class="left">
-      <div id="cards" class="grid"></div>
-    </main>
-    <aside class="right">
-      <div id="post-panel" class="panel" style="display:none">
-        <h3>Post Property</h3>
-        <form id="post-form">
-          <input id="posterName" placeholder="Your Name" required />
-          <input id="posterAddress" placeholder="Address" required />
-          <select id="bhk"><option>1 BHK</option><option>2 BHK</option><option>3 BHK</option><option>4+ BHK</option></select>
-          <select id="propertyType"><option>Flat</option><option>Building</option><option>Bungalow</option></select>
-          <input id="price" placeholder="Price" required />
-          <input id="posterPhone" placeholder="WhatsApp Number" required />
-          <input id="images" type="file" accept="image/*" multiple />
-          <button type="submit" class="btn">Submit</button>
-        </form>
-      </div>
-      <div style="height:12px"></div>
-      <div class="panel"><h4>Admin Controls</h4><div id="admin-panel">(Login as admin to see)</div></div>
-    </aside>
-  </div>
+  <main><div class="grid" id="cards"></div></main>
 
-  <!-- modal -->
-  <div id="modal" class="modal" aria-hidden="true">
-    <div class="box">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 id="modal-title"></h3>
-        <button id="modal-close" class="btn">Close</button>
-      </div>
-      <div id="modal-body"></div>
-    </div>
-  </div>
+  <!-- detail modal -->
+  <div id="modal"><div class="box">
+    <button onclick="closeModal()">❌</button>
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+  </div></div>
 
-<script>
-const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-const firebaseConfig = { /* your firebase config here */ };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+  <!-- form modal -->
+  <div id="formModal"><div class="box">
+    <button onclick="closeForm()">❌</button>
+    <h3>Post New Property</h3>
+    <form id="postForm">
+      <label>Price</label><input type="number" name="price" required>
+      <label>BHK</label><input type="text" name="bhk" required>
+      <label>Property Type</label>
+      <select name="propertyType" required>
+        <option>Flat</option><option>House</option><option>Plot</option>
+      </select>
+      <label>Address</label><textarea name="address" required></textarea>
+      <label>Description</label><textarea name="description"></textarea>
+      <label>Phone</label><input type="text" name="posterPhone" required>
+      <label>Images (max 5)</label><input type="file" id="images" multiple accept="image/*">
+      <button type="submit" class="postBtn">Submit</button>
+    </form>
+  </div></div>
 
-let currentUser=null,isAdmin=false,allPosts=[];
-const cardsEl=document.getElementById('cards');
-const postPanel=document.getElementById('post-panel');
-const propertyBtn=document.getElementById('propertyBtn');
-const authArea=document.getElementById('auth-area');
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    // 🔹 Firebase config डालें
+    const firebaseConfig = { /* your config */ };
+    firebase.initializeApp(firebaseConfig);
+    const db=firebase.database();
 
-// theme toggle
-const themeBtn=document.getElementById('themeToggle');
-themeBtn.onclick=()=>{document.body.classList.toggle('light');};
+    let currentUser=null,isAdmin=false,allPosts=[];
+    const adminEmail="zarasamajiksevasanstha@gmail.com";
 
-// auth
-function renderAuthArea(){
-  authArea.innerHTML='';
-  if(!currentUser){
-    const btn=document.createElement('button');btn.className='btn';btn.textContent='Login with Google';
-    btn.onclick=()=>{const provider=new firebase.auth.GoogleAuthProvider();auth.signInWithPopup(provider);};
-    authArea.appendChild(btn);
-  } else {
-    const span=document.createElement('div');span.style='margin-right:8px';span.textContent=currentUser.displayName||currentUser.email;
-    const out=document.createElement('button');out.className='btn';out.textContent='Logout';out.onclick=()=>auth.signOut();
-    authArea.appendChild(span);authArea.appendChild(out);
-  }
-}
-auth.onAuthStateChanged(user=>{
-  currentUser=user;isAdmin=user&&user.email===ADMIN_EMAIL;
-  renderAuthArea();
-  if(currentUser){postPanel.style.display='block';propertyBtn.style.display='inline-block';document.getElementById('admin-panel').textContent=isAdmin?'Admin: You can Approve/Reject posts':'(Login as admin to see)';}
-  else{postPanel.style.display='none';propertyBtn.style.display='none';document.getElementById('admin-panel').textContent='(Login as admin to see)';}
-  renderCards();
-});
+    const loginBtn=document.getElementById('loginBtn');
+    const logoutBtn=document.getElementById('logoutBtn');
+    const postBtn=document.getElementById('postBtn');
 
-propertyBtn.onclick=()=>{postPanel.style.display=postPanel.style.display==='block'?'none':'block';};
+    loginBtn.onclick=()=>{firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());};
+    logoutBtn.onclick=()=>firebase.auth().signOut();
 
-// file upload
-async function fileToBase64(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file);});}
-async function uploadImages(files){const urls=[];for(let i=0;i<Math.min(files.length,5);i++){const base64=await fileToBase64(files[i]);const res=await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({image:base64.split(',')[1]})});const j=await res.json();if(j.success)urls.push(j.data.url);}return urls;}
-
-// form submit
-const form=document.getElementById('post-form');
-form.addEventListener('submit',async e=>{
-  e.preventDefault();
-  if(!currentUser)return alert('Login first');
-  const payload={
-    posterUid:currentUser.uid,
-    posterName:document.getElementById('posterName').value.trim(),
-    posterPhone:document.getElementById('posterPhone').value.trim(),
-    address:document.getElementById('posterAddress').value.trim(),
-    bhk:document.getElementById('bhk').value,
-    propertyType:document.getElementById('propertyType').value,
-    price:document.getElementById('price').value.trim(),
-    images:document.getElementById('images').files.length?await uploadImages(document.getElementById('images').files):[],
-    status:'pending',
-    createdAt:Date.now()
-  };
-  db.ref('posts').push().set(payload);
-  form.reset();
-});
-
-// db listener
-db.ref('posts').on('value',snap=>{
-  const v=snap.val()||{};
-  allPosts=Object.keys(v).map(k=>({id:k,...v[k]})).sort((a,b)=>b.createdAt-a.createdAt);
-  renderCards();
-});
-document.getElementById('search').addEventListener('input',()=>renderCards());
-document.getElementById('priceFilter').addEventListener('change',()=>renderCards());
-
-// render cards
-function renderCards(){
-  cardsEl.innerHTML='';
-  const q=document.getElementById('search').value.trim().toLowerCase();
-  let posts=allPosts.filter(p=>{
-    if(q){
-      const hay=((p.posterName||'')+' '+(p.address||'')+' '+(p.posterPhone||'')+' '+(p.price||'')+' '+(p.bhk||'')+' '+(p.propertyType||'')).toLowerCase();
-      if(!hay.includes(q))return false;
-    }
-    if(isAdmin)return true;
-    if(currentUser)return p.status==='approved'||p.posterUid===currentUser.uid;
-    return p.status==='approved';
-  });
-  // sort by price
-  const filter=document.getElementById('priceFilter').value;
-  if(filter){
-    posts.sort((a,b)=>{
-      const pa=parseInt(a.price)||0,pb=parseInt(b.price)||0;
-      return filter==='low-high'?pa-pb:pb-pa;
+    firebase.auth().onAuthStateChanged(u=>{
+      if(u){
+        currentUser=u;isAdmin=(u.email===adminEmail);
+        loginBtn.style.display='none';
+        logoutBtn.style.display='inline-block';
+        postBtn.style.display='inline-block';
+      }else{
+        currentUser=null;isAdmin=false;
+        loginBtn.style.display='inline-block';
+        logoutBtn.style.display='none';
+        postBtn.style.display='none';
+      }
+      renderCards();
     });
-  }
-  if(!posts.length){cardsEl.innerHTML='<div style="color:var(--muted);padding:12px">कोई पोस्ट नहीं मिली</div>';return;}
-  posts.forEach(p=>{
-    const card=document.createElement('div');card.className='card';card.onclick=()=>openModal(p);
-    const img=document.createElement('img');img.className='thumb';img.src=(p.images&&p.images.length)?p.images[0]:'https://via.placeholder.com/400x300?text=No+Image';card.appendChild(img);
-    const title=document.createElement('h4');title.textContent=`${p.price} — ${p.bhk} ${p.propertyType}`;card.appendChild(title);
-    const desc=document.createElement('div');desc.className='desc';desc.innerHTML=`📍 ${p.address}<br>👤 ${p.posterName}`;card.appendChild(desc);
-    const badge=document.createElement('div');badge.className='badge '+(p.status==='approved'?'approved':'pending');badge.innerText=p.status.toUpperCase();card.appendChild(badge);
-    cardsEl.appendChild(card);
-  });
-}
 
-// modal
-const modal=document.getElementById('modal');
-const modalTitle=document.getElementById('modal-title');
-const modalBody=document.getElementById('modal-body');
-let currentImgIndex=0;
-function openModal(post){
-  modal.classList.add('open');modal.setAttribute('aria-hidden','false');
-  modalTitle.textContent=`${post.bhk} ${post.propertyType} — ${post.price}`;
-  modalBody.innerHTML='';currentImgIndex=0;
-  const gallery=document.createElement('div');gallery.className='gallery';
-  const mainImg=document.createElement('img');mainImg.src=(post.images&&post.images.length)?post.images[0]:'https://via.placeholder.com/600x400';gallery.appendChild(mainImg);
-  if(post.images.length>1){
-    const left=document.createElement('div');left.className='arrow left';left.innerHTML='⟨';left.onclick=()=>{currentImgIndex=(currentImgIndex-1+post.images.length)%post.images.length;mainImg.src=post.images[currentImgIndex];};
-    const right=document.createElement('div');right.className='arrow right';right.innerHTML='⟩';right.onclick=()=>{currentImgIndex=(currentImgIndex+1)%post.images.length;mainImg.src=post.images[currentImgIndex];};
-    gallery.appendChild(left);gallery.appendChild(right);
-  }
-  modalBody.appendChild(gallery);
-  const info=document.createElement('div');info.style.marginTop='12px';info.innerHTML=`
-    <p><b>📍 Address:</b> ${post.address}</p>
-    <p><b>👤 Owner:</b> ${post.posterName}</p>
-    <p><b>📱 WhatsApp:</b> <a href="https://wa.me/${(post.posterPhone||'').replace(/\D/g,'')}" target="_blank">${post.posterPhone}</a></p>
-    <p><b>Status:</b> ${post.status}</p>
-    <p style="color:var(--muted);font-size:12px">Posted: ${new Date(post.createdAt).toLocaleString()}</p>`;
-  modalBody.appendChild(info);
-  const actions=document.createElement('div');actions.style.marginTop='14px';actions.style.display='flex';actions.style.flexWrap='wrap';actions.style.gap='10px';
-  const waBtn=document.createElement('a');waBtn.className='whatsapp-btn';waBtn.href=`https://wa.me/${(post.posterPhone||'').replace(/\D/g,'')}`;waBtn.target='_blank';waBtn.innerText='Chat on WhatsApp';actions.appendChild(waBtn);
-  if(currentUser&&currentUser.uid===post.posterUid){
-    const del=document.createElement('button');del.className='delete-btn';del.textContent='Delete';del.onclick=async()=>{if(confirm('Delete this post?')){await db.ref('posts/'+post.id).remove();closeModal();}};actions.appendChild(del);
-  }
-  if(isAdmin){
-    const app=document.createElement('button');app.className='btn';app.textContent='Approve';app.onclick=()=>db.ref('posts/'+post.id).update({status:'approved'});
-    const rej=document.createElement('button');rej.className='btn';rej.textContent='Reject';rej.onclick=()=>db.ref('posts/'+post.id).update({status:'rejected'});
-    actions.appendChild(app);actions.appendChild(rej);
-  }
-  modalBody.appendChild(actions);
-}
-document.getElementById('modal-close').onclick=()=>close
+    db.ref('posts').on('value',snap=>{
+      const val=snap.val()||{};
+      allPosts=Object.keys(val).map(id=>({...val[id],id}));
+      renderCards();
+    });
+
+    const cardsEl=document.getElementById('cards');
+    function renderCards(){
+      cardsEl.innerHTML='';
+      let posts=[...allPosts];
+      const pf=document.getElementById('priceFilter').value;
+      if(pf==='low') posts.sort((a,b)=>parseInt(a.price||0)-parseInt(b.price||0));
+      if(pf==='high') posts.sort((a,b)=>parseInt(b.price||0)-parseInt(a.price||0));
+      posts.forEach(p=>{
+        if(!isAdmin){
+          if(!currentUser && p.status!=='approved') return;
+          if(currentUser && p.posterUid!==currentUser.uid && p.status!=='approved') return;
+        }
+        const card=document.createElement('div');
+        card.className='card';card.onclick=()=>openModal(p);
+        card.innerHTML=`
+          <img class="thumb" src="${(p.images&&p.images[0])||'https://via.placeholder.com/400'}" loading="lazy">
+          <h4>${p.price||''} — ${p.bhk||''} ${p.propertyType||''}</h4>
+          <div class="desc">📍 ${p.address||''}<br>👤 ${p.posterName||''}</div>
+          <div class="badge ${p.status||'pending'}">${p.status||'pending'}</div>`;
+        cardsEl.appendChild(card);
+      });
+    }
+
+    const modal=document.getElementById('modal');
+    const modalTitle=document.getElementById('modalTitle');
+    const modalBody=document.getElementById('modalBody');
+    function openModal(p){
+      modal.classList.add('open');
+      modalTitle.textContent=`${p.bhk} ${p.propertyType} — ${p.price}`;
+      modalBody.innerHTML='';
+      const gal=document.createElement('div');
+      gal.className='gallery';
+      (p.images||[]).forEach(url=>{gal.innerHTML+=`<img src="${url}">`;});
+      modalBody.appendChild(gal);
+      modalBody.innerHTML+=`
+        <p><b>📍 Address:</b> ${p.address||''}</p>
+        <p><b>👤 Owner:</b> ${p.posterName||''}</p>
+        <p><b>📱 Phone:</b> ${p.posterPhone||''}</p>
+        <p><b>Status:</b> ${p.status||''}</p>`;
+      const act=document.createElement('div');act.style.marginTop='10px';
+      if(p.posterPhone){act.innerHTML+=`<a class="whatsapp-btn" href="https://wa.me/${p.posterPhone}" target="_blank">WhatsApp</a>`;}
+      if(currentUser && currentUser.uid===p.posterUid){
+        const del=document.createElement('button');
+        del.textContent='Delete';del.onclick=()=>{if(confirm('Delete?')) db.ref('posts/'+p.id).remove();closeModal();};
+        act.appendChild(del);
+      }
+      if(isAdmin){
+        const app=document.createElement('button');app.textContent='Approve';app.onclick=()=>db.ref('posts/'+p.id).update({status:'approved'});
+        const rej=document.createElement('button');rej.textContent='Reject';rej.onclick=()=>db.ref('posts/'+p.id).update({status:'rejected'});
+        act.appendChild(app);act.appendChild(rej);
+      }
+      modalBody.appendChild(act);
+    }
+    function closeModal(){modal.classList.remove('open');}
+    window.onkeydown=e=>{if(e.key==='Escape'){closeModal();closeForm();}}
+
+    // theme toggle
+    document.getElementById('themeToggle').onclick=()=>{
+      const b=document.body;
+      b.setAttribute('data-theme',b.getAttribute('data-theme')==='dark'?'light':'dark');
+    };
+    document.getElementById('priceFilter').onchange=renderCards;
+
+    // post form
+    const formModal=document.getElementById('formModal');
+    postBtn.onclick=()=>formModal.classList.add('open');
+    function closeForm(){formModal.classList.remove('open');}
+    document.getElementById('postForm').onsubmit=async e=>{
+      e.preventDefault();
+      if(!currentUser) return alert('Login required');
+      const fd=new FormData(e.target);
+      let images=[];
+      const files=document.getElementById('images').files;
+      for(let i=0;i<Math.min(files.length,5);i++){
+        const f=files[i];
+        const url=URL.createObjectURL(f); // NOTE: यहां सिर्फ demo के लिए blob url, असल में आपको imgbb या storage upload करना होगा
+        images.push(url);
+      }
+      const post={
+        price:fd.get('price'),bhk:fd.get('bhk'),propertyType:fd.get('propertyType'),
+        address:fd.get('address'),description:fd.get('description'),
+        posterPhone:fd.get('posterPhone'),
+        posterName:currentUser.displayName,posterUid:currentUser.uid,
+        images,status:'pending',createdAt:Date.now()
+      };
+      await db.ref('posts').push(post);
+      closeForm();
+    };
+  </script>
+</body>
+</html>
