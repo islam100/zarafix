@@ -1,267 +1,512 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Property Listings</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZARA FIX – Coupons (Firebase Realtime DB)</title>
+  <style>
+    :root{
+      --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --text:#e5e7eb;
+      --accent:#22c55e; --accent-dark:#15803d; --danger:#ef4444; --ring:#334155; --gold:#fbbf24;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:radial-gradient(1200px 600px at 70% -10%, #1e293b 0, var(--bg) 55%);color:var(--text);min-height:100vh;}
 
-<style>
-body {
-  font-family: "Segoe UI", sans-serif;
-  margin: 0;
-  padding: 0;
-  background: linear-gradient(135deg,#f0f4f7,#e0f7fa);
-  color: #333;
-}
+    /* ======= HEADER ======= */
+    header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;position:sticky;top:0;background:rgba(2,6,23,.7);backdrop-filter: blur(10px);border-bottom:1px solid #1f2937;z-index:60}
 
-/* Header */
-header {
-  background: linear-gradient(90deg,#1976d2,#42a5f5);
-  color: white;
-  padding: 12px 20px;
-  font-size: 20px;
-  font-weight: bold;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
+    /* 3D colorful logo */
+    .logo{
+      font-weight:900; letter-spacing:1px; line-height:1; user-select:none; cursor:pointer;
+      font-size:30px;
+      background: conic-gradient(from 180deg, #22d3ee, #a78bfa, #f472b6, #f97316, #22c55e, #22d3ee);
+      background-clip:text; -webkit-background-clip:text; color:transparent;
+      text-shadow: 0 2px 0 rgba(255,255,255,.12), 0 6px 0 #0a0f1a, 0 14px 20px rgba(0,0,0,.6);
+      filter: drop-shadow(0 10px 22px rgba(0,0,0,.45));
+    }
+    @media(min-width:900px){ .logo{ font-size:42px } }
 
-/* Cards Grid */
-#posts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
-  gap: 16px;
-  padding: 20px;
-}
+    /* menu dropdowns in header */
+    .menus{display:flex;gap:10px;align-items:center}
+    .menu-dd{
+      padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;cursor:pointer;box-shadow:inset 0 0 0 1px #0e1627, 0 8px 0 #0a0f1a;
+    }
 
-/* Card */
-.card {
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  padding: 12px;
-  transition: transform .2s, box-shadow .2s;
-  cursor: pointer;
-}
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-.card img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 10px;
-  margin-bottom: 8px;
-}
-.card h3 {
-  margin: 6px 0;
-  font-size: 18px;
-  color: #1976d2;
-}
-.card p {
-  margin: 4px 0;
-  font-size: 14px;
-}
+    .header-actions{display:flex;align-items:center;gap:10px}
+    .tab{padding:9px 12px;border-radius:999px;border:1px solid #1f2937;background:#0b1220;color:#cbd5e1;font-weight:600;cursor:pointer}
+    .tab.active{border-color:#14532d;background:#052e16;color:#bbf7d0}
 
-/* Status Badges */
-.card p.status {
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 6px;
-  display: inline-block;
-}
-.card.approved p.status {
-  background: #c8e6c9;
-  color: #2e7d32;
-}
-.card.rejected p.status {
-  background: #ffcdd2;
-  color: #c62828;
-}
-.card.pending p.status {
-  background: #fff9c4;
-  color: #f57f17;
-  animation: blink 1s infinite;
-}
-@keyframes blink { 50% { opacity: .5; } }
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:12px;border:1px solid #14532d;background:#052e16;color:#bbf7d0;font-weight:800;cursor:pointer;box-shadow:0 6px 0 #0c2c19;transition:transform .06s ease, box-shadow .06s ease}
+    .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c2c19}
+    .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
+    .btn-danger{border-color:#7f1d1d;background:#450a0a;color:#fecaca;box-shadow:0 6px 0 #2a0a0a}
 
-/* Buttons */
-button {
-  border: none;
-  padding: 8px 14px;
-  margin: 4px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
-}
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-.waBtn {
-  background: linear-gradient(90deg,#25d366,#128c7e);
-  color: white;
-}
-.btn3d {
-  background: linear-gradient(90deg,#43a047,#66bb6a);
-  color: white;
-}
-.logoutBtn {
-  background: linear-gradient(90deg,#e53935,#ef5350);
-  color: white;
-}
+    main{max-width:1100px;margin:0 auto;padding:16px;}
 
-/* Modal */
-#cardModal {
-  display:none; 
-  position:fixed; 
-  inset:0; 
-  background:rgba(0,0,0,0.6); 
-  justify-content:center; 
-  align-items:center;
-}
-#cardContent {
-  background:white;
-  border-radius:12px;
-  padding:20px;
-  max-width:600px;
-  width:90%;
-  max-height:90%;
-  overflow-y:auto;
-  position:relative;
-}
-#cardContent img { border-radius:10px; margin:8px 0; }
-.close {
-  position:absolute; 
-  top:10px; right:14px; 
-  font-size:24px; 
-  cursor:pointer;
-}
-</style>
+    /* Grid: mobile में 2 cards/row */
+    .grid{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+    @media(min-width:760px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:1040px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+    /* 3D Cards */
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid #1f2937;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,0.03);padding:10px;transition:transform .2s ease, box-shadow .2s ease;position:relative;overflow:hidden;cursor:pointer}
+    .card:hover{transform:translateY(-4px)}
+    .card img{width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px; box-shadow:0 10px 18px rgba(0,0,0,.25)}
+    .title{font-weight:800;font-size:15px}
+    .muted{color:var(--muted);font-size:12px}
+    .info{font-size:12px;margin:6px 0}
+    .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin:6px 0}
+    .badge{position:absolute;top:8px;right:8px;padding:4px 8px;border-radius:999px;font-size:11px;border:1px solid #1f2937;background:#0b1220}
+    .sold::after{content:"SOLD";position:absolute;inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:white;padding:8px 12px;border-radius:10px;font-weight:900;letter-spacing:.5px;box-shadow:0 12px 26px rgba(239,68,68,.45)}
+
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:80}
+    .overlay.show{display:block}
+    .card.expanded{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.02);width:min(92vw,460px)}
+
+    .panel{display:none}
+    .panel.active{display:block}
+
+    form{display:grid;gap:10px}
+    input,select{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0a0f1a;color:#e5e7eb}
+    label{font-size:12px;color:#a3b3cf}
+
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .stats{display:flex;gap:12px;flex-wrap:wrap}
+    .stat{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px 12px}
+    .table{width:100%;border-collapse:collapse;font-size:13px}
+    .table th,.table td{border-bottom:1px solid #1f2937;padding:8px;text-align:left}
+
+    .whats-btn{position:fixed;right:16px;bottom:16px}
+  </style>
 </head>
 <body>
+  <header>
+    <!-- Left: Logo -->
+    <div class="logo" onclick="document.querySelector('[data-target=public]').click()">ZARA FIX</div>
 
-<header>
-  <div>🏠 Property Listings</div>
-  <div id="authButtons">
-    <button id="loginBtn" class="btn3d">Login</button>
-    <button id="logoutBtn" class="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</header>
+    <!-- Center: Menus + Tabs -->
+    <div class="menus">
+      <select id="menuA" class="menu-dd"><option>Menu A</option></select>
+      <select id="menuB" class="menu-dd"><option>Menu B</option></select>
+      <button class="tab active" data-target="public">Public</button>
+      <button class="tab" data-target="shop">Shopkeeper</button>
+      <button class="tab" data-target="admin">Admin</button>
+    </div>
 
-<main>
-  <!-- Posts container -->
-  <div id="posts"></div>
-</main>
+    <!-- Right: Login/Logout -->
+    <div class="header-actions">
+      <button class="btn" id="loginBtn">Login with Google</button>
+      <button class="btn btn-danger" id="logoutBtn" style="display:none">Logout</button>
+    </div>
+  </header>
 
-<!-- Modal -->
-<div id="cardModal">
-  <div id="cardContent">
-    <span class="close" onclick="closeModal()">&times;</span>
-    <div id="modalBody"></div>
-  </div>
-</div>
+  <main>
+    <!-- PUBLIC -->
+    <section id="public" class="panel active">
+      <p class="muted">ग्राहक बिना login सभी cards देख सकते हैं। "Submit Code" के बाद भी card SOLD नहीं होगा — केवल shopkeeper Accept करने पर SOLD दिखेगा। Card पर क्लिक करने पर बड़ा, बाहर क्लिक पर छोटा।</p>
+      <div id="publicGrid" class="grid"></div>
+    </section>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth();
-const db=firebase.database();
+    <!-- SHOPKEEPER -->
+    <section id="shop" class="panel">
+      <div id="shopGuard" class="muted">Shopkeeper panel देखने के लिए Google से login करें और आपका email shopkeepers में होना चाहिए।</div>
+      <div id="shopPanel" style="display:none;margin-top:12px">
+        <div class="row stats">
+          <div class="stat">Pending: <span id="shopPending">0</span></div>
+          <div class="stat">Accepted: <span id="shopAccepted">0</span></div>
+        </div>
+        <h3>मेरे Coupons</h3>
+        <div id="shopGrid" class="grid"></div>
+        <button class="btn whats-btn" id="whatsBtn">WhatsApp Admin</button>
+      </div>
+    </section>
 
-let currentUser=null;
+    <!-- ADMIN -->
+    <section id="admin" class="panel">
+      <p class="muted">Admin: केवल <b>zarasamajiksevasanstha@gmail.com</b> Google login से। यहाँ से shops, coupons और header menus manage करें।</p>
+      <div id="adminPanel" style="display:none;margin-top:14px">
+        <div class="row stats">
+          <div class="stat">Total Cards: <span id="statTotal">0</span></div>
+          <div class="stat">SOLD: <span id="statSold">0</span></div>
+          <div class="stat">Available: <span id="statAvail">0</span></div>
+        </div>
 
-// Auth
-auth.onAuthStateChanged(user=>{
-  currentUser=user;
-  document.getElementById("loginBtn").style.display=user?"none":"inline-block";
-  document.getElementById("logoutBtn").style.display=user?"inline-block":"none";
-  loadPosts();
-});
+        <h3>Shopkeeper जोड़ें</h3>
+        <form id="shopForm">
+          <div class="row">
+            <input id="sEmail" placeholder="Email" required>
+            <input id="sName" placeholder="Shop Name" required>
+          </div>
+          <div class="row">
+            <input id="sAddr" placeholder="Shop Address" required>
+            <input id="sExpiry" type="date" required>
+          </div>
+          <button class="btn" type="submit">Add Shop</button>
+        </form>
 
-document.getElementById("loginBtn").onclick=()=>{
-  const email=prompt("Enter email");
-  const pass=prompt("Enter password");
-  if(email&&pass) auth.signInWithEmailAndPassword(email,pass).catch(alert);
-};
-document.getElementById("logoutBtn").onclick=()=>auth.signOut();
+        <h3 style="margin-top:16px">Card (Coupon) जोड़ें</h3>
+        <form id="cardForm">
+          <div class="row">
+            <input id="pName" placeholder="Product Name" required>
+            <input id="pValue" type="number" placeholder="Value (₹)" required>
+            <input id="pDiscount" placeholder="Discount (10% / ₹200)" required>
+          </div>
+          <div class="row">
+            <input id="pExpiry" type="date" required>
+            <select id="pShop" required></select>
+          </div>
+          <div class="row">
+            <label>Image:</label>
+            <input id="imgFile" type="file" accept="image/*" required>
+          </div>
+          <button class="btn" type="submit">Create Card</button>
+        </form>
 
-// Load Posts
-function loadPosts(){
-  db.ref("posts").orderByChild("timestamp").on("value",snap=>{
-    const cont=document.getElementById("posts");
-    cont.innerHTML="";
-    let posts=[];
-    snap.forEach(ch=>{ posts.unshift({...ch.val(),id:ch.key}); });
-    posts.forEach(p=>renderCard(p,cont));
-  });
-}
+        <h3 style="margin-top:16px">Header Menus</h3>
+        <div class="row">
+          <form id="menuAForm" style="flex:1">
+            <div class="row">
+              <input id="mAName" placeholder="Menu A - Item name" required>
+              <input id="mALink" placeholder="Menu A - URL (https://...)" required>
+              <button class="btn" type="submit">Add to Menu A</button>
+            </div>
+          </form>
+          <form id="menuBForm" style="flex:1">
+            <div class="row">
+              <input id="mBName" placeholder="Menu B - Item name" required>
+              <input id="mBLink" placeholder="Menu B - URL (https://...)" required>
+              <button class="btn" type="submit">Add to Menu B</button>
+            </div>
+          </form>
+        </div>
 
-function renderCard(p,cont){
-  const card=document.createElement("div");
-  card.className="card "+(p.status||"pending");
-  card.onclick=()=>openModal(p);
+        <div class="row" id="menusList" style="margin-top:10px"></div>
 
-  card.innerHTML=`
-    ${p.images && p.images.length ? `<img src="${p.images[0]}">` : ""}
-    <h3>${p.propertyType||""} - ${p.bhk||""}</h3>
-    <p>💰 ₹${p.price||""}</p>
-    <p>📍 ${p.address||""}</p>
-    <p>🧑 ${p.posterType||""}</p>
-    <p>📞 ${p.posterPhone||""}</p>
-    <p class="status">${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending"}</p>
-    <button class="waBtn" onclick="event.stopPropagation();window.open('https://wa.me/'+${p.posterPhone||""},'_blank')">📲 WhatsApp</button>
-  `;
+        <h3 style="margin-top:16px">All Cards</h3>
+        <table class="table" id="adminTable">
+          <thead><tr><th>Code</th><th>Product</th><th>Value</th><th>Discount</th><th>Expiry</th><th>Shop</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="adminGuard" class="muted">Admin panel देखने के लिए Google से login करें (fixed admin email).</div>
+    </section>
+  </main>
 
-  if(currentUser){
-    if(currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-      const btnRow=document.createElement("div");
-      btnRow.innerHTML=`
-        <button class="btn3d" onclick="event.stopPropagation();db.ref('posts/${p.id}').update({status:'approved'})">Approve</button>
-        <button class="logoutBtn" onclick="event.stopPropagation();db.ref('posts/${p.id}').update({status:'rejected'})">Reject</button>
-        <button class="logoutBtn" onclick="event.stopPropagation();db.ref('posts/${p.id}').remove()">Delete</button>
-      `;
-      card.appendChild(btnRow);
-    }else if(p.uid===currentUser.uid){
-      const del=document.createElement("button");
-      del.textContent="Delete My Post";
-      del.className="logoutBtn";
-      del.onclick=()=>{ db.ref("posts/"+p.id).remove(); };
-      card.appendChild(del);
+  <div id="overlay" class="overlay"></div>
+
+  <!-- Firebase SDKs (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    /***********************
+     * 1) Firebase Init
+     ***********************/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+      authDomain: "loot-lo-15328.firebaseapp.com",
+      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+      projectId: "loot-lo-15328",
+      storageBucket: "loot-lo-15328.appspot.com",
+      messagingSenderId: "677769861892",
+      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db   = firebase.database();
+
+    const FIXED_ADMIN = 'zarasamajiksevasanstha@gmail.com';
+    const IMGBB_API_KEY = 'ff05d1b5c3b3e139253856f0ad1123df';
+
+    /***********************
+     * 2) Tabs
+     ***********************/
+    document.querySelectorAll('.tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.target).classList.add('active');
+      })
+    })
+
+    /***********************
+     * 3) Auth (Google) — top-right
+     ***********************/
+    const loginBtn  = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    loginBtn.onclick = ()=>{
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e=>alert(e.message));
     }
-  }
+    logoutBtn.onclick = ()=> auth.signOut();
 
-  cont.appendChild(card);
-}
+    let currentUser = null; // {email, isAdmin, isShop, shopRecord}
 
-// Modal
-function openModal(p){
-  const body=document.getElementById("modalBody");
-  body.innerHTML=`
-    <h2>${p.propertyType||""} - ${p.bhk||""}</h2>
-    <p><b>Price:</b> ₹${p.price||""}</p>
-    <p><b>Address:</b> ${p.address||""}</p>
-    <p><b>Poster:</b> ${p.posterType||""}</p>
-    <p><b>Phone:</b> ${p.posterPhone||""}</p>
-    ${p.images? p.images.map(i=>`<img src="${i}" style="width:100%;">`).join(""):""}
-  `;
-  document.getElementById("cardModal").style.display="flex";
-}
-function closeModal(){ document.getElementById("cardModal").style.display="none"; }
-</script>
+    auth.onAuthStateChanged(async user=>{
+      currentUser = null;
+      if(user){
+        const email = user.email.toLowerCase();
+        const isAdmin = (email === FIXED_ADMIN.toLowerCase());
+        // find shopkeeper
+        let shopRecord = null; let isShop=false;
+        const snap = await db.ref('shopkeepers').get();
+        snap.forEach(ch=>{ const v=ch.val(); if(v.email && v.email.toLowerCase()===email){ shopRecord={id:ch.key,...v}; isShop=true } });
+        currentUser = { email, isAdmin, isShop, shopRecord };
+      }
+      updateGuards();
+      subscribePublic();
+      subscribeShop();
+      subscribeAdmin();
+      subscribeMenus();
+    });
 
+    function updateGuards(){
+      const loggedIn = !!currentUser;
+      document.getElementById('logoutBtn').style.display = loggedIn? 'inline-flex':'none';
+      document.getElementById('loginBtn').style.display  = loggedIn? 'none':'inline-flex';
+
+      document.getElementById('shopPanel').style.display = (currentUser && currentUser.isShop)? 'block':'none';
+      document.getElementById('shopGuard').style.display = (currentUser && currentUser.isShop)? 'none':'block';
+
+      document.getElementById('adminPanel').style.display = (currentUser && currentUser.isAdmin)? 'block':'none';
+      document.getElementById('adminGuard').style.display = (currentUser && currentUser.isAdmin)? 'none':'block';
+    }
+
+    /***********************
+     * 4) PUBLIC (Realtime list)
+     ***********************/
+    const overlay = document.getElementById('overlay');
+    let publicUnsub = null;
+    function subscribePublic(){
+      if(publicUnsub){ db.ref('coupons').off('value', publicUnsub); publicUnsub=null }
+      publicUnsub = db.ref('coupons').on('value', (snapshot)=>{
+        const list=[]; snapshot.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
+        list.sort((a,b)=> (Number(a.accepted) - Number(b.accepted)) || (Number(b.createdAt||0) - Number(a.createdAt||0)) );
+        renderPublic(list);
+        syncAdminStats(list);
+      });
+    }
+
+    function renderPublic(items){
+      const grid = document.getElementById('publicGrid');
+      grid.innerHTML='';
+      items.forEach(c=>{
+        const card = document.createElement('div');
+        card.className = 'card' + (c.accepted? ' sold':'');
+        const status = c.accepted? 'SOLD' : (c.submitted? 'SUBMITTED':'AVAILABLE');
+        card.innerHTML = `
+          <span class="badge">${status}</span>
+          <img src="${c.img||''}" alt="${c.product||''}">
+          <div class="title">${c.product||''}</div>
+          <div class="info">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
+          <div class="info">Expiry: ${c.expiry||''}</div>
+          <div class="code">Code: ${c.code||''}</div>
+          <button class="btn" ${c.accepted? 'disabled':''}>${c.submitted? 'Submitted':'Submit Code'}</button>
+        `;
+        card.addEventListener('click', (e)=>{ if(e.target.tagName.toLowerCase()==='button') return; card.classList.add('expanded'); overlay.classList.add('show') })
+        overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
+        card.querySelector('button').addEventListener('click', (e)=>{
+          e.stopPropagation(); if(c.accepted) return;
+          if(c.submitted){ alert('Already submitted. Shopkeeper will verify.'); return }
+          db.ref('coupons/'+c.id).update({ submitted:true, submittedBy: (currentUser? currentUser.email : 'guest'), submittedAt: Date.now() });
+        })
+        grid.appendChild(card);
+      })
+    }
+
+    /***********************
+     * 5) SHOPKEEPER view (Realtime)
+     ***********************/
+    let shopUnsub = null;
+    function subscribeShop(){
+      if(shopUnsub){ db.ref('coupons').off('value', shopUnsub); shopUnsub=null }
+      if(!(currentUser && currentUser.isShop)) return;
+      const myEmail = currentUser.shopRecord.email.toLowerCase();
+      shopUnsub = db.ref('coupons').on('value', (snapshot)=>{
+        const mine=[]; snapshot.forEach(ch=>{ const v={id:ch.key, ...ch.val()}; if((v.shopEmail||'').toLowerCase()===myEmail) mine.push(v) });
+        mine.sort((a,b)=> (Number(a.accepted)-Number(b.accepted)) || (Number(b.createdAt||0)-Number(a.createdAt||0)) );
+        renderShop(mine);
+      })
+    }
+
+    function renderShop(mine){
+      const grid = document.getElementById('shopGrid'); grid.innerHTML='';
+      let pending=0, accepted=0;
+      mine.forEach(c=>{ if(c.accepted) accepted++; else if(c.submitted) pending++; })
+      document.getElementById('shopPending').textContent = pending;
+      document.getElementById('shopAccepted').textContent = accepted;
+
+      mine.forEach(c=>{
+        const card = document.createElement('div');
+        card.className = 'card' + (c.accepted? ' sold':'');
+        card.innerHTML = `
+          <img src="${c.img||''}">
+          <div class="title">${c.product||''}</div>
+          <div class="info">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
+          <div class="info">Expiry: ${c.expiry||''}</div>
+          <div class="code">${c.code||''}</div>
+          <div class="row">
+            <button class="btn" data-act="accept" ${c.accepted||!c.submitted? 'disabled':''}>Accept</button>
+            <button class="btn btn-danger" data-act="reject" ${c.accepted||!c.submitted? 'disabled':''}>Reject</button>
+          </div>
+        `;
+        card.addEventListener('click', (e)=>{ if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show') })
+        overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
+        card.querySelectorAll('button').forEach(btn=>{
+          btn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            if(btn.dataset.act==='accept'){
+              // expiry check
+              const today = new Date(); today.setHours(0,0,0,0);
+              const exp = new Date(c.expiry);
+              if(exp < today){ alert('Coupon expired, cannot accept'); return }
+              db.ref('coupons/'+c.id).update({ accepted:true, acceptedAt: Date.now() });
+            }
+            if(btn.dataset.act==='reject'){
+              db.ref('coupons/'+c.id).update({ submitted:false, submittedBy:null, submittedAt:null });
+            }
+          })
+        })
+        grid.appendChild(card);
+      })
+
+      document.getElementById('whatsBtn').onclick = ()=>{
+        const msg = encodeURIComponent(`Shop: ${currentUser.shopRecord.name} (${currentUser.email})\nPending: ${pending}, Accepted: ${accepted}`);
+        window.open(`https://wa.me/917378342192?text=${msg}`, '_blank');
+      }
+    }
+
+    /***********************
+     * 6) ADMIN view (Realtime) + Menus
+     ***********************/
+    let adminCouponsUnsub = null, adminShopsUnsub = null, menusUnsub = null;
+    function subscribeAdmin(){
+      if(adminCouponsUnsub){ db.ref('coupons').off('value', adminCouponsUnsub); adminCouponsUnsub=null }
+      if(adminShopsUnsub){ db.ref('shopkeepers').off('value', adminShopsUnsub); adminShopsUnsub=null }
+      if(!(currentUser && currentUser.isAdmin)) return;
+
+      adminShopsUnsub = db.ref('shopkeepers').on('value', snap=>{
+        const sel=document.getElementById('pShop'); sel.innerHTML='';
+        snap.forEach(ch=>{ const v=ch.val(); const opt=document.createElement('option'); opt.value=v.email; opt.textContent=`${v.name} (${v.email})`; sel.appendChild(opt) })
+      })
+
+      adminCouponsUnsub = db.ref('coupons').on('value', snap=>{
+        const list=[]; snap.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
+        list.sort((a,b)=> Number(b.createdAt||0)-Number(a.createdAt||0));
+        renderAdminTable(list); syncAdminStats(list);
+      })
+    }
+
+    function renderAdminTable(list){
+      const tbody=document.querySelector('#adminTable tbody'); tbody.innerHTML='';
+      list.forEach(c=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${c.code||''}</td><td>${c.product||''}</td><td>₹${c.value||0}</td><td>${c.discount||''}</td><td>${c.expiry||''}</td><td>${c.shopEmail||''}</td><td>${c.accepted? 'SOLD' : (c.submitted? 'SUBMITTED':'AVAILABLE')}</td>`;
+        tbody.appendChild(tr);
+      })
+    }
+    function syncAdminStats(list){
+      const total=list.length, sold=list.filter(x=>x.accepted).length, avail=total-sold;
+      document.getElementById('statTotal').textContent=total;
+      document.getElementById('statSold').textContent=sold;
+      document.getElementById('statAvail').textContent=avail;
+    }
+
+    // Add shopkeeper
+    document.getElementById('shopForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
+      const s={ email: sEmail.value.trim(), name:sName.value.trim(), address:sAddr.value.trim(), expiry:sExpiry.value };
+      db.ref('shopkeepers').push(s).then(()=>{ alert('Shop added'); e.target.reset(); })
+    })
+
+    // Create card (ImgBB upload + duplicate code check)
+    document.getElementById('cardForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
+      const file = document.getElementById('imgFile').files[0];
+      if(!file) return alert('Select image');
+      try{
+        const fd = new FormData(); fd.append('image', file);
+        const url = `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`;
+        const res = await fetch(url, { method:'POST', body: fd });
+        const data = await res.json();
+        if(!data.success) throw new Error('ImgBB upload failed');
+        const img = data.data.display_url;
+
+        // unique code
+        let code; const all = (await db.ref('coupons').get());
+        do{ code = genCode() }while(Object.values(all.val()||{}).some(x=> x.code===code));
+
+        const coupon = {
+          code, product: pName.value.trim(), value: Number(pValue.value), discount: pDiscount.value.trim(),
+          expiry: pExpiry.value, shopEmail: pShop.value, img, submitted:false, accepted:false, createdAt: Date.now()
+        };
+        await db.ref('coupons').push(coupon);
+        alert('Card created'); e.target.reset();
+      }catch(err){ alert(err.message) }
+    })
+
+    function genCode(){ return Math.random().toString(36).slice(2,10).toUpperCase() }
+
+    /***********************
+     * 7) Header Menus (Realtime)
+     ***********************/
+    const ddA = document.getElementById('menuA');
+    const ddB = document.getElementById('menuB');
+
+    function subscribeMenus(){
+      if(menusUnsub){ db.ref('menus').off('value', menusUnsub); menusUnsub=null }
+      menusUnsub = db.ref('menus').on('value', snap=>{
+        const menus = snap.val()||{ menuA:{}, menuB:{} };
+        renderMenus(menus);
+        renderMenusAdmin(menus);
+      })
+    }
+
+    function renderMenus(menus){
+      // fill dropdowns
+      ddA.innerHTML = ''; ddB.innerHTML='';
+      const a = Object.entries(menus.menuA||{}); const b = Object.entries(menus.menuB||{});
+      if(a.length===0) ddA.innerHTML = '<option>Menu A</option>'; else a.forEach(([id,item])=>{ const o=document.createElement('option'); o.value=item.url; o.textContent=item.name; ddA.appendChild(o) })
+      if(b.length===0) ddB.innerHTML = '<option>Menu B</option>'; else b.forEach(([id,item])=>{ const o=document.createElement('option'); o.value=item.url; o.textContent=item.name; ddB.appendChild(o) })
+      ddA.onchange = ()=>{ const url=ddA.value; if(url && url.startsWith('http')) window.open(url,'_blank') }
+      ddB.onchange = ()=>{ const url=ddB.value; if(url && url.startsWith('http')) window.open(url,'_blank') }
+    }
+
+    function renderMenusAdmin(menus){
+      if(!(currentUser && currentUser.isAdmin)) return;
+      const wrap = document.getElementById('menusList'); wrap.innerHTML='';
+
+      const makeList = (title, key, obj)=>{
+        const box = document.createElement('div');
+        box.style.flex='1'; box.className='stat';
+        const rows = Object.entries(obj||{}).map(([id,item])=>
+          `<div class="row" style="justify-content:space-between"><span>${item.name}</span><a href="${item.url}" target="_blank" class="muted">${item.url}</a><button class="btn btn-danger" data-del="${key}/${id}">Delete</button></div>`
+        ).join('') || '<div class="muted">Empty</div>';
+        box.innerHTML = `<h4>${title}</h4>${rows}`;
+        wrap.appendChild(box);
+      }
+      makeList('Menu A Items', 'menuA', menus.menuA||{});
+      makeList('Menu B Items', 'menuB', menus.menuB||{});
+
+      wrap.querySelectorAll('[data-del]').forEach(btn=>{
+        btn.onclick = ()=> db.ref('menus/'+btn.dataset.del).remove();
+      })
+    }
+
+    document.getElementById('menuAForm').addEventListener('submit', (e)=>{
+      e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
+      db.ref('menus/menuA').push({ name: mAName.value.trim(), url: mALink.value.trim() }).then(()=> e.target.reset());
+    })
+    document.getElementById('menuBForm').addEventListener('submit', (e)=>{
+      e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
+      db.ref('menus/menuB').push({ name: mBName.value.trim(), url: mBLink.value.trim() }).then(()=> e.target.reset());
+    })
+  </script>
 </body>
 </html>
