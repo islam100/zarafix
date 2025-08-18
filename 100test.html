@@ -3,185 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - Product Approval</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <title>ZaraFix Products</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f5f6fa;
-      color: #333;
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#f4f6f9; }
     header {
-      background: #007bff;
-      color: #fff;
-      padding: 15px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      background:#007bff; color:white; padding:15px; text-align:center;
+      font-size:20px; font-weight:bold;
     }
-    .container {
-      max-width: 1100px;
-      margin: auto;
-      padding: 15px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 15px;
-    }
+    .container { max-width: 900px; margin:20px auto; padding:10px; }
     .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: 0.3s;
+      background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);
+      margin:10px; padding:15px; display:inline-block; width: 250px;
+      vertical-align:top; text-align:center; transition:0.3s;
     }
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+    .card:hover { transform:scale(1.05); }
+    .card img { width:100%; height:150px; object-fit:cover; border-radius:10px; }
+    .card h3 { margin:10px 0 5px; font-size:18px; }
+    .card p { font-size:14px; color:#555; }
+
+    #loginSection, #addForm { text-align:center; margin:15px 0; }
+    #addForm input, #addForm textarea {
+      width:90%; padding:8px; margin:5px 0; border:1px solid #ccc; border-radius:5px;
     }
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
+    #addForm button {
+      background:#28a745; color:white; border:none; padding:10px 15px;
+      border-radius:5px; cursor:pointer; font-size:16px;
     }
-    .card-content {
-      padding: 12px;
-      flex: 1;
-    }
-    .card h3 {
-      margin: 0 0 5px;
-      font-size: 18px;
-      color: #222;
-    }
-    .card p {
-      margin: 3px 0;
-      font-size: 14px;
-      color: #555;
-    }
-    .buttons {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
-    }
-    button {
-      flex: 1;
-      margin: 0 5px;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .approve {
-      background: #28a745;
-      color: #fff;
-    }
-    .approve:hover {
-      background: #218838;
-    }
-    .reject {
-      background: #dc3545;
-      color: #fff;
-    }
-    .reject:hover {
-      background: #c82333;
-    }
-    .login-container {
-      text-align: center;
-      margin: 40px auto;
-    }
-    .login-btn {
-      background: #4285F4;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 16px;
-      border: none;
-      cursor: pointer;
-    }
+    #addForm button:hover { background:#218838; }
   </style>
 </head>
 <body>
-  <header>ZaraFix - Product Approval Dashboard</header>
-
-  <div id="loginSection" class="login-container">
-    <button class="login-btn" onclick="googleLogin()">Login with Google</button>
+  <header>ZaraFix Product Listing</header>
+  
+  <!-- Login Section -->
+  <div id="loginSection">
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 
-  <div id="productSection" style="display:none;">
-    <div class="container" id="productList"></div>
+  <!-- Add Product Form -->
+  <div id="addForm" style="display:none;">
+    <h2>Add New Product</h2>
+    <input type="text" id="productName" placeholder="Product Name" required><br>
+    <textarea id="productDesc" placeholder="Description"></textarea><br>
+    <input type="text" id="productImage" placeholder="Image URL"><br>
+    <button id="submitProduct">Submit</button>
   </div>
 
-<script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abc123"
-  };
+  <!-- Product Listing -->
+  <div class="container" id="productList">
+    <!-- Products from Firebase will appear here -->
+  </div>
 
-  // Initialize Firebase
-  const app = firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const database = firebase.database();
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  // Google Login
-  function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .then(result => {
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("productSection").style.display = "block";
-        loadProducts();
-      })
-      .catch(error => {
-        alert("Login Failed: " + error.message);
-      });
-  }
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "575019426981",
+      appId: "1:575019426981:web:c6acfb522f6cf84102ab8f"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-  // Load products
-  function loadProducts() {
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const addForm = document.getElementById("addForm");
+    const submitProduct = document.getElementById("submitProduct");
     const productList = document.getElementById("productList");
-    productList.innerHTML = "";
-    database.ref("products").on("value", snapshot => {
+
+    // Google Login
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+    logoutBtn.onclick = () => auth.signOut();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        addForm.style.display = "block";
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        addForm.style.display = "none";
+      }
+    });
+
+    // Add Product
+    submitProduct.onclick = () => {
+      const name = document.getElementById("productName").value;
+      const desc = document.getElementById("productDesc").value;
+      const image = document.getElementById("productImage").value || "https://via.placeholder.com/250";
+      if (!name) { alert("Please enter product name"); return; }
+
+      const newProduct = { name, desc, image, status:"pending" };
+      db.ref("products").push(newProduct).then(() => {
+        alert("Product submitted for approval!");
+        document.getElementById("productName").value = "";
+        document.getElementById("productDesc").value = "";
+        document.getElementById("productImage").value = "";
+      });
+    };
+
+    // Show Products
+    db.ref("products").on("value", snapshot => {
       productList.innerHTML = "";
       snapshot.forEach(child => {
-        const data = child.val();
-        const id = child.key;
-        let card = `
-          <div class="card">
-            <img src="${data.image || 'https://via.placeholder.com/300x160'}" alt="Product">
-            <div class="card-content">
-              <h3>${data.name || 'No Name'}</h3>
-              <p><b>Price:</b> ${data.price || 'N/A'}</p>
-              <p><b>Status:</b> ${data.status || 'Pending'}</p>
+        const product = child.val();
+        if (product.status === "approved") { // केवल approved दिखे
+          productList.innerHTML += `
+            <div class="card">
+              <img src="${product.image}" alt="Product">
+              <h3>${product.name}</h3>
+              <p>${product.desc}</p>
             </div>
-            <div class="buttons">
-              <button class="approve" onclick="updateStatus('${id}', 'Approved')">Approve</button>
-              <button class="reject" onclick="updateStatus('${id}', 'Rejected')">Reject</button>
-            </div>
-          </div>
-        `;
-        productList.innerHTML += card;
+          `;
+        }
       });
     });
-  }
-
-  // Update product status
-  function updateStatus(id, status) {
-    database.ref("products/" + id).update({ status: status });
-  }
-</script>
+  </script>
 </body>
 </html>
