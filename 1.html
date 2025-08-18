@@ -1,611 +1,316 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Zara Properties — Real Estate</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zara Property Listing</title>
+  <style>
+    /* Basic reset + pleasant modern look */
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#2563eb;--glass:rgba(255,255,255,0.03);--wh: #fff}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:var(--wh);background:linear-gradient(180deg,#071024 0%, #071824 100%);padding:18px}
 
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    /* Header */
+    .header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .logo{font-weight:800;font-size:28px;letter-spacing:1px;transform:skewX(-6deg);padding:10px 18px;border-radius:12px;background:linear-gradient(90deg,#8b5cf6,#06b6d4);box-shadow:0 10px 30px rgba(6,11,20,0.6);color:#fff}
+    /* 3D effect for logo */
+    .logo::after{content:'';position:absolute;transform:translate(8px,10px) skewX(-6deg);width:100%;height:100%;border-radius:12px;filter:blur(12px);opacity:0.18}
 
-<style>
-:root{
-  --brand:#2563eb; --muted:#667085; --bg:#f5f7fb; --card:#ffffff; --ok:#10b981; --danger:#ef4444; --warn:#f59e0b;
-  --radius:16px
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#0f172a;font-family:Inter,system-ui,Arial}
-a{text-decoration:none;color:inherit}
-button{cursor:pointer}
-.container{max-width:1180px;margin:0 auto;padding:16px}
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{background:var(--glass);border:0;padding:10px 14px;border-radius:12px;color:var(--wh);cursor:pointer;backdrop-filter:blur(6px);box-shadow: 0 6px 0 rgba(0,0,0,0.45);transform:translateY(0);transition:all .12s}
+    .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,0.45)}
 
-/* Header */
-header{
-  background:linear-gradient(180deg,#0b1220 0%, #0e1633 100%);
-  color:#fff; position:sticky; top:0; z-index:50;
-  display:flex; align-items:center; justify-content:space-between; padding:12px 16px
-}
-.brand{display:flex; align-items:center; gap:10px}
-.logo3d{
-  width:44px;height:44px;border-radius:12px;
-  background:radial-gradient(circle at 30% 30%, #6aa7ff, #2563eb 60%, #0b3ea8);
-  box-shadow: 0 10px 20px rgba(37,99,235,.45), inset 0 2px 6px rgba(255,255,255,.2);
-}
-.brand .title{font-weight:800;letter-spacing:.2px}
-header .right{display:flex; gap:8px; align-items:center}
-.badgeUser{font-size:12px;color:#cbd5e1}
+    /* 3D whatsapp button style inside card */
+    .whatsapp-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;background:linear-gradient(180deg,#34d058,#10b981);color:#04201a;font-weight:700;box-shadow:0 6px 0 rgba(0,0,0,0.35);text-decoration:none}
 
-/* Buttons */
-.btn{
-  background:var(--brand); color:#fff; border:0; padding:8px 12px; border-radius:12px; font-weight:700;
-  box-shadow: 0 6px 0 #1e4fcc, 0 10px 18px rgba(37,99,235,.35);
-  transform: translateY(0); transition: .15s ease;
-}
-.btn:hover{transform: translateY(-2px)}
-.btn:active{transform: translateY(2px)}
-.btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.18); box-shadow:none}
+    /* Layout */
+    .topbar{display:flex;gap:12px;align-items:center}
+    #search{padding:10px 14px;border-radius:12px;border:0;min-width:220px;background:rgba(255,255,255,0.04);color:var(--wh)}
 
-.btn3d{
-  border:0; color:#fff; padding:8px 12px; border-radius:12px; font-weight:800;
-  box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 10px 18px rgba(0,0,0,.12);
-  transform: translateY(0); transition: .15s ease;
-}
-.btn3d:active{transform: translateY(2px)}
-.btn-green{background:var(--ok)}
-.btn-red{background:var(--danger)}
-.btn-yellow{background:var(--warn); color:#111}
+    .main{display:flex;gap:18px}
+    .left{flex:1}
+    .right{width:360px}
 
-.panel{
-  background:var(--card); border-radius:16px; padding:14px; box-shadow:0 8px 30px rgba(16,24,40,.06); margin:14px 0;
-}
-.help{font-size:12px; color:#667085}
+    /* Cards grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:14px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    .card img{width:100%;height:160px;object-fit:cover;border-radius:10px}
+    .card h4{margin-top:8px;font-size:16px}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 
-/* Grid + Cards */
-.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
-@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.grid{grid-template-columns:1fr}}
+    /* Poster whatsapp/phone + delete */
+    .poster-actions{display:flex;gap:8px;align-items:center}
+    .delete-btn{background:#ef4444;padding:8px;border-radius:10px;border:0;color:#fff;cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,0.35)}
 
-.card{
-  background:#fff; border:1px solid #e7edf6; border-radius:16px; overflow:hidden; display:flex; flex-direction:column;
-}
-.card-head{position:relative; height:190px; background:#f1f5f9; cursor:pointer}
-.card-head img{width:100%;height:100%;object-fit:cover}
-.badge{
-  position:absolute; left:10px; top:10px; background:#111827; color:#fff; font-size:12px; padding:6px 10px; border-radius:999px
-}
-.led{
-  position:absolute; right:12px; top:12px; width:12px; height:12px; border-radius:50%; background:#fbbf24;
-  box-shadow:0 0 0 0 rgba(251,191,36,.9); animation:blink 1s infinite;
-}
-@keyframes blink{0%{box-shadow:0 0 0 0 rgba(251,191,36,.9)}70%{box-shadow:0 0 0 10px rgba(251,191,36,0)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
-.card-body{padding:12px; display:flex; flex-direction:column; gap:8px}
-.meta{color:#667085; font-size:13px}
-.tags{display:flex; gap:8px; flex-wrap:wrap}
-.tag{font-size:12px; background:#eef2ff; border:1px solid #dbeafe; padding:5px 8px; border-radius:999px}
-.card-foot{margin-top:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.small{padding:7px 10px; border-radius:10px; border:0; background:#eef2ff; font-weight:600}
+    /* approve badge */
+    .badge{position:absolute;top:12px;left:12px;padding:6px 10px;border-radius:999px;font-weight:700;background:rgba(0,0,0,0.45)}
+    .badge.approved{background:linear-gradient(90deg,#059669,#10b981);color:#022c1b}
+    .badge.pending{background:linear-gradient(90deg,#f59e0b,#f97316);color:#2b1600;display:flex;align-items:center;gap:8px}
+    /* Blinking LED */
+    .blink{width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 8px #ffd54a;animation:blink 1s linear infinite}
+    @keyframes blink{0%{opacity:1}50%{opacity:0.15}100%{opacity:1}}
 
-/* WhatsApp 3D */
-.wabtn{
-  background:#25d366; color:#fff; border:0; padding:8px 12px; border-radius:14px; font-weight:900;
-  box-shadow: 0 6px 0 #1aa64c, 0 10px 18px rgba(37,211,102,.35);
-  transform: translateY(0); transition:.15s ease;
-}
-.wabtn:hover{transform: translateY(-2px)}
+    /* modal fullscreen */
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.8);display:none;align-items:center;justify-content:center;z-index:1200;padding:18px}
+    .modal.open{display:flex}
+    .modal .fullscreen{background:var(--card);border-radius:12px;max-width:1100px;width:100%;max-height:90vh;padding:12px;overflow:auto}
+    .fullscreen .gallery{display:flex;gap:8px;margin-bottom:8px}
+    .fullscreen .gallery img{height:420px;max-width:100%;object-fit:contain;border-radius:8px}
 
-/* Filters */
-.filters{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr 1fr auto; gap:8px}
-@media (max-width:900px){.filters{grid-template-columns:1fr 1fr 1fr 1fr;}}
-@media (max-width:640px){.filters{grid-template-columns:1fr 1fr;}}
-input, select, textarea{width:100%; padding:9px 10px; border:1px solid #e5e7eb; border-radius:10px}
-label{font-size:13px; color:#475467}
-hr.sep{border:none;border-top:1px dashed #e5e7eb; margin:10px 0}
+    /* Form */
+    form{display:flex;flex-direction:column;gap:8px;padding:12px;background:rgba(255,255,255,0.02);border-radius:12px}
+    input[type=text], input[type=tel], textarea{padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.03);color:var(--wh)}
+    input[type=file]{color:var(--wh)}
 
-/* Pagination */
-.pagination{display:flex; gap:8px; justify-content:center; margin:12px 0}
-.pgbtn{background:#eef2ff; border:0; padding:7px 10px; border-radius:10px; font-weight:700}
-.pgbtn.active{background:#111827;color:#fff}
+    /* right column small lists */
+    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:12px}
 
-/* Modal (Fullscreen Image) */
-.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:60}
-.modal.open{display:flex}
-.modal-card{width:min(1000px,98vw); background:#fff; border-radius:16px; overflow:hidden}
-.modal-head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #eef2f7}
-.modal-body{padding:10px 12px}
-.modal-body img{width:100%; height:70vh; object-fit:contain; background:#0b1220}
-</style>
+    /* pagination */
+    .pagination{display:flex;gap:8px;justify-content:center;margin-top:12px}
+    .page-btn{padding:8px 10px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);cursor:pointer}
+
+    /* responsive tweaks */
+    @media (max-width:900px){.main{flex-direction:column}.right{width:100%}}
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="brand">
-    <div class="logo3d"></div>
-    <div>
-      <div class="title">Zara Properties</div>
-      <div style="font-size:12px;color:#cbd5e1">Simple • Fast • Mobile friendly</div>
-    </div>
-  </div>
-  <div class="right">
-    <span id="userEmail" class="badgeUser"></span>
-    <button id="loginBtn" class="btn ghost">Google Sign-in</button>
-    <button id="logoutBtn" class="btn" style="display:none;background:#ef4444">Logout</button>
-  </div>
-</header>
-
-<main class="container">
-
-  <!-- SEARCH / FILTERS -->
-  <section class="panel">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Search & Filters</strong>
-      <span class="help">Title/Location • Price • BHK</span>
-    </div>
-    <div class="filters" style="margin-top:10px">
-      <input id="sText" placeholder="Search: 2 BHK, Mira Road, Shop..." />
-      <select id="sLocation"><option value="">All locations</option></select>
-      <select id="sBHK">
-        <option value="">All BHK</option><option value="1">1</option><option value="2">2</option>
-        <option value="3">3</option><option value="4">4+</option>
-      </select>
-      <input id="sMin" type="number" placeholder="Min ₹" />
-      <input id="sMax" type="number" placeholder="Max ₹" />
-      <button id="sApply" class="btn">Apply</button>
-    </div>
-  </section>
-
-  <!-- RESULT COUNTER + GRID -->
-  <section>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 2px 10px">
-      <div><strong id="count">0</strong> results</div>
-      <div class="help">Only approved posts appear publicly</div>
-    </div>
-    <div id="grid" class="grid"></div>
-    <div id="pagi" class="pagination"></div>
-  </section>
-
-  <!-- POST FORM (visible after login) -->
-  <section id="postPanel" class="panel" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Post Property</strong>
-      <span class="help">Max 5 images • imgbb upload</span>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <input id="fTitle" placeholder="Title (e.g., 2 BHK Flat)" />
-      <input id="fPrice" type="number" placeholder="Price (₹)" />
-      <input id="fLocation" placeholder="Location (e.g., Nalasopara)" />
-      <select id="fBHK"><option value="">BHK</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select>
-      <input id="fArea" placeholder="Area (sqft)" />
-      <input id="fWhatsapp" placeholder="WhatsApp (without +, e.g. 919876543210)" />
-    </div>
-
-    <div style="margin-top:10px">
-      <textarea id="fDesc" placeholder="Description" rows="4" style="width:100%"></textarea>
-    </div>
-
-    <div style="margin-top:10px">
-      <label>Images (up to 5): <input id="fFiles" type="file" accept="image/*" multiple></label>
-      <div class="help">Images are uploaded to imgbb and stored as URLs in Firebase.</div>
-    </div>
-
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-      <button id="btnPost" class="btn">Submit Post</button>
-      <span id="postMsg" class="help"></span>
-    </div>
-    <hr class="sep">
-    <div class="help">Note: New posts go to <b>Pending</b>. Admin approves to publish.</div>
-  </section>
-
-  <!-- ADMIN PANEL -->
-  <section id="adminPanel" class="panel" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Admin Panel — Review Pending</strong>
-      <span class="help">Approve ✅ or Reject ❌ • Pending shows yellow LED</span>
-    </div>
-    <div id="adminList" class="grid" style="margin-top:10px"></div>
-  </section>
-
-</main>
-
-<!-- MODAL -->
-<div id="modal" class="modal">
-  <div class="modal-card">
-    <div class="modal-head">
-      <strong id="mTitle">Gallery</strong>
-      <div>
-        <button id="mPrev" class="pgbtn">Prev</button>
-        <button id="mNext" class="pgbtn">Next</button>
-        <button id="mClose" class="btn ghost" style="margin-left:6px">Close</button>
+  <header class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="logo">Zara</div>
+      <div class="topbar">
+        <input id="search" placeholder="Search title, phone, location..." />
       </div>
     </div>
-    <div class="modal-body">
-      <img id="mImg" src="" alt="">
+    <div class="controls">
+      <div id="auth-area"></div>
+      <button id="open-post" class="btn">Post Property</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="left">
+      <div id="cards" class="grid"></div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <aside class="right">
+      <div class="panel">
+        <h3>Post Property</h3>
+        <form id="post-form">
+          <input id="title" placeholder="Title (e.g., 2BHK near market)" required />
+          <input id="phone" placeholder="Your WhatsApp number (with country code)" required />
+          <textarea id="desc" rows="3" placeholder="Short description"></textarea>
+          <input id="images" type="file" accept="image/*" multiple />
+          <div style="font-size:12px;color:var(--muted)">Max 5 images. Images will be uploaded to imgbb.</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button type="submit" class="btn">Submit</button>
+            <button type="button" id="clear-form" class="btn">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="panel">
+        <h4>Admin Controls</h4>
+        <div id="admin-panel">(Login as admin to see)</div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- fullscreen modal -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="fullscreen" role="dialog">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="modal-title"></h3>
+        <div><button id="modal-close" class="btn">Close</button></div>
+      </div>
+      <div id="modal-body"></div>
     </div>
   </div>
-</div>
 
-<script>
-/* ========= Firebase Config (as given) ========= */
-const firebaseConfig = {
-  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-  authDomain: "property-20d6d.firebaseapp.com",
-  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-  projectId: "property-20d6d",
-  storageBucket: "property-20d6d.appspot.com",
-  messagingSenderId: "916859697394",
-  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+  <!-- Firebase SDKs v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-/* ========= Settings ========= */
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-const PAGE_SIZE = 10;
-
-/* ========= State ========= */
-const state = {
-  all: [],          // approved shown publicly
-  pending: [],      // pending for admin review
-  page: 1,
-  modal: {list:[], idx:0},
-  filters: {text:'', location:'', bhk:'', min:0, max:Infinity},
-  user: null
-};
-
-/* ========= Helpers ========= */
-const $ = s => document.querySelector(s);
-const fmtINR = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
-const timeAgo = t => {
-  const d = (Date.now() - (Number(t)||0))/86400000;
-  if (d<1) return 'आज';
-  if (d<2) return 'कल';
-  return `${Math.floor(d)} दिन पहले`;
-};
-function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
-
-/* ========= Auth UI ========= */
-$('#loginBtn').addEventListener('click', ()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(e=> alert('Login error: '+e.message));
-});
-$('#logoutBtn').addEventListener('click', ()=> auth.signOut());
-
-auth.onAuthStateChanged(user=>{
-  state.user = user || null;
-  $('#userEmail').textContent = user ? user.email : '';
-  $('#loginBtn').style.display = user ? 'none' : 'inline-block';
-  $('#logoutBtn').style.display = user ? 'inline-block' : 'none';
-  // Post panel for any logged-in user
-  $('#postPanel').style.display = user ? 'block' : 'none';
-  // Admin panel only for admin
-  $('#adminPanel').style.display = (user && user.email === ADMIN_EMAIL) ? 'block' : 'none';
-  render(); // refresh delete buttons visibility etc.
-});
-
-/* ========= DB listeners ========= */
-const ref = db.ref('properties');
-ref.on('value', snap=>{
-  const arrApproved = [];
-  const arrPending = [];
-  snap.forEach(ch=>{
-    const v = ch.val() || {};
-    const obj = {
-      id: ch.key,
-      uid: v.uid || '',
-      email: v.email || '',
-      title: v.title||'',
-      price: Number(v.price)||0,
-      location: v.location||'',
-      bhk: v.bhk||'',
-      area: v.area||'',
-      whatsapp: v.whatsapp||'',
-      description: v.description||'',
-      images: Array.isArray(v.images) ? v.images : [],
-      time: v.time || 0,
-      status: v.status || 'pending' // pending | approved | rejected
+  <script>
+    // ============== Configs (user provided) ==============
+    const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
     };
-    if (obj.status === 'approved') arrApproved.push(obj);
-    else arrPending.push(obj);
-  });
-  // newest first
-  state.all = arrApproved.sort((a,b)=> (b.time||0)-(a.time||0));
-  state.pending = arrPending.sort((a,b)=> (b.time||0)-(a.time||0));
-  populateLocations();
-  render();
-});
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-/* ========= Filters ========= */
-function populateLocations(){
-  const sel = $('#sLocation');
-  const uniq = Array.from(new Set(state.all.map(x=>x.location).filter(Boolean))).sort();
-  sel.innerHTML = '<option value="">All locations</option>' + uniq.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-}
+    // admin email as requested
+    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
 
-$('#sApply').addEventListener('click', ()=>{
-  state.filters.text = $('#sText').value.trim().toLowerCase();
-  state.filters.location = $('#sLocation').value;
-  state.filters.bhk = $('#sBHK').value;
-  const min = parseInt($('#sMin').value||'0',10);
-  const maxv = $('#sMax').value.trim(); const max = maxv? parseInt(maxv,10) : Infinity;
-  state.filters.min = isNaN(min)?0:min;
-  state.filters.max = isNaN(max)?Infinity:max;
-  state.page = 1;
-  render();
-});
+    // state
+    let currentUser = null;
+    let allPosts = []; // client side cache
+    let currentPage = 1;
+    const PAGE_SIZE = 10;
 
-/* ========= Render Public Grid ========= */
-function applyFilter(list){
-  const f = state.filters;
-  return list.filter(it=>{
-    const bag = (it.title+' '+it.location+' '+it.description).toLowerCase();
-    const okText = !f.text || bag.includes(f.text);
-    const okLoc = !f.location || it.location===f.location;
-    const okBhk = !f.bhk || (f.bhk==='4' ? (Number(it.bhk)>=4) : String(it.bhk)===String(f.bhk));
-    const okPrice = it.price >= (isFinite(f.min)?f.min:0) && it.price <= (isFinite(f.max)?f.max:Infinity);
-    return okText && okLoc && okBhk && okPrice;
-  });
-}
-function paginate(list){
-  const start = (state.page-1)*PAGE_SIZE;
-  return list.slice(start, start+PAGE_SIZE);
-}
-function render(){
-  // PUBLIC GRID
-  const filtered = applyFilter(state.all);
-  $('#count').textContent = filtered.length;
-  const items = paginate(filtered);
-  const isAdmin = state.user && state.user.email === ADMIN_EMAIL;
-  const grid = $('#grid');
-  if(!items.length){
-    grid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center;color:#667085">No results</div>`;
-  } else {
-    grid.innerHTML = items.map(it=> cardHTML(it, isAdmin)).join('');
-  }
-  bindCardEvents();
+    // helper: format timestamp
+    function timeago(ts){const d=new Date(ts);return d.toLocaleString();}
 
-  // Pagination
-  const pages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const pagi = $('#pagi');
-  let html = '';
-  html += `<button class="pgbtn" ${state.page<=1?'disabled':''} id="pgPrev">Prev</button>`;
-  for (let i=1;i<=pages;i++){
-    html += `<button class="pgbtn ${i===state.page?'active':''}" data-p="${i}">${i}</button>`;
-  }
-  html += `<button class="pgbtn" ${state.page>=pages?'disabled':''} id="pgNext">Next</button>`;
-  pagi.innerHTML = html;
-  pagi.querySelectorAll('[data-p]').forEach(b=> b.addEventListener('click', ()=>{ state.page = +b.dataset.p; render(); }));
-  $('#pgPrev')?.addEventListener('click', ()=>{ if(state.page>1){ state.page--; render(); }});
-  $('#pgNext')?.addEventListener('click', ()=>{ if(state.page<pages){ state.page++; render(); }});
-
-  // ADMIN pending list
-  if (state.user && state.user.email === ADMIN_EMAIL){
-    const ad = $('#adminList');
-    if (!state.pending.length){
-      ad.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center;color:#667085">No pending items</div>`;
-    } else {
-      ad.innerHTML = state.pending.map(p=> adminCardHTML(p)).join('');
-      bindAdminEvents();
-    }
-  }
-}
-
-function cardHTML(it, isAdmin){
-  const mine = state.user && (state.user.uid === it.uid || state.user.email === it.email);
-  return `
-  <div class="card">
-    <div class="card-head" data-urls='${JSON.stringify(it.images||[])}' data-title="${escapeHtml(it.title)}">
-      <img src="${it.images?.[0] || 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}">
-      <div class="badge">${fmtINR(it.price)} • ${timeAgo(it.time)}</div>
-    </div>
-    <div class="card-body">
-      <div style="font-weight:800">${escapeHtml(it.title)}</div>
-      <div class="meta">${escapeHtml(it.location)} • ${escapeHtml(it.bhk)} BHK • ${escapeHtml(it.area)} sqft</div>
-      <div style="color:#334155">${escapeHtml(it.description).slice(0,140)}${(it.description||'').length>140?'…':''}</div>
-      <div class="tags"><span class="tag">Approved</span></div>
-      <div class="card-foot">
-        <button class="wabtn" onclick="wa('${it.whatsapp}','${encodeURIComponent('Hi, I saw your listing: '+it.title)}')">WhatsApp</button>
-        ${mine ? `<button class="small" data-del="${it.id}" style="background:#fde2e2;color:#b91c1c">Delete my post</button>`:''}
-        ${isAdmin ? `<button class="small" data-edit="${it.id}">Edit (admin)</button>`:''}
-      </div>
-    </div>
-  </div>`;
-}
-
-function adminCardHTML(it){
-  return `
-  <div class="card">
-    <div class="card-head" data-urls='${JSON.stringify(it.images||[])}' data-title="${escapeHtml(it.title)}">
-      <img src="${it.images?.[0] || 'https://via.placeholder.com/1200x800?text=No+Image'}" alt="${escapeHtml(it.title)}">
-      <div class="badge">${fmtINR(it.price)} • ${timeAgo(it.time)}</div>
-      ${it.status!=='approved'?'<div class="led" title="Pending"></div>':''}
-    </div>
-    <div class="card-body">
-      <div style="font-weight:800">${escapeHtml(it.title)}</div>
-      <div class="meta">${escapeHtml(it.location)} • ${escapeHtml(it.bhk)} BHK • ${escapeHtml(it.area)} sqft</div>
-      <div style="color:#334155">${escapeHtml(it.description).slice(0,140)}${(it.description||'').length>140?'…':''}</div>
-      <div class="tags">
-        <span class="tag">${escapeHtml(it.email||'')}</span>
-        <span class="tag">${escapeHtml(it.whatsapp||'')}</span>
-        <span class="tag">${it.status}</span>
-      </div>
-      <div class="card-foot">
-        <button class="btn3d btn-green" data-approve="${it.id}">Approve</button>
-        <button class="btn3d btn-red" data-reject="${it.id}">Reject</button>
-        <button class="btn3d btn-yellow" data-del-any="${it.id}">Delete</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function bindCardEvents(){
-  // open modal
-  document.querySelectorAll('.card-head').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const list = JSON.parse(el.getAttribute('data-urls')||'[]');
-      const title = el.getAttribute('data-title')||'';
-      if (!list.length) return;
-      state.modal.list = list;
-      state.modal.idx = 0;
-      $('#mTitle').textContent = title;
-      $('#mImg').src = list[0];
-      $('#modal').classList.add('open');
-    });
-  });
-  // delete own
-  document.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.getAttribute('data-del');
-      if (!confirm('Delete your post?')) return;
-      try{
-        const snap = await db.ref('properties/'+id).once('value');
-        const v = snap.val();
-        if (!v) return alert('Not found');
-        // allow only owner or admin
-        const isOwner = state.user && (state.user.uid === v.uid || state.user.email === v.email);
-        const isAdmin = state.user && state.user.email === ADMIN_EMAIL;
-        if (!isOwner && !isAdmin) return alert('Not allowed');
-        await db.ref('properties/'+id).remove();
-        alert('Deleted');
-      }catch(e){ alert('Delete error: '+e.message); }
-    });
-  });
-  // (optional) admin edit hook
-  document.querySelectorAll('[data-edit]').forEach(btn=>{
-    btn.addEventListener('click', ()=> alert('Inline edit can be added similarly.'));
-  });
-}
-// admin actions
-function bindAdminEvents(){
-  document.querySelectorAll('[data-approve]').forEach(b=>{
-    b.addEventListener('click', ()=> updateStatus(b.getAttribute('data-approve'),'approved'));
-  });
-  document.querySelectorAll('[data-reject]').forEach(b=>{
-    b.addEventListener('click', ()=> updateStatus(b.getAttribute('data-reject'),'rejected'));
-  });
-  document.querySelectorAll('[data-del-any]').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      const id = b.getAttribute('data-del-any');
-      if (!confirm('Delete this post?')) return;
-      await db.ref('properties/'+id).remove();
-    });
-  });
-}
-async function updateStatus(id,status){
-  if (!(state.user && state.user.email===ADMIN_EMAIL)) return alert('Not admin');
-  await db.ref('properties/'+id).update({status});
-}
-
-/* ========= Modal controls ========= */
-$('#mClose').addEventListener('click', ()=> $('#modal').classList.remove('open'));
-$('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal'){ $('#modal').classList.remove('open'); }});
-$('#mPrev').addEventListener('click', ()=>{
-  if (!state.modal.list.length) return;
-  state.modal.idx = (state.modal.idx-1+state.modal.list.length)%state.modal.list.length;
-  $('#mImg').src = state.modal.list[state.modal.idx];
-});
-$('#mNext').addEventListener('click', ()=>{
-  if (!state.modal.list.length) return;
-  state.modal.idx = (state.modal.idx+1)%state.modal.list.length;
-  $('#mImg').src = state.modal.list[state.modal.idx];
-});
-
-/* ========= WhatsApp ========= */
-function wa(num, text){
-  const base = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
-  window.open(base,'_blank');
-}
-
-/* ========= Post: Upload to imgbb + save to Firebase ========= */
-async function fileToBase64(file){
-  return new Promise((res,rej)=>{
-    const r = new FileReader();
-    r.onload = ()=> res(String(r.result).split(',')[1]); // only base64 data
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-async function uploadToImgbb(base64){
-  const fd = new FormData();
-  fd.append('image', base64);
-  const url = `https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`;
-  const r = await fetch(url, {method:'POST', body:fd});
-  if(!r.ok) throw new Error('imgbb upload failed');
-  const j = await r.json();
-  if(!j.success) throw new Error('imgbb error');
-  return j.data.url;
-}
-
-$('#btnPost').addEventListener('click', async ()=>{
-  const u = state.user;
-  if(!u) return alert('Please login first');
-  const title = $('#fTitle').value.trim();
-  const price = parseInt($('#fPrice').value||'0',10);
-  const location = $('#fLocation').value.trim();
-  const bhk = $('#fBHK').value;
-  const area = $('#fArea').value.trim();
-  const whatsapp = $('#fWhatsapp').value.trim();
-  const description = $('#fDesc').value.trim();
-  const files = Array.from($('#fFiles').files||[]);
-  if(!title || !price || !location) return alert('Title, Price, Location required');
-  if(files.length>5) return alert('Max 5 images allowed');
-
-  $('#postMsg').textContent = 'Uploading images...';
-  try{
-    let urls = [];
-    for (const f of files){
-      const b64 = await fileToBase64(f);
-      const url = await uploadToImgbb(b64);
-      urls.push(url);
-    }
-    if (urls.length===0) urls = ['https://via.placeholder.com/1200x800?text=No+Image'];
-
-    const payload = {
-      uid: u.uid, email: u.email,
-      title, price, location, bhk, area, whatsapp, description,
-      images: urls, time: Date.now(),
-      status: 'pending'
-    };
-    await db.ref('properties').push(payload);
-    $('#postMsg').textContent = 'Submitted! Waiting for admin approval.';
-    // reset
-    $('#fTitle').value=''; $('#fPrice').value=''; $('#fLocation').value='';
-    $('#fBHK').value=''; $('#fArea').value=''; $('#fWhatsapp').value='';
-    $('#fDesc').value=''; $('#fFiles').value='';
-  }catch(e){
-    alert('Post failed: '+e.message);
-    $('#postMsg').textContent = '';
-  }
-});
-
-/* ========= Recommended Firebase Security Rules =========
-1) Firebase Console → Realtime Database → Rules
-2) Use this (replace ADMIN_UID after you log in as admin and get uid from auth):
-{
-  "rules": {
-    ".read": true,
-    "properties": {
-      ".read": true,
-      "$id": {
-        // create allowed if logged in
-        ".write": "auth != null && (
-          (!data.exists() && newData.child('uid').val() == auth.uid) || 
-          (data.exists() && (
-             data.child('uid').val() == auth.uid || auth.token.email == 'zarasamajiksevasanstha@gmail.com'
-          ))
-        )"
+    // ====== Auth UI ======
+    const authArea = document.getElementById('auth-area');
+    function renderAuthArea(){
+      authArea.innerHTML = '';
+      if(!currentUser){
+        const btn = document.createElement('button');btn.className='btn';btn.textContent='Login with Google';btn.onclick=login;
+        authArea.appendChild(btn);
+      } else {
+        const span = document.createElement('div');span.style='margin-right:8px';span.textContent=currentUser.displayName||currentUser.email;
+        const out = document.createElement('button');out.className='btn';out.textContent='Logout';out.onclick=logout;
+        authArea.appendChild(span);authArea.appendChild(out);
       }
     }
-  }
-}
-- ऊपर वाले rules से:
-  • कोई भी logged-in user नई पोस्ट बना सकता है
-  • अपना पोस्ट खुद delete/update कर सकता है
-  • Admin email सब कुछ update/delete/approve कर सकता है
-========================================================= */
-</script>
+    function login(){
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e=>alert('Login failed:'+e.message));
+    }
+    function logout(){auth.signOut();}
+
+    auth.onAuthStateChanged(u=>{
+      currentUser = u;renderAuthArea();renderAdminPanel();});
+
+    // ====== Post Form Handling ======
+    const postForm = document.getElementById('post-form');
+    const openPostBtn = document.getElementById('open-post');
+    openPostBtn.onclick = ()=>{
+      window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    }
+
+    postForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!currentUser){alert('Please login first to post.');return}
+      const title = document.getElementById('title').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const desc = document.getElementById('desc').value.trim();
+      const files = document.getElementById('images').files;
+      if(files.length>5){alert('Maximum 5 images allowed');return}
+      // upload images to imgbb
+      const uploaded = [];
+      for(let i=0;i<files.length;i++){
+        const data = await fileToBase64(files[i]);
+        try{
+          const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, {
+            method:'POST',headers:{},body:new URLSearchParams({image: data.split(',')[1]})
+          });
+          const j = await res.json();
+          if(j.success){uploaded.push(j.data.url)}
+        }catch(err){console.error('imgbb error',err);}
+      }
+      const postRef = db.ref('posts').push();
+      const payload = {
+        title,phone,desc,images:uploaded,posterUid:currentUser.uid,posterName:currentUser.displayName||currentUser.email,posterPhone:phone,approved:false,createdAt:Date.now()
+      };
+      await postRef.set(payload);
+      alert('Post submitted for admin approval');
+      postForm.reset();
+    });
+    document.getElementById('clear-form').onclick=()=>postForm.reset();
+
+    function fileToBase64(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file);})}
+
+    // ====== Listening posts ======
+    db.ref('posts').on('value', snap=>{
+      const v = snap.val()||{};allPosts = Object.keys(v).map(k=>({id:k,...v[k]})).sort((a,b)=>b.createdAt - a.createdAt);
+      renderCards();renderPagination();
+    });
+
+    // ====== Render cards with pagination and filters ======
+    const cardsEl = document.getElementById('cards');
+    const searchEl = document.getElementById('search');
+    searchEl.addEventListener('input', ()=>{currentPage=1;renderCards();renderPagination();});
+
+    function filteredPosts(){
+      const q = searchEl.value.trim().toLowerCase();
+      if(!q) return allPosts;
+      return allPosts.filter(p=>((p.title||'')+ ' '+ (p.desc||'') + ' '+ (p.posterPhone||'')).toLowerCase().includes(q));
+    }
+
+    function renderCards(){
+      const posts = filteredPosts();
+      const start = (currentPage-1)*PAGE_SIZE;const pageItems = posts.slice(start,start+PAGE_SIZE);
+      cardsEl.innerHTML='';
+      pageItems.forEach(p=>{
+        const card = document.createElement('div');card.className='card';
+        const badge = document.createElement('div');badge.className='badge '+(p.approved? 'approved':'pending');
+        badge.textContent = p.approved? 'APPROVED':'PENDING';
+        if(!p.approved){const led=document.createElement('div');led.className='blink';badge.appendChild(led)}
+        card.appendChild(badge);
+        const img = document.createElement('img');img.src = (p.images && p.images[0]) || 'https://via.placeholder.com/600x400?text=No+Image';img.alt='img';
+        img.onclick = ()=>openModal(p);
+        card.appendChild(img);
+        const h = document.createElement('h4');h.textContent = p.title || '(No title)';card.appendChild(h);
+        const meta = document.createElement('div');meta.className='meta';
+        const left = document.createElement('div');left.innerHTML = `<div style="font-size:12px;color:var(--muted)">Posted: ${timeago(p.createdAt)}</div><div style="font-size:13px">${p.desc||''}</div>`;
+        const right = document.createElement('div');right.className='poster-actions';
+        // whatsapp button
+        const wa = document.createElement('a');wa.className='whatsapp-btn';wa.href = `https://wa.me/${p.posterPhone.replace(/\D/g,'')}`;wa.target='_blank';wa.rel='noopener';wa.innerHTML = 'WhatsApp';
+        right.appendChild(wa);
+        // delete if owner
+        if(currentUser && currentUser.uid === p.posterUid){
+          const del = document.createElement('button');del.className='delete-btn';del.textContent='Delete';del.onclick = ()=>{if(confirm('Delete this post?')) db.ref('posts/'+p.id).remove();};right.appendChild(del);
+        }
+        meta.appendChild(left);meta.appendChild(right);card.appendChild(meta);
+
+        // admin approve/reject buttons visible to admin only
+        if(currentUser && currentUser.email === ADMIN_EMAIL){
+          const adminBar = document.createElement('div');adminBar.style='display:flex;gap:8px;margin-top:8px';
+          const app = document.createElement('button');app.className='btn';app.textContent='Approve';app.onclick=()=>db.ref('posts/'+p.id).update({approved:true});
+          const rej = document.createElement('button');rej.className='btn';rej.textContent='Reject';rej.onclick=()=>db.ref('posts/'+p.id).update({approved:false});
+          adminBar.appendChild(app);adminBar.appendChild(rej);card.appendChild(adminBar);
+        }
+
+        cardsEl.appendChild(card);
+      });
+    }
+
+    // modal
+    const modal = document.getElementById('modal');const modalTitle = document.getElementById('modal-title');const modalBody = document.getElementById('modal-body');
+    function openModal(post){
+      modal.classList.add('open');modal.setAttribute('aria-hidden','false');modalTitle.textContent = post.title || 'Property';
+      modalBody.innerHTML = '';
+      const g = document.createElement('div');g.className='gallery';
+      (post.images||[]).forEach(url=>{const im=document.createElement('img');im.src=url;g.appendChild(im)});
+      modalBody.appendChild(g);
+      const info = document.createElement('div');info.innerHTML = `<p>${post.desc||''}</p><p>Posted by: ${post.posterName||post.posterPhone} (${post.posterPhone})</p><p>Posted at: ${timeago(post.createdAt)}</p>`;
+      modalBody.appendChild(info);
+    }
+    document.getElementById('modal-close').onclick = ()=>closeModal();
+    modal.onclick = (e)=>{if(e.target === modal){closeModal()}};
+    function closeModal(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+
+    // pagination render
+    function renderPagination(){
+      const posts = filteredPosts();const total = posts.length;const pages = Math.max(1,Math.ceil(total/PAGE_SIZE));
+      const pagEl = document.getElementById('pagination');pagEl.innerHTML='';
+      const prev = document.createElement('button');prev.className='page-btn';prev.textContent='« Prev';prev.disabled = currentPage===1;prev.onclick=()=>{currentPage=Math.max(1,currentPage-1);renderCards();renderPagination();};pagEl.appendChild(prev);
+      const info = document.createElement('div');info.style='align-self:center;padding:6px 10px;color:var(--muted)';info.textContent=`Page ${currentPage} / ${pages}`;pagEl.appendChild(info);
+      const next = document.createElement('button');next.className='page-btn';next.textContent='Next »';next.disabled = currentPage===pages;next.onclick=()=>{currentPage=Math.min(pages,currentPage+1);renderCards();renderPagination();};pagEl.appendChild(next);
+    }
+
+    // admin panel rendering
+    function renderAdminPanel(){
+      const a = document.getElementById('admin-panel');a.innerHTML='(Login as admin to see)';
+      if(currentUser && currentUser.email===ADMIN_EMAIL){
+        a.innerHTML='You are admin. Pending posts will show orange badge. You can Approve/Reject posts from each card.';
+      }
+    }
+
+    // initial fetch done by listener
+
+  </script>
 </body>
 </html>
