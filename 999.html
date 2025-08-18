@@ -1,81 +1,179 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zara Property Listing</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix - Admin Panel</title>
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+    header { background: linear-gradient(90deg,#007bff,#0056b3); color: #fff; padding: 18px; text-align: center; font-size: 24px; font-weight: bold; box-shadow:0 2px 5px rgba(0,0,0,0.2);}
+    nav { background: #222; display: flex; flex-wrap: wrap; justify-content: center; }
+    nav a { color: #fff; padding: 12px 16px; text-decoration: none; font-size: 15px; transition:0.3s;}
+    nav a:hover { background: #007bff; border-radius:5px; }
+    .container { max-width: 900px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0px 5px 15px rgba(0,0,0,0.15); }
+    h2 { color: #007bff; margin-top: 0; }
+    input, select, textarea, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+    button { background: #007bff; color: #fff; cursor: pointer; font-weight: bold; border: none; box-shadow:0 3px 6px rgba(0,0,0,0.2); transition:0.3s;}
+    button:hover { background: #0056b3; transform:scale(1.05);}
+    .card { background: #fafafa; padding: 15px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ddd; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+    .footer { background: #222; color: #fff; padding: 15px; text-align: center; margin-top: 40px; font-size: 14px; }
+    .status-pending { color: orange; font-weight:bold; }
+    .status-approved { color: green; font-weight:bold; }
+    .status-rejected { color: red; font-weight:bold; }
+    @media (max-width: 600px) { header { font-size: 20px; } nav a { font-size: 13px; padding: 10px; } .container { margin: 10px; padding: 15px; } }
+  </style>
 </head>
 <body>
-  <h2>Zara Property Listing</h2>
 
-  <!-- Input form -->
-  <div>
-    <input type="text" id="title" placeholder="Property Title" />
-    <input type="text" id="price" placeholder="Price" />
-    <input type="text" id="location" placeholder="Location" />
-    <button onclick="postProperty()">Post</button>
+  <header>ZaraFix Admin Panel</header>
+
+  <nav>
+    <a href="#">Services</a>
+    <a href="#">Property</a>
+    <a href="#">Ambulance</a>
+    <a href="#">All Services</a>
+    <a href="#">Provider</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+    <a href="#">Privacy Policy</a>
+  </nav>
+
+  <!-- Login -->
+  <div class="container" id="loginSection">
+    <h2>🔑 Login with Google</h2>
+    <button id="googleLogin">Google से Login करें</button>
   </div>
 
-  <hr/>
+  <!-- User Info -->
+  <div class="container" id="userSection" style="display:none;">
+    <h2>👤 Welcome, <span id="userName"></span></h2>
+    <p>Email: <span id="userEmail"></span></p>
+    <button onclick="logout()">Logout</button>
+  </div>
 
-  <!-- Display properties -->
-  <h3>All Properties</h3>
-  <ul id="propertyList"></ul>
+  <!-- Product Add -->
+  <div class="container" id="addProduct" style="display:none;">
+    <h2>🆕 नया Product Add करें</h2>
+    <form id="addForm">
+      <input type="text" id="pName" placeholder="Product Name" required>
+      <select id="pCategory">
+        <option value="General">सभी Categories</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Property">Property</option>
+        <option value="Repair">Repair Service</option>
+      </select>
+      <textarea id="pDesc" placeholder="Description"></textarea>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <!-- Admin Panel -->
+  <div class="container" id="adminPanel" style="display:none;">
+    <h2>⚙️ Admin Panel</h2>
+    <p>Approve / Reject Products यहाँ से करें:</p>
+    <div id="productList"></div>
+  </div>
+
+  <div class="footer">© 2025 ZaraFix | All Rights Reserved</div>
 
   <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
 
   <script>
-    // ✅ Firebase Config
+    // 🔹 Firebase Config (same as आपके project का)
     const firebaseConfig = {
-      apiKey: "AIzaSyXXXXXXX",
-      authDomain: "your-app.firebaseapp.com",
-      databaseURL: "https://your-app.firebaseio.com",
-      projectId: "your-app",
-      storageBucket: "your-app.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:abcdef"
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "352465373909",
+      appId: "1:352465373909:web:7f6722e4df94b0e09c9ee3"
     };
 
-    // ✅ Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
+    const provider = new firebase.auth.GoogleAuthProvider();
 
-    // ✅ Post Property
-    function postProperty() {
-      let title = document.getElementById("title").value;
-      let price = document.getElementById("price").value;
-      let location = document.getElementById("location").value;
+    // 🔹 Login with Google
+    document.getElementById("googleLogin").addEventListener("click", () => {
+      auth.signInWithPopup(provider).then((result) => {
+        const user = result.user;
+        showUser(user);
+      }).catch((err) => alert("Login Failed: " + err.message));
+    });
 
-      if(title=="" || price=="" || location==""){
-        alert("कृपया सभी फ़ील्ड भरें");
-        return;
-      }
-
-      let newPostRef = db.ref("properties").push();
-      newPostRef.set({
-        title: title,
-        price: price,
-        location: location
+    // 🔹 Logout
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("userSection").style.display = "none";
+        document.getElementById("addProduct").style.display = "none";
+        document.getElementById("adminPanel").style.display = "none";
       });
-
-      document.getElementById("title").value="";
-      document.getElementById("price").value="";
-      document.getElementById("location").value="";
     }
 
-    // ✅ Realtime Fetch Properties
-    db.ref("properties").on("value", function(snapshot) {
-      let list = document.getElementById("propertyList");
-      list.innerHTML = "";
-      snapshot.forEach(function(childSnapshot) {
-        let data = childSnapshot.val();
-        let li = document.createElement("li");
-        li.innerText = `${data.title} – ₹${data.price} – ${data.location}`;
-        list.appendChild(li);
+    // 🔹 Show User
+    function showUser(user) {
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("userSection").style.display = "block";
+      document.getElementById("addProduct").style.display = "block";
+      document.getElementById("adminPanel").style.display = "block";
+      document.getElementById("userName").innerText = user.displayName;
+      document.getElementById("userEmail").innerText = user.email;
+      loadProducts();
+    }
+
+    // 🔹 Add Product
+    document.getElementById("addForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("pName").value;
+      const cat = document.getElementById("pCategory").value;
+      const desc = document.getElementById("pDesc").value;
+      const newRef = db.ref("products").push();
+      newRef.set({
+        name: name,
+        category: cat,
+        description: desc,
+        status: "pending",
+        user: auth.currentUser.email,
+        timestamp: Date.now()
       });
+      alert("✅ Product Added!");
+      document.getElementById("addForm").reset();
     });
+
+    // 🔹 Load Products
+    function loadProducts() {
+      const list = document.getElementById("productList");
+      db.ref("products").on("value", (snapshot) => {
+        list.innerHTML = "";
+        snapshot.forEach((child) => {
+          const p = child.val();
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>${p.name}</h3>
+            <p>Category: ${p.category}</p>
+            <p>${p.description || ""}</p>
+            <p>Added By: ${p.user || "Unknown"}</p>
+            <p>Status: <span class="status-${p.status}">${p.status}</span></p>
+            <button onclick="updateStatus('${child.key}','approved')">Approve</button>
+            <button onclick="updateStatus('${child.key}','rejected')">Reject</button>
+          `;
+          list.appendChild(div);
+        });
+      });
+    }
+
+    // 🔹 Update Status
+    function updateStatus(id, status) {
+      db.ref("products/" + id + "/status").set(status);
+      alert("✅ Status updated to " + status);
+    }
   </script>
 </body>
 </html>
