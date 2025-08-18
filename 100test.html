@@ -3,135 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Products</title>
+  <title>Loot-Lo Property Post</title>
   <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f4f6f9; }
-    header {
-      background:#007bff; color:white; padding:15px; text-align:center;
-      font-size:20px; font-weight:bold;
-    }
-    .container { max-width: 900px; margin:20px auto; padding:10px; }
-    .card {
-      background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);
-      margin:10px; padding:15px; display:inline-block; width: 250px;
-      vertical-align:top; text-align:center; transition:0.3s;
-    }
-    .card:hover { transform:scale(1.05); }
-    .card img { width:100%; height:150px; object-fit:cover; border-radius:10px; }
-    .card h3 { margin:10px 0 5px; font-size:18px; }
-    .card p { font-size:14px; color:#555; }
-
-    #loginSection, #addForm { text-align:center; margin:15px 0; }
-    #addForm input, #addForm textarea {
-      width:90%; padding:8px; margin:5px 0; border:1px solid #ccc; border-radius:5px;
-    }
-    #addForm button {
-      background:#28a745; color:white; border:none; padding:10px 15px;
-      border-radius:5px; cursor:pointer; font-size:16px;
-    }
-    #addForm button:hover { background:#218838; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    .form-container { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    input, select, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+    button { background: #28a745; color: #fff; font-size: 16px; cursor: pointer; }
+    button:hover { background: #218838; }
   </style>
 </head>
 <body>
-  <header>ZaraFix Product Listing</header>
-  
-  <!-- Login Section -->
-  <div id="loginSection">
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
 
-  <!-- Add Product Form -->
-  <div id="addForm" style="display:none;">
-    <h2>Add New Product</h2>
-    <input type="text" id="productName" placeholder="Product Name" required><br>
-    <textarea id="productDesc" placeholder="Description"></textarea><br>
-    <input type="text" id="productImage" placeholder="Image URL"><br>
-    <button id="submitProduct">Submit</button>
-  </div>
+<div class="form-container">
+  <h2>Post Your Property</h2>
+  <form id="propertyForm">
+    <input type="text" id="title" placeholder="Property Title" required>
+    <input type="text" id="shopName" placeholder="Shop Name" required>
+    <select id="category" required>
+      <option value="">Select Category</option>
+      <option value="Flat">Flat</option>
+      <option value="House">House</option>
+      <option value="Plot">Plot</option>
+      <option value="Shop">Shop</option>
+      <option value="Office">Office</option>
+    </select>
+    <input type="number" id="price" placeholder="Price (₹)" required>
+    <input type="number" id="discount" placeholder="Discount (₹)" required>
+    <input type="text" id="location" placeholder="Location" required>
+    <input type="file" id="image" accept="image/*" required>
+    <button type="submit">Submit</button>
+  </form>
+</div>
 
-  <!-- Product Listing -->
-  <div class="container" id="productList">
-    <!-- Products from Firebase will appear here -->
-  </div>
+<script type="module">
+  // Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+    authDomain: "loot-lo-15328.firebaseapp.com",
+    databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+    projectId: "loot-lo-15328",
+    storageBucket: "loot-lo-15328.appspot.com",
+    messagingSenderId: "677769861892",
+    appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+  };
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "575019426981",
-      appId: "1:575019426981:web:c6acfb522f6cf84102ab8f"
-    };
-    firebase.initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-    const auth = firebase.auth();
-    const db = firebase.database();
+  // ImgBB Key
+  const imgbbKey = "ff05d1b5c3b3e139253856f0ad1123df";
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const addForm = document.getElementById("addForm");
-    const submitProduct = document.getElementById("submitProduct");
-    const productList = document.getElementById("productList");
+  document.getElementById("propertyForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    // Google Login
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    };
-    logoutBtn.onclick = () => auth.signOut();
+    const title = document.getElementById("title").value;
+    const shopName = document.getElementById("shopName").value;
+    const category = document.getElementById("category").value;
+    const price = document.getElementById("price").value;
+    const discount = document.getElementById("discount").value;
+    const location = document.getElementById("location").value;
+    const imageFile = document.getElementById("image").files[0];
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        addForm.style.display = "block";
-      } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        addForm.style.display = "none";
-      }
+    // Image Upload to ImgBB
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const imgUpload = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+      method: "POST",
+      body: formData
     });
 
-    // Add Product
-    submitProduct.onclick = () => {
-      const name = document.getElementById("productName").value;
-      const desc = document.getElementById("productDesc").value;
-      const image = document.getElementById("productImage").value || "https://via.placeholder.com/250";
-      if (!name) { alert("Please enter product name"); return; }
+    const imgResponse = await imgUpload.json();
+    const imageUrl = imgResponse.data.url;
 
-      const newProduct = { name, desc, image, status:"pending" };
-      db.ref("products").push(newProduct).then(() => {
-        alert("Product submitted for approval!");
-        document.getElementById("productName").value = "";
-        document.getElementById("productDesc").value = "";
-        document.getElementById("productImage").value = "";
-      });
-    };
-
-    // Show Products
-    db.ref("products").on("value", snapshot => {
-      productList.innerHTML = "";
-      snapshot.forEach(child => {
-        const product = child.val();
-        if (product.status === "approved") { // केवल approved दिखे
-          productList.innerHTML += `
-            <div class="card">
-              <img src="${product.image}" alt="Product">
-              <h3>${product.name}</h3>
-              <p>${product.desc}</p>
-            </div>
-          `;
-        }
-      });
+    // Save to Firebase
+    await push(ref(db, "properties"), {
+      title,
+      shopName,
+      category,
+      price,
+      discount,
+      location,
+      imageUrl,
+      timestamp: Date.now()
     });
-  </script>
+
+    alert("✅ Property Submitted Successfully!");
+    document.getElementById("propertyForm").reset();
+  });
+</script>
+
 </body>
 </html>
