@@ -13,41 +13,40 @@
     header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
              display:flex; align-items:center; justify-content:space-between;
              padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
-    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
-    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
-             box-shadow:0 3px 5px rgba(0,0,0,0.2); font-size:13px; font-weight:bold; margin:2px; }
+    header h1 { margin:0; font-size:22px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:8px;
+             box-shadow:0 4px 6px rgba(0,0,0,0.3); font-weight:bold; margin:2px; font-size:13px; }
     .btn3d { background:#4CAF50; color:#fff; }
     .btn3d:disabled { background:#999; box-shadow:none; }
     .logoutBtn { background:#E53935; color:#fff; }
-    .newPostBtn { background:#FF9800; color:#fff; margin-left:8px; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
 
     /* Grid */
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
             gap:12px; padding:12px; }
     .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
-            padding:8px; position:relative; transition:transform .2s; cursor:pointer;
-            max-height:300px; overflow:hidden; }
+            padding:8px; position:relative; transition:transform .2s; cursor:pointer; }
     .card:hover { transform:scale(1.02); }
     .card img { width:100%; height:120px; object-fit:cover; border-radius:6px; }
-    .card h3 { margin:6px 0 3px; font-size:15px; }
-    .card p { margin:1px 0; font-size:12px; line-height:1.3; }
+    .card h3 { margin:6px 0 2px; font-size:15px; }
+    .card p { margin:2px 0; font-size:13px; }
 
-    /* Pending Highlight (Red blinking) */
-    .pending { background:#ffcdd2; border:2px solid #f44336;
-               animation: blinkBorder 1s infinite; }
-    @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+    /* Pending Highlight (Red blinking border only) */
+    .pending { border:2px solid #f44336; animation: blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color:#b71c1c; } }
 
     /* Modal */
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
              background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
-    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:350px;
                      max-height:90%; overflow:auto; position:relative; }
-    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:20px; }
 
     form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
-    form input, form select { width:100%; padding:6px; margin:3px 0 8px;
+    form input, form select { width:100%; padding:5px; margin:3px 0 8px;
                               border:1px solid #ccc; border-radius:6px; font-size:13px; }
-    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
+    .btnRow { margin-top:8px; display:flex; flex-wrap:wrap; gap:5px; }
+    .whatsappBtn { background:#25D366; color:white; }
   </style>
 </head>
 <body>
@@ -101,7 +100,6 @@
 </div>
 
 <script>
-/* Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain: "property-20d6d.firebaseapp.com",
@@ -128,12 +126,10 @@ const closeCard=document.getElementById('closeCard');
 
 let currentUser=null;
 
-/* Login / Logout */
-loginBtn.onclick=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
 logoutBtn.onclick=()=>auth.signOut();
 
-auth.onAuthStateChanged(u=>{
-  currentUser=u;
+auth.onAuthStateChanged(u=>{ currentUser=u;
   if(u){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; newPostBtn.style.display="inline-block"; }
   else { loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; newPostBtn.style.display="none"; }
   loadPosts();
@@ -143,77 +139,72 @@ newPostBtn.onclick=()=>postModal.style.display="flex";
 closeForm.onclick=()=>postModal.style.display="none";
 closeCard.onclick=()=>cardModal.style.display="none";
 
-/* Upload Images */
 async function uploadImages(files){
-  const urls=[];
-  for(let i=0;i<Math.min(5,files.length);i++){
-    const f=files[i]; const fd=new FormData();
-    fd.append("image",f);
+  const urls=[]; 
+  for(let i=0;i<Math.min(5,files.length);i++){ 
+    const f=files[i]; 
+    const fd=new FormData(); fd.append("image",f); 
     const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
-    const j=await r.json(); urls.push(j.data.url);
-  }
-  return urls;
+    const j=await r.json(); urls.push(j.data.url); 
+  } return urls;
 }
 
-/* Submit Post */
 postForm.onsubmit=async e=>{
-  e.preventDefault();
-  if(!currentUser) return alert("Login first");
+  e.preventDefault(); if(!currentUser) return alert("Login first");
   const submitBtn=postForm.querySelector("button[type=submit]");
   submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
-
-  const post={
-    price:price.value, bhk:bhk.value, propertyType:ptype.value,
-    address:address.value, posterPhone:phone.value,
-    posterType:posterType.value, posterName:currentUser.displayName,
-    posterUid:currentUser.uid, status:"pending", created:Date.now()
-  };
-  const files=images.files; if(files.length>0) post.images=await uploadImages(files);
-
-  db.ref("posts").push(post,(err)=>{
-    if(err) alert("❌ Error");
-    else { alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
-    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
-  });
+  const post={ price:price.value, bhk:bhk.value, propertyType:ptype.value, address:address.value,
+    posterPhone:phone.value, posterType:posterType.value, posterName:currentUser.displayName, posterUid:currentUser.uid,
+    status:"pending", created:Date.now() };
+  const files=document.getElementById('images').files; if(files.length>0) post.images=await uploadImages(files);
+  db.ref("posts").push(post,(err)=>{ if(err){alert("❌ Error");}
+    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Post"; });
 };
 
-/* Load Posts */
 function loadPosts(){
   db.ref("posts").orderByChild("created").on("value",snap=>{
-    postsDiv.innerHTML="";
-    const arr=[]; snap.forEach(ch=>arr.push({...ch.val(),id:ch.key})); arr.reverse();
-
+    postsDiv.innerHTML=""; const arr=[]; snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); }); arr.reverse();
     arr.forEach(p=>{
-      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){ /* admin sees all */ }
-      else { if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return; }
-
-      const card=document.createElement("div");
-      card.className="card"; if(p.status!=="approved") card.classList.add("pending");
-
+      if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){ 
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+      const card=document.createElement("div"); card.className="card"; if(p.status!=="approved") card.classList.add("pending");
       if(p.images && p.images.length){ const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img); }
       const h3=document.createElement("h3"); h3.textContent=p.propertyType+" - "+p.bhk; card.appendChild(h3);
-      card.innerHTML+=`<p>${p.address}</p><p>₹${p.price}</p><p>📞 ${p.posterPhone}</p>`;
-      card.innerHTML+=`<p>${p.status==="approved"?"✅ Approved":"⏳ Pending Approval"}</p>`;
+      const price=document.createElement("p"); price.textContent="₹"+p.price; card.appendChild(price);
+      const st=document.createElement("p"); st.textContent=(p.status==="approved"?"✅ Approved":"⏳ Pending Approval"); card.appendChild(st);
+      
+      card.onclick=()=>{ 
+        cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+        cardContent.innerHTML+=`<h2 style="font-size:16px;">${p.propertyType} - ${p.bhk}</h2>
+          <p><b>Price:</b> ₹${p.price}</p><p><b>Address:</b> ${p.address}</p>
+          <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
+          <p><b>Phone:</b> ${p.posterPhone}</p>`;
+        if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;border-radius:6px;">`; }); }
+        const btnRow=document.createElement("div"); btnRow.className="btnRow";
+        
+        const wa=document.createElement("a"); wa.href=`https://wa.me/${p.posterPhone}`; wa.target="_blank";
+        wa.innerHTML="💬 WhatsApp"; wa.className="whatsappBtn"; wa.style.textDecoration="none"; wa.style.padding="6px 10px"; wa.style.borderRadius="6px";
+        btnRow.appendChild(wa);
 
-      const btnRow=document.createElement("div"); btnRow.className="btnRow";
-      if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
-        const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="logoutBtn";
-        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); };
-        btnRow.appendChild(del);
-      }
-      if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-        const ap=document.createElement("button"); ap.textContent="✅ Approve"; ap.className="btn3d";
-        ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
-        const rj=document.createElement("button"); rj.textContent="❌ Reject"; rj.className="logoutBtn";
-        rj.onclick=async e=>{ e.stopPropagation(); if(confirm("Reject post?")) await db.ref("posts/"+p.id).remove(); };
-        const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="logoutBtn";
-        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete post?")) await db.ref("posts/"+p.id).remove(); };
-        btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
-      }
-      card.appendChild(btnRow);
-
-      card.onclick=()=>{ cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>'; cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2><p><b>Price:</b> ₹${p.price}</p><p><b>Address:</b> ${p.address}</p><p><b>Poster:</b> ${p.posterName} (${p.posterType})</p><p><b>Phone:</b> ${p.posterPhone}</p>`; if(p.images){ p.images.forEach(u=>cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`); } cardModal.style.display="flex"; document.getElementById("closeCard").onclick=()=>cardModal.style.display="none"; };
-
+        if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
+          const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="logoutBtn";
+          del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); cardModal.style.display="none"; };
+          btnRow.appendChild(del);
+        }
+        if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+          const ap=document.createElement("button"); ap.textContent="✅ Approve"; ap.className="btn3d";
+          ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); cardModal.style.display="none"; };
+          const rj=document.createElement("button"); rj.textContent="❌ Reject"; rj.className="logoutBtn";
+          rj.onclick=async e=>{ e.stopPropagation(); if(confirm("Reject post?")) await db.ref("posts/"+p.id).remove(); cardModal.style.display="none"; };
+          const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="logoutBtn";
+          del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete post?")) await db.ref("posts/"+p.id).remove(); cardModal.style.display="none"; };
+          btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
+        }
+        cardContent.appendChild(btnRow);
+        cardModal.style.display="flex"; document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
+      };
       postsDiv.appendChild(card);
     });
   });
