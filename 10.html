@@ -18,19 +18,21 @@
     /* 3D colorful logo */
     .logo{
       font-weight:900; letter-spacing:1px; line-height:1; user-select:none; cursor:pointer;
-      font-size:30px;
+      font-size:34px;
       background: conic-gradient(from 180deg, #22d3ee, #a78bfa, #f472b6, #f97316, #22c55e, #22d3ee);
       background-clip:text; -webkit-background-clip:text; color:transparent;
       text-shadow: 0 2px 0 rgba(255,255,255,.12), 0 6px 0 #0a0f1a, 0 14px 20px rgba(0,0,0,.6);
       filter: drop-shadow(0 10px 22px rgba(0,0,0,.45));
     }
-    @media(min-width:900px){ .logo{ font-size:42px } }
+    @media(min-width:900px){ .logo{ font-size:46px } }
 
-    /* menu dropdowns in header */
     .menus{display:flex;gap:10px;align-items:center}
-    .menu-dd{
-      padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;cursor:pointer;box-shadow:inset 0 0 0 1px #0e1627, 0 8px 0 #0a0f1a;
-    }
+    .menu-wrap{position:relative}
+    .menu-btn{padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;cursor:pointer;box-shadow:inset 0 0 0 1px #0e1627, 0 8px 0 #0a0f1a;font-weight:800}
+    .menu-list{display:none;position:absolute;top:110%;left:0;background:#0b1220;border:1px solid #1f2937;border-radius:12px;min-width:200px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.45);z-index:70}
+    .menu-wrap:hover .menu-list{display:block}
+    .menu-item{display:block;padding:10px 12px;color:#e5e7eb;text-decoration:none;border-bottom:1px solid #1f2937}
+    .menu-item:hover{background:#111826}
 
     .header-actions{display:flex;align-items:center;gap:10px}
     .tab{padding:9px 12px;border-radius:999px;border:1px solid #1f2937;background:#0b1220;color:#cbd5e1;font-weight:600;cursor:pointer}
@@ -40,6 +42,7 @@
     .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c2c19}
     .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
     .btn-danger{border-color:#7f1d1d;background:#450a0a;color:#fecaca;box-shadow:0 6px 0 #2a0a0a}
+    .btn-ghost{border:1px dashed #334155;background:transparent;color:#cbd5e1;box-shadow:none}
 
     main{max-width:1100px;margin:0 auto;padding:16px;}
 
@@ -77,6 +80,11 @@
     .table th,.table td{border-bottom:1px solid #1f2937;padding:8px;text-align:left}
 
     .whats-btn{position:fixed;right:16px;bottom:16px}
+
+    /* Modal for editing menu links (admin only) */
+    .modal{display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.55);align-items:center;justify-content:center}
+    .modal.show{display:flex}
+    .modal-card{background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;min-width:min(92vw,680px)}
   </style>
 </head>
 <body>
@@ -84,17 +92,34 @@
     <!-- Left: Logo -->
     <div class="logo" onclick="document.querySelector('[data-target=public]').click()">ZARA FIX</div>
 
-    <!-- Center: Menus + Tabs -->
+    <!-- Center: Menus -->
     <div class="menus">
-      <select id="menuA" class="menu-dd"><option>Menu A</option></select>
-      <select id="menuB" class="menu-dd"><option>Menu B</option></select>
+      <div class="menu-wrap">
+        <button class="menu-btn">Services ▾</button>
+        <div class="menu-list" id="menuServices">
+          <a class="menu-item" id="lnkProperty"   target="_blank">Property</a>
+          <a class="menu-item" id="lnkAmbulance"  target="_blank">Ambulance</a>
+          <a class="menu-item" id="lnkAllService" target="_blank">All Services</a>
+        </div>
+      </div>
+      <div class="menu-wrap">
+        <button class="menu-btn">Info ▾</button>
+        <div class="menu-list" id="menuInfo">
+          <a class="menu-item" id="lnkProvider" target="_blank">Provider</a>
+          <a class="menu-item" id="lnkAbout"    target="_blank">About</a>
+          <a class="menu-item" id="lnkContact"  target="_blank">Contact</a>
+          <a class="menu-item" id="lnkPrivacy"  target="_blank">Privacy Policy</a>
+        </div>
+      </div>
+      <!-- small gear for admin to edit links -->
+      <button id="editMenusBtn" class="btn btn-ghost" style="display:none">✦ Edit Links</button>
+    </div>
+
+    <!-- Right: Tabs + Login -->
+    <div class="header-actions">
       <button class="tab active" data-target="public">Public</button>
       <button class="tab" data-target="shop">Shopkeeper</button>
       <button class="tab" data-target="admin">Admin</button>
-    </div>
-
-    <!-- Right: Login/Logout -->
-    <div class="header-actions">
       <button class="btn" id="loginBtn">Login with Google</button>
       <button class="btn btn-danger" id="logoutBtn" style="display:none">Logout</button>
     </div>
@@ -123,7 +148,7 @@
 
     <!-- ADMIN -->
     <section id="admin" class="panel">
-      <p class="muted">Admin: केवल <b>zarasamajiksevasanstha@gmail.com</b> Google login से। यहाँ से shops, coupons और header menus manage करें।</p>
+      <p class="muted">Admin: केवल <b>zarasamajiksevasanstha@gmail.com</b> Google login से। यहाँ से shops और coupons manage करें। (Header menus अब fixed हैं; links edit करने का छोटा popup ऊपर gear से.)</p>
       <div id="adminPanel" style="display:none;margin-top:14px">
         <div class="row stats">
           <div class="stat">Total Cards: <span id="statTotal">0</span></div>
@@ -162,26 +187,6 @@
           <button class="btn" type="submit">Create Card</button>
         </form>
 
-        <h3 style="margin-top:16px">Header Menus</h3>
-        <div class="row">
-          <form id="menuAForm" style="flex:1">
-            <div class="row">
-              <input id="mAName" placeholder="Menu A - Item name" required>
-              <input id="mALink" placeholder="Menu A - URL (https://...)" required>
-              <button class="btn" type="submit">Add to Menu A</button>
-            </div>
-          </form>
-          <form id="menuBForm" style="flex:1">
-            <div class="row">
-              <input id="mBName" placeholder="Menu B - Item name" required>
-              <input id="mBLink" placeholder="Menu B - URL (https://...)" required>
-              <button class="btn" type="submit">Add to Menu B</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="row" id="menusList" style="margin-top:10px"></div>
-
         <h3 style="margin-top:16px">All Cards</h3>
         <table class="table" id="adminTable">
           <thead><tr><th>Code</th><th>Product</th><th>Value</th><th>Discount</th><th>Expiry</th><th>Shop</th><th>Status</th></tr></thead>
@@ -193,6 +198,48 @@
   </main>
 
   <div id="overlay" class="overlay"></div>
+
+  <!-- Edit Menus Modal (admin only) -->
+  <div id="menusModal" class="modal">
+    <div class="modal-card">
+      <h3>Header Links Edit करें</h3>
+      <p class="muted">दो dropdown (Services / Info) के links यहाँ बदलें:</p>
+      <form id="menusForm" style="margin-top:8px">
+        <div class="row">
+          <label style="width:120px">Property URL</label>
+          <input id="uProperty" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">Ambulance URL</label>
+          <input id="uAmbulance" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">All Services URL</label>
+          <input id="uAll" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">Provider URL</label>
+          <input id="uProvider" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">About URL</label>
+          <input id="uAbout" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">Contact URL</label>
+          <input id="uContact" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row">
+          <label style="width:120px">Privacy URL</label>
+          <input id="uPrivacy" placeholder="https://..." required style="flex:1">
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-ghost" id="closeMenus">Close</button>
+          <button class="btn" type="submit">Save Links</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Firebase SDKs (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -233,7 +280,7 @@
     })
 
     /***********************
-     * 3) Auth (Google) — top-right
+     * 3) Auth (Google)
      ***********************/
     const loginBtn  = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
@@ -244,24 +291,23 @@
     }
     logoutBtn.onclick = ()=> auth.signOut();
 
-    let currentUser = null; // {email, isAdmin, isShop, shopRecord}
+    let currentUser = null; // {email, uid, isAdmin, isShop, shopRecord}
 
     auth.onAuthStateChanged(async user=>{
       currentUser = null;
       if(user){
         const email = user.email.toLowerCase();
         const isAdmin = (email === FIXED_ADMIN.toLowerCase());
-        // find shopkeeper
         let shopRecord = null; let isShop=false;
         const snap = await db.ref('shopkeepers').get();
         snap.forEach(ch=>{ const v=ch.val(); if(v.email && v.email.toLowerCase()===email){ shopRecord={id:ch.key,...v}; isShop=true } });
-        currentUser = { email, isAdmin, isShop, shopRecord };
+        currentUser = { email, uid:user.uid, isAdmin, isShop, shopRecord };
       }
       updateGuards();
       subscribePublic();
       subscribeShop();
       subscribeAdmin();
-      subscribeMenus();
+      setupMenus();
     });
 
     function updateGuards(){
@@ -274,6 +320,8 @@
 
       document.getElementById('adminPanel').style.display = (currentUser && currentUser.isAdmin)? 'block':'none';
       document.getElementById('adminGuard').style.display = (currentUser && currentUser.isAdmin)? 'none':'block';
+
+      document.getElementById('editMenusBtn').style.display = (currentUser && currentUser.isAdmin)? 'inline-flex':'none';
     }
 
     /***********************
@@ -299,20 +347,26 @@
         card.className = 'card' + (c.accepted? ' sold':'');
         const status = c.accepted? 'SOLD' : (c.submitted? 'SUBMITTED':'AVAILABLE');
         card.innerHTML = `
-          <span class="badge">${status}</span>
-          <img src="${c.img||''}" alt="${c.product||''}">
-          <div class="title">${c.product||''}</div>
-          <div class="info">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
-          <div class="info">Expiry: ${c.expiry||''}</div>
-          <div class="code">Code: ${c.code||''}</div>
-          <button class="btn" ${c.accepted? 'disabled':''}>${c.submitted? 'Submitted':'Submit Code'}</button>
+          <span class=\"badge\">${status}</span>
+          <img src=\"${c.img||''}\" alt=\"${c.product||''}\">
+          <div class=\"title\">${c.product||''}</div>
+          <div class=\"info\">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
+          <div class=\"info\">Expiry: ${c.expiry||''}</div>
+          <div class=\"code\">Code: ${c.code||''}</div>
+          <button class=\"btn\" ${c.accepted? 'disabled':''}>${c.submitted? 'Submitted':'Submit Code'}</button>
         `;
         card.addEventListener('click', (e)=>{ if(e.target.tagName.toLowerCase()==='button') return; card.classList.add('expanded'); overlay.classList.add('show') })
         overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
-        card.querySelector('button').addEventListener('click', (e)=>{
+        card.querySelector('button').addEventListener('click', async (e)=>{
           e.stopPropagation(); if(c.accepted) return;
+          // Expiry check client-side
+          if(isExpired(c.expiry)) return alert('Coupon expired.');
           if(c.submitted){ alert('Already submitted. Shopkeeper will verify.'); return }
-          db.ref('coupons/'+c.id).update({ submitted:true, submittedBy: (currentUser? currentUser.email : 'guest'), submittedAt: Date.now() });
+          const user = auth.currentUser;
+          const uid = user? user.uid : 'guest';
+          const email = user? user.email : 'guest';
+          await db.ref('coupons/'+c.id).update({ submitted:true, submittedBy: email, submittedAt: Date.now() });
+          await db.ref('coupons/'+c.id+'/submissions/'+uid).set({ by:email, at: Date.now() });
         })
         grid.appendChild(card);
       })
@@ -344,30 +398,39 @@
         const card = document.createElement('div');
         card.className = 'card' + (c.accepted? ' sold':'');
         card.innerHTML = `
-          <img src="${c.img||''}">
-          <div class="title">${c.product||''}</div>
-          <div class="info">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
-          <div class="info">Expiry: ${c.expiry||''}</div>
-          <div class="code">${c.code||''}</div>
-          <div class="row">
-            <button class="btn" data-act="accept" ${c.accepted||!c.submitted? 'disabled':''}>Accept</button>
-            <button class="btn btn-danger" data-act="reject" ${c.accepted||!c.submitted? 'disabled':''}>Reject</button>
+          <img src=\"${c.img||''}\">
+          <div class=\"title\">${c.product||''}</div>
+          <div class=\"info\">Value: ₹${c.value||0} • Discount: ${c.discount||''}</div>
+          <div class=\"info\">Expiry: ${c.expiry||''}</div>
+          <div class=\"code\">${c.code||''}</div>
+          <div class=\"row\">
+            <button class=\"btn\" data-act=\"verify\" ${c.accepted? 'disabled':''}>Verify</button>
+            <button class=\"btn\" data-act=\"accept\" ${c.accepted||!c.submitted? 'disabled':''}>Accept</button>
+            <button class=\"btn btn-danger\" data-act=\"reject\" ${c.accepted||!c.submitted? 'disabled':''}>Reject</button>
           </div>
         `;
         card.addEventListener('click', (e)=>{ if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show') })
         overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
+
         card.querySelectorAll('button').forEach(btn=>{
-          btn.addEventListener('click', (e)=>{
+          btn.addEventListener('click', async (e)=>{
             e.stopPropagation();
+            if(btn.dataset.act==='verify'){
+              if(c.accepted) return alert('Already SOLD');
+              if(isExpired(c.expiry)) return alert('Coupon expired');
+              if(!c.submitted) return alert('Not submitted yet');
+              const subsSnap = await db.ref('coupons/'+c.id+'/submissions').get();
+              if(!subsSnap.exists()) return alert('No submission record');
+              let msg='Submissions:\n'; subsSnap.forEach(s=>{ const v=s.val(); msg += `• ${v.by||s.key} at ${new Date(v.at).toLocaleString()}\n`; });
+              alert(msg);
+            }
             if(btn.dataset.act==='accept'){
-              // expiry check
-              const today = new Date(); today.setHours(0,0,0,0);
-              const exp = new Date(c.expiry);
-              if(exp < today){ alert('Coupon expired, cannot accept'); return }
-              db.ref('coupons/'+c.id).update({ accepted:true, acceptedAt: Date.now() });
+              if(isExpired(c.expiry)) return alert('Coupon expired, cannot accept');
+              await db.ref('coupons/'+c.id).update({ accepted:true, acceptedAt: Date.now(), acceptedBy: currentUser.email });
             }
             if(btn.dataset.act==='reject'){
-              db.ref('coupons/'+c.id).update({ submitted:false, submittedBy:null, submittedAt:null });
+              await db.ref('coupons/'+c.id).update({ submitted:false, submittedBy:null, submittedAt:null });
+              await db.ref('coupons/'+c.id+'/submissions').remove();
             }
           })
         })
@@ -381,9 +444,9 @@
     }
 
     /***********************
-     * 6) ADMIN view (Realtime) + Menus
+     * 6) ADMIN view (Realtime)
      ***********************/
-    let adminCouponsUnsub = null, adminShopsUnsub = null, menusUnsub = null;
+    let adminCouponsUnsub = null, adminShopsUnsub = null;
     function subscribeAdmin(){
       if(adminCouponsUnsub){ db.ref('coupons').off('value', adminCouponsUnsub); adminCouponsUnsub=null }
       if(adminShopsUnsub){ db.ref('shopkeepers').off('value', adminShopsUnsub); adminShopsUnsub=null }
@@ -424,12 +487,13 @@
       db.ref('shopkeepers').push(s).then(()=>{ alert('Shop added'); e.target.reset(); })
     })
 
-    // Create card (ImgBB upload + duplicate code check)
+    // Create card (ImgBB upload + duplicate code check + expiry validation)
     document.getElementById('cardForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
       if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
       const file = document.getElementById('imgFile').files[0];
       if(!file) return alert('Select image');
+      if(isExpired(pExpiry.value)) return alert('Expiry must be today or later');
       try{
         const fd = new FormData(); fd.append('image', file);
         const url = `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`;
@@ -438,9 +502,14 @@
         if(!data.success) throw new Error('ImgBB upload failed');
         const img = data.data.display_url;
 
-        // unique code
-        let code; const all = (await db.ref('coupons').get());
-        do{ code = genCode() }while(Object.values(all.val()||{}).some(x=> x.code===code));
+        // unique code loop
+        let code; let exists=true;
+        const allSnap = await db.ref('coupons').get();
+        const all = allSnap.val()||{};
+        do{
+          code = genCode();
+          exists = Object.values(all).some(x=> x.code===code);
+        }while(exists);
 
         const coupon = {
           code, product: pName.value.trim(), value: Number(pValue.value), discount: pDiscount.value.trim(),
@@ -452,61 +521,90 @@
     })
 
     function genCode(){ return Math.random().toString(36).slice(2,10).toUpperCase() }
+    function isExpired(dateStr){ const d=new Date(dateStr); d.setHours(23,59,59,999); return d.getTime()<Date.now(); }
 
     /***********************
-     * 7) Header Menus (Realtime)
+     * 7) Header Menus Links (stored in DB, edit popup only for admin)
      ***********************/
-    const ddA = document.getElementById('menuA');
-    const ddB = document.getElementById('menuB');
+    const linkIds = {
+      property:'uProperty', ambulance:'uAmbulance', all:'uAll', provider:'uProvider', about:'uAbout', contact:'uContact', privacy:'uPrivacy'
+    };
+    const linkNodes = {
+      property: document.getElementById('lnkProperty'),
+      ambulance: document.getElementById('lnkAmbulance'),
+      all: document.getElementById('lnkAllService'),
+      provider: document.getElementById('lnkProvider'),
+      about: document.getElementById('lnkAbout'),
+      contact: document.getElementById('lnkContact'),
+      privacy: document.getElementById('lnkPrivacy'),
+    };
 
-    function subscribeMenus(){
-      if(menusUnsub){ db.ref('menus').off('value', menusUnsub); menusUnsub=null }
-      menusUnsub = db.ref('menus').on('value', snap=>{
-        const menus = snap.val()||{ menuA:{}, menuB:{} };
-        renderMenus(menus);
-        renderMenusAdmin(menus);
-      })
-    }
-
-    function renderMenus(menus){
-      // fill dropdowns
-      ddA.innerHTML = ''; ddB.innerHTML='';
-      const a = Object.entries(menus.menuA||{}); const b = Object.entries(menus.menuB||{});
-      if(a.length===0) ddA.innerHTML = '<option>Menu A</option>'; else a.forEach(([id,item])=>{ const o=document.createElement('option'); o.value=item.url; o.textContent=item.name; ddA.appendChild(o) })
-      if(b.length===0) ddB.innerHTML = '<option>Menu B</option>'; else b.forEach(([id,item])=>{ const o=document.createElement('option'); o.value=item.url; o.textContent=item.name; ddB.appendChild(o) })
-      ddA.onchange = ()=>{ const url=ddA.value; if(url && url.startsWith('http')) window.open(url,'_blank') }
-      ddB.onchange = ()=>{ const url=ddB.value; if(url && url.startsWith('http')) window.open(url,'_blank') }
-    }
-
-    function renderMenusAdmin(menus){
-      if(!(currentUser && currentUser.isAdmin)) return;
-      const wrap = document.getElementById('menusList'); wrap.innerHTML='';
-
-      const makeList = (title, key, obj)=>{
-        const box = document.createElement('div');
-        box.style.flex='1'; box.className='stat';
-        const rows = Object.entries(obj||{}).map(([id,item])=>
-          `<div class="row" style="justify-content:space-between"><span>${item.name}</span><a href="${item.url}" target="_blank" class="muted">${item.url}</a><button class="btn btn-danger" data-del="${key}/${id}">Delete</button></div>`
-        ).join('') || '<div class="muted">Empty</div>';
-        box.innerHTML = `<h4>${title}</h4>${rows}`;
-        wrap.appendChild(box);
+    function setupMenus(){
+      // load from DB
+      db.ref('menuLinks').on('value', snap=>{
+        const d = snap.val() || defaultLinks();
+        applyMenuLinks(d);
+      });
+      // admin edit
+      const btn = document.getElementById('editMenusBtn');
+      const modal = document.getElementById('menusModal');
+      const closeBtn = document.getElementById('closeMenus');
+      btn.onclick = ()=>{ if(!(currentUser && currentUser.isAdmin)) return; openLinksEditor(); modal.classList.add('show') };
+      closeBtn.onclick = ()=> modal.classList.remove('show');
+      document.getElementById('menusForm').onsubmit = (e)=>{
+        e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return;
+        const payload = readLinksFromForm();
+        db.ref('menuLinks').set(payload).then(()=>{ modal.classList.remove('show') })
       }
-      makeList('Menu A Items', 'menuA', menus.menuA||{});
-      makeList('Menu B Items', 'menuB', menus.menuB||{});
+    }
 
-      wrap.querySelectorAll('[data-del]').forEach(btn=>{
-        btn.onclick = ()=> db.ref('menus/'+btn.dataset.del).remove();
+    function defaultLinks(){
+      return {
+        property:'https://example.com/property',
+        ambulance:'https://example.com/ambulance',
+        all:'https://example.com/all-services',
+        provider:'https://example.com/provider',
+        about:'https://example.com/about',
+        contact:'https://example.com/contact',
+        privacy:'https://example.com/privacy-policy'
+      }
+    }
+
+    function applyMenuLinks(d){
+      linkNodes.property.href = d.property; linkNodes.ambulance.href=d.ambulance; linkNodes.all.href=d.all;
+      linkNodes.provider.href = d.provider; linkNodes.about.href=d.about; linkNodes.contact.href=d.contact; linkNodes.privacy.href=d.privacy;
+    }
+
+    function openLinksEditor(){
+      db.ref('menuLinks').get().then(s=>{
+        const d = s.val() || defaultLinks();
+        document.getElementById('uProperty').value = d.property;
+        document.getElementById('uAmbulance').value= d.ambulance;
+        document.getElementById('uAll').value      = d.all;
+        document.getElementById('uProvider').value = d.provider;
+        document.getElementById('uAbout').value    = d.about;
+        document.getElementById('uContact').value  = d.contact;
+        document.getElementById('uPrivacy').value  = d.privacy;
       })
     }
 
-    document.getElementById('menuAForm').addEventListener('submit', (e)=>{
-      e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
-      db.ref('menus/menuA').push({ name: mAName.value.trim(), url: mALink.value.trim() }).then(()=> e.target.reset());
-    })
-    document.getElementById('menuBForm').addEventListener('submit', (e)=>{
-      e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
-      db.ref('menus/menuB').push({ name: mBName.value.trim(), url: mBLink.value.trim() }).then(()=> e.target.reset());
-    })
+    function readLinksFromForm(){
+      return {
+        property: document.getElementById('uProperty').value.trim(),
+        ambulance:document.getElementById('uAmbulance').value.trim(),
+        all:      document.getElementById('uAll').value.trim(),
+        provider: document.getElementById('uProvider').value.trim(),
+        about:    document.getElementById('uAbout').value.trim(),
+        contact:  document.getElementById('uContact').value.trim(),
+        privacy:  document.getElementById('uPrivacy').value.trim(),
+      }
+    }
+
+    /***********************
+     * 8) Notes (Security Rules Suggestion)
+     * Realtime Database rules में expiry, admin-only writes, shop-only accept enforce करें.
+     * Example rules आप मुझसे अलग से मांग सकते हैं।
+     ***********************/
   </script>
 </body>
 </html>
