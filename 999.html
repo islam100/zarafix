@@ -8,180 +8,131 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f7fa;
-      color: #333;
-    }
-    header {
-      background: #2563eb;
-      color: #fff;
-      padding: 15px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .container {
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 15px;
-    }
-    .card {
-      background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-    }
-    .card:hover { transform: scale(1.02); }
-    button {
-      padding: 10px 15px;
-      margin: 5px 0;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn-primary { background: #2563eb; color: white; }
-    .btn-danger { background: #ef4444; color: white; }
-    .btn-success { background: #16a34a; color: white; }
-    .btn-primary:hover { background: #1e3a8a; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-success:hover { background: #15803d; }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 6px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    #logoutBtn { display: none; }
+    body { font-family: Arial, sans-serif; margin:0; background:#f4f6f9; }
+    header { background:#0d6efd; color:#fff; padding:15px; text-align:center; font-size:20px; font-weight:bold; }
+    .container { max-width:600px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1);}
+    button { background:#0d6efd; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; }
+    button:hover { background:#084298; }
+    .hidden { display:none; }
+    input, textarea { width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:6px; }
+    .product-card { border:1px solid #ddd; border-radius:10px; padding:15px; margin:10px 0; background:#fafafa; }
+    .status { font-weight:bold; }
+    .approved { color:green; }
+    .rejected { color:red; }
+    .pending { color:orange; }
   </style>
 </head>
 <body>
-  <header>ZaraFix Product Portal</header>
-  <div class="container">
-    <!-- Login Section -->
-    <div id="loginSection">
-      <button id="loginBtn" class="btn-primary">Login with Google</button>
-    </div>
 
-    <!-- After Login -->
-    <div id="appSection" style="display:none;">
-      <button id="logoutBtn" class="btn-danger">Logout</button>
-      <h2>Add Product</h2>
-      <input type="text" id="productName" placeholder="Product Name">
-      <textarea id="productDesc" placeholder="Product Description"></textarea>
-      <button id="addProductBtn" class="btn-success">Add Product</button>
-      
-      <h2>Products</h2>
-      <div id="productList"></div>
-    </div>
+<header>ZaraFix Product Dashboard</header>
+
+<div class="container">
+  <div id="loginSection">
+    <p style="text-align:center;">Please login with Google to continue</p>
+    <button onclick="googleLogin()">Login with Google</button>
   </div>
 
-  <script type="module">
-    // ✅ Firebase Config
-   const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-};
+  <div id="dashboard" class="hidden">
+    <h2>Welcome, <span id="userName"></span></h2>
+    <button onclick="logout()">Logout</button>
 
-    // ✅ Initialize Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    <h3>Add New Product</h3>
+    <input type="text" id="title" placeholder="Product Title">
+    <input type="number" id="price" placeholder="Price">
+    <textarea id="desc" placeholder="Description"></textarea>
+    <button onclick="addProduct()">Add Product</button>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const db = getDatabase(app);
+    <h3>Your Products</h3>
+    <div id="productList"></div>
+  </div>
+</div>
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const loginSection = document.getElementById("loginSection");
-    const appSection = document.getElementById("appSection");
-    const productList = document.getElementById("productList");
+<script>
+  // 🔹 Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "1093343251465",
+    appId: "1:1093343251465:web:xxxx"
+  };
 
-    // ✅ Login
-    loginBtn.addEventListener("click", async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (err) {
-        alert("Login Error: " + err.message);
-      }
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let currentUser = null;
+
+  // 🔹 Google Login
+  function googleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result => {
+      currentUser = result.user;
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+      document.getElementById("userName").innerText = currentUser.displayName;
+      loadProducts();
     });
+  }
 
-    // ✅ Logout
-    logoutBtn.addEventListener("click", async () => {
-      await signOut(auth);
+  // 🔹 Logout
+  function logout() {
+    auth.signOut().then(() => {
+      currentUser = null;
+      document.getElementById("loginSection").classList.remove("hidden");
+      document.getElementById("dashboard").classList.add("hidden");
     });
+  }
 
-    // ✅ Auth State
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginSection.style.display = "none";
-        appSection.style.display = "block";
-        logoutBtn.style.display = "block";
-        loadProducts();
-      } else {
-        loginSection.style.display = "block";
-        appSection.style.display = "none";
-        logoutBtn.style.display = "none";
-      }
-    });
+  // 🔹 Add Product
+  function addProduct() {
+    const title = document.getElementById("title").value;
+    const price = document.getElementById("price").value;
+    const desc = document.getElementById("desc").value;
 
-    // ✅ Add Product
-    document.getElementById("addProductBtn").addEventListener("click", () => {
-      const name = document.getElementById("productName").value;
-      const desc = document.getElementById("productDesc").value;
-      if (!name || !desc) { alert("Please fill all fields"); return; }
-
-      push(ref(db, "products"), {
-        name, desc, status: "pending"
-      });
-
-      document.getElementById("productName").value = "";
-      document.getElementById("productDesc").value = "";
-    });
-
-    // ✅ Load Products
-    function loadProducts() {
-      onValue(ref(db, "products"), (snapshot) => {
-        productList.innerHTML = "";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          const key = child.key;
-
-          let card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <h3>${data.name}</h3>
-            <p>${data.desc}</p>
-            <p>Status: <b>${data.status}</b></p>
-            <button class="btn-success" onclick="approveProduct('${key}')">Approve</button>
-            <button class="btn-danger" onclick="rejectProduct('${key}')">Reject</button>
-          `;
-          productList.appendChild(card);
-        });
-      });
+    if (!title || !price || !desc) {
+      alert("Please fill all fields");
+      return;
     }
 
-    // ✅ Approve/Reject
-    window.approveProduct = (id) => {
-      update(ref(db, "products/" + id), { status: "approved" });
-    };
-    window.rejectProduct = (id) => {
-      update(ref(db, "products/" + id), { status: "rejected" });
-    };
-  </script>
+    const newProductRef = db.ref("products").push();
+    newProductRef.set({
+      userId: currentUser.uid,
+      title, price, desc,
+      status: "pending"
+    });
+
+    document.getElementById("title").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("desc").value = "";
+  }
+
+  // 🔹 Load Products
+  function loadProducts() {
+    db.ref("products").on("value", snapshot => {
+      const products = snapshot.val();
+      let html = "";
+      for (let id in products) {
+        const p = products[id];
+        if (p.userId === currentUser.uid) {
+          html += `
+            <div class="product-card">
+              <h4>${p.title} - ₹${p.price}</h4>
+              <p>${p.desc}</p>
+              <p class="status ${p.status}">Status: ${p.status}</p>
+            </div>
+          `;
+        }
+      }
+      document.getElementById("productList").innerHTML = html || "No products yet.";
+    });
+  }
+
+  // 🔹 Admin Approve/Reject (Extra for Admin Page)
+  // Example: db.ref("products/" + productId).update({status: "approved"});
+</script>
+
 </body>
 </html>
