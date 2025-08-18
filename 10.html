@@ -25,7 +25,7 @@
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
             gap:15px; padding:15px; }
     .card { background:#fff; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.2);
-            padding:12px; position:relative; transition:transform .2s; }
+            padding:12px; position:relative; transition:transform .2s; cursor:pointer; }
     .card:hover { transform:scale(1.02); }
     .card img { width:100%; height:150px; object-fit:cover; border-radius:8px; }
     .card h3 { margin:8px 0 4px; font-size:18px; }
@@ -34,10 +34,10 @@
     .blink { background:yellow; animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* Modal (for Post Form & Card View) */
+    /* Modal */
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
              background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
-    .modal-content { background:#fff; padding:20px; border-radius:12px; width:90%; max-width:400px;
+    .modal-content { background:#fff; padding:20px; border-radius:12px; width:90%; max-width:450px;
                      max-height:90%; overflow:auto; position:relative; }
     .close { position:absolute; top:10px; right:15px; cursor:pointer; font-weight:bold; }
 
@@ -89,11 +89,10 @@
   </div>
 </div>
 
-<!-- Card View Modal (Admin only) -->
+<!-- Card View Modal -->
 <div class="modal" id="cardModal">
   <div class="modal-content" id="cardContent">
     <span class="close" id="closeCard">&times;</span>
-    <!-- content injected by JS -->
   </div>
 </div>
 
@@ -148,7 +147,7 @@ newPostBtn.onclick=()=>postModal.style.display="flex";
 closeForm.onclick=()=>postModal.style.display="none";
 closeCard.onclick=()=>cardModal.style.display="none";
 
-// Upload images to imgbb
+// Upload images
 async function uploadImages(files){
   const urls=[];
   for(let i=0;i<Math.min(5,files.length);i++){
@@ -162,7 +161,7 @@ async function uploadImages(files){
   return urls;
 }
 
-// Post form submit
+// Post submit
 postForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first");
@@ -191,12 +190,15 @@ postForm.onsubmit=async e=>{
   });
 };
 
-// Load posts
+// Load posts (latest first)
 function loadPosts(){
-  db.ref("posts").on("value",snap=>{
+  db.ref("posts").orderByChild("created").on("value",snap=>{
     postsDiv.innerHTML="";
-    snap.forEach(ch=>{
-      const p=ch.val(); p.id=ch.key;
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse(); // latest first
+
+    arr.forEach(p=>{
       if(p.status!=="approved" && (!currentUser || currentUser.email!=="zarasamajiksevasanstha@gmail.com") && (!currentUser || p.posterUid!==currentUser.uid)) return;
       const card=document.createElement("div"); card.className="card";
 
@@ -208,48 +210,43 @@ function loadPosts(){
       const price=document.createElement("p"); price.textContent="₹"+p.price; card.appendChild(price);
       const ph=document.createElement("p"); ph.textContent="📞 "+p.posterPhone; card.appendChild(ph);
 
-      // Status
       const st=document.createElement("p");
       if(p.status==="approved") st.textContent="✅ Approved";
       else { st.innerHTML='<span class="led blink"></span> Pending'; }
       card.appendChild(st);
 
-      // Poster delete
+      // delete option for poster
       if(currentUser && currentUser.uid===p.posterUid){
         const del=document.createElement("button");
         del.textContent="🗑 Delete"; del.className="btn3d";
         del.onclick=async e=>{
           e.stopPropagation();
-          if(confirm("Delete this post?")){
-            await db.ref("posts/"+p.id).remove();
-            card.remove();
-          }
+          if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove();
         };
         card.appendChild(del);
       }
 
-      // Admin Approve/Reject
-      if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-        const ap=document.createElement("button");
-        ap.textContent="✅ Approve"; ap.className="btn3d";
-        ap.onclick=()=>db.ref("posts/"+p.id).update({status:"approved"});
-        const rej=document.createElement("button");
-        rej.textContent="❌ Reject"; rej.className="logoutBtn";
-        rej.onclick=()=>db.ref("posts/"+p.id).remove();
-        card.appendChild(ap); card.appendChild(rej);
-
-        // Card enlarge for admin only
-        card.onclick=()=>{
-          cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
-          cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
+      // enlarge card for all users
+      card.onclick=()=>{
+        cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+        cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
           <p><b>Price:</b> ₹${p.price}</p>
           <p><b>Address:</b> ${p.address}</p>
-          <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>`;
-          if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
-          cardModal.style.display="flex";
-          document.getElementById('closeCard').onclick=()=>cardModal.style.display="none";
-        };
-      }
+          <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
+          <p><b>Phone:</b> ${p.posterPhone}</p>`;
+        if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
+
+        // Admin extra buttons
+        if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+          cardContent.innerHTML+=`<button id="ap" class="btn3d">✅ Approve</button>
+                                  <button id="rj" class="logoutBtn">❌ Reject</button>`;
+          document.getElementById("ap").onclick=()=>db.ref("posts/"+p.id).update({status:"approved"});
+          document.getElementById("rj").onclick=()=>db.ref("posts/"+p.id).remove();
+        }
+        cardModal.style.display="flex";
+        document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
+      };
+
       postsDiv.appendChild(card);
     });
   });
