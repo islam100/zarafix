@@ -30,9 +30,11 @@
     .card img { width:100%; height:150px; object-fit:cover; border-radius:8px; }
     .card h3 { margin:8px 0 4px; font-size:18px; }
     .card p { margin:2px 0; font-size:14px; }
-    .led { width:12px; height:12px; border-radius:50%; display:inline-block; }
-    .blink { background:yellow; animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity:0; } }
+
+    /* Pending Highlight */
+    .pending { background:#fff9c4; border:2px solid #ffeb3b;
+               animation: blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color: #f57f17; } }
 
     /* Modal */
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -199,8 +201,16 @@ function loadPosts(){
     arr.reverse(); // latest first
 
     arr.forEach(p=>{
-      if(p.status!=="approved" && (!currentUser || currentUser.email!=="zarasamajiksevasanstha@gmail.com") && (!currentUser || p.posterUid!==currentUser.uid)) return;
-      const card=document.createElement("div"); card.className="card";
+      // Show rules
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){
+        // admin sees all
+      } else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status!=="approved") card.classList.add("pending");
 
       if(p.images && p.images.length) {
         const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
@@ -211,8 +221,7 @@ function loadPosts(){
       const ph=document.createElement("p"); ph.textContent="📞 "+p.posterPhone; card.appendChild(ph);
 
       const st=document.createElement("p");
-      if(p.status==="approved") st.textContent="✅ Approved";
-      else { st.innerHTML='<span class="led blink"></span> Pending'; }
+      st.textContent=(p.status==="approved"?"✅ Approved":"⏳ Pending Approval");
       card.appendChild(st);
 
       // delete option for poster
