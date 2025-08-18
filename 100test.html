@@ -3,98 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loot-Lo Property Post</title>
+  <title>Loot-Lo</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    .form-container { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    input, select, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
-    button { background: #28a745; color: #fff; font-size: 16px; cursor: pointer; }
-    button:hover { background: #218838; }
+    body { font-family: Arial, sans-serif; background:#f0f2f5; margin:0; padding:0; }
+    .container { max-width:800px; margin:auto; padding:20px; }
+    h2 { text-align:center; }
+    form { background:#fff; padding:20px; border-radius:10px; margin-bottom:20px; }
+    input, select, textarea, button {
+      width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:5px;
+    }
+    button { background:#28a745; color:#fff; cursor:pointer; border:none; font-weight:bold; }
+    button:hover { background:#218838; }
+    .card {
+      background:#fff; margin:10px 0; padding:15px; border-radius:10px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card img { max-width:100%; border-radius:10px; }
+    .admin-section { background:#fff; padding:20px; border-radius:10px; margin-top:30px; }
+    .approve-btn { background:#007bff; }
+    .reject-btn { background:#dc3545; }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>🛒 Loot-Lo - Post Property / Service</h2>
 
-<div class="form-container">
-  <h2>Post Your Property</h2>
-  <form id="propertyForm">
-    <input type="text" id="title" placeholder="Property Title" required>
-    <input type="text" id="shopName" placeholder="Shop Name" required>
-    <select id="category" required>
-      <option value="">Select Category</option>
-      <option value="Flat">Flat</option>
-      <option value="House">House</option>
-      <option value="Plot">Plot</option>
-      <option value="Shop">Shop</option>
-      <option value="Office">Office</option>
-    </select>
-    <input type="number" id="price" placeholder="Price (₹)" required>
-    <input type="number" id="discount" placeholder="Discount (₹)" required>
-    <input type="text" id="location" placeholder="Location" required>
-    <input type="file" id="image" accept="image/*" required>
-    <button type="submit">Submit</button>
-  </form>
-</div>
+    <!-- FORM -->
+    <form id="postForm">
+      <input type="text" id="title" placeholder="Title" required>
+      <textarea id="description" placeholder="Description" required></textarea>
+      <input type="text" id="price" placeholder="Price ₹" required>
+      <input type="text" id="discount" placeholder="Discount ₹" required>
+      <input type="text" id="shop" placeholder="Shop Name" required>
+      <select id="category" required>
+        <option value="">Select Category</option>
+        <option>Mobile</option>
+        <option>Electronics</option>
+        <option>Clothes</option>
+        <option>Grocery</option>
+        <option>Furniture</option>
+      </select>
+      <input type="file" id="image" accept="image/*" required>
+      <button type="submit">Submit</button>
+    </form>
 
-<script type="module">
-  // Firebase
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+    <!-- LISTINGS -->
+    <h2>📋 Approved Listings</h2>
+    <div id="listing"></div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-    authDomain: "loot-lo-15328.firebaseapp.com",
-    databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-    projectId: "loot-lo-15328",
-    storageBucket: "loot-lo-15328.appspot.com",
-    messagingSenderId: "677769861892",
-    appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-  };
+    <!-- ADMIN PANEL -->
+    <div class="admin-section">
+      <h2>🔑 Admin Approval</h2>
+      <div id="adminListing"></div>
+    </div>
+  </div>
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
-  // ImgBB Key
-  const imgbbKey = "ff05d1b5c3b3e139253856f0ad1123df";
+  <script>
+    // 🔑 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+      authDomain: "loot-lo-15328.firebaseapp.com",
+      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+      projectId: "loot-lo-15328",
+      storageBucket: "loot-lo-15328.appspot.com",
+      messagingSenderId: "677769861892",
+      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  document.getElementById("propertyForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    const form = document.getElementById("postForm");
+    const listing = document.getElementById("listing");
+    const adminListing = document.getElementById("adminListing");
 
-    const title = document.getElementById("title").value;
-    const shopName = document.getElementById("shopName").value;
-    const category = document.getElementById("category").value;
-    const price = document.getElementById("price").value;
-    const discount = document.getElementById("discount").value;
-    const location = document.getElementById("location").value;
-    const imageFile = document.getElementById("image").files[0];
+    // ImgBB API Key
+    const imgbbApiKey = "ff05d1b5c3b3e139253856f0ad1123df";
 
-    // Image Upload to ImgBB
-    const formData = new FormData();
-    formData.append("image", imageFile);
+    // 📝 Form Submit
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+      const price = document.getElementById("price").value;
+      const discount = document.getElementById("discount").value;
+      const shop = document.getElementById("shop").value;
+      const category = document.getElementById("category").value;
+      const file = document.getElementById("image").files[0];
 
-    const imgUpload = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
-      method: "POST",
-      body: formData
+      if (!file) {
+        alert("Please upload an image!");
+        return;
+      }
+
+      // Upload to ImgBB
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      const imageUrl = data.data.url;
+
+      const newPostRef = db.ref("posts").push();
+      newPostRef.set({
+        title, description, price, discount, shop, category,
+        imageUrl, approved: false, timestamp: Date.now()
+      });
+
+      alert("Post submitted! Waiting for admin approval.");
+      form.reset();
     });
 
-    const imgResponse = await imgUpload.json();
-    const imageUrl = imgResponse.data.url;
-
-    // Save to Firebase
-    await push(ref(db, "properties"), {
-      title,
-      shopName,
-      category,
-      price,
-      discount,
-      location,
-      imageUrl,
-      timestamp: Date.now()
+    // 📋 Load Approved Listings
+    db.ref("posts").on("value", (snapshot) => {
+      listing.innerHTML = "";
+      snapshot.forEach(child => {
+        const post = child.val();
+        if (post.approved) {
+          listing.innerHTML += `
+            <div class="card">
+              <h3>${post.title}</h3>
+              <img src="${post.imageUrl}" alt="">
+              <p>${post.description}</p>
+              <p><b>Shop:</b> ${post.shop}</p>
+              <p><b>Category:</b> ${post.category}</p>
+              <p><b>Price:</b> ₹${post.price} <b>Discount:</b> ₹${post.discount}</p>
+            </div>
+          `;
+        }
+      });
     });
 
-    alert("✅ Property Submitted Successfully!");
-    document.getElementById("propertyForm").reset();
-  });
-</script>
+    // 🔑 Admin Panel
+    db.ref("posts").on("value", (snapshot) => {
+      adminListing.innerHTML = "";
+      snapshot.forEach(child => {
+        const post = child.val();
+        const key = child.key;
+        adminListing.innerHTML += `
+          <div class="card">
+            <h3>${post.title}</h3>
+            <img src="${post.imageUrl}" alt="">
+            <p>${post.description}</p>
+            <p><b>Shop:</b> ${post.shop}</p>
+            <p><b>Category:</b> ${post.category}</p>
+            <p><b>Price:</b> ₹${post.price} <b>Discount:</b> ₹${post.discount}</p>
+            <button class="approve-btn" onclick="approvePost('${key}')">Approve</button>
+            <button class="reject-btn" onclick="rejectPost('${key}')">Reject</button>
+          </div>
+        `;
+      });
+    });
 
+    function approvePost(id) {
+      db.ref("posts/" + id).update({ approved: true });
+    }
+    function rejectPost(id) {
+      db.ref("posts/" + id).remove();
+    }
+  </script>
 </body>
 </html>
