@@ -2,109 +2,181 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Property Cards</title>
+  <title>🏠 Real Estate Listings (Debug Mode)</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .card-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-5px);
-    }
-    .card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-    }
-    .card-content {
-      padding: 15px;
-    }
-    .card-content h3 {
-      margin: 0 0 10px;
-      font-size: 18px;
-      color: #111;
-    }
-    .card-content p {
-      margin: 5px 0;
-      font-size: 14px;
-      color: #555;
-    }
-    .contact-btn {
-      display: block;
-      margin-top: 10px;
-      padding: 10px;
-      text-align: center;
-      background: #2563eb;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }
+    header { background:#2c3e50; color:#fff; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .btn { padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .btn-3d { background:linear-gradient(#4cafef,#2196f3); color:white; box-shadow:0 4px #0b79d0; }
+    .btn-3d:active { box-shadow:0 2px #0b79d0; transform:translateY(2px); }
+    #posts { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; padding:15px; }
+    .card { background:white; border-radius:10px; padding:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); cursor:pointer; transition:0.3s; }
+    .card:hover { transform:scale(1.02); }
+    .pending { background:#ffcccc; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity:0.6; } }
+    .hidden { display:none; }
+    /* modal */
+    #modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; }
+    #modal .content { background:white; padding:20px; border-radius:12px; max-width:600px; width:90%; max-height:90%; overflow:auto; }
   </style>
 </head>
 <body>
+  <header>
+    <h2>📋 Property Listings</h2>
+    <div>
+      <button id="loginBtn" class="btn btn-3d">Login</button>
+      <button id="logoutBtn" class="btn btn-3d hidden">Logout</button>
+      <button id="newPostBtn" class="btn btn-3d hidden">➕ New Post</button>
+    </div>
+  </header>
 
-  <h2>📋 Property Listings</h2>
-  <div class="card-container" id="propertyList"></div>
+  <main>
+    <div id="posts">Loading posts...</div>
+  </main>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Modal -->
+  <div id="modal">
+    <div class="content" id="modalContent"></div>
+  </div>
+
+  <!-- Post Form (modal) -->
+  <div id="postFormModal" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;justify-content:center;align-items:center;">
+    <form id="postForm" style="background:#fff;padding:20px;border-radius:12px;max-width:400px;width:90%;">
+      <h3>New Post</h3>
+      <label>Price: <input id="price" required></label><br><br>
+      <label>BHK: <input id="bhk" required></label><br><br>
+      <label>Property Type: <input id="ptype" required></label><br><br>
+      <label>Address: <input id="address" required></label><br><br>
+      <label>Phone: <input id="phone" required></label><br><br>
+      <label>Poster Type:
+        <select id="posterType" required>
+          <option value="Builder">Builder</option>
+          <option value="Owner">Owner</option>
+          <option value="Agent">Agent</option>
+        </select>
+      </label><br><br>
+      <input type="file" id="images" multiple accept="image/*"><br><br>
+      <button type="submit" class="btn btn-3d">Submit Post</button>
+      <button type="button" class="btn" onclick="document.getElementById('postFormModal').style.display='none'">Close</button>
+    </form>
+  </div>
 
   <script>
-    // 🔹 Your Firebase Config
+    // Firebase init
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
     };
     firebase.initializeApp(firebaseConfig);
-
+    const auth = firebase.auth();
     const db = firebase.database();
-    const propertyList = document.getElementById("propertyList");
 
-    // 🔹 Fetch Data and Show in Card
-    db.ref("properties").on("value", (snapshot) => {
-      propertyList.innerHTML = "";
-      snapshot.forEach((child) => {
-        const data = child.val();
-        const card = `
-          <div class="card">
-            <img src="${data.image || 'https://via.placeholder.com/300x180'}" alt="Property">
-            <div class="card-content">
-              <h3>${data.title || "No Title"}</h3>
-              <p><b>Location:</b> ${data.location || "N/A"}</p>
-              <p><b>Price:</b> ₹${data.price || "N/A"}</p>
-              <a class="contact-btn" href="https://wa.me/${data.contact || ''}" target="_blank">📞 Contact</a>
-            </div>
-          </div>
-        `;
-        propertyList.innerHTML += card;
-      });
+    const postsDiv = document.getElementById("posts");
+    const modal = document.getElementById("modal");
+    const modalContent = document.getElementById("modalContent");
+    let currentUser = null;
+
+    // Auth buttons
+    loginBtn.onclick = ()=> {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(e=>alert(e.message));
+    };
+    logoutBtn.onclick = ()=> auth.signOut();
+
+    newPostBtn.onclick = ()=> document.getElementById("postFormModal").style.display="flex";
+
+    auth.onAuthStateChanged(user=>{
+      console.log("Auth state changed:", user?.email);
+      currentUser=user;
+      loginBtn.classList.toggle("hidden", !!user);
+      logoutBtn.classList.toggle("hidden", !user);
+      newPostBtn.classList.toggle("hidden", !user);
+      loadPosts();
     });
-  </script>
-</body>
-</html>
+
+    // Load posts
+    function loadPosts(){
+      postsDiv.innerHTML="Loading posts...";
+      db.ref("posts").orderByChild("created").on("value", snap=>{
+        if(!snap.exists()){ postsDiv.innerHTML="No posts yet."; return; }
+        let arr=[];
+        snap.forEach(ch=>{ let p=ch.val(); p.id=ch.key; arr.push(p); });
+        arr.sort((a,b)=>b.created-a.created); // new first
+        postsDiv.innerHTML="";
+        arr.forEach(p=>renderPost(p));
+      },err=>{
+        console.error("DB error:",err);
+        postsDiv.innerHTML="Error loading posts.";
+      });
+    }
+
+    // Render post
+    function renderPost(p){
+      const card=document.createElement("div");
+      card.className="card"+(p.status==="pending"?" pending":"");
+      card.innerHTML=`<h4>${p.propertyType} - ₹${p.price}</h4>
+        <p>${p.bhk} BHK</p>
+        <p>${p.address}</p>
+        <p>By: ${p.posterType}</p>
+        <small>${new Date(p.created).toLocaleString()}</small>`;
+      // normal user click (only admin can expand)
+      card.onclick=()=>{
+        if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){
+          modalContent.innerHTML=`
+            <h3>${p.propertyType} - ₹${p.price}</h3>
+            <p>${p.bhk} BHK</p>
+            <p>${p.address}</p>
+            <p>Phone: ${p.posterPhone}</p>
+            <p>Poster: ${p.posterType}</p>
+            <small>${new Date(p.created).toLocaleString()}</small>
+            <div>
+              <button class="btn btn-3d" onclick="approvePost('${p.id}')">Approve</button>
+              <button class="btn btn-3d" onclick="rejectPost('${p.id}')">Reject</button>
+              <button class="btn btn-3d" onclick="deletePost('${p.id}')">Delete</button>
+            </div>
+          `;
+          modal.style.display="flex";
+        }
+      };
+      postsDiv.appendChild(card);
+    }
+
+    modal.onclick=(e)=>{ if(e.target===modal) modal.style.display="none"; };
+
+    function approvePost(id){ db.ref("posts/"+id).update({status:"approved"}); modal.style.display="none"; }
+    function rejectPost(id){ db.ref("posts/"+id).update({status:"rejected"}); modal.style.display="none"; }
+    function deletePost(id){ if(confirm("Delete post?")) db.ref("posts/"+id).remove(); modal.style.display="none"; }
+
+    // Post form
+    postForm.onsubmit=async e=>{
+      e.preventDefault();
+      if(!currentUser) return alert("Login first");
+      const btn=postForm.querySelector("button[type=submit]");
+      btn.disabled=true; btn.textContent="⏳ Submitting...";
+      const post={
+        price:price.value,
+        bhk:bhk.value,
+        propertyType:ptype.value,
+        address:address.value,
+        posterPhone:phone.value,
+        posterType:posterType.value,
+        posterName:currentUser.displayName,
+        posterUid:currentUser.uid,
+        status:"pending",
+        created:Date.now()
+      };
+      try{
+        await db.ref("posts").push(post);
+        alert("✅ Post submitted (pending approval)");
+        postForm.reset();
+        document.getElementById("postFormModal").style.display="none";
+      }catch(err){ alert("❌ Error: "+err.message); }
+      btn.disabled=false; btn.textContent="Submit Post";
