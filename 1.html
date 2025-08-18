@@ -1,130 +1,627 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real Estate Listings</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    .card { border: 1px solid #ddd; padding: 15px; margin: 10px; border-radius: 10px; }
-    .blink { width: 15px; height: 15px; background: yellow; border-radius: 50%; animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zara Properties — Real Estate + Notices</title>
+
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{
+  --brand:#2563eb; --muted:#667085; --bg:#f5f7fb; --card:#ffffff;
+  --ok:#10b981; --danger:#ef4444; --warn:#f59e0b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#0f172a;font-family:Inter,system-ui,Arial}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer}
+.container{max-width:1180px;margin:0 auto;padding:16px}
+
+/* Header */
+header{
+  background:linear-gradient(180deg,#0b1220 0%, #0e1633 100%);
+  color:#fff; position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; padding:12px 16px
+}
+.brand{display:flex; align-items:center; gap:10px}
+.logo3d{
+  width:46px;height:46px;border-radius:14px;
+  background:radial-gradient(circle at 30% 30%, #6aa7ff, #2563eb 60%, #0b3ea8);
+  box-shadow: 0 10px 20px rgba(37,99,235,.45), inset 0 2px 6px rgba(255,255,255,.25);
+}
+.brand .title{font-weight:900;letter-spacing:.2px}
+header .right{display:flex; gap:8px; align-items:center}
+.badgeUser{font-size:12px;color:#cbd5e1}
+
+/* Buttons */
+.btn{
+  background:var(--brand); color:#fff; border:0; padding:8px 12px; border-radius:12px; font-weight:800;
+  box-shadow: 0 6px 0 #1e4fcc, 0 10px 18px rgba(37,99,235,.35);
+  transform: translateY(0); transition:.15s ease;
+}
+.btn:hover{transform: translateY(-2px)}
+.btn:active{transform: translateY(2px)}
+.btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.18); box-shadow:none}
+
+.btn3d{
+  border:0; color:#fff; padding:8px 12px; border-radius:12px; font-weight:900;
+  box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 10px 18px rgba(0,0,0,.12);
+  transform: translateY(0); transition:.15s ease;
+}
+.btn3d:active{transform: translateY(2px)}
+.btn-green{background:var(--ok)}
+.btn-red{background:var(--danger)}
+.btn-yellow{background:var(--warn); color:#111}
+
+.wabtn{
+  background:#25d366; color:#fff; border:0; padding:8px 12px; border-radius:14px; font-weight:900;
+  box-shadow: 0 6px 0 #1aa64c, 0 10px 18px rgba(37,211,102,.35);
+  transform: translateY(0); transition:.15s ease;
+}
+.wabtn:hover{transform: translateY(-2px)}
+
+/* Panels */
+.panel{
+  background:var(--card); border-radius:16px; padding:14px;
+  box-shadow:0 8px 30px rgba(16,24,40,.06); margin:14px 0;
+}
+
+/* Grid + Card */
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+
+.card{background:#fff; border:1px solid #e7edf6; border-radius:16px; overflow:hidden; display:flex; flex-direction:column}
+.card-head{position:relative; height:190px; background:#f1f5f9; cursor:pointer}
+.card-head img{width:100%;height:100%;object-fit:cover}
+.badge{
+  position:absolute; left:10px; top:10px; background:#111827; color:#fff; font-size:12px;
+  padding:6px 10px; border-radius:999px
+}
+.badge.notice{background:#7c3aed} /* purple */
+.led{
+  position:absolute; right:12px; top:12px; width:12px; height:12px; border-radius:50%; background:#fbbf24;
+  box-shadow:0 0 0 0 rgba(251,191,36,.9); animation:blink 1s infinite;
+}
+@keyframes blink{
+  0%{box-shadow:0 0 0 0 rgba(251,191,36,.9)}
+  70%{box-shadow:0 0 0 10px rgba(251,191,36,0)}
+  100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}
+}
+.card-body{padding:12px; display:flex; flex-direction:column; gap:8px}
+.meta{color:#667085; font-size:13px}
+.tags{display:flex; gap:8px; flex-wrap:wrap}
+.tag{font-size:12px; background:#eef2ff; border:1px solid #dbeafe; padding:5px 8px; border-radius:999px}
+.card-foot{margin-top:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.small{padding:7px 10px; border-radius:10px; border:0; background:#eef2ff; font-weight:700}
+
+/* Filters */
+.filters{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr 1fr auto; gap:8px}
+@media (max-width:900px){.filters{grid-template-columns:1fr 1fr 1fr 1fr}}
+@media (max-width:640px){.filters{grid-template-columns:1fr 1fr}}
+
+/* Pagination */
+.pagination{display:flex; gap:8px; justify-content:center; margin:12px 0; flex-wrap:wrap}
+.pgbtn{background:#eef2ff; border:0; padding:7px 10px; border-radius:10px; font-weight:800}
+.pgbtn.active{background:#111827;color:#fff}
+
+/* Modal */
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:60}
+.modal.open{display:flex}
+.modal-card{width:min(1000px,98vw); background:#fff; border-radius:16px; overflow:hidden}
+.modal-head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #eef2f7}
+.modal-body{padding:10px 12px}
+.modal-body img{width:100%; height:70vh; object-fit:contain; background:#0b1220}
+
+/* Misc */
+.help{font-size:12px; color:#667085}
+hr.sep{border:none;border-top:1px dashed #e5e7eb; margin:10px 0}
+</style>
 </head>
 <body>
 
-  <h2>🏠 Real Estate Listings</h2>
-  <button id="loginBtn">Login</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
-
-  <div id="postForm" style="display:none; margin-top:20px;">
-    <h3>Create New Post</h3>
-    <input type="text" id="title" placeholder="Title"><br><br>
-    <input type="text" id="location" placeholder="Location"><br><br>
-    <input type="number" id="price" placeholder="Price"><br><br>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number"><br><br>
-    <textarea id="desc" placeholder="Description"></textarea><br><br>
-    <input type="file" id="images" multiple accept="image/*"><br><br>
-    <button onclick="addPost()">Post</button>
+<header>
+  <div class="brand">
+    <div class="logo3d"></div>
+    <div>
+      <div class="title">Zara Properties</div>
+      <div style="font-size:12px;color:#cbd5e1">Properties & Notices • Fast • Mobile friendly</div>
+    </div>
   </div>
+  <div class="right">
+    <span id="userEmail" class="badgeUser"></span>
+    <button id="loginBtn" class="btn ghost">Google Sign-in</button>
+    <button id="logoutBtn" class="btn" style="display:none;background:#ef4444">Logout</button>
+  </div>
+</header>
 
-  <h3>All Listings:</h3>
-  <div id="listings"></div>
+<main class="container">
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- SEARCH / FILTERS (Public) -->
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Search & Filters</strong>
+      <span class="help">Title/Location • Price • BHK</span>
+    </div>
+    <div class="filters" style="margin-top:10px">
+      <input id="sText" placeholder="Search: 2 BHK, Mira Road, Shop..." />
+      <select id="sLocation"><option value="">All locations</option></select>
+      <select id="sBHK">
+        <option value="">All BHK</option><option value="1">1</option><option value="2">2</option>
+        <option value="3">3</option><option value="4">4+</option>
+      </select>
+      <input id="sMin" type="number" placeholder="Min ₹" />
+      <input id="sMax" type="number" placeholder="Max ₹" />
+      <button id="sApply" class="btn">Apply</button>
+    </div>
+  </section>
 
-  <script>
-    // ✅ Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "916859697394",
-      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  <!-- RESULT COUNTER + GRID -->
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 2px 10px">
+      <div><strong id="count">0</strong> results</div>
+      <div class="help">Public view: only <b>Approved</b> posts</div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="pagi" class="pagination"></div>
+  </section>
+
+  <!-- POST FORM (visible after login) -->
+  <section id="postPanel" class="panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Create Post</strong>
+      <span class="help">Max 5 images • imgbb upload</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <input id="fTitle" placeholder="Title (e.g., 2 BHK Flat / Notice: Water supply)" />
+      <input id="fPrice" type="number" placeholder="Price (₹) — for Notice keep 0" />
+      <input id="fLocation" placeholder="Location (e.g., Nalasopara)" />
+      <select id="fBHK"><option value="">BHK</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4+</option></select>
+      <input id="fArea" placeholder="Area (sqft) — optional" />
+      <input id="fWhatsapp" placeholder="WhatsApp (without +, e.g. 919876543210)" />
+    </div>
+
+    <div style="margin-top:10px">
+      <textarea id="fDesc" placeholder="Description" rows="4" style="width:100%"></textarea>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label>Images (up to 5): <input id="fFiles" type="file" accept="image/*" multiple></label>
+      <label style="display:flex;gap:8px;align-items:center">
+        <input id="fIsNotice" type="checkbox"> <span>Is Notice (Admin only)</span>
+      </label>
+      <span class="help">Images uploaded to imgbb; URLs saved to Firebase.</span>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button id="btnPost" class="btn">Submit Post</button>
+      <span id="postMsg" class="help"></span>
+    </div>
+    <hr class="sep">
+    <div class="help">New posts go to <b>Pending</b>. Admin approves to publish. Admin-created Notices can be auto-approved.</div>
+  </section>
+
+  <!-- ADMIN PANEL -->
+  <section id="adminPanel" class="panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Admin Panel — Review Pending</strong>
+      <span class="help">Approve ✅ or Reject ❌ • Pending shows yellow LED</span>
+    </div>
+    <div id="adminList" class="grid" style="margin-top:10px"></div>
+  </section>
+
+</main>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <strong id="mTitle">Gallery</strong>
+      <div>
+        <button id="mPrev" class="pgbtn">Prev</button>
+        <button id="mNext" class="pgbtn">Next</button>
+        <button id="mClose" class="btn ghost" style="margin-left:6px">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <img id="mImg" src="" alt="">
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========= Firebase Config (yours) ========= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+/* ========= Settings ========= */
+const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
+const PAGE_SIZE = 10;
+
+/* ========= State ========= */
+const state = {
+  all: [],          // approved + notices
+  pending: [],      // waiting for admin
+  page: 1,
+  modal: {list:[], idx:0},
+  filters: {text:'', location:'', bhk:'', min:0, max:Infinity},
+  user: null
+};
+
+/* ========= Helpers ========= */
+const $ = s => document.querySelector(s);
+const fmtINR = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
+const timeAgo = t => {
+  const d = (Date.now() - (Number(t)||0))/86400000;
+  if (d<1) return 'आज';
+  if (d<2) return 'कल';
+  return `${Math.floor(d)} दिन पहले`;
+};
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"'`=\/]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#96;','=':'&#61;'}[c])); }
+
+/* ========= Auth UI ========= */
+$('#loginBtn').addEventListener('click', ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e=> alert('Login error: '+e.message));
+});
+$('#logoutBtn').addEventListener('click', ()=> auth.signOut());
+
+auth.onAuthStateChanged(user=>{
+  state.user = user || null;
+  $('#userEmail').textContent = user ? user.email : '';
+  $('#loginBtn').style.display = user ? 'none' : 'inline-block';
+  $('#logoutBtn').style.display = user ? 'inline-block' : 'none';
+
+  // Post panel anyone logged-in can see
+  $('#postPanel').style.display = user ? 'block' : 'none';
+  // Notice checkbox enable only for admin
+  $('#fIsNotice').disabled = !(user && user.email===ADMIN_EMAIL);
+  // Admin panel only for admin
+  $('#adminPanel').style.display = (user && user.email === ADMIN_EMAIL) ? 'block' : 'none';
+  render();
+});
+
+/* ========= DB listeners ========= */
+const ref = db.ref('properties');
+ref.on('value', snap=>{
+  const approved = [];
+  const pending = [];
+  snap.forEach(ch=>{
+    const v = ch.val() || {};
+    const obj = {
+      id: ch.key,
+      uid: v.uid || '',
+      email: v.email || '',
+      title: v.title||'',
+      price: Number(v.price)||0,
+      location: v.location||'',
+      bhk: v.bhk||'',
+      area: v.area||'',
+      whatsapp: v.whatsapp||'',
+      description: v.description||'',
+      images: Array.isArray(v.images) ? v.images : [],
+      time: v.time || 0,
+      status: v.status || 'pending', // pending | approved | rejected
+      type: v.type || 'property'     // property | notice
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    if (obj.status === 'approved') approved.push(obj);
+    else pending.push(obj);
+  });
+  // newest first
+  state.all = approved.sort((a,b)=> (b.time||0)-(a.time||0));
+  state.pending = pending.sort((a,b)=> (b.time||0)-(a.time||0));
+  populateLocations();
+  render();
+});
 
-    // ✅ ImgBB API Key
-    const imgbbKey = "cad1f0dbfbd25346460789376cc2d7d5";
+/* ========= Filters ========= */
+function populateLocations(){
+  const sel = $('#sLocation');
+  const uniq = Array.from(new Set(state.all.map(x=>x.location).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">All locations</option>' + uniq.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+}
+$('#sApply').addEventListener('click', ()=>{
+  state.filters.text = $('#sText').value.trim().toLowerCase();
+  state.filters.location = $('#sLocation').value;
+  state.filters.bhk = $('#sBHK').value;
+  const min = parseInt($('#sMin').value||'0',10);
+  const maxv = $('#sMax').value.trim(); const max = maxv? parseInt(maxv,10) : Infinity;
+  state.filters.min = isNaN(min)?0:min;
+  state.filters.max = isNaN(max)?Infinity:max;
+  state.page = 1;
+  render();
+});
+function applyFilter(list){
+  const f = state.filters;
+  return list.filter(it=>{
+    const bag = (it.title+' '+it.location+' '+it.description).toLowerCase();
+    const okText = !f.text || bag.includes(f.text);
+    const okLoc = !f.location || it.location===f.location;
+    const okBhk = !f.bhk || (f.bhk==='4' ? (Number(it.bhk)>=4) : String(it.bhk)===String(f.bhk));
+    const okPrice = it.type==='notice' ? true : (it.price >= (isFinite(f.min)?f.min:0) && it.price <= (isFinite(f.max)?f.max:Infinity));
+    return okText && okLoc && okBhk && okPrice;
+  });
+}
+function paginate(list){
+  const start = (state.page-1)*PAGE_SIZE;
+  return list.slice(start, start+PAGE_SIZE);
+}
 
-    // 🔹 Simple Login/Logout (demo purpose)
-    document.getElementById("loginBtn").onclick = () => {
-      auth.signInWithEmailAndPassword("demo@test.com","123456")
-      .then(()=>{ document.getElementById("postForm").style.display="block";
-                  document.getElementById("loginBtn").style.display="none";
-                  document.getElementById("logoutBtn").style.display="inline"; })
-      .catch(()=> auth.createUserWithEmailAndPassword("demo@test.com","123456"));
-    };
+/* ========= Render ========= */
+function render(){
+  // PUBLIC GRID (approved only already in state.all)
+  const filtered = applyFilter(state.all);
+  $('#count').textContent = filtered.length;
+  const items = paginate(filtered);
+  const grid = $('#grid');
+  const isAdmin = state.user && state.user.email === ADMIN_EMAIL;
 
-    document.getElementById("logoutBtn").onclick = () => {
-      auth.signOut().then(()=> location.reload());
-    };
+  if(!items.length){
+    grid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center;color:#667085">No results</div>`;
+  } else {
+    grid.innerHTML = items.map(it=> cardHTML(it, isAdmin)).join('');
+  }
+  bindCardEvents();
 
-    // 🔹 Post add with images
-    async function addPost(){
-      let title=document.getElementById("title").value;
-      let loc=document.getElementById("location").value;
-      let price=document.getElementById("price").value;
-      let desc=document.getElementById("desc").value;
-      let whatsapp=document.getElementById("whatsapp").value;
-      let files=document.getElementById("images").files;
+  // Pagination
+  const pages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const pagi = $('#pagi');
+  let html = '';
+  html += `<button class="pgbtn" ${state.page<=1?'disabled':''} id="pgPrev">Prev</button>`;
+  for (let i=1;i<=pages;i++){
+    html += `<button class="pgbtn ${i===state.page?'active':''}" data-p="${i}">${i}</button>`;
+  }
+  html += `<button class="pgbtn" ${state.page>=pages?'disabled':''} id="pgNext">Next</button>`;
+  pagi.innerHTML = html;
+  pagi.querySelectorAll('[data-p]').forEach(b=> b.addEventListener('click', ()=>{ state.page = +b.dataset.p; render(); }));
+  $('#pgPrev')?.addEventListener('click', ()=>{ if(state.page>1){ state.page--; render(); }});
+  $('#pgNext')?.addEventListener('click', ()=>{ if(state.page<pages){ state.page++; render(); }});
 
-      if(!title || !loc || !price){ alert("Please fill details"); return; }
-
-      let imgUrls=[];
-      for(let i=0;i<files.length && i<5;i++){
-        let formData=new FormData();
-        formData.append("image",files[i]);
-        let res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:formData});
-        let data=await res.json();
-        imgUrls.push(data.data.url);
-      }
-
-      db.ref("posts/").push({
-        title, location:loc, price, desc, whatsapp, images:imgUrls,
-        approved:false, timestamp:Date.now()
-      });
-
-      alert("Post added (pending approval)");
-      document.getElementById("title").value="";
-      document.getElementById("desc").value="";
-      document.getElementById("location").value="";
-      document.getElementById("price").value="";
-      document.getElementById("whatsapp").value="";
+  // ADMIN pending list
+  if (state.user && state.user.email === ADMIN_EMAIL){
+    const ad = $('#adminList');
+    if (!state.pending.length){
+      ad.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center;color:#667085">No pending items</div>`;
+    } else {
+      ad.innerHTML = state.pending.map(p=> adminCardHTML(p)).join('');
+      bindAdminEvents();
     }
+  }
+}
 
-    // 🔹 Show posts
-    db.ref("posts/").on("value",snap=>{
-      let data=snap.val();
-      let container=document.getElementById("listings");
-      container.innerHTML="";
-      for(let id in data){
-        let p=data[id];
-        let card=document.createElement("div");
-        card.className="card";
+function cardHTML(it, isAdmin){
+  const mine = state.user && (state.user.uid === it.uid || state.user.email === it.email);
+  const firstImg = it.images?.[0] || 'https://via.placeholder.com/1200x800?text=No+Image';
+  const typeTag = it.type==='notice' ? '<span class="tag" style="background:#ede9fe;border-color:#ddd6fe;color:#4c1d95">NOTICE</span>' : '<span class="tag">Property</span>';
+  const priceTag = it.type==='notice' ? '' : `<span class="tag">${fmtINR(it.price)}</span>`;
+  const bhkArea = it.type==='notice' ? '' : ` • ${escapeHtml(it.bhk)} BHK • ${escapeHtml(it.area)} sqft`;
+  return `
+  <div class="card">
+    <div class="card-head" data-urls='${JSON.stringify(it.images||[])}' data-title="${escapeHtml(it.title)}">
+      <img src="${firstImg}" alt="${escapeHtml(it.title)}">
+      <div class="badge ${it.type==='notice'?'notice':''}">${it.type==='notice'?'Notice':''} ${timeAgo(it.time)}</div>
+    </div>
+    <div class="card-body">
+      <div style="font-weight:900">${escapeHtml(it.title)}</div>
+      <div class="meta">${escapeHtml(it.location)}${bhkArea}</div>
+      <div style="color:#334155">${escapeHtml(it.description).slice(0,160)}${it.description.length>160?'…':''}</div>
+      <div class="tags">
+        ${typeTag}
+        ${priceTag}
+      </div>
+      <div class="card-foot">
+        <button class="wabtn" onclick="wa('${it.whatsapp}','${encodeURIComponent('Hi, I saw your listing: '+it.title)}')">WhatsApp</button>
+        ${mine ? `<button class="small" data-del="${it.id}" style="background:#fde2e2;color:#b91c1c">Delete my post</button>`:''}
+        ${isAdmin ? `<button class="small" data-edit="${it.id}">Edit (admin)</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
 
-        card.innerHTML=`
-          <h4>${p.title} - ₹${p.price}</h4>
-          <p>${p.location}</p>
-          <p>${p.desc}</p>
-          ${p.images? p.images.map(img=>`<img src="${img}" width="100">`).join(""):""}
-          <br>
-          <a href="https://wa.me/${p.whatsapp}" target="_blank">
-            <button style="background:green;color:white;border-radius:10px;">WhatsApp</button>
-          </a>
-          ${!p.approved ? '<div class="blink"></div>' : ''}
-        `;
+function adminCardHTML(it){
+  const firstImg = it.images?.[0] || 'https://via.placeholder.com/1200x800?text=No+Image';
+  const typeTag = it.type==='notice' ? '<span class="tag" style="background:#ede9fe;border-color:#ddd6fe;color:#4c1d95">NOTICE</span>' : '<span class="tag">Property</span>';
+  return `
+  <div class="card">
+    <div class="card-head" data-urls='${JSON.stringify(it.images||[])}' data-title="${escapeHtml(it.title)}">
+      <img src="${firstImg}" alt="${escapeHtml(it.title)}">
+      <div class="badge ${it.type==='notice'?'notice':''}">${it.type==='notice'?'Notice':''} ${timeAgo(it.time)}</div>
+      ${it.status!=='approved'?'<div class="led" title="Pending"></div>':''}
+    </div>
+    <div class="card-body">
+      <div style="font-weight:900">${escapeHtml(it.title)}</div>
+      <div class="meta">${escapeHtml(it.location)} • ${escapeHtml(it.bhk||'-')} BHK • ${escapeHtml(it.area||'-')} sqft</div>
+      <div style="color:#334155">${escapeHtml(it.description).slice(0,160)}${it.description.length>160?'…':''}</div>
+      <div class="tags">
+        ${typeTag}
+        <span class="tag">${escapeHtml(it.email||'')}</span>
+        <span class="tag">${escapeHtml(it.whatsapp||'')}</span>
+        <span class="tag">${it.status}</span>
+      </div>
+      <div class="card-foot">
+        <button class="btn3d btn-green" data-approve="${it.id}">Approve</button>
+        <button class="btn3d btn-red" data-reject="${it.id}">Reject</button>
+        <button class="btn3d btn-yellow" data-del-any="${it.id}">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
 
-        container.appendChild(card);
-      }
+/* ========= Bind events ========= */
+function bindCardEvents(){
+  // open modal
+  document.querySelectorAll('.card-head').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const list = JSON.parse(el.getAttribute('data-urls')||'[]');
+      const title = el.getAttribute('data-title')||'';
+      if (!list.length) return;
+      state.modal.list = list;
+      state.modal.idx = 0;
+      $('#mTitle').textContent = title;
+      $('#mImg').src = list[0];
+      $('#modal').classList.add('open');
     });
-  </script>
-</body>
-</html>
+  });
+  // delete own
+  document.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-del');
+      if (!confirm('Delete your post?')) return;
+      try{
+        const snap = await db.ref('properties/'+id).once('value');
+        const v = snap.val();
+        if (!v) return alert('Not found');
+        // allow only owner or admin
+        const isOwner = state.user && (state.user.uid === v.uid || state.user.email === v.email);
+        const isAdmin = state.user && state.user.email === ADMIN_EMAIL;
+        if (!isOwner && !isAdmin) return alert('Not allowed');
+        await db.ref('properties/'+id).remove();
+        alert('Deleted');
+      }catch(e){ alert('Delete error: '+e.message); }
+    });
+  });
+  // (optional) admin edit hook
+  document.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> alert('Inline edit (optional)'));
+  });
+}
+function bindAdminEvents(){
+  document.querySelectorAll('[data-approve]').forEach(b=>{
+    b.addEventListener('click', ()=> updateStatus(b.getAttribute('data-approve'),'approved'));
+  });
+  document.querySelectorAll('[data-reject]').forEach(b=>{
+    b.addEventListener('click', ()=> updateStatus(b.getAttribute('data-reject'),'rejected'));
+  });
+  document.querySelectorAll('[data-del-any]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const id = b.getAttribute('data-del-any');
+      if (!confirm('Delete this post?')) return;
+      await db.ref('properties/'+id).remove();
+    });
+  });
+}
+async function updateStatus(id,status){
+  if (!(state.user && state.user.email===ADMIN_EMAIL)) return alert('Not admin');
+  await db.ref('properties/'+id).update({status});
+}
+
+/* ========= Modal controls ========= */
+$('#mClose').addEventListener('click', ()=> $('#modal').classList.remove('open'));
+$('#modal').addEventListener('click', (e)=>{ if(e.target.id==='modal'){ $('#modal').classList.remove('open'); }});
+$('#mPrev').addEventListener('click', ()=>{
+  if (!state.modal.list.length) return;
+  state.modal.idx = (state.modal.idx-1+state.modal.list.length)%state.modal.list.length;
+  $('#mImg').src = state.modal.list[state.modal.idx];
+});
+$('#mNext').addEventListener('click', ()=>{
+  if (!state.modal.list.length) return;
+  state.modal.idx = (state.modal.idx+1)%state.modal.list.length;
+  $('#mImg').src = state.modal.list[state.modal.idx];
+});
+
+/* ========= WhatsApp ========= */
+function wa(num, text){
+  const base = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(base,'_blank');
+}
+
+/* ========= Imgbb upload ========= */
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(String(r.result).split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+async function uploadToImgbb(base64){
+  const fd = new FormData();
+  fd.append('image', base64);
+  const url = `https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`;
+  const r = await fetch(url, {method:'POST', body:fd});
+  if(!r.ok) throw new Error('imgbb upload failed');
+  const j = await r.json();
+  if(!j.success) throw new Error('imgbb error');
+  return j.data.url;
+}
+
+/* ========= Create Post ========= */
+$('#btnPost').addEventListener('click', async ()=>{
+  const u = state.user;
+  if(!u) return alert('Please login first');
+
+  const title = $('#fTitle').value.trim();
+  const price = parseInt($('#fPrice').value||'0',10);
+  const location = $('#fLocation').value.trim();
+  const bhk = $('#fBHK').value;
+  const area = $('#fArea').value.trim();
+  const whatsapp = $('#fWhatsapp').value.trim();
+  const description = $('#fDesc').value.trim();
+  const files = Array.from($('#fFiles').files||[]);
+  const isNotice = $('#fIsNotice').checked;
+
+  if(!title || !location) return alert('Title & Location required');
+  if(files.length>5) return alert('Max 5 images allowed');
+
+  // Notice सिर्फ admin
+  if(isNotice && !(u.email===ADMIN_EMAIL)) return alert('Only Admin can create Notice');
+
+  $('#postMsg').textContent = 'Uploading images...';
+  try{
+    let urls = [];
+    for (const f of files){
+      const b64 = await fileToBase64(f);
+      const url = await uploadToImgbb(b64);
+      urls.push(url);
+    }
+    if (urls.length===0) urls = ['https://via.placeholder.com/1200x800?text=No+Image'];
+
+    const payload = {
+      uid: u.uid, email: u.email,
+      title, price: isNotice? 0 : price, location, bhk: isNotice? '' : bhk, area: isNotice? '' : area,
+      whatsapp, description,
+      images: urls, time: Date.now(),
+      status: (isNotice && u.email===ADMIN_EMAIL) ? 'approved' : 'pending',
+      type: isNotice ? 'notice' : 'property'
+    };
+    await db.ref('properties').push(payload);
+    $('#postMsg').textContent = (payload.status==='approved') ? 'Notice published.' : 'Submitted! Waiting for admin approval.';
+    // reset
+    $('#fTitle').value=''; $('#fPrice').value=''; $('#fLocation').value='';
+    $('#fBHK').value=''; $('#fArea').value=''; $('#fWhatsapp').value='';
+    $('#fDesc').value=''; $('#fFiles').value=''; $('#fIsNotice').checked=false;
+  }catch(e){
+    alert('Post failed: '+e.message);
+    $('#postMsg').textContent = '';
+  }
+});
+
+/* ========= SECURITY RULES (Apply in Firebase Console) =========
+Realtime Database Rules — paste & publish:
+
+{
+  "rules": {
+    ".read": true,
+    "properties": {
+      "$id": {
+        // Create (new) allowed if logged-in, and if it's a Notice then only Admin
+        ".write": "auth != null && (
+          (!data.exists() && (
+            (newData.child('type').val() == 'notice' && auth.token.email == 'zarasamajiksevasanstha@gmail.com') ||
+            (newData.child('type').
