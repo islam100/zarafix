@@ -1,182 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix Real Estate</title>
-<style>
-body { margin:0; font-family:Arial,sans-serif; background:#f0f2f5; }
-header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#2563eb; color:white; box-shadow:0 3px 6px rgba(0,0,0,0.2); }
-header h1 { font-size:28px; font-weight:bold; text-shadow:2px 2px 5px #000, 0 0 5px #fff; }
-button { cursor:pointer; border:none; border-radius:8px; padding:8px 14px; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2); transition:0.2s; }
-button:hover { transform:translateY(-2px); box-shadow:0 6px 12px rgba(0,0,0,0.3); }
-.grid { max-width:1100px; margin:20px auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:15px; }
-.card { background:white; border-radius:12px; padding:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); position:relative; transition:transform 0.3s, box-shadow 0.3s; }
-.card:hover { transform: translateY(-5px); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
-.card.pending { border:2px solid yellow; animation: glowBlink 1s infinite; }
-@keyframes glowBlink {0%,50%,100%{ box-shadow:0 0 10px yellow; } 25%,75%{ box-shadow:0 0 20px yellow; }}
-.card img { width:100%; border-radius:8px; margin:5px 0; cursor:pointer; }
-.card h3 { margin:5px 0; font-size:18px; }
-.card p { margin:2px 0; font-size:14px; }
-.card-footer { display:flex; gap:8px; margin-top:10px; justify-content:flex-end; flex-wrap:wrap; }
-.card .whatsapp-btn { display:inline-block; margin-top:5px; padding:6px 10px; border-radius:8px; background:linear-gradient(to right,#25D366,#128C7E); color:white; text-decoration:none; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.2); transition:0.2s; }
-.card .whatsapp-btn:hover { transform:translateY(-2px); box-shadow:0 6px 12px rgba(0,0,0,0.3); }
-.card .admin-btn { background: linear-gradient(145deg,#43cea2,#185a9d); color:white; padding:6px 12px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s; }
-.card .admin-btn:hover { transform:translateY(-2px); box-shadow:0 6px 12px rgba(0,0,0,0.4); }
-#postForm { max-width:600px;margin:20px auto;padding:15px;background:white;border-radius:12px; display:none; }
-.modal, #confirmModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:999; }
-.modal-content, #confirmModal .modal-content { background:white; padding:15px; border-radius:12px; max-width:90%; max-height:90%; overflow-y:auto; }
-.modal img { width:100%; max-height:300px; object-fit:contain; margin-bottom:10px; }
-.pagination { display:flex; justify-content:center; margin:20px 0; gap:10px; }
-.pagination button:disabled { opacity:0.5; cursor:not-allowed; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏡 Real Estate</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
+  <style>
+    body{margin:0;font-family:sans-serif;background:#f0f2f5;color:#333;}
+    header{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#2563eb;color:white;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+    header h2{margin:0;font-size:20px;text-shadow:1px 1px 2px #000;}
+    .btn-3d {
+      padding:8px 14px;margin:4px;border:none;border-radius:8px;
+      font-weight:600;color:white;cursor:pointer;
+      box-shadow:2px 2px 6px rgba(0,0,0,.3),-2px -2px 6px rgba(255,255,255,.2);
+      transition:all .2s ease-in-out;
+    }
+    .btn-3d:hover{transform:translateY(-2px);}
+    .btn-login{background:linear-gradient(145deg,#3b82f6,#1e40af);}
+    .btn-logout{background:linear-gradient(145deg,#ef4444,#991b1b);}
+    .btn-approve{background:linear-gradient(145deg,#22c55e,#15803d);}
+    .btn-reject{background:linear-gradient(145deg,#ef4444,#991b1b);}
+    .btn-delete{background:linear-gradient(145deg,#3b82f6,#1e40af);}
+    .wa-btn{display:inline-block;margin:5px 0;padding:6px 12px;border-radius:8px;background:linear-gradient(145deg,#25d366,#128c7e);color:#fff;text-decoration:none;font-weight:600;box-shadow:2px 2px 6px rgba(0,0,0,.3);}
+    .wa-btn:hover{transform:translateY(-2px);}
+    .tabs{display:flex;gap:10px;justify-content:center;margin:10px;}
+    .tab-btn{padding:8px 16px;border:none;border-radius:8px;font-weight:600;cursor:pointer;color:white;background:linear-gradient(145deg,#3b82f6,#2563eb);box-shadow:2px 2px 6px #1e40af,-2px -2px 6px #60a5fa;}
+    .tab-btn.active{background:linear-gradient(145deg,#22c55e,#15803d);box-shadow:2px 2px 6px #166534,-2px -2px 6px #4ade80;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:10px;}
+    .card{background:#fff;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.1);overflow:hidden;cursor:pointer;transition:.2s;padding:10px;}
+    .card:hover{transform:translateY(-4px);}
+    .thumb{width:100%;height:180px;object-fit:cover;border-radius:10px;}
+    h4{margin:8px 0 4px;}
+    .desc{font-size:14px;color:#555;}
+    .badge{display:inline-block;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600;margin:6px 0;}
+    .approved{background:#bbf7d0;color:#166534;}
+    .rejected{background:#fecaca;color:#991b1b;}
+    .pending{background:#fef08a;color:#854d0e;animation:blink 1s infinite;}
+    @keyframes blink{50%{opacity:0.5;}}
+    form{display:none;flex-direction:column;gap:10px;padding:10px;max-width:500px;margin:10px auto;background:#fff;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.1);}
+    form input,form select,form textarea{padding:8px;border-radius:6px;border:1px solid #ccc;}
+    .pagination{text-align:center;margin:10px;}
+    .pagination button{margin:0 5px;}
+    @media(max-width:600px){
+      .thumb{height:150px;}
+      h4{font-size:14px;}
+      .desc{font-size:12px;}
+    }
+  </style>
 </head>
 <body>
 <header>
-  <h1>ZaraFix</h1>
-  <div id="loginDiv"><button onclick="login()">Login</button></div>
+  <h2>🏡 Real Estate</h2>
+  <div id="authBtns">
+    <button id="loginBtn" class="btn-3d btn-login">Login</button>
+    <button id="logoutBtn" class="btn-3d btn-logout" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<div id="postForm">
-  <h3>Post Property</h3>
-  <input type="text" id="title" placeholder="Title" style="width:100%;margin:5px 0;"><br>
-  <textarea id="description" placeholder="Description" style="width:100%;margin:5px 0;"></textarea><br>
-  <input type="number" id="price" placeholder="Price" style="width:100%;margin:5px 0;"><br>
-  <input type="text" id="location" placeholder="Location" style="width:100%;margin:5px 0;"><br>
-  <input type="file" id="images" multiple accept="image/*"><br>
-  <input type="text" id="whatsapp" placeholder="WhatsApp Number" style="width:100%;margin:5px 0;"><br>
-  <button onclick="submitPost()">Submit</button>
+<div class="tabs">
+  <button id="tabAll" class="tab-btn active">All Posts</button>
+  <button id="tabMine" class="tab-btn">My Posts</button>
 </div>
 
-<div class="grid" id="postsGrid"></div>
-<div class="pagination">
-  <button id="prevBtn" onclick="prevPage()">⬅ Prev</button>
-  <button id="nextBtn" onclick="nextPage()">Next ➡</button>
+<div style="text-align:center;margin:10px;">
+  <input id="searchBox" type="text" placeholder="🔍 Search address, type..." style="padding:8px;width:60%;max-width:300px;">
+  <select id="priceFilter" style="padding:8px;">
+    <option value="">Sort by Price</option>
+    <option value="low">Low → High</option>
+    <option value="high">High → Low</option>
+  </select>
 </div>
 
-<div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
-<div class="modal" id="confirmModal"><div class="modal-content"><p>Are you sure?</p><button id="confirmYes">Yes</button><button id="confirmNo">No</button></div></div>
+<div class="grid" id="cards"></div>
+<div class="grid" id="myPosts" style="display:none;"></div>
+<div class="pagination"><button id="prevBtn">⬅ Prev</button><span id="pageNum"></span><button id="nextBtn">Next ➡</button></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<form id="postForm">
+  <h3>📝 New Property Post</h3>
+  <input id="price" placeholder="Price" required>
+  <input id="bhk" placeholder="BHK / Size" required>
+  <input id="ptype" placeholder="Property Type" required>
+  <input id="address" placeholder="Address" required>
+  <input id="phone" placeholder="WhatsApp Number" required>
+  <select id="posterType" required>
+    <option value="">Select Poster Type</option>
+    <option>Builder</option>
+    <option>Agent</option>
+    <option>Owner</option>
+  </select>
+  <input id="images" type="file" accept="image/*" multiple>
+  <button type="submit" class="btn-3d btn-login">Submit Post</button>
+</form>
+
 <script>
-const firebaseConfig = { apiKey:"AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA", authDomain:"property-20d6d.firebaseapp.com", databaseURL:"https://property-20d6d-default-rtdb.firebaseio.com", projectId:"property-20d6d", storageBucket:"property-20d6d.appspot.com", messagingSenderId:"916859697394", appId:"1:916859697394:web:2a8f9ad2d62f8306dcb86b" };
-const imgbbKey="cad1f0dbfbd25346460789376cc2d7d5";
+const firebaseConfig = {
+  apiKey:"AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain:"property-20d6d.firebaseapp.com",
+  databaseURL:"https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId:"property-20d6d",
+  storageBucket:"property-20d6d.appspot.com",
+  messagingSenderId:"916859697394",
+  appId:"1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
 const auth=firebase.auth();
+const db=firebase.database();
 
-let currentUser=null, postsData=[], postsPerPage=10, currentPage=0, admins=["zarasamajiksevasanstha@gmail.com"], isAdmin=false, deleteId=null;
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const postForm=document.getElementById('postForm');
+const cardsEl=document.getElementById('cards');
+const myPostsEl=document.getElementById('myPosts');
+const tabAll=document.getElementById('tabAll');
+const tabMine=document.getElementById('tabMine');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
+const pageNum=document.getElementById('pageNum');
+const searchBox=document.getElementById('searchBox');
+const priceFilter=document.getElementById('priceFilter');
 
-// Login / Logout
-function login(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function logout(){ auth.signOut(); currentUser=null; isAdmin=false; document.getElementById('loginDiv').innerHTML=`<button onclick="login()">Login</button>`; document.getElementById('postForm').style.display='none'; }
+let currentUser=null,isAdmin=false,allPosts=[],activeTab='all',page=1,perPage=10;
+
+loginBtn.onclick=()=>{
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+};
+logoutBtn.onclick=()=>auth.signOut();
 
 auth.onAuthStateChanged(user=>{
   if(user){
     currentUser=user;
-    isAdmin=admins.includes(user.email);
-    document.getElementById('loginDiv').innerHTML=`<button onclick="logout()">Logout</button>`;
-    if(!isAdmin) document.getElementById('postForm').style.display='block';
-    fetchPosts();
+    loginBtn.style.display='none';logoutBtn.style.display='inline-block';
+    postForm.style.display='flex';
+    isAdmin=(user.email==="zarasamajiksevasanstha@gmail.com");
+  } else {
+    currentUser=null;isAdmin=false;
+    loginBtn.style.display='inline-block';logoutBtn.style.display='none';
+    postForm.style.display='none';
   }
+  renderCards();
 });
 
-// Fetch posts
-function fetchPosts(){
-  db.ref('posts').on('value',snap=>{
-    postsData=[]; snap.forEach(child=>postsData.push({id:child.key,...child.val()})); currentPage=0; renderPage();
-  });
+db.ref('posts').on('value',snap=>{
+  allPosts=[];
+  snap.forEach(child=>allPosts.push({...child.val(),id:child.key}));
+  renderCards();
+});
+
+tabAll.onclick=()=>{activeTab='all';tabAll.classList.add('active');tabMine.classList.remove('active');cardsEl.style.display='grid';myPostsEl.style.display='none';renderCards();};
+tabMine.onclick=()=>{activeTab='mine';tabMine.classList.add('active');tabAll.classList.remove('active');cardsEl.style.display='none';myPostsEl.style.display='grid';renderCards();};
+prevBtn.onclick=()=>{if(page>1){page--;renderCards();}};
+nextBtn.onclick=()=>{if(page<Math.ceil(allPosts.length/perPage)){page++;renderCards();}};
+
+searchBox.oninput=()=>renderCards();
+priceFilter.onchange=()=>renderCards();
+
+async function uploadImages(files){
+  const urls=[];
+  for(let i=0;i<Math.min(files.length,5);i++){
+    const fd=new FormData();
+    fd.append('image',files[i]);
+    const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
+    const j=await r.json();
+    if(j.data) urls.push(j.data.url);
+  }
+  return urls;
 }
 
-// Render posts
-function renderPage(){
-  const grid=document.getElementById('postsGrid'); grid.innerHTML='';
-  let start=currentPage*postsPerPage, end=start+postsPerPage, paginated=postsData.slice(start,end);
-  paginated.forEach(post=>{
-    const card=document.createElement('div'); card.className='card '+(post.approved?'':'pending');
-    card.innerHTML=`
-      <img src="${post.images?post.images[0]:''}" onclick="openModal('${post.id}')">
-      <h3>${post.title||''}</h3>
-      <p>${post.description||''}</p>
-      <p>Price: ${post.price||''}</p>
-      <p>Location: ${post.location||''}</p>
-    `;
-    const footer=document.createElement('div'); footer.className='card-footer';
-    if(currentUser && currentUser.email!==post.poster){
-      const waBtn=document.createElement('a'); waBtn.className='whatsapp-btn'; waBtn.href=`https://wa.me/${post.whatsapp}`; waBtn.target='_blank'; waBtn.textContent='📞 WhatsApp'; footer.appendChild(waBtn);
-    } else if(currentUser && currentUser.email===post.poster){
-      const label=document.createElement('span'); label.textContent='Your Post'; label.style.fontWeight='bold'; footer.appendChild(label);
-    }
-    if(isAdmin && !post.approved){
-      const approveBtn=document.createElement('button'); approveBtn.className='admin-btn'; approveBtn.textContent='Approve'; approveBtn.onclick=()=>approvePost(post.id);
-      const rejectBtn=document.createElement('button'); rejectBtn.className='admin-btn'; rejectBtn.textContent='Reject'; rejectBtn.onclick=()=>rejectPost(post.id);
-      footer.appendChild(approveBtn); footer.appendChild(rejectBtn);
-    }
-    if(currentUser && currentUser.email===post.poster){
-      const delBtn=document.createElement('button'); delBtn.className='admin-btn'; delBtn.textContent='Delete'; delBtn.onclick=()=>showConfirm(post.id);
-      footer.appendChild(delBtn);
-    }
-    card.appendChild(footer); grid.appendChild(card);
-  });
-  document.getElementById('prevBtn').style.display=(currentPage===0?'none':'inline-block');
-  document.getElementById('nextBtn').style.display=((currentPage+1)*postsPerPage>=postsData.length?'none':'inline-block');
-}
-
-// Approve / Reject / Delete
-function approvePost(id){ db.ref('posts/'+id).update({approved:true}); }
-function rejectPost(id){ db.ref('posts/'+id).update({approved:false}); }
-function showConfirm(id){ deleteId=id; document.getElementById('confirmModal').style.display='flex'; }
-document.getElementById('confirmYes').onclick=()=>{ if(deleteId) db.ref('posts/'+deleteId).remove(); document.getElementById('confirmModal').style.display='none'; }
-document.getElementById('confirmNo').onclick=()=>{ document.getElementById('confirmModal').style.display='none'; deleteId=null; }
-
-// Modal
-function openModal(id){
-  db.ref('posts/'+id).once('value').then(snap=>{
-    const post=snap.val(); if(!post) return;
-    const modalContent=document.getElementById('modalContent'); let imgs=post.images?post.images.map(src=>`<img src="${src}">`).join(''):'';
-    modalContent.innerHTML=`
-      ${imgs}
-      <h2>${post.title||''}</h2>
-      <p>${post.description||''}</p>
-      <p>Price: ${post.price||''}</p>
-      <p>Location: ${post.location||''}</p>
-      <p><a class="whatsapp-btn" href="https://wa.me/${post.whatsapp}" target="_blank">📞 WhatsApp</a></p>
-    `;
-    const modal=document.getElementById('modal'); modal.style.display='flex'; modal.onclick=()=>modal.style.display='none';
-  });
-}
-
-// Submit post
-async function submitPost(){
-  if(!currentUser){ alert('Login first'); return; }
-  const title=document.getElementById('title').value.trim();
-  const description=document.getElementById('description').value.trim();
-  const price=parseFloat(document.getElementById('price').value);
-  const location=document.getElementById('location').value.trim();
-  const whatsapp=document.getElementById('whatsapp').value.trim();
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser)return alert("Login first");
+  loginBtn.disabled=true;
+  const post={
+    price:document.getElementById('price').value,
+    bhk:document.getElementById('bhk').value,
+    propertyType:document.getElementById('ptype').value,
+    address:document.getElementById('address').value,
+    posterPhone:document.getElementById('phone').value,
+    posterType:document.getElementById('posterType').value,
+    posterName:currentUser.displayName,
+    posterUid:currentUser.uid,
+    status:"pending",
+    created:Date.now()
+  };
   const files=document.getElementById('images').files;
-  if(!title || !description || !price || !location || !whatsapp){ alert('Fill all fields'); return; }
-  if(price<=0){ alert('Price must be positive'); return; }
-  if(!/^\d{10,15}$/.test(whatsapp)){ alert('Enter valid WhatsApp number'); return; }
-  if(files.length>5){ alert('Maximum 5 images'); return; }
+  if(files.length>0) post.images=await uploadImages(files);
+  db.ref('posts').push(post);
+  postForm.reset();
+  loginBtn.disabled=false;
+  alert("Post submitted! Waiting approval.");
+};
 
-  let urls=await Promise.all([...files].map(async file=>{
-    let formData=new FormData(); formData.append("image",file);
-    let res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:formData});
-    let data=await res.json(); return data.data.url;
-  }));
+function renderCards(){
+  cardsEl.innerHTML='';myPostsEl.innerHTML='';
+  let posts=[...allPosts];
 
-  const newPost={title,description,price,location,whatsapp,images:urls,poster:currentUser.email,approved:false};
-  db.ref('posts').push(newPost);
-  alert('Post submitted');
-  document.getElementById('postForm').reset(); document.getElementById('images').value='';
+  // search
+  const q=searchBox.value.toLowerCase();
+  if(q) posts=posts.filter(p=>(p.address||'').toLowerCase().includes(q)||(p.propertyType||'').toLowerCase().includes(q));
+
+  // price sort
+  if(priceFilter.value==='low') posts.sort((a,b)=>parseFloat(a.price)-parseFloat(b.price));
+  if(priceFilter.value==='high') posts.sort((a,b)=>parseFloat(b.price)-parseFloat(a.price));
+
+  if(activeTab==='all'){
+    const start=(page-1)*perPage;
+    const paginated=posts.slice(start,start+perPage);
+    pageNum.textContent=`Page ${page}/${Math.ceil(posts.length/perPage)||1}`;
+    paginated.forEach(p=>{
+      if(!isAdmin){
+        if(!currentUser && p.status!=='approved')return;
+        if(currentUser && p.posterUid!==currentUser.uid && p.status!=='approved')return;
+      }
+      cardsEl.appendChild(makeCard(p));
+    });
+  }
+  if(activeTab==='mine'&&currentUser){
+    const my=allPosts.filter(p=>p.posterUid===currentUser.uid);
+    if(my.length===0) myPostsEl.innerHTML='<p>No posts yet.</p>';
+    my.forEach(p=>myPostsEl.appendChild(makeCard(p,true)));
+  }
 }
 
-// Pagination
-function nextPage(){ if((currentPage+1)*postsPerPage<postsData.length){ currentPage++; renderPage(); } }
-function prevPage(){ if(currentPage>0){ currentPage--; renderPage(); } }
+function makeCard(p,isMine=false){
+  const card=document.createElement('div');
+  card.className='card';
+
+  const img=document.createElement('img');
+  img.className='thumb';
+  img.src=(p.images&&p.images[0])||'https://via.placeholder.com/400';
+  card.appendChild(img);
+
+  const h=document.createElement('h4');
+  h.textContent=`${p.price} — ${p.bhk} ${p.propertyType}`;
+  card.appendChild(h);
+
+  const d=document.createElement('div');
+  d.className='desc';
+  d.innerHTML=`📍 ${p.address}<br>👤 ${p.posterName||''} (${p.posterType||''})`;
+  card.appendChild(d);
+
+  const badge=document.createElement('div');
+  if(isMine){
+    if(p.status==='approved'){badge.className='badge approved';badge.textContent='✅ Approved';}
+    else{badge.className='badge rejected';badge.textContent='❌ Not Approved';}
+  } else {badge.className='badge '+(p.status||'pending');badge.textContent=p.status||'pending';}
+  card.appendChild(badge);
+
+  const wa=document.createElement('a');
+  wa.className='wa-btn';
+  wa.href=`https://wa.me/${(p.posterPhone||'').replace(/\D/g,'')}`;
+  wa.target='_blank';
+  wa.textContent='WhatsApp';
+  card.appendChild(wa);
+
+  if(isAdmin){
+    const actions=document.createElement('div');
+    const approveBtn=document.createElement('button');
+    approveBtn.className='btn-3d btn-approve';
+    approveBtn.textContent='Approve';
+    approveBtn.onclick=(e)=>{e.stopPropagation();updateStatus(p.id,'approved');};
+    const rejectBtn=document.createElement('button');
+    rejectBtn.className='btn-3d btn-reject';
+    rejectBtn.textContent='Reject';
+    rejectBtn.onclick=(e)=>{e.stopPropagation();updateStatus(p.id,'rejected');};
+    actions.appendChild(approveBtn);
+    actions.appendChild(rejectBtn);
+    card.appendChild(actions);
+  }
+
+  if(currentUser && currentUser.uid===p.posterUid){
+    const del=document.createElement('button');
+    del.className='btn-3d btn-delete';
+    del.textContent='Delete';
+    del.onclick=(e)=>{e.stopPropagation();deletePost(p.id);};
+    card.appendChild(del);
+  }
+  return card;
+}
+
+function updateStatus(id,status){db.ref('posts/'+id+'/status').set(status);}
+function deletePost(id){if(confirm("Delete this post?"))db.ref('posts/'+id).remove();}
 </script>
 </body>
 </html>
