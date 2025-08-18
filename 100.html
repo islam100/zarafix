@@ -14,8 +14,8 @@
              display:flex; align-items:center; justify-content:space-between;
              padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
     header h1 { margin:0; font-size:22px; text-shadow:1px 1px 3px #000; }
-    button { cursor:pointer; padding:8px 16px; border:none; border-radius:8px;
-             box-shadow:0 4px 6px rgba(0,0,0,0.3); font-weight:bold; }
+    button { cursor:pointer; padding:8px 12px; border:none; border-radius:8px;
+             box-shadow:0 4px 6px rgba(0,0,0,0.3); font-weight:bold; margin:3px; }
     .btn3d { background:#4CAF50; color:#fff; }
     .btn3d:disabled { background:#999; box-shadow:none; }
     .logoutBtn { background:#E53935; color:#fff; }
@@ -46,6 +46,7 @@
     form label { font-size:14px; font-weight:bold; margin-top:8px; display:block; }
     form input, form select { width:100%; padding:6px; margin:4px 0 10px;
                               border:1px solid #ccc; border-radius:6px; }
+    .btnRow { margin-top:8px; display:flex; flex-wrap:wrap; }
   </style>
 </head>
 <body>
@@ -224,16 +225,38 @@ function loadPosts(){
       st.textContent=(p.status==="approved"?"✅ Approved":"⏳ Pending Approval");
       card.appendChild(st);
 
+      // Button row
+      const btnRow=document.createElement("div"); btnRow.className="btnRow";
+
       // delete option for poster
-      if(currentUser && currentUser.uid===p.posterUid){
+      if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
         const del=document.createElement("button");
-        del.textContent="🗑 Delete"; del.className="btn3d";
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
         del.onclick=async e=>{
           e.stopPropagation();
           if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove();
         };
-        card.appendChild(del);
+        btnRow.appendChild(del);
       }
+
+      // admin actions
+      if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+        const ap=document.createElement("button");
+        ap.textContent="✅ Approve"; ap.className="btn3d";
+        ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
+
+        const rj=document.createElement("button");
+        rj.textContent="❌ Reject"; rj.className="logoutBtn";
+        rj.onclick=async e=>{ e.stopPropagation(); if(confirm("Reject post?")) await db.ref("posts/"+p.id).remove(); };
+
+        const del=document.createElement("button");
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
+        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete post?")) await db.ref("posts/"+p.id).remove(); };
+
+        btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
+      }
+
+      card.appendChild(btnRow);
 
       // enlarge card
       card.onclick=()=>{
@@ -244,14 +267,6 @@ function loadPosts(){
           <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
           <p><b>Phone:</b> ${p.posterPhone}</p>`;
         if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
-
-        // Admin buttons
-        if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-          cardContent.innerHTML+=`<button id="ap" class="btn3d">✅ Approve</button>
-                                  <button id="rj" class="logoutBtn">❌ Reject</button>`;
-          document.getElementById("ap").onclick=()=>db.ref("posts/"+p.id).update({status:"approved"});
-          document.getElementById("rj").onclick=()=>db.ref("posts/"+p.id).remove();
-        }
         cardModal.style.display="flex";
         document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
       };
