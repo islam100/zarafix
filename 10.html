@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🏡 Real Estate</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
+  <!-- Firebase v8 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body{margin:0;font-family:sans-serif;background:#f0f2f5;color:#333;}
     header{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#2563eb;color:white;box-shadow:0 2px 6px rgba(0,0,0,.2);}
@@ -95,6 +96,7 @@
 </form>
 
 <script>
+// Firebase Config
 const firebaseConfig = {
   apiKey:"AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
   authDomain:"property-20d6d.firebaseapp.com",
@@ -105,6 +107,7 @@ const firebaseConfig = {
   appId:"1:916859697394:web:2a8f9ad2d62f8306dcb86b"
 };
 firebase.initializeApp(firebaseConfig);
+
 const auth=firebase.auth();
 const db=firebase.database();
 
@@ -123,6 +126,7 @@ const priceFilter=document.getElementById('priceFilter');
 
 let currentUser=null,isAdmin=false,allPosts=[],activeTab='all',page=1,perPage=10;
 
+// Login / Logout
 loginBtn.onclick=()=>{
   const provider=new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider);
@@ -143,20 +147,26 @@ auth.onAuthStateChanged(user=>{
   renderCards();
 });
 
+// Fetch Posts
 db.ref('posts').on('value',snap=>{
   allPosts=[];
   snap.forEach(child=>allPosts.push({...child.val(),id:child.key}));
   renderCards();
 });
 
+// Tabs
 tabAll.onclick=()=>{activeTab='all';tabAll.classList.add('active');tabMine.classList.remove('active');cardsEl.style.display='grid';myPostsEl.style.display='none';renderCards();};
 tabMine.onclick=()=>{activeTab='mine';tabMine.classList.add('active');tabAll.classList.remove('active');cardsEl.style.display='none';myPostsEl.style.display='grid';renderCards();};
+
+// Pagination
 prevBtn.onclick=()=>{if(page>1){page--;renderCards();}};
 nextBtn.onclick=()=>{if(page<Math.ceil(allPosts.length/perPage)){page++;renderCards();}};
 
+// Search & Filter
 searchBox.oninput=()=>renderCards();
 priceFilter.onchange=()=>renderCards();
 
+// Upload Images to ImgBB
 async function uploadImages(files){
   const urls=[];
   for(let i=0;i<Math.min(files.length,5);i++){
@@ -169,10 +179,10 @@ async function uploadImages(files){
   return urls;
 }
 
+// Submit Post
 postForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser)return alert("Login first");
-  loginBtn.disabled=true;
   const post={
     price:document.getElementById('price').value,
     bhk:document.getElementById('bhk').value,
@@ -189,19 +199,17 @@ postForm.onsubmit=async e=>{
   if(files.length>0) post.images=await uploadImages(files);
   db.ref('posts').push(post);
   postForm.reset();
-  loginBtn.disabled=false;
   alert("Post submitted! Waiting approval.");
 };
 
+// Render
 function renderCards(){
   cardsEl.innerHTML='';myPostsEl.innerHTML='';
   let posts=[...allPosts];
 
-  // search
   const q=searchBox.value.toLowerCase();
   if(q) posts=posts.filter(p=>(p.address||'').toLowerCase().includes(q)||(p.propertyType||'').toLowerCase().includes(q));
 
-  // price sort
   if(priceFilter.value==='low') posts.sort((a,b)=>parseFloat(a.price)-parseFloat(b.price));
   if(priceFilter.value==='high') posts.sort((a,b)=>parseFloat(b.price)-parseFloat(a.price));
 
