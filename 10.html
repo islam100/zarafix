@@ -2,604 +2,298 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZARA FIX – Products (Realtime DB, WhatsApp Contact)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zara Fix</title>
   <style>
-    :root{
-      --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --text:#e5e7eb;
-      --accent:#22c55e; --accent-dark:#15803d; --danger:#ef4444; --ring:#334155; --gold:#fbbf24;
-      --red:#7f1d1d; --red2:#450a0a; --amber:#b45309; --blue:#1e40af;
+    body {
+      font-family: Arial, sans-serif;
+      margin:0; padding:0;
+      background:#f9f9f9;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:radial-gradient(1200px 600px at 70% -10%, #1e293b 0, var(--bg) 55%);color:var(--text);min-height:100vh;}
-
-    /* ======= HEADER (unchanged as per your instruction) ======= */
-    header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;position:sticky;top:0;background:rgba(2,6,23,.7);backdrop-filter: blur(10px);border-bottom:1px solid #1f2937;z-index:60}
-
-    /* 3D colorful logo */
-    .logo{
-      font-weight:900; letter-spacing:1px; line-height:1; user-select:none; cursor:pointer;
-      font-size:34px;
-      background: conic-gradient(from 180deg, #22d3ee, #a78bfa, #f472b6, #f97316, #22c55e, #22d3ee);
-      background-clip:text; -webkit-background-clip:text; color:transparent;
-      text-shadow: 0 2px 0 rgba(255,255,255,.12), 0 6px 0 #0a0f1a, 0 14px 20px rgba(0,0,0,.6);
-      filter: drop-shadow(0 10px 22px rgba(0,0,0,.45));
+    header {
+      background: linear-gradient(45deg,#ff0080,#7928ca);
+      color:white; padding:10px 20px;
+      display:flex; justify-content:space-between; align-items:center;
     }
-    @media(min-width:900px){ .logo{ font-size:46px } }
+    .logo {
+      font-size:28px; font-weight:bold;
+      text-shadow:2px 2px 8px black;
+      color:yellow;
+    }
+    .menu { display:flex; gap:20px; }
+    .dropdown { position:relative; }
+    .dropdown button {
+      background:#fff; color:#333; padding:6px 12px;
+      border:none; border-radius:8px; font-weight:bold;
+      cursor:pointer; box-shadow:2px 2px 6px rgba(0,0,0,0.3);
+    }
+    .dropdown-content {
+      display:none; position:absolute; top:100%; left:0;
+      background:#fff; min-width:160px;
+      box-shadow:0 8px 16px rgba(0,0,0,0.2);
+      z-index:1;
+    }
+    .dropdown-content a {
+      color:black; padding:8px 12px;
+      display:block; text-decoration:none;
+    }
+    .dropdown:hover .dropdown-content { display:block; }
 
-    .menus{display:flex;gap:10px;align-items:center}
-    .menu-wrap{position:relative}
-    .menu-btn{padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;cursor:pointer;box-shadow:inset 0 0 0 1px #0e1627, 0 8px 0 #0a0f1a;font-weight:800}
-    .menu-list{display:none;position:absolute;top:110%;left:0;background:#0b1220;border:1px solid #1f2937;border-radius:12px;min-width:200px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.45);z-index:70}
-    .menu-wrap:hover .menu-list{display:block}
-    .menu-item{display:block;padding:10px 12px;color:#e5e7eb;text-decoration:none;border-bottom:1px solid #1f2937}
-    .menu-item:hover{background:#111826}
+    #login-btn {
+      background:#fff; color:#333;
+      padding:6px 12px; border:none; border-radius:8px;
+      cursor:pointer; font-weight:bold;
+      box-shadow:2px 2px 6px rgba(0,0,0,0.3);
+    }
 
-    .header-actions{display:flex;align-items:center;gap:10px}
-    .tab{padding:9px 12px;border-radius:999px;border:1px solid #1f2937;background:#0b1220;color:#cbd5e1;font-weight:600;cursor:pointer}
-    .tab.active{border-color:#14532d;background:#052e16;color:#bbf7d0}
+    .filter-bar { padding:10px; text-align:center; }
+    .filter-bar select {
+      padding:6px 10px; border-radius:8px;
+    }
 
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:12px;border:1px solid #14532d;background:#052e16;color:#bbf7d0;font-weight:800;cursor:pointer;box-shadow:0 6px 0 #0c2c19;transition:transform .06s ease, box-shadow .06s ease}
-    .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c2c19}
-    .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
-    .btn-danger{border-color:#7f1d1d;background:#450a0a;color:#fecaca;box-shadow:0 6px 0 #2a0a0a}
-    .btn-amber{border-color:#78350f;background:#3f1d0b;color:#fde68a;box-shadow:0 6px 0 #2b1408}
-    .btn-ghost{border:1px dashed #334155;background:transparent;color:#cbd5e1;box-shadow:none}
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:12px; padding:15px;
+    }
+    .card {
+      background:white; border-radius:12px;
+      padding:10px; box-shadow:2px 2px 10px rgba(0,0,0,0.2);
+      transition:transform 0.3s;
+      cursor:pointer; position:relative;
+    }
+    .card img { width:100%; height:150px; object-fit:cover; border-radius:10px; }
+    .card.expanded {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:90%; max-height:90vh;
+      overflow:auto; z-index:1000;
+      background:white;
+    }
+    .card.expanded img {
+      width:100%; height:auto;
+      max-height:80vh;
+      object-fit:contain; border-radius:10px;
+    }
+    .whatsapp-btn, .reject-btn, .approve-btn, .delete-btn {
+      margin-top:5px;
+      padding:8px 12px;
+      border:none; border-radius:10px;
+      cursor:pointer; font-weight:bold;
+      display:block;
+      box-shadow:2px 2px 5px rgba(0,0,0,0.3);
+    }
+    .whatsapp-btn { background:green; color:white; }
+    .reject-btn { background:red; color:white; }
+    .approve-btn { background:blue; color:white; }
+    .delete-btn { background:orange; color:white; }
 
-    main{max-width:1100px;margin:0 auto;padding:16px;}
+    .pending { background:#fff0cc; }
+    .rejected { background:#ffdddd; }
+    .approved { background:#ddffdd; }
 
-    /* Grid: mobile में 2 cards/row */
-    .grid{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
-    @media(min-width:760px){.grid{grid-template-columns:repeat(3,1fr)}}
-    @media(min-width:1040px){.grid{grid-template-columns:repeat(4,1fr)}}
-
-    /* 3D Product Cards */
-    .card{background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid #1f2937;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,0.03);padding:10px;transition:transform .2s ease, box-shadow .2s ease;position:relative;overflow:hidden;cursor:pointer}
-    .card:hover{transform:translateY(-4px)}
-    .card .gallery{position:relative}
-    .card img{width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px; box-shadow:0 10px 18px rgba(0,0,0,.25)}
-    .dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:6px}
-    .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5)}
-    .dot.active{background:#fff}
-
-    .title{font-weight:800;font-size:15px}
-    .muted{color:var(--muted);font-size:12px}
-    .info{font-size:12px;margin:6px 0}
-    .price{font-size:14px;font-weight:900}
-    .badge{position:absolute;top:8px;left:8px;padding:4px 8px;border-radius:999px;font-size:11px;border:1px solid #1f2937;background:#0b1220}
-
-    .pending{border-color:#7f1d1d}
-    .pending::before{content:"WAIT FOR APPROVAL";position:absolute;top:8px;right:8px;padding:4px 8px;border-radius:999px;font-size:11px;background:#7f1d1d;color:#fecaca}
-
-    .rejected{border-color:#78350f}
-    .rejected::before{content:"REJECTED";position:absolute;top:8px;right:8px;padding:4px 8px;border-radius:999px;background:#78350f;color:#fde68a;font-size:11px}
-
-    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:80}
-    .overlay.show{display:block}
-    .card.expanded{position:fixed;z-index:100;top:50%;left:50%;transform:translate(-50%,-50%) scale(1.02);width:min(92vw,480px)}
-
-    .panel{display:none}
-    .panel.active{display:block}
-
-    form{display:grid;gap:10px}
-    input,select,textarea{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0a0f1a;color:#e5e7eb}
-    label{font-size:12px;color:#a3b3cf}
-
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .stats{display:flex;gap:12px;flex-wrap:wrap}
-    .stat{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px 12px}
-    .table{width:100%;border-collapse:collapse;font-size:13px}
-    .table th,.table td{border-bottom:1px solid #1f2937;padding:8px;text-align:left}
-
-    .whats-btn{position:fixed;right:16px;bottom:16px}
-
-    /* Modal for editing menu links (admin only) */
-    .modal{display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.55);align-items:center;justify-content:center}
-    .modal.show{display:flex}
-    .modal-card{background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;min-width:min(92vw,680px)}
+    .form-section {
+      background:white; padding:15px; margin:20px;
+      border-radius:12px; box-shadow:2px 2px 10px rgba(0,0,0,0.2);
+    }
+    .form-section input, .form-section select {
+      display:block; margin-bottom:10px; width:100%;
+      padding:8px; border-radius:6px; border:1px solid #ccc;
+    }
+    .form-section button {
+      background:purple; color:white; font-weight:bold;
+      padding:10px; border:none; border-radius:8px;
+      box-shadow:2px 2px 6px rgba(0,0,0,0.4);
+      cursor:pointer;
+    }
+    .admin-section { margin:20px; }
   </style>
 </head>
 <body>
-  <header>
-    <!-- Left: Logo (unchanged) -->
-    <div class="logo" onclick="document.querySelector('[data-target=public]').click()">ZARA FIX</div>
-
-    <!-- Center: Menus (unchanged) -->
-    <div class="menus">
-      <div class="menu-wrap">
-        <button class="menu-btn">Services ▾</button>
-        <div class="menu-list" id="menuServices">
-          <a class="menu-item" id="lnkProperty"   target="_blank">Property</a>
-          <a class="menu-item" id="lnkAmbulance"  target="_blank">Ambulance</a>
-          <a class="menu-item" id="lnkAllService" target="_blank">All Services</a>
-        </div>
+<header>
+  <div class="logo">Zara Fix</div>
+  <div class="menu">
+    <div class="dropdown">
+      <button>Services</button>
+      <div class="dropdown-content" id="menu1">
+        <a href="#">Property</a>
+        <a href="#">Ambulance</a>
+        <a href="#">All Service</a>
       </div>
-      <div class="menu-wrap">
-        <button class="menu-btn">Info ▾</button>
-        <div class="menu-list" id="menuInfo">
-          <a class="menu-item" id="lnkProvider" target="_blank">Provider</a>
-          <a class="menu-item" id="lnkAbout"    target="_blank">About</a>
-          <a class="menu-item" id="lnkContact"  target="_blank">Contact</a>
-          <a class="menu-item" id="lnkPrivacy"  target="_blank">Privacy Policy</a>
-        </div>
-      </div>
-      <button id="editMenusBtn" class="btn btn-ghost" style="display:none">✦ Edit Links</button>
     </div>
-
-    <!-- Right: Tabs + Login (unchanged) -->
-    <div class="header-actions">
-      <button class="tab active" data-target="public">Public</button>
-      <button class="tab" data-target="shop">Shopkeeper</button>
-      <button class="tab" data-target="admin">Admin</button>
-      <button class="btn" id="loginBtn">Login with Google</button>
-      <button class="btn btn-danger" id="logoutBtn" style="display:none">Logout</button>
-    </div>
-  </header>
-
-  <main>
-    <!-- PUBLIC -->
-    <section id="public" class="panel active">
-      <div class="row" style="margin-bottom:10px">
-        <label>Category Filter</label>
-        <select id="catFilter"></select>
+    <div class="dropdown">
+      <button>Info</button>
+      <div class="dropdown-content" id="menu2">
+        <a href="#">Provider</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy Policy</a>
       </div>
-      <p class="muted">ऑफर सीमित अवधि के लिए है , अभी खरीदारी करने  पर आपको भारी छूट दी जाएगी
- </p>
-      <div id="publicGrid" class="grid"></div>
-    </section>
-
-    <!-- SHOPKEEPER -->
-    <section id="shop" class="panel">
-      <div id="shopGuard" class="muted">Shopkeeper panel देखने के लिए Google login करें। आपका email <b>shopkeepers</b> में होना चाहिए।</div>
-      <div id="shopPanel" style="display:none;margin-top:12px">
-        <div class="row stats">
-          <div class="stat">Pending: <span id="shopPending">0</span></div>
-          <div class="stat">Approved: <span id="shopApproved">0</span></div>
-          <div class="stat">Rejected: <span id="shopRejected">0</span></div>
-        </div>
-
-        <h3>नया Product जोड़ें</h3>
-        <form id="prodForm">
-          <div class="row">
-            <input id="pdName" placeholder="Product Name" required>
-            <input id="pdPrice" type="number" placeholder="Price (₹)" required>
-            <input id="pdDiscount" placeholder="Discount (10% / ₹200)">
-          </div>
-          <div class="row">
-            <label>Category</label>
-            <select id="pdCategory" required></select>
-          </div>
-          <div class="row">
-            <label>Images (1–5)</label>
-            <input id="pdImgs" type="file" accept="image/*" multiple required>
-          </div>
-          <button class="btn" type="submit">Submit for Approval</button>
-          <div class="muted">Submit के बाद status: <b>pending</b> रहेगा। Admin approve करेगा तब public listing में live होगा।</div>
-        </form>
-
-        <h3 style="margin-top:16px">मेरे Products</h3>
-        <div id="shopGrid" class="grid"></div>
-      </div>
-    </section>
-
-    <!-- ADMIN -->
-    <section id="admin" class="panel">
-      <p class="muted">Admin: केवल <b>zarasamajiksevasanstha@gmail.com</b> Google login से। यहाँ से shops और products manage करें।</p>
-      <div id="adminPanel" style="display:none;margin-top:14px">
-        <div class="row stats">
-          <div class="stat">Total: <span id="statTotal">0</span></div>
-          <div class="stat">Approved: <span id="statApproved">0</span></div>
-          <div class="stat">Pending: <span id="statPending">0</span></div>
-          <div class="stat">Rejected: <span id="statRejected">0</span></div>
-        </div>
-
-        <h3>Shopkeeper जोड़ें</h3>
-        <form id="shopForm">
-          <div class="row">
-            <input id="sEmail" placeholder="Email" required>
-            <input id="sName" placeholder="Shop Name" required>
-          </div>
-          <div class="row">
-            <input id="sPhone" placeholder="WhatsApp Number (country code सहित, जैसे 91xxxxxxxxxx)" required>
-            <input id="sAddr" placeholder="Shop Address" required>
-          </div>
-          <div class="row">
-            <input id="sExpiry" type="date" required>
-          </div>
-          <button class="btn" type="submit">Add Shop</button>
-        </form>
-
-        <h3 style="margin-top:16px">All Products</h3>
-        <table class="table" id="adminTable">
-          <thead><tr><th>When</th><th>Product</th><th>Category</th><th>Price</th><th>Discount</th><th>Shop</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div id="adminGuard" class="muted">Admin panel देखने के लिए Google login करें (fixed admin email).</div>
-    </section>
-  </main>
-
-  <div id="overlay" class="overlay"></div>
-
-  <!-- Edit Menus Modal (admin only) -->
-  <div id="menusModal" class="modal">
-    <div class="modal-card">
-      <h3>Header Links Edit करें</h3>
-      <p class="muted">दो dropdown (Services / Info) के links यहाँ बदलें:</p>
-      <form id="menusForm" style="margin-top:8px">
-        <div class="row"><label style="width:140px">Property URL</label><input id="uProperty" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">Ambulance URL</label><input id="uAmbulance" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">All Services URL</label><input id="uAll" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">Provider URL</label><input id="uProvider" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">About URL</label><input id="uAbout" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">Contact URL</label><input id="uContact" placeholder="https://..." required style="flex:1"></div>
-        <div class="row"><label style="width:140px">Privacy URL</label><input id="uPrivacy" placeholder="https://..." required style="flex:1"></div>
-        <div class="row" style="justify-content:flex-end;margin-top:8px">
-          <button type="button" class="btn btn-ghost" id="closeMenus">Close</button>
-          <button class="btn" type="submit">Save Links</button>
-        </div>
-      </form>
     </div>
   </div>
+  <button id="login-btn">Login</button>
+</header>
 
-  <!-- Firebase SDKs (Compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<div class="filter-bar">
+  <select id="categoryFilter">
+    <option value="">सभी Categories</option>
+  </select>
+</div>
 
-  <script>
-    /***********************
-     * 1) Firebase Init
-     ***********************/
-    const firebaseConfig = {
-      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-      authDomain: "loot-lo-15328.firebaseapp.com",
-      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-      projectId: "loot-lo-15328",
-      storageBucket: "loot-lo-15328.appspot.com",
-      messagingSenderId: "677769861892",
-      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-    };
-    firebase.initializeApp(firebaseConfig);
+<div class="grid" id="productGrid"></div>
 
-    const auth = firebase.auth();
-    const db   = firebase.database();
+<div id="shopForm" class="form-section" style="display:none;">
+  <h2>अपना Product Submit करें</h2>
+  <input id="pname" placeholder="Product Name"/>
+  <input id="pprice" placeholder="Price" type="number"/>
+  <input id="pdiscount" placeholder="Discount (%)" type="number"/>
+  <input id="pcategory" placeholder="Category"/>
+  <input id="pwhatsapp" placeholder="WhatsApp Number"/>
+  <input id="pimage" type="text" placeholder="Image URL (comma separated)"/>
+  <button id="submitProduct">Submit</button>
+</div>
 
-    const FIXED_ADMIN = 'zarasamajiksevasanstha@gmail.com';
-    const DEFAULT_ADMIN_WHATS = '917378342192';
-    const IMGBB_API_KEY = 'ff05d1b5c3b3e139253856f0ad1123df';
+<div id="adminSection" class="admin-section" style="display:none;">
+  <h2>Admin Dashboard</h2>
+  <p>Pending / Approved / Rejected products यहां दिखेंगे (Approve/Reject control के साथ)।</p>
+</div>
 
-    // Single source of truth for categories (form + filter)
-    const CATEGORIES = [
-      'All',
-      'Electronics',
-      'Clothing',
-      'Home',
-      'Services',
-      'Automobile',
-      'Food',
-      'Health',
-      'Real Estate',
-      'Education',
-      'Other'
-    ];
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, onValue, remove, update, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    /***********************
-     * 2) Tabs (unchanged)
-     ***********************/
-    document.querySelectorAll('.tab').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.target).classList.add('active');
-      })
-    })
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+    authDomain: "loot-lo-15328.firebaseapp.com",
+    databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+    projectId: "loot-lo-15328",
+    storageBucket: "loot-lo-15328.appspot.com",
+    messagingSenderId: "677769861892",
+    appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+  };
 
-    /***********************
-     * 3) Auth (Google)
-     ***********************/
-    const loginBtn  = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-    loginBtn.onclick = ()=>{
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(e=>alert(e.message));
-    }
-    logoutBtn.onclick = ()=> auth.signOut();
+  const loginBtn = document.getElementById("login-btn");
+  const productGrid = document.getElementById("productGrid");
+  const filter = document.getElementById("categoryFilter");
+  const shopForm = document.getElementById("shopForm");
+  const adminSection = document.getElementById("adminSection");
 
-    let currentUser = null; // {email, uid, isAdmin, isShop, shopRecord}
+  loginBtn.onclick = () => {
+    if(auth.currentUser) signOut(auth);
+    else signInWithPopup(auth, provider);
+  };
 
-    auth.onAuthStateChanged(async user=>{
-      currentUser = null;
-      if(user){
-        const email = user.email.toLowerCase();
-        const isAdmin = (email === FIXED_ADMIN.toLowerCase());
-        let shopRecord = null; let isShop=false;
-        const snap = await db.ref('shopkeepers').get();
-        snap.forEach(ch=>{ const v=ch.val(); if(v.email && v.email.toLowerCase()===email){ shopRecord={id:ch.key,...v}; isShop=true } });
-        currentUser = { email, uid:user.uid, isAdmin, isShop, shopRecord };
+  onAuthStateChanged(auth, user => {
+    if(user){
+      loginBtn.textContent = "Logout ("+user.email+")";
+      shopForm.style.display = "block";
+      if(user.email==="zarasamajiksevasanstha@gmail.com"){
+        adminSection.style.display = "block";
       }
-      updateGuards();
-      populateCategories();
-      subscribePublic();
-      subscribeShop();
-      subscribeAdmin();
-      setupMenus();
+    } else {
+      loginBtn.textContent = "Login";
+      shopForm.style.display = "none";
+      adminSection.style.display = "none";
+    }
+  });
+
+  // Load Products
+  function loadProducts(){
+    const productsRef = ref(db,"products");
+    onValue(productsRef, snapshot => {
+      let products=[];
+      snapshot.forEach(child=>{
+        let p = child.val();
+        p.key = child.key;
+        products.push(p);
+      });
+      products.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+      renderProducts(products);
+    });
+  }
+
+  function renderProducts(products){
+    productGrid.innerHTML="";
+    let cats=new Set();
+    products.forEach(p=>{
+      if(p.category) cats.add(p.category);
+    });
+    filter.innerHTML='<option value="">सभी Categories</option>';
+    cats.forEach(c=>{
+      filter.innerHTML+=`<option value="${c}">${c}</option>`;
     });
 
-    function updateGuards(){
-      const loggedIn = !!currentUser;
-      document.getElementById('logoutBtn').style.display = loggedIn? 'inline-flex':'none';
-      document.getElementById('loginBtn').style.display  = loggedIn? 'none':'inline-flex';
-
-      document.getElementById('shopPanel').style.display = (currentUser && currentUser.isShop)? 'block':'none';
-      document.getElementById('shopGuard').style.display = (currentUser && currentUser.isShop)? 'none':'block';
-
-      document.getElementById('adminPanel').style.display = (currentUser && currentUser.isAdmin)? 'block':'none';
-      document.getElementById('adminGuard').style.display = (currentUser && currentUser.isAdmin)? 'none':'block';
-
-      document.getElementById('editMenusBtn').style.display = (currentUser && currentUser.isAdmin)? 'inline-flex':'none';
-    }
-
-    /***********************
-     * 4) Categories (form + public filter)
-     ***********************/
-    function populateCategories(){
-      const catSel = document.getElementById('pdCategory');
-      const catFilter = document.getElementById('catFilter');
-      if(catSel && !catSel.dataset.ready){
-        CATEGORIES.filter(c=>c!=='All').forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o) });
-        catSel.dataset.ready = '1';
-      }
-      if(catFilter && !catFilter.dataset.ready){
-        CATEGORIES.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catFilter.appendChild(o) });
-        catFilter.value='All';
-        catFilter.onchange = ()=> subscribePublic(); // re-render on change
-        catFilter.dataset.ready = '1';
-      }
-    }
-
-    /***********************
-     * 5) PUBLIC (Realtime listing)
-     ***********************/
-    const overlay = document.getElementById('overlay');
-    let publicUnsub = null;
-
-    function subscribePublic(){
-      if(publicUnsub){ db.ref('products').off('value', publicUnsub); publicUnsub=null }
-      const selected = (document.getElementById('catFilter')||{}).value || 'All';
-      publicUnsub = db.ref('products').on('value', (snapshot)=>{
-        const list=[]; snapshot.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
-        const filtered = list.filter(x=> !x.deleted && (x.status==='approved' || x.status==='pending'))
-          .filter(x=> selected==='All' ? true : (x.category===selected));
-        filtered.sort((a,b)=> Number(b.createdAt||0)-Number(a.createdAt||0)); // new on top
-        renderPublic(filtered);
-        syncAdminStats(list);
-      });
-    }
-
-    function renderGallery(container, images){
-      if(!Array.isArray(images) || images.length===0){ container.innerHTML=''; return }
-      const img = document.createElement('img');
-      let idx = 0; img.src = images[0];
-      const dots = document.createElement('div'); dots.className='dots';
-      const dotEls = images.map((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===0?' active':''); dots.appendChild(d); d.addEventListener('click', (e)=>{ e.stopPropagation(); idx=i; img.src=images[idx]; updateDots() }); return d });
-      function updateDots(){ dotEls.forEach((d,i)=> d.classList.toggle('active', i===idx)) }
-      container.appendChild(img); container.appendChild(dots);
-      container.addEventListener('click', (e)=>{ idx=(idx+1)%images.length; img.src=images[idx]; updateDots() })
-    }
-
-    function renderPublic(items){
-      const grid = document.getElementById('publicGrid');
-      grid.innerHTML='';
-      items.forEach(p=>{
-        const card = document.createElement('div');
-        card.className = 'card ' + (p.status==='pending' ? 'pending' : '') + (p.status==='rejected' ? 'rejected' : '');
-        card.innerHTML = `
-          <span class=\"badge\">${p.category||'-'}</span>
-          <div class=\"gallery\"></div>
-          <div class=\"title\">${p.name||''}</div>
-          <div class=\"price\">₹${p.price||0} <span class=\"muted\">• Discount: ${p.discount||'-'}</span></div>
-          <div class=\"row\">
-            <button class=\"btn\" data-act=\"whatsapp\">WhatsApp Shop</button>
-          </div>
-        `;
-        renderGallery(card.querySelector('.gallery'), (p.images||[]).slice(0,5));
-        card.addEventListener('click', (e)=>{ if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show') })
-        overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
-        card.querySelector('[data-act=whatsapp]').addEventListener('click', (e)=>{
-          e.stopPropagation();
-          const shopPhone = (p.shopPhone && String(p.shopPhone).replace(/\D/g,'')) || DEFAULT_ADMIN_WHATS;
-          const msg = encodeURIComponent(`Hame aapka product pasand aaya hai.\nProduct: ${p.name} (₹${p.price})\nCategory: ${p.category||'-'}\nKripya puri jankari de.`);
-          window.open(`https://wa.me/${shopPhone}?text=${msg}`, '_blank');
-        })
-        grid.appendChild(card);
-      })
-    }
-
-    /***********************
-     * 6) SHOPKEEPER view (Realtime + Create Product)
-     ***********************/
-    let shopUnsub = null;
-    function subscribeShop(){
-      if(shopUnsub){ db.ref('products').off('value', shopUnsub); shopUnsub=null }
-      if(!(currentUser && currentUser.isShop)) return;
-      const myEmail = currentUser.shopRecord.email.toLowerCase();
-      shopUnsub = db.ref('products').on('value', (snapshot)=>{
-        const mine=[]; snapshot.forEach(ch=>{ const v={id:ch.key, ...ch.val()}; if((v.shopEmail||'').toLowerCase()===myEmail && !v.deleted) mine.push(v) });
-        mine.sort((a,b)=> Number(b.createdAt||0)-Number(a.createdAt||0) );
-        renderShop(mine);
-      })
-    }
-
-    function renderShop(mine){
-      const grid = document.getElementById('shopGrid'); grid.innerHTML='';
-      let p=0,a=0,r=0; mine.forEach(x=>{ if(x.status==='pending')p++; else if(x.status==='approved')a++; else if(x.status==='rejected')r++; })
-      document.getElementById('shopPending').textContent = p;
-      document.getElementById('shopApproved').textContent = a;
-      document.getElementById('shopRejected').textContent = r;
-
-      mine.forEach(pr=>{
-        const card = document.createElement('div');
-        card.className = 'card ' + (pr.status==='pending' ? 'pending' : (pr.status==='rejected'? 'rejected':''));
-        card.innerHTML = `
-          <span class=\"badge\">${pr.category||'-'}</span>
-          <div class=\"gallery\"></div>
-          <div class=\"title\">${pr.name||''}</div>
-          <div class=\"price\">₹${pr.price||0} <span class=\"muted\">• ${pr.discount||'-'}</span></div>
-          <div class=\"info\">Status: <b>${pr.status}</b></div>
-          <div class=\"row\">
-            <button class=\"btn btn-danger\" data-act=\"delete\">Delete</button>
-          </div>
-        `;
-        renderGallery(card.querySelector('.gallery'), (pr.images||[]).slice(0,5));
-        card.addEventListener('click', (e)=>{ if(e.target.closest('button')) return; card.classList.add('expanded'); overlay.classList.add('show') })
-        overlay.addEventListener('click', ()=>{ card.classList.remove('expanded'); overlay.classList.remove('show') }, {once:true});
-
-        card.querySelector('[data-act=delete]').addEventListener('click', async (e)=>{
-          e.stopPropagation();
-          if(!confirm('Delete इस product को सूची से छुपा देगा. Continue?')) return;
-          await db.ref('products/'+pr.id).update({ deleted:true, deletedAt: Date.now(), deletedBy: currentUser.email });
-        })
-        grid.appendChild(card);
-      })
-    }
-
-    document.getElementById('prodForm').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      if(!(currentUser && currentUser.isShop)) return alert('Shopkeeper only');
-      const files = Array.from(document.getElementById('pdImgs').files||[]);
-      if(files.length===0) return alert('कम से कम 1 image चुनें');
-      if(files.length>5) return alert('अधिकतम 5 images allowed');
-      try{
-        const urls = [];
-        for(const f of files){
-          const fd = new FormData(); fd.append('image', f);
-          const url = `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`;
-          const res = await fetch(url, { method:'POST', body: fd });
-          const data = await res.json(); if(!data.success) throw new Error('ImgBB upload failed');
-          urls.push(data.data.display_url);
+    let selected=filter.value;
+    products.forEach(p=>{
+      if(selected && p.category!==selected) return;
+      const div=document.createElement("div");
+      div.className="card "+(p.status||"pending");
+      div.innerHTML=`
+        <img src="${p.images? p.images[0]:""}" alt="">
+        <h3>${p.name}</h3>
+        <p>₹${p.price} - ${p.discount}% off</p>
+        <p>${p.category||""}</p>
+        <button class="whatsapp-btn">WhatsApp</button>
+        ${
+          auth.currentUser && auth.currentUser.email===p.shopEmail
+          ? `<button class="delete-btn">Delete</button>` : ""
         }
-        const payload = {
-          name: pdName.value.trim(),
-          price: Number(pdPrice.value),
-          discount: pdDiscount.value.trim(),
-          category: pdCategory.value,
-          images: urls,
-          shopEmail: currentUser.shopRecord.email,
-          shopPhone: currentUser.shopRecord.phone||DEFAULT_ADMIN_WHATS,
-          status: 'pending',
-          createdAt: Date.now(),
-          deleted:false
+        ${
+          auth.currentUser && auth.currentUser.email==="zarasamajiksevasanstha@gmail.com"
+          ? `<button class="approve-btn">Approve</button>
+             <button class="reject-btn">Reject</button>` : ""
+        }
+      `;
+      div.querySelector(".whatsapp-btn").onclick=()=> {
+        window.open(`https://wa.me/${p.whatsapp}?text=हमें आपका product "${p.name}" पसंद आया है, कृपया पूरी जानकारी दें`,"_blank");
+      };
+      if(div.querySelector(".delete-btn")){
+        div.querySelector(".delete-btn").onclick=()=>{
+          if(confirm("Delete your product?")){
+            remove(ref(db,"products/"+p.key));
+          }
         };
-        await db.ref('products').push(payload);
-        alert('Product submitted. Wait for approval.');
-        e.target.reset();
-      }catch(err){ alert(err.message) }
-    })
+      }
+      if(div.querySelector(".approve-btn")){
+        div.querySelector(".approve-btn").onclick=()=> update(ref(db,"products/"+p.key),{status:"approved"});
+      }
+      if(div.querySelector(".reject-btn")){
+        div.querySelector(".reject-btn").onclick=()=> update(ref(db,"products/"+p.key),{status:"rejected"});
+      }
+      div.onclick=(e)=>{ if(e.target.tagName!=="BUTTON") div.classList.toggle("expanded"); };
+      productGrid.appendChild(div);
+    });
+  }
 
-    /***********************
-     * 7) ADMIN view (Realtime + Approve/Reject)
-     ***********************/
-    let adminProductsUnsub = null, adminShopsUnsub = null;
-    function subscribeAdmin(){
-      if(adminProductsUnsub){ db.ref('products').off('value', adminProductsUnsub); adminProductsUnsub=null }
-      if(adminShopsUnsub){ db.ref('shopkeepers').off('value', adminShopsUnsub); adminShopsUnsub=null }
-      if(!(currentUser && currentUser.isAdmin)) return;
+  filter.onchange=()=> loadProducts();
+  loadProducts();
 
-      adminShopsUnsub = db.ref('shopkeepers').on('value', snap=>{ /* keep cache */ });
-
-      adminProductsUnsub = db.ref('products').on('value', snap=>{
-        const list=[]; snap.forEach(ch=> list.push({id:ch.key, ...ch.val()}));
-        const visible = list.filter(x=> !x.deleted);
-        visible.sort((a,b)=> Number(b.createdAt||0)-Number(a.createdAt||0));
-        renderAdminTable(visible);
-        syncAdminStats(visible);
-      })
-    }
-
-    function renderAdminTable(list){
-      const tbody=document.querySelector('#adminTable tbody'); tbody.innerHTML='';
-      list.forEach(p=>{
-        const tr=document.createElement('tr');
-        const when = new Date(p.createdAt||Date.now()).toLocaleString();
-        tr.innerHTML = `<td>${when}</td><td>${p.name||''}</td><td>${p.category||'-'}</td><td>₹${p.price||0}</td><td>${p.discount||'-'}</td><td>${p.shopEmail||''}</td><td>${p.status}</td><td></td>`;
-        const tdAct = tr.lastElementChild;
-        const btnApprove = document.createElement('button'); btnApprove.className='btn'; btnApprove.textContent='Approve';
-        const btnReject  = document.createElement('button'); btnReject.className='btn btn-amber'; btnReject.style.marginLeft='6px'; btnReject.textContent='Reject';
-        tdAct.appendChild(btnApprove); tdAct.appendChild(btnReject);
-        btnApprove.onclick = ()=> db.ref('products/'+p.id).update({ status:'approved', approvedAt: Date.now(), approvedBy: currentUser.email });
-        btnReject.onclick  = ()=> db.ref('products/'+p.id).update({ status:'rejected', rejectedAt: Date.now(), rejectedBy: currentUser.email });
-        tbody.appendChild(tr);
-      })
-    }
-
-    function syncAdminStats(list){
-      const total=list.length, approved=list.filter(x=>x.status==='approved').length, pending=list.filter(x=>x.status==='pending').length, rejected=list.filter(x=>x.status==='rejected').length;
-      document.getElementById('statTotal').textContent=total;
-      document.getElementById('statApproved').textContent=approved;
-      document.getElementById('statPending').textContent=pending;
-      document.getElementById('statRejected').textContent=rejected;
-    }
-
-    /***********************
-     * 8) Header Menus Links (DB + admin popup)
-     ***********************/
-    const linkNodes = {
-      property: document.getElementById('lnkProperty'),
-      ambulance: document.getElementById('lnkAmbulance'),
-      all: document.getElementById('lnkAllService'),
-      provider: document.getElementById('lnkProvider'),
-      about: document.getElementById('lnkAbout'),
-      contact: document.getElementById('lnkContact'),
-      privacy: document.getElementById('lnkPrivacy'),
+  // Shop Form Submit
+  document.getElementById("submitProduct").onclick=()=>{
+    const user=auth.currentUser;
+    if(!user) return alert("Login first!");
+    const data={
+      name:document.getElementById("pname").value,
+      price:document.getElementById("pprice").value,
+      discount:document.getElementById("pdiscount").value,
+      category:document.getElementById("pcategory").value,
+      whatsapp:document.getElementById("pwhatsapp").value,
+      images:document.getElementById("pimage").value.split(",").map(x=>x.trim()),
+      shopEmail:user.email,
+      status:"pending",
+      createdAt:Date.now()
     };
-
-    function setupMenus(){
-      db.ref('menuLinks').on('value', snap=>{ const d = snap.val() || defaultLinks(); applyMenuLinks(d) });
-      const btn = document.getElementById('editMenusBtn');
-      const modal = document.getElementById('menusModal');
-      const closeBtn = document.getElementById('closeMenus');
-      btn.onclick = ()=>{ if(!(currentUser && currentUser.isAdmin)) return; openLinksEditor(); modal.classList.add('show') };
-      closeBtn.onclick = ()=> modal.classList.remove('show');
-      document.getElementById('menusForm').onsubmit = (e)=>{
-        e.preventDefault(); if(!(currentUser && currentUser.isAdmin)) return;
-        const payload = readLinksFromForm(); db.ref('menuLinks').set(payload).then(()=>{ modal.classList.remove('show') })
-      }
-    }
-
-    function defaultLinks(){
-      return {
-        property:'https://example.com/property',
-        ambulance:'https://example.com/ambulance',
-        all:'https://example.com/all-services',
-        provider:'https://example.com/provider',
-        about:'https://example.com/about',
-        contact:'https://example.com/contact',
-        privacy:'https://example.com/privacy-policy'
-      }
-    }
-    function applyMenuLinks(d){ linkNodes.property.href = d.property; linkNodes.ambulance.href=d.ambulance; linkNodes.all.href=d.all; linkNodes.provider.href = d.provider; linkNodes.about.href=d.about; linkNodes.contact.href=d.contact; linkNodes.privacy.href=d.privacy; }
-    function openLinksEditor(){ db.ref('menuLinks').get().then(s=>{ const d = s.val() || defaultLinks(); uProperty.value=d.property; uAmbulance.value=d.ambulance; uAll.value=d.all; uProvider.value=d.provider; uAbout.value=d.about; uContact.value=d.contact; uPrivacy.value=d.privacy; }) }
-    function readLinksFromForm(){ return { property:uProperty.value.trim(), ambulance:uAmbulance.value.trim(), all:uAll.value.trim(), provider:uProvider.value.trim(), about:uAbout.value.trim(), contact:uContact.value.trim(), privacy:uPrivacy.value.trim() } }
-
-    /***********************
-     * 9) Admin: Add Shopkeeper (with WhatsApp phone)
-     ***********************/
-    document.getElementById('shopForm').addEventListener('submit', (e)=>{
-      e.preventDefault();
-      if(!(currentUser && currentUser.isAdmin)) return alert('Admin only');
-      const rec={ email:sEmail.value.trim(), name:sName.value.trim(), phone:sPhone.value.trim(), address:sAddr.value.trim(), expiry:sExpiry.value };
-      db.ref('shopkeepers').push(rec).then(()=>{ alert('Shop added'); e.target.reset(); })
-    })
-
-    /***********************
-     * 10) Notes (Security Rules Suggestion)
-     * - products: create by shop owner; approve/reject only admin; delete by owner (soft delete)
-     * - menuLinks: admin only
-     * - shopkeepers: admin only
-     ***********************/
-  </script>
+    const newRef=push(ref(db,"products"));
+    set(newRef,data);
+    alert("Submitted! Wait for admin approval.");
+  };
+</script>
 </body>
 </html>
