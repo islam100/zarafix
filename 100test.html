@@ -1,936 +1,146 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-} from "firebase/auth";
-import {
-  getDatabase,
-  ref,
-  onValue,
-  push,
-  set,
-  update,
-  remove,
-  serverTimestamp,
-  query,
-  orderByChild,
-} from "firebase/database";
-import { motion, AnimatePresence } from "framer-motion";
-
-/************************************
- * 🔧 Firebase Config (given by you)
- ************************************/
-const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const provider = new GoogleAuthProvider();
-
-/************************************
- * 🔐 Constants
- ************************************/
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-const IMGBB_API_KEY = "ff05d1b5c3b3e139253856f0ad1123df"; // image hosting
-
-/************************************
- * 🧩 Helpers
- ************************************/
-const classNames = (...arr) => arr.filter(Boolean).join(" ");
-
-const categories = [
-  "all",
-  "bike",
-  "car",
-  "cloth",
-  "watch",
-  "mobile",
-  "pc",
-];
-
-const defaultLinks = {
-  services: [
-    { label: "Property", href: "#" },
-    { label: "Ambulance", href: "#" },
-    { label: "All Services", href: "#" },
-  ],
-  info: [
-    { label: "Provider", href: "#" },
-    { label: "About", href: "#" },
-    { label: "Contact", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-  ],
-};
-
-/************************************
- * 🧭 Header Component (Dark + 3D Logo + 2 Menus + Google Login)
- ************************************/
-function Header({ user, onLogin, onLogout, isAdmin, links, onOpenEditLinks }) {
-  return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-gray-950/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        {/* Left: 3D colourful ZARA FIX logo */}
-        <motion.div
-          initial={{ y: -4, scale: 0.98 }}
-          animate={{ y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 160, damping: 12 }}
-          className="select-none"
-        >
-          <div className="text-2xl font-extrabold text-white drop-shadow-[0_6px_10px_rgba(236,72,153,0.55)]">
-            <span className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-violet-500 bg-clip-text text-transparent [text-shadow:0_2px_0_rgba(0,0,0,0.45)]">ZARA</span>{" "}
-            <span className="text-white">FIX</span>
-          </div>
-        </motion.div>
-
-        {/* Middle: two dropdown menus */}
-        <nav className="hidden items-center gap-8 md:flex">
-          <Dropdown label="Services" items={links?.services || defaultLinks.services} />
-          <Dropdown label="Info" items={links?.info || defaultLinks.info} />
-        </nav>
-
-        {/* Right: Login / Tabs */}
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <button
-              onClick={onOpenEditLinks}
-              className="hidden rounded-xl border border-white/10 bg-gray-800 px-3 py-1 text-xs text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_20px_rgba(0,0,0,0.45)] hover:bg-gray-700 md:block"
-              title="Edit dropdown links"
-            >
-              ⚙ Edit Links
-            </button>
-          )}
-
-          {user ? (
-            <div className="flex items-center gap-2">
-              <img
-                src={user.photoURL}
-                alt="avatar"
-                className="h-8 w-8 rounded-full border border-pink-400 shadow-[0_4px_16px_rgba(236,72,153,0.6)]"
-              />
-              <span className="hidden text-sm text-white sm:block">
-                {user.displayName}
-              </span>
-              <Button3D onClick={onLogout}>Logout</Button3D>
-            </div>
-          ) : (
-            <Button3D onClick={onLogin}>Login with Google</Button3D>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile dropdowns */}
-      <div className="flex items-center justify-center gap-6 border-t border-white/5 px-3 py-2 md:hidden">
-        <Dropdown label="Services" items={links?.services || defaultLinks.services} />
-        <Dropdown label="Info" items={links?.info || defaultLinks.info} />
-      </div>
-    </header>
-  );
-}
-
-function Dropdown({ label, items }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="rounded-xl px-3 py-2 text-sm text-white/90 outline-none transition hover:text-pink-400"
-      >
-        {label} ▾
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl"
-          >
-            {items.map((it, idx) => (
-              <a
-                key={idx}
-                href={it.href}
-                className="block px-4 py-2 text-sm text-white/80 hover:bg-gray-800"
-              >
-                {it.label}
-              </a>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/************************************
- * 🎛️ Tabs (Public / Shopkeeper / Admin)
- ************************************/
-function Tabs({ value, onChange, isAdmin, isShopkeeper }) {
-  const tabs = [
-    { key: "public", label: "Public" },
-    ...(isShopkeeper ? [{ key: "shop", label: "Shopkeeper" }] : []),
-    ...(isAdmin ? [{ key: "admin", label: "Admin" }] : []),
-  ];
-  return (
-    <div className="sticky top-[64px] z-30 border-b border-white/10 bg-gray-950/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl gap-3 px-4 py-2">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => onChange(t.key)}
-            className={classNames(
-              "rounded-2xl px-4 py-2 text-sm transition",
-              value === t.key
-                ? "bg-pink-600 text-white shadow-[0_10px_25px_rgba(236,72,153,0.6)]"
-                : "text-white/80 hover:text-white hover:bg-white/5"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/************************************
- * 🛒 Product Card (3D, colourful, gallery, WhatsApp)
- ************************************/
-function ProductCard({ product, onOpen, isPending, isRejected }) {
-  const [idx, setIdx] = useState(0);
-  const images = product.images || [];
-  const hasImages = images.length > 0;
-
-  const badge = isRejected
-    ? { text: "REJECTED", cls: "bg-gray-800 text-white" }
-    : isPending
-    ? { text: "WAIT FOR APPROVAL", cls: "bg-red-600 text-white" }
-    : null;
-
-  const whatsappText = encodeURIComponent(
-    `Hame apka product pasand aaya hai\nProduct: ${product.name}\nPrice: ${product.price}\nKripya puri jankari dein.`
-  );
-  const waLink = `https://wa.me/${product.whatsapp}?text=${whatsappText}`;
-
-  return (
-    <motion.div
-      layout
-      onClick={() => onOpen(product)}
-      className={classNames(
-        "relative cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br shadow-2xl transition-transform",
-        "from-gray-800 via-gray-900 to-black",
-        "hover:-translate-y-1 hover:shadow-[0_30px_80px_rgba(236,72,153,0.35)]"
-      )}
-    >
-      {badge && (
-        <div className={classNames("absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-semibold", badge.cls)}>
-          {badge.text}
-        </div>
-      )}
-
-      {/* Image area */}
-      <div className="relative aspect-[4/3] w-full bg-black/40">
-        {hasImages ? (
-          <img
-            src={images[idx]}
-            alt={product.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-white/40">
-            No Image
-          </div>
-        )}
-
-        {images.length > 1 && (
-          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIdx(i);
-                }}
-                className={classNames(
-                  "h-2 w-2 rounded-full",
-                  i === idx ? "bg-white" : "bg-white/40"
-                )}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="space-y-2 p-4">
-        <h3 className="text-base font-semibold leading-tight text-white">
-          {product.name}
-        </h3>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="rounded-lg bg-white/5 px-2 py-1 font-bold text-white">
-            ₹{product.price}
-          </span>
-          {product.discount && (
-            <span className="rounded-lg bg-emerald-600/20 px-2 py-1 text-emerald-300">
-              {product.discount} OFF
-            </span>
-          )}
-          {product.category && (
-            <span className="rounded-lg bg-white/5 px-2 py-1 text-white/70">
-              {product.category}
-            </span>
-          )}
-        </div>
-
-        <div className="pt-2">
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_15px_40px_rgba(16,185,129,0.45)] hover:brightness-110"
-          >
-            WhatsApp Shop
-          </a>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/************************************
- * 🔍 Filters bar for Public
- ************************************/
-function FiltersBar({ category, setCategory, search, setSearch }) {
-  return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-2">
-        <label className="text-white/70">Category:</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded-xl border border-white/10 bg-gray-900 px-3 py-2 text-white shadow-inner outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search product name..."
-        className="w-full rounded-2xl border border-white/10 bg-gray-900 px-4 py-2 text-white shadow-inner outline-none sm:max-w-sm"
-      />
-    </div>
-  );
-}
-
-/************************************
- * 🧾 Modal for full view
- ************************************/
-function ProductModal({ product, onClose }) {
-  const esc = (e) => e.key === "Escape" && onClose();
-  useEffect(() => {
-    document.addEventListener("keydown", esc);
-    return () => document.removeEventListener("keydown", esc);
-  }, []);
-
-  const images = product?.images || [];
-  const [idx, setIdx] = useState(0);
-
-  if (!product) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          onClick={(e) => e.stopPropagation()}
-          initial={{ scale: 0.96, y: 10 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.96, y: 10 }}
-          transition={{ type: "spring", stiffness: 180, damping: 16 }}
-          className="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-gray-950 shadow-2xl"
-        >
-          <div className="relative aspect-video w-full bg-black/30">
-            {images.length ? (
-              <img
-                src={images[idx]}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-white/40">
-                No Image
-              </div>
-            )}
-            {images.length > 1 && (
-              <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
-                {images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setIdx(i)}
-                    className={classNames(
-                      "h-2.5 w-2.5 rounded-full",
-                      i === idx ? "bg-white" : "bg-white/40"
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2 p-5">
-            <h3 className="text-xl font-bold text-white">{product.name}</h3>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="rounded-lg bg-white/5 px-2 py-1 font-bold text-white">
-                ₹{product.price}
-              </span>
-              {product.discount && (
-                <span className="rounded-lg bg-emerald-600/20 px-2 py-1 text-emerald-300">
-                  {product.discount} OFF
-                </span>
-              )}
-              {product.category && (
-                <span className="rounded-lg bg-white/5 px-2 py-1 text-white/70">
-                  {product.category}
-                </span>
-              )}
-            </div>
-            <div className="flex justify-end">
-              <Button3D onClick={onClose}>Close</Button3D>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-/************************************
- * 🧑‍💼 Admin Panel
- ************************************/
-function AdminPanel({ products, onApprove, onReject, stats }) {
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <h2 className="mb-4 text-xl font-bold text-white">Admin Dashboard</h2>
-
-      {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total" value={stats.total} />
-        <StatCard label="Approved" value={stats.approved} />
-        <StatCard label="Pending" value={stats.pending} />
-        <StatCard label="Rejected" value={stats.rejected} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        {products.map((p) => (
-          <div
-            key={p.id}
-            className="flex flex-col justify-between gap-3 rounded-2xl border border-white/10 bg-gray-900 p-4 sm:flex-row sm:items-center"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-14 w-20 overflow-hidden rounded-xl bg-black/40">
-                {p.images?.[0] ? (
-                  <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-white/40">
-                    No Image
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="font-semibold text-white">{p.name}</div>
-                <div className="text-sm text-white/70">₹{p.price} • {p.category}</div>
-                <div className="text-xs text-white/60">Status: {p.status}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button3D onClick={() => onApprove(p.id)}>✅ Approve</Button3D>
-              <Button3D onClick={() => onReject(p.id)} variant="danger">❌ Reject</Button3D>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-gray-900 p-4 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-      <div className="text-sm text-white/70">{label}</div>
-      <div className="text-2xl font-extrabold text-white">{value}</div>
-    </div>
-  );
-}
-
-/************************************
- * 🏪 Shopkeeper Panel
- ************************************/
-function ShopkeeperPanel({ user, products, onDelete, onSubmit }) {
-  const mine = products.filter((p) => p.shopId === user?.uid);
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <h2 className="mb-4 text-xl font-bold text-white">Shopkeeper</h2>
-
-      <AddProductForm onSubmit={onSubmit} />
-
-      <h3 className="mt-8 mb-3 text-lg font-semibold text-white">Your Products</h3>
-      <div className="grid grid-cols-1 gap-4">
-        {mine.map((p) => (
-          <div
-            key={p.id}
-            className={classNames(
-              "flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center",
-              p.status === "pending"
-                ? "border-red-500/40 bg-red-950/30"
-                : p.status === "rejected"
-                ? "border-white/10 bg-gray-900"
-                : "border-emerald-500/30 bg-emerald-950/20"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-14 w-20 overflow-hidden rounded-xl bg-black/40">
-                {p.images?.[0] ? (
-                  <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-white/40">
-                    No Image
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="font-semibold text-white">{p.name}</div>
-                <div className="text-sm text-white/70">₹{p.price} • {p.category}</div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                  {p.status === "pending" && <span className="text-red-400">WAIT FOR APPROVAL</span>}
-                  {p.status === "approved" && <span className="text-emerald-400">APPROVED</span>}
-                  {p.status === "rejected" && <span className="text-white/60">REJECTED</span>}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button3D onClick={() => onDelete(p.id)} variant="danger">Delete</Button3D>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/************************************
- * ➕ Add Product Form (max 5 images via ImgBB)
- ************************************/
-function AddProductForm({ onSubmit }) {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [discount, setDiscount] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [category, setCategory] = useState("mobile");
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErr("");
-    setLoading(true);
-
-    try {
-      const urls = await uploadToImgBB(files.slice(0, 5));
-      await onSubmit({ name, price, discount, whatsapp, category, images: urls });
-      // Reset
-      setName("");
-      setPrice("");
-      setDiscount("");
-      setWhatsapp("");
-      setCategory("mobile");
-      setFiles([]);
-    } catch (e) {
-      console.error(e);
-      setErr("Upload/Submit failed");
-    } finally {
-      setLoading(false);
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix - Admin Panel</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      color: #333;
     }
-  };
+    header {
+      background: #007bff;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    nav {
+      background: #333;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: #fff;
+      padding: 12px 18px;
+      text-decoration: none;
+      display: block;
+    }
+    nav a:hover {
+      background: #007bff;
+    }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0px 3px 8px rgba(0,0,0,0.2);
+    }
+    h2 {
+      color: #007bff;
+      margin-top: 0;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .card {
+      background: #f9f9f9;
+      padding: 15px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .footer {
+      background: #333;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-gray-900 p-5">
-      <h4 className="text-white">Add Product</h4>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <input
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-          placeholder="Product Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          type="number"
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-        />
-        <input
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-          placeholder="Discount (e.g. 10%)"
-          value={discount}
-          onChange={(e) => setDiscount(e.target.value)}
-        />
-        <input
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-          placeholder="Shop WhatsApp (+91...)"
-          value={whatsapp}
-          onChange={(e) => setWhatsapp(e.target.value)}
-          required
-        />
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-        >
-          {categories.filter((c) => c !== "all").map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={(e) => setFiles(Array.from(e.target.files || []))}
-          className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-        />
-      </div>
-      {files.length > 5 && (
-        <p className="text-sm text-red-400">Max 5 images allowed — extra files will be ignored.</p>
-      )}
-      {err && <p className="text-sm text-red-400">{err}</p>}
-      <div className="flex justify-end">
-        <Button3D type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Submit"}
-        </Button3D>
-      </div>
+  <header>Zara Fix</header>
+
+  <nav>
+    <a href="#">Services</a>
+    <a href="#">Property</a>
+    <a href="#">Ambulance</a>
+    <a href="#">All Services</a>
+    <a href="#">Provider</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+    <a href="#">Privacy Policy</a>
+  </nav>
+
+  <div class="container">
+    <h2>🔑 Login</h2>
+    <form>
+      <input type="email" placeholder="Email" required>
+      <input type="password" placeholder="Password" required>
+      <button type="submit">Login</button>
     </form>
-  );
-}
+  </div>
 
-async function uploadToImgBB(files) {
-  const urls = [];
-  for (const file of files) {
-    const b64 = await fileToBase64(file);
-    const form = new FormData();
-    form.append("image", b64.split(",")[1]);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: form,
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error("ImgBB upload failed");
-    urls.push(json.data.url);
-  }
-  return urls;
-}
+  <div class="container">
+    <h2>🆕 नया Product Add करें</h2>
+    <form id="addForm">
+      <input type="text" placeholder="Product Name" required>
+      <select>
+        <option>सभी Categories</option>
+        <option>Electronics</option>
+        <option>Property</option>
+        <option>Repair Service</option>
+      </select>
+      <textarea placeholder="Description"></textarea>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-/************************************
- * 🧱 3D Button
- ************************************/
-function Button3D({ children, onClick, type = "button", disabled, variant }) {
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={classNames(
-        "rounded-2xl px-4 py-2 font-semibold text-white transition active:translate-y-[1px]",
-        "shadow-[0_14px_40px_rgba(236,72,153,0.45)]",
-        disabled ? "opacity-60" : "",
-        variant === "danger"
-          ? "border border-red-500/40 bg-red-600 hover:brightness-110"
-          : "border border-pink-500/40 bg-pink-600 hover:brightness-110"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/************************************
- * 🌐 Public Listing (approved only). Mobile: 2 cards per row
- ************************************/
-function PublicListing({ products, onOpen, category, search }) {
-  const filtered = useMemo(() => {
-    let list = products.filter((p) => p.status === "approved");
-    if (category && category !== "all") list = list.filter((p) => p.category === category);
-    if (search) list = list.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-    return list;
-  }, [products, category, search]);
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((p) => (
-          <ProductCard key={p.id} product={p} onOpen={onOpen} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="col-span-full rounded-2xl border border-white/10 bg-gray-900 p-6 text-center text-white/70">
-            No products yet.
-          </div>
-        )}
-      </div>
+  <div class="container">
+    <h2>⚙️ Admin Panel</h2>
+    <p>Approve / Reject Products यहाँ से करें:</p>
+    <div class="card">
+      <h3>Example Product 1</h3>
+      <p>Category: Electronics</p>
+      <button>Approve</button>
+      <button>Reject</button>
     </div>
-  );
-}
-
-/************************************
- * ⚙ Edit Links Modal (Admin only)
- ************************************/
-function EditLinksModal({ open, onClose, links, onSave }) {
-  const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(links || defaultLinks)));
-
-  useEffect(() => {
-    setLocal(JSON.parse(JSON.stringify(links || defaultLinks)));
-  }, [links, open]);
-
-  if (!open) return null;
-
-  const handleChange = (group, idx, key, value) => {
-    const copy = { ...local, [group]: [...local[group]] };
-    copy[group][idx] = { ...copy[group][idx], [key]: value };
-    setLocal(copy);
-  };
-
-  const addItem = (group) => {
-    const copy = { ...local };
-    copy[group] = [...copy[group], { label: "New", href: "#" }];
-    setLocal(copy);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-gray-900" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
-          <h3 className="text-white">Edit Dropdown Links</h3>
-          <Button3D onClick={onClose}>Close</Button3D>
-        </div>
-        <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-2">
-          {(["services", "info"]).map((group) => (
-            <div key={group}>
-              <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-white capitalize">{group}</h4>
-                <Button3D onClick={() => addItem(group)}>+ Add</Button3D>
-              </div>
-              <div className="space-y-2">
-                {local[group].map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <input
-                      className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-                      value={item.label}
-                      onChange={(e) => handleChange(group, idx, "label", e.target.value)}
-                    />
-                    <input
-                      className="rounded-xl border border-white/10 bg-gray-950 px-3 py-2 text-white outline-none"
-                      value={item.href}
-                      onChange={(e) => handleChange(group, idx, "href", e.target.value)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-2 border-t border-white/10 p-4">
-          <Button3D onClick={() => onSave(local)}>Save</Button3D>
-        </div>
-      </div>
+    <div class="card">
+      <h3>Example Product 2</h3>
+      <p>Category: Repair Service</p>
+      <button>Approve</button>
+      <button>Reject</button>
     </div>
-  );
-}
+  </div>
 
-/************************************
- * 🧠 Main App
- ************************************/
-export default function App() {
-  const [user, setUser] = useState(null);
-  const isAdmin = user?.email === ADMIN_EMAIL;
-  const isShopkeeper = !!user && !isAdmin; // simple rule: anyone logged in (not admin) is a shopkeeper
+  <div class="footer">
+    © 2025 ZaraFix | All Rights Reserved
+  </div>
 
-  const [tab, setTab] = useState("public");
-  const [products, setProducts] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [category, setCategory] = useState("all");
-  const [search, setSearch] = useState("");
-  const [links, setLinks] = useState(null);
-  const [openLinks, setOpenLinks] = useState(false);
-
-  // Auth state
-  useEffect(() => {
-    return onAuthStateChanged(auth, (u) => setUser(u));
-  }, []);
-
-  const login = async () => {
-    await signInWithPopup(auth, provider);
-  };
-
-  const logout = async () => {
-    await signOut(auth);
-    setTab("public");
-  };
-
-  // Load products (newest first)
-  useEffect(() => {
-    const q = query(ref(db, "products"), orderByChild("createdAt"));
-    return onValue(q, (snap) => {
-      const val = snap.val() || {};
-      const list = Object.entries(val)
-        .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // New post sabse upar
-      setProducts(list);
-    });
-  }, []);
-
-  // Load links settings
-  useEffect(() => {
-    return onValue(ref(db, "settings/links"), (snap) => {
-      setLinks(snap.val() || defaultLinks);
-    });
-  }, []);
-
-  const saveLinks = async (data) => {
-    if (!isAdmin) return;
-    await set(ref(db, "settings/links"), data);
-    setOpenLinks(false);
-  };
-
-  // Admin actions
-  const approveProduct = async (id) => {
-    await update(ref(db, `products/${id}`), { status: "approved" });
-  };
-  const rejectProduct = async (id) => {
-    await update(ref(db, `products/${id}`), { status: "rejected" });
-  };
-
-  // Shopkeeper actions
-  const deleteProduct = async (id) => {
-    await remove(ref(db, `products/${id}`));
-  };
-
-  const submitProduct = async ({ name, price, discount, whatsapp, category, images }) => {
-    if (!user) throw new Error("Login required");
-    const item = {
-      shopId: user.uid,
-      name,
-      price: Number(price),
-      discount,
-      whatsapp,
-      category,
-      images,
-      status: "pending",
-      createdAt: Date.now(),
-    };
-    await set(push(ref(db, "products")), item);
-  };
-
-  // Stats for admin
-  const stats = useMemo(() => {
-    return {
-      total: products.length,
-      approved: products.filter((p) => p.status === "approved").length,
-      pending: products.filter((p) => p.status === "pending").length,
-      rejected: products.filter((p) => p.status === "rejected").length,
-    };
-  }, [products]);
-
-  // Visible list per tab
-  const adminList = products; // all
-  const shopList = products.filter((p) => p.shopId === user?.uid);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-950 to-black text-white">
-      <Header
-        user={user}
-        isAdmin={isAdmin}
-        onLogin={login}
-        onLogout={logout}
-        links={links}
-        onOpenEditLinks={() => setOpenLinks(true)}
-      />
-
-      <Tabs value={tab} onChange={setTab} isAdmin={isAdmin} isShopkeeper={isShopkeeper} />
-
-      {/* Public Filters */}
-      {tab === "public" && (
-        <>
-          <FiltersBar
-            category={category}
-            setCategory={setCategory}
-            search={search}
-            setSearch={setSearch}
-          />
-          <PublicListing
-            products={products}
-            onOpen={setSelected}
-            category={category}
-            search={search}
-          />
-        </>
-      )}
-
-      {tab === "shop" && user && (
-        <ShopkeeperPanel
-          user={user}
-          products={products}
-          onDelete={deleteProduct}
-          onSubmit={submitProduct}
-        />
-      )}
-
-      {tab === "admin" && isAdmin && (
-        <AdminPanel products={adminList} onApprove={approveProduct} onReject={rejectProduct} stats={stats} />
-      )}
-
-      <ProductModal product={selected} onClose={() => setSelected(null)} />
-
-      <EditLinksModal open={openLinks} onClose={() => setOpenLinks(false)} links={links} onSave={saveLinks} />
-
-      <footer className="mx-auto mt-10 max-w-7xl px-4 py-10 text-center text-xs text-white/40">
-        ZARA FIX • Built with React + Firebase • Dark 3D UI • Mobile: 2 cards per row
-      </footer>
-    </div>
-  );
-}
+</body>
+</html>
