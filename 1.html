@@ -2,192 +2,129 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Zara Bazaar Slider</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real Estate Listings</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      color: #2d3436;
-    }
-    .slider-wrapper {
-      position: relative;
-      max-width: 500px;
-      height: 260px;
-      margin: 20px auto;
-      overflow: hidden;
-      border-radius: 10px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    }
-    .slider-images {
-      display: flex;
-      transition: transform 0.5s ease-in-out;
-      width: 100%;
-      height: 100%;
-    }
-    .slider-images img {
-      min-width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .arrow {
-      position: absolute;
-      top: 40%;
-      transform: translateY(-50%);
-      font-size: 24px;
-      background: rgba(0,0,0,0.4);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 2;
-    }
-    .arrow:hover {
-      background: rgba(0,0,0,0.7);
-    }
-    .arrow.left {
-      left: 10px;
-    }
-    .arrow.right {
-      right: 10px;
-    }
-    .dots {
-      text-align: center;
-      margin-top: 10px;
-    }
-    .dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      margin: 4px;
-      background-color: #bbb;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    .dot.active {
-      background-color: #00b894;
-    }
-
-    .button-container {
-      display: flex;
-      justify-content: center;
-      flex-wrap: nowrap;
-      gap: 15px;
-      margin-top: 5px;
-    }
-
-    .button-container button {
-      flex: 1 1 40%;
-      max-width: 180px;
-      white-space: nowrap;
-      background: linear-gradient(145deg, #00b894, #55efc4);
-      color: white;
-      padding: 14px 20px;
-      font-size: 15px;
-      border: none;
-      border-radius: 40px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
-      transition: transform 0.2s ease-in-out;
-    }
-
-    .button-container button:nth-child(2) {
-      background: linear-gradient(145deg, #0984e3, #74b9ff);
-    }
-
-    .button-container button:hover {
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 480px) {
-      .button-container {
-        flex-wrap: nowrap;
-        gap: 10px;
-      }
-      .button-container button {
-        font-size: 14px;
-        padding: 12px 10px;
-      }
-    }
+    body { font-family: Arial; padding: 20px; }
+    .card { border: 1px solid #ddd; padding: 15px; margin: 10px; border-radius: 10px; }
+    .blink { width: 15px; height: 15px; background: yellow; border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
   </style>
 </head>
 <body>
 
-<h2>ZARA Real State</h2>
+  <h2>🏠 Real Estate Listings</h2>
+  <button id="loginBtn">Login</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
 
-<div class="slider-wrapper">
-  <div class="slider-images" id="sliderImages"></div>
-  <div class="arrow left" onclick="prevSlide()">&#10094;</div>
-  <div class="arrow right" onclick="nextSlide()">&#10095;</div>
-</div>
+  <div id="postForm" style="display:none; margin-top:20px;">
+    <h3>Create New Post</h3>
+    <input type="text" id="title" placeholder="Title"><br><br>
+    <input type="text" id="location" placeholder="Location"><br><br>
+    <input type="number" id="price" placeholder="Price"><br><br>
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number"><br><br>
+    <textarea id="desc" placeholder="Description"></textarea><br><br>
+    <input type="file" id="images" multiple accept="image/*"><br><br>
+    <button onclick="addPost()">Post</button>
+  </div>
 
-<div class="dots" id="dots"></div>
+  <h3>All Listings:</h3>
+  <div id="listings"></div>
 
-<!-- 🟩 Buttons Inline -->
-<div class="button-container">
-  <button onclick="location.href='ads.html'">🏘️ Sell / Rent</button>
-  <button onclick="location.href='post-property.html'">📝 Post Property</button>
-</div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<script>
-  const imageUrls = [
-    "https://i.ibb.co/b5xDJWm3/Red-Bold-Finance-You-Tube-Thumbnail-20250626-091854-0000.png",
-    "https://i.ibb.co/N6zSVTRK/20250625-154036911.jpg",
-    "https://i.ibb.co/3dZ4H8m/sample-image-3.jpg"
-  ];
+  <script>
+    // ✅ Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "916859697394",
+      appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-  const sliderImages = document.getElementById('sliderImages');
-  const dotsContainer = document.getElementById('dots');
-  let currentIndex = 0;
+    // ✅ ImgBB API Key
+    const imgbbKey = "cad1f0dbfbd25346460789376cc2d7d5";
 
-  function createSlider() {
-    imageUrls.forEach((url, index) => {
-      const img = document.createElement('img');
-      img.src = url;
-      sliderImages.appendChild(img);
+    // 🔹 Simple Login/Logout (demo purpose)
+    document.getElementById("loginBtn").onclick = () => {
+      auth.signInWithEmailAndPassword("demo@test.com","123456")
+      .then(()=>{ document.getElementById("postForm").style.display="block";
+                  document.getElementById("loginBtn").style.display="none";
+                  document.getElementById("logoutBtn").style.display="inline"; })
+      .catch(()=> auth.createUserWithEmailAndPassword("demo@test.com","123456"));
+    };
 
-      const dot = document.createElement('span');
-      dot.classList.add('dot');
-      if (index === 0) dot.classList.add('active');
-      dot.addEventListener('click', () => goToSlide(index));
-      dotsContainer.appendChild(dot);
+    document.getElementById("logoutBtn").onclick = () => {
+      auth.signOut().then(()=> location.reload());
+    };
+
+    // 🔹 Post add with images
+    async function addPost(){
+      let title=document.getElementById("title").value;
+      let loc=document.getElementById("location").value;
+      let price=document.getElementById("price").value;
+      let desc=document.getElementById("desc").value;
+      let whatsapp=document.getElementById("whatsapp").value;
+      let files=document.getElementById("images").files;
+
+      if(!title || !loc || !price){ alert("Please fill details"); return; }
+
+      let imgUrls=[];
+      for(let i=0;i<files.length && i<5;i++){
+        let formData=new FormData();
+        formData.append("image",files[i]);
+        let res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:formData});
+        let data=await res.json();
+        imgUrls.push(data.data.url);
+      }
+
+      db.ref("posts/").push({
+        title, location:loc, price, desc, whatsapp, images:imgUrls,
+        approved:false, timestamp:Date.now()
+      });
+
+      alert("Post added (pending approval)");
+      document.getElementById("title").value="";
+      document.getElementById("desc").value="";
+      document.getElementById("location").value="";
+      document.getElementById("price").value="";
+      document.getElementById("whatsapp").value="";
+    }
+
+    // 🔹 Show posts
+    db.ref("posts/").on("value",snap=>{
+      let data=snap.val();
+      let container=document.getElementById("listings");
+      container.innerHTML="";
+      for(let id in data){
+        let p=data[id];
+        let card=document.createElement("div");
+        card.className="card";
+
+        card.innerHTML=`
+          <h4>${p.title} - ₹${p.price}</h4>
+          <p>${p.location}</p>
+          <p>${p.desc}</p>
+          ${p.images? p.images.map(img=>`<img src="${img}" width="100">`).join(""):""}
+          <br>
+          <a href="https://wa.me/${p.whatsapp}" target="_blank">
+            <button style="background:green;color:white;border-radius:10px;">WhatsApp</button>
+          </a>
+          ${!p.approved ? '<div class="blink"></div>' : ''}
+        `;
+
+        container.appendChild(card);
+      }
     });
-    startAutoSlide();
-  }
-
-  function goToSlide(index) {
-    currentIndex = index;
-    updateSlider();
-  }
-
-  function nextSlide() {
-    currentIndex = (currentIndex + 1) % imageUrls.length;
-    updateSlider();
-  }
-
-  function prevSlide() {
-    currentIndex = (currentIndex - 1 + imageUrls.length) % imageUrls.length;
-    updateSlider();
-  }
-
-  function updateSlider() {
-    sliderImages.style.transform = `translateX(-${currentIndex * 100}%)`;
-    document.querySelectorAll('.dot').forEach((dot, i) => {
-      dot.classList.toggle('active', i === currentIndex);
-    });
-  }
-
-  function startAutoSlide() {
-    setInterval(nextSlide, 3000);
-  }
-
-  createSlider();
-</script>
-
+  </script>
 </body>
 </html>
