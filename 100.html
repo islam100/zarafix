@@ -42,7 +42,6 @@
     <input type="tel" id="whatsappNumber" placeholder="WhatsApp Number (10 digit)" pattern="[0-9]{10}" required>
     <input type="number" id="productPrice" placeholder="Price" min="1" required>
     <input type="number" id="discount" placeholder="Discount (%)" min="0" max="90" required>
-    <input type="file" id="productImage" accept="image/*" multiple required>
     <textarea id="description" placeholder="Product Description" required></textarea>
     <select id="category" required>
       <option value="">Select Category</option>
@@ -68,24 +67,23 @@
   </div>
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+<!-- Firebase (v8) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-  // Firebase Config (अपना वाला डालना)
+  // Firebase Config
   const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-};
+    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+    authDomain: "loot-lo-15328.firebaseapp.com",
+    databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+    projectId: "loot-lo-15328",
+    storageBucket: "loot-lo-15328.appspot.com",
+    messagingSenderId: "677769861892",
+    appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+  };
 
-
-  const app = firebase.initializeApp(firebaseConfig);
+  firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
   // Show Sections
@@ -101,7 +99,7 @@
   }
 
   // Form Submit
-  document.getElementById("offerForm").addEventListener("submit", async function(e){
+  document.getElementById("offerForm").addEventListener("submit", function(e){
     e.preventDefault();
 
     let name = document.getElementById("productName").value;
@@ -122,16 +120,21 @@
       created: Date.now()
     };
 
-    firebase.database().ref("products").push(product);
-    alert("Product submitted successfully!");
-    this.reset();
+    db.ref("products").push(product, function(error){
+      if(error){
+        alert("Error: " + error);
+      } else {
+        alert("Product submitted successfully!");
+        document.getElementById("offerForm").reset();
+      }
+    });
   });
 
   // Load Products
   function loadProducts(){
     let list = document.getElementById("productList");
     list.innerHTML = "";
-    firebase.database().ref("products").on("value", (snapshot)=>{
+    db.ref("products").once("value", (snapshot)=>{
       snapshot.forEach((child)=>{
         let data = child.val();
         let div = document.createElement("div");
@@ -148,7 +151,7 @@
 
   // View Product
   function viewProduct(id){
-    firebase.database().ref("products/"+id).once("value").then((snapshot)=>{
+    db.ref("products/"+id).once("value").then((snapshot)=>{
       let data = snapshot.val();
       document.getElementById("modalBody").innerHTML = `
         <h2>${data.name}</h2>
