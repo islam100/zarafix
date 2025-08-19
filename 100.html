@@ -1,78 +1,72 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix – Sale Offers</title>
+  <title>ZaraFix Marketplace</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
-    header { background:#222; color:#fff; padding:15px; text-align:center; }
-    nav { background:#444; padding:10px; display:flex; justify-content:center; gap:20px; }
-    nav button { background:#fff; border:none; padding:8px 14px; cursor:pointer; border-radius:5px; }
-    nav button:hover { background:#ddd; }
-
-    .product-form, .dashboard { max-width:600px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; }
-    input, select, textarea { width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:5px; }
-    button { padding:10px 15px; background:#28a745; color:#fff; border:none; border-radius:5px; cursor:pointer; }
-    button:hover { background:#218838; }
-    .hidden { display:none; }
-
-    /* Modal */
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; }
-    .modal-content { background:#fff; padding:20px; border-radius:10px; max-width:500px; width:90%; position:relative; }
-    .close-btn { position:absolute; top:10px; right:10px; background:red; color:#fff; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; }
+    body { background-color: #0f172a; color: white; }
+    .logo-text {
+      font-size: 2rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #ff00ff, #00ffff, #ff9900);
+      -webkit-background-clip: text;
+      color: transparent;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+    }
+    .card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .card:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+    .btn-3d {
+      background: linear-gradient(145deg,#1e293b,#334155);
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 6px 12px;
+      box-shadow: 3px 3px 8px #0f172a, -3px -3px 8px #1e293b;
+      transition: transform 0.2s;
+    }
+    .btn-3d:hover { transform: translateY(-2px); }
+    /* Modal for zoom image */
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; }
+    .modal img { max-width:90%; max-height:90%; border-radius:12px; }
   </style>
 </head>
-<body>
+<body class="p-4">
 
-<header>
-  <h1>ZaraFix – Sale Offers</h1>
-</header>
+  <!-- Header -->
+  <header class="flex justify-between items-center mb-4">
+    <div class="logo-text">ZARA FIX</div>
+    <nav class="flex gap-4">
+      <select class="bg-gray-800 p-2 rounded">
+        <option>All Services</option>
+        <option>Property</option>
+        <option>Ambulance</option>
+        <option>Home</option>
+      </select>
+      <select class="bg-gray-800 p-2 rounded">
+        <option>Provider</option>
+        <option>About</option>
+        <option>Contact</option>
+        <option>Privacy Policy</option>
+      </select>
+    </nav>
+    <button id="loginBtn" class="btn-3d">Login with Google</button>
+  </header>
 
-<nav>
-  <button onclick="showForm()">Add Product</button>
-  <button onclick="showDashboard()">Dashboard</button>
-</nav>
+  <!-- Product Listing -->
+  <div id="productList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
 
-<!-- Product Form -->
-<div class="product-form" id="productForm">
-  <h2>Add Product</h2>
-  <form id="offerForm">
-    <input type="text" id="productName" placeholder="Product Name" required>
-    <input type="tel" id="whatsappNumber" placeholder="WhatsApp Number (10 digit)" pattern="[0-9]{10}" required>
-    <input type="number" id="productPrice" placeholder="Price" min="1" required>
-    <input type="number" id="discount" placeholder="Discount (%)" min="0" max="90" required>
-    <textarea id="description" placeholder="Product Description" required></textarea>
-    <select id="category" required>
-      <option value="">Select Category</option>
-      <option>Electronics</option>
-      <option>Fashion</option>
-      <option>Food</option>
-    </select>
-    <button type="submit">Submit</button>
-  </form>
-</div>
+  <!-- Image Zoom Modal -->
+  <div id="imgModal" class="modal"><img id="modalImg" src=""></div>
 
-<!-- Dashboard -->
-<div class="dashboard hidden" id="dashboard">
-  <h2>Admin Dashboard</h2>
-  <div id="productList"></div>
-</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+  import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-<!-- Modal -->
-<div class="modal" id="modal">
-  <div class="modal-content">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <div id="modalBody"></div>
-  </div>
-</div>
-
-<!-- Firebase (v8) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<script>
-  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
     authDomain: "loot-lo-15328.firebaseapp.com",
@@ -83,89 +77,73 @@
     appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-  // Show Sections
-  function showForm() {
-    document.getElementById("productForm").classList.remove("hidden");
-    document.getElementById("dashboard").classList.add("hidden");
-  }
+  const loginBtn = document.getElementById("loginBtn");
+  const productList = document.getElementById("productList");
+  const imgModal = document.getElementById("imgModal");
+  const modalImg = document.getElementById("modalImg");
 
-  function showDashboard() {
-    document.getElementById("productForm").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
-    loadProducts();
-  }
+  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
 
-  // Form Submit
-  document.getElementById("offerForm").addEventListener("submit", function(e){
-    e.preventDefault();
-
-    let name = document.getElementById("productName").value;
-    let number = document.getElementById("whatsappNumber").value;
-    let price = document.getElementById("productPrice").value;
-    let discount = document.getElementById("discount").value;
-    let desc = document.getElementById("description").value;
-    let category = document.getElementById("category").value;
-
-    if(number.length !== 10){
-      alert("Please enter a valid 10-digit WhatsApp number.");
-      return;
+  loginBtn.onclick = async () => {
+    if (auth.currentUser) {
+      await signOut(auth);
+      loginBtn.innerText = "Login with Google";
+    } else {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      loginBtn.innerText = "Logout";
     }
+  };
 
-    let product = {
-      name, number, price, discount, desc, category,
-      status: "Pending",
-      created: Date.now()
-    };
+  onValue(ref(db, "products"), (snapshot) => {
+    const data = snapshot.val();
+    productList.innerHTML = "";
+    if (!data) return;
 
-    db.ref("products").push(product, function(error){
-      if(error){
-        alert("Error: " + error);
-      } else {
-        alert("Product submitted successfully!");
-        document.getElementById("offerForm").reset();
+    // Products ko timestamp se sort karo (newest first)
+    const sorted = Object.entries(data).sort((a,b) => b[1].timestamp - a[1].timestamp);
+
+    sorted.forEach(([id, p]) => {
+      const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
+      const bgColor = p.status === "approved" ? "bg-gray-800" : "bg-red-800";
+
+      let btns = "";
+      if (isAdmin) {
+        if (p.status === "approved") {
+          btns += `<button onclick="rejectProduct('${id}')" class="btn-3d">Reject</button>
+                   <button onclick="deleteProduct('${id}')" class="btn-3d">Delete</button>`;
+        } else {
+          btns += `<button onclick="approveProduct('${id}')" class="btn-3d">Approve</button>`;
+        }
       }
+
+      productList.innerHTML += `
+        <div class="card ${bgColor} p-4 rounded-xl">
+          <img src="${p.images?.[0] || ''}" class="w-full h-40 object-contain rounded cursor-pointer" onclick="openModal('${p.images?.[0]}')">
+          <h2 class="text-xl font-bold">${p.name}</h2>
+          <p>Price: ₹${p.price} <span class="text-green-400">${p.discount}% Off</span></p>
+          <a href="https://wa.me/${p.whatsapp}?text=हमे आपका product पसंद आया: ${p.name} - ₹${p.price}" target="_blank">
+            <button class="btn-3d">WhatsApp Shop</button>
+          </a>
+          <div class="mt-2 flex gap-2">${btns}</div>
+          ${p.status !== "approved" ? `<p class="text-red-300 mt-2">WAIT FOR APPROVAL</p>` : ""}
+        </div>
+      `;
     });
   });
 
-  // Load Products
-  function loadProducts(){
-    let list = document.getElementById("productList");
-    list.innerHTML = "";
-    db.ref("products").once("value", (snapshot)=>{
-      snapshot.forEach((child)=>{
-        let data = child.val();
-        let div = document.createElement("div");
-        div.innerHTML = `
-          <h3>${data.name}</h3>
-          <p>Price: ₹${data.price} | Discount: ${data.discount}%</p>
-          <p>Status: ${data.status}</p>
-          <button onclick="viewProduct('${child.key}')">View</button>
-        `;
-        list.appendChild(div);
-      });
-    });
-  }
+  // Modal Functions
+  window.openModal = (src) => { modalImg.src = src; imgModal.style.display = "flex"; };
+  imgModal.onclick = () => { imgModal.style.display = "none"; };
 
-  // View Product
-  function viewProduct(id){
-    db.ref("products/"+id).once("value").then((snapshot)=>{
-      let data = snapshot.val();
-      document.getElementById("modalBody").innerHTML = `
-        <h2>${data.name}</h2>
-        <p>${data.desc}</p>
-        <p>Category: ${data.category}</p>
-        <p>WhatsApp: ${data.number}</p>
-      `;
-      document.getElementById("modal").style.display="flex";
-    });
-  }
-
-  function closeModal(){
-    document.getElementById("modal").style.display="none";
-  }
+  // Admin Actions
+  window.approveProduct = (id) => update(ref(db,"products/"+id), {status:"approved"});
+  window.rejectProduct = (id) => update(ref(db,"products/"+id), {status:"rejected"});
+  window.deleteProduct = (id) => remove(ref(db,"products/"+id));
 </script>
 </body>
 </html>
