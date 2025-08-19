@@ -1,60 +1,183 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix App</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix – Public | Shopkeeper | Admin</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
-    .btn-3d {
-      box-shadow: 0px 4px 0px #222;
-      transform: translateY(0);
-      transition: transform 0.1s, box-shadow 0.1s;
-    }
-    .btn-3d:active {
-      transform: translateY(3px);
-      box-shadow: 0px 1px 0px #222;
-    }
-    .card-3d {
-      transition: transform 0.2s;
-    }
-    .card-3d:hover {
-      transform: scale(1.03);
-      z-index: 20;
-    }
+    body{ background:#0b1220; color:#e5e7eb; }
+    /* 3D buttons */
+    .btn-3d{ box-shadow:0 6px 0 rgba(0,0,0,.6); transform:translateY(0); transition:.08s; }
+    .btn-3d:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.6); }
+    /* Card */
+    .card-3d{ background:linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); border-radius:18px; overflow:hidden; box-shadow:0 12px 30px rgba(0,0,0,.45); }
+    /* Gallery */
+    .gal-img{ width:100%; height:190px; object-fit:contain; background:#07101d; }
+    @media(min-width:640px){ .gal-img{ height:210px } }
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:70; }
+    .modal.show{ display:flex }
+    .modal-card{ width:min(95vw,900px); background:#0e1524; border:1px solid rgba(255,255,255,.08); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+    /* Dropdown open helper */
+    .open .dd-list{ display:block }
+    .badge{ position:absolute; top:10px; left:10px; background:#0f182a; border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; }
   </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="min-h-screen flex flex-col">
+
   <!-- Header -->
-  <header class="flex justify-between items-center p-4 bg-gray-800 shadow-lg sticky top-0 z-50">
-    <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-yellow-400 to-green-400 drop-shadow-lg">ZARA FIX</h1>
-    <nav class="flex space-x-6">
-      <select class="bg-gray-700 p-2 rounded">
-        <option>All Services</option>
-        <option>Property</option>
-        <option>Ambulance</option>
-        <option>Home</option>
-      </select>
-      <select class="bg-gray-700 p-2 rounded">
-        <option>Provider</option>
-        <option>About</option>
-        <option>Contact</option>
-        <option>Privacy Policy</option>
-      </select>
-    </nav>
-    <div id="authSection">
-      <button onclick="login()" class="btn-3d bg-green-500 px-4 py-2 rounded">Login with Google</button>
+  <header class="sticky top-0 z-50 bg-[#0b1220]/80 backdrop-blur border-b border-white/10">
+    <div class="max-w-6xl mx-auto flex items-center justify-between p-3">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 select-none">
+        <div class="w-10 h-10 rounded-xl" style="background:conic-gradient(from 210deg, #8b5cf6, #06b6d4, #22c55e); box-shadow:0 10px 24px rgba(34,197,94,.25), inset 0 -8px 20px rgba(0,0,0,.35)"></div>
+        <div class="text-3xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-blue-400 to-emerald-400 drop-shadow">ZARA FIX</div>
+      </div>
+
+      <!-- Menus -->
+      <nav class="hidden sm:flex items-center gap-3">
+        <div class="relative group">
+          <button id="dd1" class="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10">Services ▾</button>
+          <div class="dd-list absolute mt-2 hidden min-w-[220px] bg-[#0e1524] border border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">All Services</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Property</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Ambulance</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Home</a>
+          </div>
+        </div>
+        <div class="relative group">
+          <button id="dd2" class="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10">Info ▾</button>
+          <div class="dd-list absolute mt-2 hidden min-w-[220px] bg-[#0e1524] border border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Provider</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">About</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Contact</a>
+            <a class="block px-3 py-2 hover:bg-white/5" href="#">Privacy Policy</a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Auth -->
+      <div id="authArea" class="flex items-center gap-2">
+        <button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="max-w-6xl mx-auto px-3 pb-3">
+      <div class="flex gap-2">
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/10 font-semibold" data-tab="public">Public</button>
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold" data-tab="shop">Shopkeeper</button>
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold hidden" id="adminTab" data-tab="admin">Admin</button>
+      </div>
     </div>
   </header>
 
-  <!-- Main -->
-  <main class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4" id="listing"></main>
+  <!-- Content -->
+  <main class="w-full max-w-6xl mx-auto flex-1 p-3">
+    <!-- PUBLIC -->
+    <section id="public" class="space-y-3">
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mb-2">
+        <select id="filterCategory" class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+          <option value="">All Categories</option>
+          <option>bike</option><option>car</option><option>cloth</option><option>watch</option><option>mobile</option><option>pc</option>
+        </select>
+        <input id="searchInput" class="px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex-1 min-w-[200px]" placeholder="Search product..." />
+      </div>
 
-  <!-- Firebase + Logic -->
+      <!-- Grid -->
+      <div id="publicGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    </section>
+
+    <!-- SHOPKEEPER -->
+    <section id="shop" class="hidden">
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5">
+        <h3 class="text-lg font-bold mb-2">Sale Offer Add Karein</h3>
+        <p class="text-sm text-slate-300 mb-3">1–5 images • * required</p>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm">Product Name *</label>
+            <input id="pName" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10" placeholder="eg. iPhone 13">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm">Category *</label>
+            <select id="pCategory" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+              <option value="">Select...</option>
+              <option>bike</option><option>car</option><option>cloth</option><option>watch</option><option>mobile</option><option>pc</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="text-slate-400 text-sm">Price (₹) *</label>
+            <input id="pPrice" type="number" min="1" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10" placeholder="999">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm">Discount (%)</label>
+            <input id="pDiscount" type="number" min="0" max="95" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10" placeholder="10">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm">Shop WhatsApp Number *</label>
+            <input id="pWhats" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10" placeholder="91xxxxxxxxxx">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="text-slate-400 text-sm">Description</label>
+          <textarea id="pDesc" rows="2" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10" placeholder="Short details..."></textarea>
+        </div>
+
+        <div class="mt-3">
+          <label class="text-slate-400 text-sm">Images (1–5) via ImgBB *</label>
+          <input id="pImages" type="file" accept="image/*" multiple class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+          <p class="text-xs text-slate-400 mt-1">We will upload to ImgBB automatically. Max 5 images.</p>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+          <button id="submitProduct" class="btn-3d px-4 py-2 rounded-xl bg-emerald-500 font-bold">Submit Offer</button>
+          <span id="formMsg" class="text-sm text-slate-300"></span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5 mt-4">
+        <h3 class="text-lg font-bold mb-2">Your Offers</h3>
+        <div id="myGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="admin" class="hidden">
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5">
+        <h3 class="text-lg font-bold mb-3">Admin Dashboard</h3>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Total: <span id="aTotal">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Approved: <span id="aApproved">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Pending: <span id="aPending">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Rejected: <span id="aRejected">0</span></div>
+        </div>
+        <div id="adminGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for zoom -->
+  <div id="modal" class="modal">
+    <div id="modalCard" class="modal-card"></div>
+  </div>
+
   <script>
+    /***** CONFIG *****/
     const firebaseConfig = {
       apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
       authDomain: "loot-lo-15328.firebaseapp.com",
@@ -64,88 +187,286 @@
       messagingSenderId: "677769861892",
       appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-
     const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-    let currentUser = null;
+    const IMGBB_KEY = "ff05d1b5c3b3e139253856f0ad1123df";
 
-    function login(){
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    }
-    function logout(){ auth.signOut(); }
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-    auth.onAuthStateChanged(user=>{
-      currentUser = user;
-      document.getElementById("authSection").innerHTML = user ? 
-        `<span>${user.email}</span> 
-         <button onclick="logout()" class="btn-3d bg-red-500 px-4 py-2 rounded">Logout</button>` 
-        : `<button onclick="login()" class="btn-3d bg-green-500 px-4 py-2 rounded">Login with Google</button>`;
-      loadProducts();
+    /***** Helpers *****/
+    const $ = s => document.querySelector(s);
+    const byId = id => document.getElementById(id);
+    const rupees = n => '₹' + Number(n||0).toLocaleString('en-IN');
+    const toast = (el, msg) => { el.textContent = msg; setTimeout(()=> el.textContent='', 4000); };
+    const clean = s => (s||'').replace(/</g,'&lt;');
+
+    // Dropdown open/close
+    document.querySelectorAll('header .group').forEach(g=>{
+      const btn = g.querySelector('button');
+      btn.addEventListener('click', (e)=>{ e.stopPropagation(); g.classList.toggle('open'); });
+      document.addEventListener('click', e=>{ if(!g.contains(e.target)) g.classList.remove('open'); });
     });
 
-    function loadProducts(){
-      db.ref("products").on("value",snap=>{
-        const items=[];
-        snap.forEach(c=>items.push({...c.val(),id:c.key}));
-        items.sort((a,b)=>b.createdAt-a.createdAt); // New posts on top
-        renderProducts(items);
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(x=>{
+          x.classList.remove('bg-white/10'); x.classList.add('bg-white/5');
+        });
+        t.classList.add('bg-white/10'); t.classList.remove('bg-white/5');
+        ['public','shop','admin'].forEach(id=> byId(id).classList.add('hidden'));
+        byId(t.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    /***** AUTH *****/
+    byId('loginBtn').onclick = async () => {
+      if(auth.currentUser){ return auth.signOut(); }
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    };
+
+    auth.onAuthStateChanged(user=>{
+      const logged = !!user;
+      byId('loginBtn').textContent = logged ? 'Logout' : 'Login with Google';
+      if(logged){
+        byId('authArea').innerHTML = `
+          <span class="hidden sm:inline text-sm opacity-80 mr-1">${user.email}</span>
+          <button id="logoutBtn" class="btn-3d px-4 py-2 rounded-xl bg-rose-500 font-bold">Logout</button>
+        `;
+        byId('logoutBtn').onclick = ()=> auth.signOut();
+      }else{
+        byId('authArea').innerHTML = `<button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>`;
+        byId('loginBtn').onclick = async()=>{ const provider = new firebase.auth.GoogleAuthProvider(); await auth.signInWithPopup(provider); };
+      }
+
+      // Admin tab show/hide
+      byId('adminTab').classList.toggle('hidden', !(user && user.email===ADMIN_EMAIL));
+      renderAll(); loadMine(); renderAdmin();
+    });
+
+    /***** DB + LIVE LISTENER *****/
+    // products/{id}: { id, name, category, price, discount, desc, images[], whats, owner, status, createdAt }
+    const productsRef = db.ref('products');
+
+    let ALL = [];
+    productsRef.on('value', snap=>{
+      const obj = snap.val()||{};
+      ALL = Object.values(obj).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)); // newest first
+      updateStats(); renderAll(); loadMine(); renderAdmin();
+    });
+
+    function updateStats(){
+      const t = ALL.length,
+            a = ALL.filter(p=>p.status==='approved').length,
+            p = ALL.filter(p=>p.status==='pending').length,
+            r = ALL.filter(p=>p.status==='rejected').length;
+      byId('aTotal').textContent = t;
+      byId('aApproved').textContent = a;
+      byId('aPending').textContent = p;
+      byId('aRejected').textContent = r;
+    }
+
+    /***** FILTERS (Public) *****/
+    byId('filterCategory').addEventListener('change', renderAll);
+    byId('searchInput').addEventListener('input', ()=>{ clearTimeout(window.__t); window.__t=setTimeout(renderAll,150); });
+
+    function applyFilters(list){
+      const cat = byId('filterCategory').value;
+      const q = byId('searchInput').value.trim().toLowerCase();
+      return list.filter(p=>{
+        if(cat && p.category!==cat) return false;
+        if(q && !(p.name||'').toLowerCase().includes(q)) return false;
+        return true;
       });
     }
 
-    function renderProducts(products){
-      const container=document.getElementById("listing");
-      container.innerHTML="";
-      products.forEach(p=>{
-        const borderClass = p.status!=="approved" ? "border-4 border-red-600" : "border border-gray-700";
-        const card=document.createElement("div");
-        card.className=`card-3d bg-gray-800 rounded-xl shadow-lg overflow-hidden ${borderClass}`;
-        card.innerHTML=`
-          <div class="h-48 bg-black flex justify-center items-center">
-            <img src="${p.images? p.images[0]:""}" class="h-full object-contain">
+    /***** ImgBB Upload *****/
+    async function uploadToImgBB(file){
+      const body = new FormData();
+      body.append('key', IMGBB_KEY);
+      body.append('image', file);
+      const res = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body });
+      const data = await res.json();
+      if(!data || !data.data || !data.data.url) throw new Error('ImgBB upload failed');
+      return data.data.url;
+    }
+    async function uploadMultiple(files){
+      const list = Array.from(files).slice(0,5);
+      const out=[];
+      for(const f of list){ out.push(await uploadToImgBB(f)); }
+      return out;
+    }
+
+    /***** SUBMIT OFFER (Shopkeeper) *****/
+    byId('submitProduct').onclick = async()=>{
+      const u = auth.currentUser; if(!u){ alert('Please login first'); return; }
+
+      const name = byId('pName').value.trim();
+      const category = byId('pCategory').value.trim();
+      const price = Number(byId('pPrice').value);
+      const discount = Number(byId('pDiscount').value||0);
+      const whats = byId('pWhats').value.trim();
+      const desc = byId('pDesc').value.trim();
+      const files = byId('pImages').files;
+
+      if(!name || !category || !price || !whats || !files.length){
+        toast(byId('formMsg'),'Please fill all required fields*');
+        return;
+      }
+      byId('formMsg').textContent = 'Uploading images…';
+      try{
+        const images = await uploadMultiple(files);
+        byId('formMsg').textContent = 'Saving…';
+        const id = productsRef.push().key;
+        const item = { id, name, category, price, discount, desc, images, whats,
+          owner: u.email, status:'pending', createdAt: Date.now()
+        };
+        await productsRef.child(id).set(item);
+        byId('formMsg').textContent = 'Submitted! WAIT FOR APPROVAL';
+        ['pName','pCategory','pPrice','pDiscount','pWhats','pDesc'].forEach(i=> byId(i).value='');
+        byId('pImages').value='';
+      }catch(e){
+        console.error(e);
+        toast(byId('formMsg'), 'Error: '+e.message);
+      }
+    };
+
+    /***** RENDER CARDS *****/
+    function waLink(p){
+      const msg = `हमें आपका product पसंद आया है: ${p.name} (${rupees(p.price)}). कृपया पूरी जानकारी दें।`;
+      const phone = (p.whats||'').replace(/\D/g,'');
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    }
+    function galleryHTML(p){
+      const first = (p.images&&p.images[0])||'';
+      const cnt = (p.images||[]).length;
+      return `
+        <div class="relative">
+          <img class="gal-img" src="${first}" alt="${clean(p.name)}"/>
+          ${cnt>1?`
+            <div class="absolute inset-0 flex items-center justify-between px-2">
+              <button class="px-3 py-1 rounded-full bg-black/40 border border-white/30 font-bold prev">‹</button>
+              <button class="px-3 py-1 rounded-full bg-black/40 border border-white/30 font-bold next">›</button>
+            </div>`:''}
+        </div>`;
+    }
+    function attachGalleryHandlers(cardEl, p){
+      const img = cardEl.querySelector('.gal-img');
+      const total = (p.images||[]).length;
+      if(!img || total<2) return;
+      let i = 0;
+      cardEl.querySelector('.prev')?.addEventListener('click', (e)=>{ e.stopPropagation(); i=(i-1+total)%total; img.src=p.images[i]; });
+      cardEl.querySelector('.next')?.addEventListener('click', (e)=>{ e.stopPropagation(); i=(i+1)%total; img.src=p.images[i]; });
+    }
+
+    function statusBorder(p){
+      return p.status==='approved' ? 'border border-white/10' : 'border-2 border-red-500';
+    }
+
+    function makeCard(p, ctx){
+      const el = document.createElement('div');
+      el.className = `card-3d ${statusBorder(p)}`;
+      const discountTxt = p.discount ? `<span class="text-amber-300 font-bold">-${p.discount}%</span>` : '';
+      let adminBtns = '';
+      if(auth.currentUser && auth.currentUser.email===ADMIN_EMAIL){
+        if(p.status==='approved'){
+          // Approved → Reject + Delete
+          adminBtns = `
+            <button class="btn-3d px-3 py-2 rounded-xl bg-yellow-500 font-bold admin-reject">Reject</button>
+            <button class="btn-3d px-3 py-2 rounded-xl bg-rose-600 font-bold admin-del">Delete</button>
+          `;
+        }else{
+          // Not approved → Approve only
+          adminBtns = `<button class="btn-3d px-3 py-2 rounded-xl bg-emerald-600 font-bold admin-approve">Approve</button>`;
+        }
+      }
+      let shopBtns = '';
+      if(auth.currentUser && auth.currentUser.email===p.owner){
+        shopBtns = `<button class="btn-3d px-3 py-2 rounded-xl bg-rose-600 font-bold mine-del">Delete</button>`;
+      }
+      const pendingNote = p.status!=='approved' ? `<div class="text-red-400 font-bold text-sm mt-1">WAIT FOR APPROVAL</div>` : '';
+
+      el.innerHTML = `
+        <div class="relative">${p.status!=='approved'?'<span class="badge">PENDING/REJECTED</span>':''}</div>
+        ${galleryHTML(p)}
+        <div class="p-3">
+          <div class="font-extrabold text-[15px] leading-tight">${clean(p.name||'')}</div>
+          <div class="text-sm opacity-80 mt-1">${(p.category||'').toUpperCase()} • <span class="font-bold">${rupees(p.price||0)}</span> ${discountTxt}</div>
+          ${p.desc? `<div class="text-xs opacity-70 mt-1">${clean(p.desc)}</div>`:''}
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <a class="btn-3d px-3 py-2 rounded-xl bg-emerald-500 font-bold" target="_blank" href="${waLink(p)}">WhatsApp</a>
+            ${adminBtns}
+            ${shopBtns}
           </div>
-          <div class="p-3">
-            <h2 class="text-lg font-bold">${p.name}</h2>
-            <p>₹${p.price} <span class="text-green-400">-${p.discount}%</span></p>
-            <button onclick="whatsappShop('${p.whatsapp}','${p.name}','${p.price}')" class="btn-3d mt-2 bg-green-600 px-3 py-1 rounded">WhatsApp</button>
-            ${adminButtons(p)}
-            ${shopkeeperButtons(p)}
-            ${statusLabel(p)}
-          </div>`;
-        container.appendChild(card);
-      });
+          ${pendingNote}
+        </div>
+      `;
+
+      // enlarge on click (not on buttons)
+      el.addEventListener('click', (e)=>{ if(e.target.closest('button,a') || e.target.classList.contains('prev') || e.target.classList.contains('next')) return; openModal(p); });
+      // handlers
+      el.querySelector('.admin-approve')?.addEventListener('click', async e=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'approved'}); });
+      el.querySelector('.admin-reject')?.addEventListener('click', async e=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'rejected'}); });
+      el.querySelector('.admin-del')?.addEventListener('click', async e=>{ e.stopPropagation(); if(confirm('Delete this product?')) await productsRef.child(p.id).remove(); });
+      el.querySelector('.mine-del')?.addEventListener('click', async e=>{ e.stopPropagation(); if(confirm('Delete your product?')) await productsRef.child(p.id).remove(); });
+
+      attachGalleryHandlers(el,p);
+      return el;
     }
 
-    function whatsappShop(num,name,price){
-      const msg=encodeURIComponent(`Hi, I like your product ${name} for ₹${price}. Please share details.`);
-      window.open(`https://wa.me/${num}?text=${msg}`,'_blank');
+    function renderPublic(){
+      const grid = byId('publicGrid');
+      grid.innerHTML = '';
+      const list = applyFilters(ALL);
+      for(const p of list){ grid.appendChild(makeCard(p,'public')); }
+      if(!list.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-4 col-span-full">No offers found.</div>'; }
     }
 
-    function adminButtons(p){
-      if(!currentUser || currentUser.email!==ADMIN_EMAIL) return "";
-      if(p.status==="approved"){
-        return `<button class="btn-3d mt-2 bg-yellow-600 px-3 py-1 rounded" onclick="updateStatus('${p.id}','rejected')">Reject</button>`;
-      } else {
-        return `<button class="btn-3d mt-2 bg-green-600 px-3 py-1 rounded" onclick="updateStatus('${p.id}','approved')">Approve</button>`;
-      }
+    function loadMine(){
+      const grid = byId('myGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      const u = auth.currentUser;
+      if(!u){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">Login to manage your offers.</div>'; return; }
+      const mine = ALL.filter(p=>p.owner===u.email);
+      for(const p of mine){ grid.appendChild(makeCard(p,'mine')); }
+      if(!mine.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">No offers yet. Add your first one!</div>'; }
     }
 
-    function shopkeeperButtons(p){
-      if(!currentUser || currentUser.email!==p.owner) return "";
-      return `<button class="btn-3d mt-2 bg-red-600 px-3 py-1 rounded" onclick="deleteProduct('${p.id}')">Delete</button>`;
+    function renderAdmin(){
+      const grid = byId('adminGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      const u = auth.currentUser;
+      const isAdmin = u && u.email===ADMIN_EMAIL;
+      if(!isAdmin){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">Admin only.</div>'; return; }
+      for(const p of ALL){ grid.appendChild(makeCard(p,'admin')); }
+      if(!ALL.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">No products in database.</div>'; }
     }
 
-    function statusLabel(p){
-      if(p.status!=="approved"){
-        return `<p class="text-red-400 font-bold">WAIT FOR APPROVAL</p>`;
-      }
-      return "";
-    }
+    function renderAll(){ renderPublic(); }
 
-    function updateStatus(id,status){ db.ref("products/"+id).update({status}); }
-    function deleteProduct(id){ db.ref("products/"+id).remove(); }
+    /***** Modal *****/
+    const modal = byId('modal'); const modalCard = byId('modalCard');
+    function openModal(p){
+      modalCard.innerHTML = `
+        ${galleryHTML(p)}
+        <div class="p-4">
+          <div class="text-xl font-extrabold">${clean(p.name)}</div>
+          <div class="opacity-80 mt-1">${(p.category||'').toUpperCase()} • <span class="font-bold">${rupees(p.price)}</span> ${p.discount?`<span class="text-amber-300 font-bold">-${p.discount}%</span>`:''}</div>
+          ${p.desc? `<div class="text-sm opacity-80 mt-2">${clean(p.desc)}</div>`:''}
+          <div class="mt-3">
+            <a class="btn-3d px-4 py-2 rounded-xl bg-emerald-500 font-bold" target="_blank" href="${waLink(p)}">WhatsApp Shop</a>
+          </div>
+        </div>`;
+      modal.classList.add('show');
+      attachGalleryHandlers(modalCard,p);
+    }
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('show'); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') modal.classList.remove('show'); });
+
+    // Initial render (empty before first DB load)
+    renderAll(); loadMine(); renderAdmin();
   </script>
 </body>
 </html>
