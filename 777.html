@@ -1,83 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Zara Property — Fixed Cards</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zara Property</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9fafb;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #222;
-    }
-    #property-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 16px;
-      margin-top: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .card img {
-      width: 100%;
-      max-height: 220px;
-      border-radius: 10px;
-      object-fit: contain; /* zoom पर भी कटेगा नहीं */
-      transition: transform 0.3s ease;
-      cursor: zoom-in;
-      background: #000;
-    }
-    .card img:hover {
-      transform: scale(1.1);
-    }
-    .details {
-      margin-top: 12px;
-      text-align: center;
-    }
-    .details p {
-      margin: 6px 0;
-      font-size: 14px;
-    }
-    .actions {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-    }
-    button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    .approve { background: #16a34a; color: #fff; }
-    .reject { background: #dc2626; color: #fff; }
-    .delete { background: #6b7280; color: #fff; }
+    body { font-family: Arial, sans-serif; background: #f9fafb; margin: 0; padding: 20px; }
+    h2, h3 { text-align: center; }
+    #propertyList { display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 15px; margin-top: 20px; }
+    .card { background:#fff; border-radius:12px; padding:15px; box-shadow:0 2px 8px rgba(0,0,0,0.1); text-align:center; }
+    .card img { width:100%; max-height:200px; object-fit:contain; border-radius:8px; background:#000; cursor:zoom-in; transition:0.3s; }
+    .card img:hover { transform:scale(1.05); }
+    button { margin:4px; padding:6px 10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
+    .approve { background:#16a34a; color:#fff; }
+    .reject { background:#dc2626; color:#fff; }
+    .delete { background:#6b7280; color:#fff; }
   </style>
 </head>
 <body>
-  <h1>🏠 Zara Property Listings</h1>
-  <div id="property-list"></div>
+  <h2>🏠 Zara Property</h2>
 
-  <!-- Firebase -->
+  <!-- Add Property Form -->
+  <form id="propertyForm">
+    <input type="text" id="title" placeholder="Title" required><br>
+    <input type="text" id="price" placeholder="Price" required><br>
+    <input type="text" id="image" placeholder="Image URL (optional)"><br>
+    <button type="submit">Add Property</button>
+  </form>
+
+  <!-- Property List -->
+  <h3>Property List</h3>
+  <div id="propertyList"></div>
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
-    // 🔑 Firebase Config (आपका actual config)
+    // 🔑 Firebase Config (आपका दिया हुआ)
     const firebaseConfig = {
       apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
       authDomain: "loot-lo-15328.firebaseapp.com",
@@ -90,50 +50,63 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const listDiv = document.getElementById("property-list");
+    const fallbackImg = "https://i.ibb.co/ff05d1b5c3b3e139253856f0ad1123df/bb.jpg";
 
-    // 📌 Property Fetch
-    function fetchProperties() {
-      db.ref("properties").on("value", snap => {
-        listDiv.innerHTML = "";
-        snap.forEach(child => {
-          let data = child.val();
-          let id = child.key;
-          let card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <img src="${data.image || 'https://i.ibb.co/ff05d1b5c3b3e139253856f0ad1123df/bb.jpg'}" alt="Property Image" />
-            <div class="details">
-              <p><b>Title:</b> ${data.title || "N/A"}</p>
-              <p><b>Price:</b> ${data.price || "N/A"}</p>
-              <p><b>Status:</b> ${data.status || "Pending"}</p>
-            </div>
-            <div class="actions">
-              <button class="approve">Approve</button>
-              <button class="reject">Reject</button>
-              <button class="delete">Delete</button>
-            </div>
+    // Property Add
+    document.getElementById("propertyForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const title = document.getElementById("title").value;
+      const price = document.getElementById("price").value;
+      const image = document.getElementById("image").value || fallbackImg;
+
+      const newRef = db.ref("properties").push();
+      newRef.set({ title, price, image, status: "Pending" });
+
+      document.getElementById("propertyForm").reset();
+    });
+
+    // Show Property List
+    function loadProperties() {
+      db.ref("properties").on("value", snapshot => {
+        const list = document.getElementById("propertyList");
+        list.innerHTML = "";
+        snapshot.forEach(child => {
+          const prop = child.val();
+          const div = document.createElement("div");
+          div.className = "card";
+
+          div.innerHTML = `
+            <img src="${prop.image || fallbackImg}" alt="Property Image">
+            <h4>${prop.title}</h4>
+            <p><b>Price:</b> ${prop.price}</p>
+            <p><b>Status:</b> ${prop.status}</p>
+            <button class="approve" onclick="approveProperty('${child.key}')">Approve</button>
+            <button class="reject" onclick="rejectProperty('${child.key}')">Reject</button>
+            <button class="delete" onclick="deleteProperty('${child.key}')">Delete</button>
           `;
-          // Approve
-          card.querySelector(".approve").onclick = () => {
-            db.ref("properties/" + id).update({ status: "Approved" });
-          };
-          // Reject
-          card.querySelector(".reject").onclick = () => {
-            db.ref("properties/" + id).update({ status: "Rejected" });
-          };
-          // Delete
-          card.querySelector(".delete").onclick = () => {
-            if(confirm("Delete this property permanently?")) {
-              db.ref("properties/" + id).remove();
-            }
-          };
-          listDiv.appendChild(card);
+
+          list.appendChild(div);
         });
       });
     }
+    loadProperties();
 
-    fetchProperties();
+    // Approve
+    function approveProperty(id) {
+      db.ref("properties/" + id).update({ status: "Approved" });
+    }
+
+    // Reject
+    function rejectProperty(id) {
+      db.ref("properties/" + id).update({ status: "Rejected" });
+    }
+
+    // Delete
+    function deleteProperty(id) {
+      if(confirm("Delete this property permanently?")) {
+        db.ref("properties/" + id).remove();
+      }
+    }
   </script>
 </body>
 </html>
