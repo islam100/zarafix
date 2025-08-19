@@ -1,135 +1,658 @@
-import React, { useState, useEffect } from "react";
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, onSnapshot, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
-
-// 🔥 Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", discount: "", whatsapp: "", images: [] });
-
-  // 🟢 Real-time Products
-  useEffect(() => {
-    const q = query(collection(db, "products"), orderBy("timestamp", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    return unsub;
-  }, []);
-
-  // 🔐 Google Login
-  const login = async () => {
-    try {
-      const res = await signInWithPopup(auth, provider);
-      setUser(res.user);
-    } catch (e) {
-      console.error(e);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix Marketplace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0d12; /* deep dark */
+      --card:#11141b; /* card base */
+      --card-2:#151a24; /* elevated */
+      --text:#e7ecf5; /* main text */
+      --muted:#9fb0cc;
+      --brand-1:#7c6cff; /* gradient start */
+      --brand-2:#00e5ff; /* gradient end */
+      --accent:#24d26b; /* success */
+      --danger:#ff3b3b; /* pending/reject */
+      --warning:#ffb02e;
+      --shadow: 0 15px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.02);
+      --radius-2xl: 22px;
     }
-  };
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at -10% -10%, rgba(124,108,255,.15), transparent 50%),
+                  radial-gradient(1000px 600px at 110% -20%, rgba(0,229,255,.12), transparent 50%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{color:inherit; text-decoration:none}
 
-  const logout = () => {
-    signOut(auth);
-    setUser(null);
-  };
+    /* ===== Header / App Bar ===== */
+    .appbar{
+      position:sticky; top:0; z-index:50; backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(15,17,24,.75), rgba(15,17,24,.35));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .appbar-inner{
+      max-width:1200px; margin:0 auto; padding:10px 14px; display:flex; align-items:center; gap:12px;
+    }
+    .logo{
+      display:flex; align-items:center; gap:10px; user-select:none;
+    }
+    .logo-badge{
+      width:44px; height:44px; border-radius:14px;
+      background: conic-gradient(from 200deg, var(--brand-1), var(--brand-2));
+      box-shadow: 0 10px 24px rgba(0,229,255,.25), inset 0 -6px 20px rgba(0,0,0,.35);
+    }
+    .logo-text{
+      font-weight:800; letter-spacing:.5px; font-size:26px; line-height:1;
+      background: linear-gradient(90deg, #fff, #b0dfff, #86a0ff);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 6px 30px rgba(0,229,255,.25);
+      filter: drop-shadow(0 10px 10px rgba(0,229,255,.1));
+    }
+    .pill{
+      display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); box-shadow: var(--shadow);
+    }
+    .menus{flex:1; display:flex; justify-content:center; gap:10px}
+    .dropdown{position:relative}
+    .dropdown > button{
+      font-weight:600; border:none; cursor:pointer; color:var(--text); background:transparent;
+      padding:10px 14px; border-radius:12px;
+    }
+    .dropdown-list{
+      position:absolute; top:100%; left:0; min-width:230px; margin-top:8px; display:none; flex-direction:column;
+      background: var(--card-2); border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow: var(--shadow);
+      overflow:hidden; z-index:60;
+    }
+    .dropdown.open .dropdown-list{display:flex}
+    .dropdown-list a{padding:12px 14px; display:flex; align-items:center; gap:10px}
+    .dropdown-list a:hover{background:rgba(255,255,255,.06)}
 
-  // 🛒 Add Product (Shopkeeper)
-  const addProduct = async () => {
-    if (!newProduct.name || !newProduct.price) return alert("Fill all details");
-    await addDoc(collection(db, "products"), {
-      ...newProduct,
-      status: "pending",
-      shop: user.email,
-      timestamp: Date.now()
-    });
-    setNewProduct({ name: "", price: "", discount: "", whatsapp: "", images: [] });
-    alert("Product submitted. Wait for approval.");
-  };
+    .auth-area{display:flex; align-items:center; gap:8px}
+    .btn-3d{
+      appearance:none; border:none; cursor:pointer; color:#081018; font-weight:800;
+      padding:10px 14px; border-radius:14px; background: linear-gradient(180deg,#8ef6ff,#44d2ff);
+      box-shadow: 0 10px 20px rgba(0,229,255,.35), inset 0 -8px 16px rgba(0,0,0,.25);
+      transition: transform .08s ease, box-shadow .2s ease;
+    }
+    .btn-3d:active{ transform: translateY(2px); box-shadow: 0 6px 14px rgba(0,229,255,.35), inset 0 -6px 14px rgba(0,0,0,.25); }
+    .btn-ghost{ background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); color:var(--text)}
+    .btn-danger{ background: linear-gradient(180deg,#ff9a9a,#ff5252)}
+    .btn-success{ background: linear-gradient(180deg,#86ffcc,#24d26b)}
 
-  // ✅ Admin Approve / ❌ Reject
-  const updateStatus = async (id, status) => {
-    await updateDoc(doc(db, "products", id), { status });
-  };
+    .roles{ display:flex; gap:6px }
+    .tab{ padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; opacity:.85; border:1px solid rgba(255,255,255,.08)}
+    .tab.active{ background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); opacity:1 }
 
-  return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      {/* Header */}
-      <header className="flex justify-between items-center p-4 bg-black shadow-xl sticky top-0 z-50">
-        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-yellow-500 to-green-500 drop-shadow-lg">
-          ZARA FIX
-        </h1>
-        <nav className="flex gap-6">
-          <select className="bg-gray-800 p-2 rounded-xl">
-            <option>All Services</option>
-            <option>Property</option>
-            <option>Ambulance</option>
-            <option>Home</option>
-          </select>
-          <select className="bg-gray-800 p-2 rounded-xl">
-            <option>Provider</option>
-            <option>About</option>
-            <option>Contact</option>
-            <option>Privacy Policy</option>
-          </select>
-        </nav>
-        {user ? (
-          <button onClick={logout} className="px-4 py-2 rounded-2xl shadow-lg bg-gradient-to-r from-red-500 to-pink-600 font-bold">Logout</button>
-        ) : (
-          <button onClick={login} className="px-4 py-2 rounded-2xl shadow-lg bg-gradient-to-r from-green-500 to-blue-600 font-bold">Login with Google</button>
-        )}
-      </header>
+    /* ===== Main Layout ===== */
+    .wrap{ max-width:1200px; margin:20px auto; padding:0 14px }
 
-      {/* Add Product Form (Shopkeeper) */}
-      {user && user.email !== "zarasamajiksevasanstha@gmail.com" && (
-        <div className="p-4">
-          <h2 className="text-xl mb-2 font-bold">Add Product</h2>
-          <input placeholder="Name" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} className="p-2 m-1 bg-gray-800 rounded-xl" />
-          <input placeholder="Price" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} className="p-2 m-1 bg-gray-800 rounded-xl" />
-          <input placeholder="Discount" value={newProduct.discount} onChange={(e) => setNewProduct({ ...newProduct, discount: e.target.value })} className="p-2 m-1 bg-gray-800 rounded-xl" />
-          <input placeholder="WhatsApp Number" value={newProduct.whatsapp} onChange={(e) => setNewProduct({ ...newProduct, whatsapp: e.target.value })} className="p-2 m-1 bg-gray-800 rounded-xl" />
-          <button onClick={addProduct} className="block mt-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-600 shadow-xl">Submit</button>
-        </div>
-      )}
+    /* ===== Info bars ===== */
+    .info{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:10px 0 18px; flex-wrap:wrap }
+    .stats{ display:flex; gap:10px; flex-wrap:wrap }
+    .chip{ padding:8px 12px; border-radius:999px; background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); font-weight:700; font-size:12px }
 
-      {/* Product List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        {products.map((p) => (
-          <div key={p.id} className={`p-4 rounded-2xl shadow-2xl transform transition hover:scale-105 ${p.status === "pending" ? "bg-red-700" : "bg-gray-800"}`}>
-            <h3 className="text-lg font-bold">{p.name}</h3>
-            <p>Price: ₹{p.price}</p>
-            <p>Discount: {p.discount}%</p>
-            <a href={`https://wa.me/${p.whatsapp}?text=Hame%20apka%20product%20pasand%20aaya%20hai:%20${p.name}%20Price:%20${p.price}`} target="_blank" rel="noreferrer">
-              <button className="mt-2 px-3 py-1 bg-green-600 rounded-xl shadow-lg">WhatsApp Shop</button>
-            </a>
+    /* ===== Grid / Cards ===== */
+    .grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:12px }
+    @media (min-width: 820px){ .grid{ grid-template-columns:repeat(4, 1fr) } }
 
-            {/* Admin Actions */}
-            {user?.email === "zarasamajiksevasanstha@gmail.com" && (
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => updateStatus(p.id, "approved")} className="px-3 py-1 bg-blue-600 rounded-xl">Approve</button>
-                <button onClick={() => updateStatus(p.id, "rejected")} className="px-3 py-1 bg-red-800 rounded-xl">Reject</button>
-              </div>
-            )}
+    .card{ position:relative; border-radius: var(--radius-2xl); background: linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); overflow:hidden; user-select:none }
+    .card.pending{ outline:2px dashed rgba(255,59,59,.6); background: linear-gradient(160deg, rgba(255,59,59,.15), rgba(255,255,255,.03)) }
+    .card.rejected{ outline:2px dashed rgba(255,59,59,.9); filter:saturate(.6) opacity(.9) }
+    .badge{ position:absolute; top:10px; left:10px; padding:6px 10px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.3px; color:#081018 }
+    .badge.pending{ background: linear-gradient(180deg,#ffd0d0,#ff7373) }
+    .badge.approved{ background: linear-gradient(180deg,#b8ffd9,#49e28c) }
+    .badge.rejected{ background: linear-gradient(180deg,#ffc2c2,#ff3b3b) }
 
-            {/* Status */}
-            <p className="text-sm mt-1">Status: {p.status}</p>
+    .media{ position:relative; height:170px; background:#0d1117 }
+    .media img{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none }
+    .media .nav{ position:absolute; top:50%; transform:translateY(-50%); width:100%; display:flex; justify-content:space-between; padding:0 6px }
+    .icon-btn{ width:34px; height:34px; border-radius:999px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.25);
+      background: rgba(0,0,0,.35); backdrop-filter: blur(4px); cursor:pointer; font-weight:900 }
+
+    .body{ padding:12px }
+    .name{ font-weight:800; font-size:14px; line-height:1.3 }
+    .meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; margin:6px 0 10px; flex-wrap:wrap }
+    .price{ font-weight:900; font-size:16px }
+    .discount{ font-size:12px; font-weight:800; color:#ffe08a }
+
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .row .grow{ flex:1 }
+
+    .card-actions{ display:flex; gap:8px; margin-top:10px }
+
+    /* ===== Forms ===== */
+    .panel{ background: var(--card); border:1px solid rgba(255,255,255,.08); border-radius: var(--radius-2xl); box-shadow: var(--shadow); padding:14px; margin:12px 0 }
+    .panel h3{ margin:0 0 10px; font-size:16px }
+    .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px }
+    .field input, .field select, .field textarea{
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); color:var(--text);
+      border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; outline:none
+    }
+    .hint{ font-size:12px; color:var(--muted) }
+
+    /* ===== Modal (Card enlarge) ===== */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,.6); z-index:70 }
+    .modal.show{ display:flex }
+    .modal-card{ width:min(96vw, 900px); border-radius:22px; overflow:hidden; background: var(--card-2); border:1px solid rgba(255,255,255,.08); box-shadow: var(--shadow) }
+
+    /* ===== Admin gear ===== */
+    .gear{ display:none; margin-left:6px; cursor:pointer; font-size:18px }
+    .gear.show{ display:inline }
+
+    /* ===== Tiny helpers ===== */
+    .hidden{ display:none !important }
+    .right{ margin-left:auto }
+    .sep{ height:1px; background: rgba(255,255,255,.08); margin:10px 0 }
+
+    /* Prevent copy/cut on cards */
+    .card, .card *{ user-select:none }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <!-- Left: 3D colourful logo -->
+      <div class="logo">
+        <div class="logo-badge"></div>
+        <div class="logo-text">ZARA FIX</div>
+      </div>
+
+      <!-- Center: menus -->
+      <div class="menus">
+        <div class="pill">
+          <div class="dropdown" id="dd-services">
+            <button>Services ▾</button>
+            <div class="dropdown-list">
+              <a href="#" data-link-key="allServices">All Services</a>
+              <a href="#" data-link-key="property">Property</a>
+              <a href="#" data-link-key="ambulance">Ambulance</a>
+              <a href="#" data-link-key="home">Home</a>
+            </div>
           </div>
-        ))}
+          <div class="dropdown" id="dd-info">
+            <button>Info ▾</button>
+            <div class="dropdown-list">
+              <a href="#" data-link-key="provider">Provider</a>
+              <a href="#" data-link-key="about">About</a>
+              <a href="#" data-link-key="contact">Contact</a>
+              <a href="#" data-link-key="privacy">Privacy Policy</a>
+            </div>
+          </div>
+          <span class="gear" id="editLinksBtn">⚙ Edit Links</span>
+        </div>
+      </div>
+
+      <!-- Right: auth + role tabs -->
+      <div class="auth-area">
+        <div class="roles pill">
+          <span class="tab active" data-tab="publicTab">Public</span>
+          <span class="tab" data-tab="shopTab">Shopkeeper</span>
+          <span class="tab hidden" id="adminTabBtn" data-tab="adminTab">Admin</span>
+        </div>
+        <button class="btn-3d btn-ghost" id="loginBtn">Login with Google</button>
+        <button class="btn-3d btn-danger hidden" id="logoutBtn">Logout</button>
       </div>
     </div>
-  );
-}
+  </header>
+
+  <div class="wrap">
+    <!-- Top Info Bar / Filters -->
+    <div class="info">
+      <div class="pill" style="gap:8px; flex:1; flex-wrap:wrap">
+        <span class="chip">Newest first</span>
+        <span class="chip">3D Cards</span>
+        <span class="chip">App-like • Dark Theme</span>
+        <select id="filterCategory" class="chip" style="background:transparent; color:var(--text); border:none">
+          <option value="">All Categories</option>
+          <option>bike</option>
+          <option>car</option>
+          <option>cloth</option>
+          <option>watch</option>
+          <option>mobile</option>
+          <option>pc</option>
+        </select>
+        <input id="searchInput" class="chip" placeholder="Search name..." style="background:transparent; color:var(--text); border:none" />
+      </div>
+      <div class="stats pill">
+        <span class="chip" id="statTotal">Total: 0</span>
+        <span class="chip" id="statApproved">Approved: 0</span>
+        <span class="chip" id="statPending">Pending: 0</span>
+        <span class="chip" id="statRejected">Rejected: 0</span>
+      </div>
+    </div>
+
+    <!-- ===== PUBLIC LIST ===== -->
+    <section id="publicTab">
+      <div class="grid" id="publicGrid"></div>
+    </section>
+
+    <!-- ===== SHOPKEEPER PANEL ===== -->
+    <section id="shopTab" class="hidden">
+      <div class="panel">
+        <h3>Shopkeeper: Add Product</h3>
+        <div class="hint">Upload up to 5 images. Fields with * are required.</div>
+        <div class="row">
+          <div class="field" style="flex:1">
+            <label>Product Name *</label>
+            <input id="pName" maxlength="80" placeholder="eg. Redmi Note 12" />
+          </div>
+          <div class="field">
+            <label>Category *</label>
+            <select id="pCategory">
+              <option value="">Select...</option>
+              <option>bike</option>
+              <option>car</option>
+              <option>cloth</option>
+              <option>watch</option>
+              <option>mobile</option>
+              <option>pc</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Price (₹) *</label>
+            <input id="pPrice" type="number" min="1" placeholder="999" />
+          </div>
+          <div class="field">
+            <label>Discount (%)</label>
+            <input id="pDiscount" type="number" min="0" max="95" placeholder="10" />
+          </div>
+          <div class="field grow">
+            <label>Shop WhatsApp Number *</label>
+            <input id="pWhats" type="tel" maxlength="15" placeholder="91xxxxxxxxxx" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Images (1–5) via ImgBB *</label>
+          <input id="pImages" type="file" accept="image/*" multiple />
+          <div class="hint">We will upload to ImgBB automatically. Max 5 images.</div>
+        </div>
+        <div class="row">
+          <button id="submitProduct" class="btn-3d">Submit Product</button>
+          <span id="formMsg" class="hint"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Your Products</h3>
+        <div class="grid" id="myGrid"></div>
+      </div>
+    </section>
+
+    <!-- ===== ADMIN PANEL ===== -->
+    <section id="adminTab" class="hidden">
+      <div class="panel">
+        <h3>Admin Dashboard</h3>
+        <div class="row">
+          <div class="chip" id="aTotal">Total: 0</div>
+          <div class="chip" id="aApproved">Approved: 0</div>
+          <div class="chip" id="aPending">Pending: 0</div>
+          <div class="chip" id="aRejected">Rejected: 0</div>
+        </div>
+        <div class="sep"></div>
+        <div class="grid" id="adminGrid"></div>
+      </div>
+
+      <div class="panel hidden" id="linksEditor">
+        <h3>⚙ Edit Dropdown Links</h3>
+        <div id="linksForm"></div>
+        <button class="btn-3d btn-success" id="saveLinks">Save Links</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal for enlarged card -->
+  <div class="modal" id="modal">
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+
+  <!-- Firebase + App Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ====== CONFIG ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+      authDomain: "loot-lo-15328.firebaseapp.com",
+      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+      projectId: "loot-lo-15328",
+      storageBucket: "loot-lo-15328.appspot.com",
+      messagingSenderId: "677769861892",
+      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+    };
+    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+    const IMGBB_KEY = 'ff05d1b5c3b3e139253856f0ad1123df';
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // ====== UI Helpers ======
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const byId = id => document.getElementById(id);
+
+    function toast(el, msg){ el.textContent = msg; setTimeout(()=> el.textContent='', 4000) }
+
+    function rupees(n){ try{ return '₹' + Number(n).toLocaleString('en-IN'); }catch{ return '₹' + n }
+    }
+
+    // Dropdown open/close
+    $$('#dd-services, #dd-info').forEach(dd=>{
+      const btn = dd.querySelector('button');
+      btn.addEventListener('click', ()=> dd.classList.toggle('open'));
+      document.addEventListener('click', (e)=>{ if(!dd.contains(e.target)) dd.classList.remove('open') })
+    })
+
+    // Tabs
+    $$('.tab').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        $$('.tab').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+        ['publicTab','shopTab','adminTab'].forEach(id=> byId(id).classList.add('hidden'));
+        byId(t.dataset.tab).classList.remove('hidden');
+      })
+    })
+
+    // ====== AUTH ======
+    const loginBtn = byId('loginBtn');
+    const logoutBtn = byId('logoutBtn');
+    const adminTabBtn = byId('adminTabBtn');
+    const editLinksBtn = byId('editLinksBtn');
+
+    loginBtn.onclick = async()=>{
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    }
+    logoutBtn.onclick = ()=> auth.signOut();
+
+    auth.onAuthStateChanged(user=>{
+      const isLogged = !!user;
+      loginBtn.classList.toggle('hidden', isLogged);
+      logoutBtn.classList.toggle('hidden', !isLogged);
+      byId('shopTab').classList.toggle('hidden', !isLogged);
+      // Admin controls
+      const isAdmin = user && user.email === ADMIN_EMAIL;
+      adminTabBtn.classList.toggle('hidden', !isAdmin);
+      editLinksBtn.classList.toggle('show', isAdmin);
+      if(isAdmin){ loadLinksEditor(); }
+      // refresh views
+      renderAll();
+      loadMyProducts();
+    })
+
+    // ====== DB STRUCT ======
+    // products/{id}: { id, name, category, price, discount, images[], whats, shopUid, status, createdAt }
+    const productsRef = db.ref('products');
+
+    // ====== LINKS CONFIG (admin editable) ======
+    const LINK_KEYS = ['allServices','property','ambulance','home','provider','about','contact','privacy'];
+
+    async function loadLinks(){
+      const snap = await db.ref('config/links').get();
+      const links = snap.val() || {};
+      // apply to menu anchors
+      $$('[data-link-key]').forEach(a=>{ const k=a.dataset.linkKey; if(links[k]) a.href=links[k]; });
+    }
+
+    function loadLinksEditor(){
+      const box = byId('linksEditor');
+      box.classList.remove('hidden');
+      const form = byId('linksForm');
+      form.innerHTML = LINK_KEYS.map(k=>`<div class="field"><label>${k}</label><input data-k="${k}" placeholder="https://..."/></div>`).join('');
+      db.ref('config/links').get().then(s=>{
+        const links = s.val()||{};
+        form.querySelectorAll('input').forEach(inp=>{ const k=inp.dataset.k; inp.value = links[k]||'' })
+      })
+      byId('saveLinks').onclick = async()=>{
+        const obj={}; form.querySelectorAll('input').forEach(inp=> obj[inp.dataset.k]=inp.value.trim());
+        await db.ref('config/links').set(obj);
+        await loadLinks();
+        alert('Links saved.');
+      }
+    }
+
+    loadLinks();
+
+    // ====== IMAGE UPLOAD (ImgBB) ======
+    async function uploadToImgBB(file){
+      const body = new FormData();
+      body.append('key', IMGBB_KEY);
+      body.append('image', file);
+      const res = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body });
+      const data = await res.json();
+      if(!data || !data.data || !data.data.url) throw new Error('ImgBB upload failed');
+      return data.data.url; // display URL
+    }
+
+    async function uploadMultiple(files){
+      const limited = Array.from(files).slice(0,5);
+      const urls = [];
+      for(const f of limited){ urls.push(await uploadToImgBB(f)); }
+      return urls;
+    }
+
+    // ====== SUBMIT PRODUCT ======
+    byId('submitProduct').onclick = async()=>{
+      const user = auth.currentUser; if(!user){ alert('Please login first'); return }
+      const name = byId('pName').value.trim();
+      const category = byId('pCategory').value.trim();
+      const price = Number(byId('pPrice').value);
+      const discount = Number(byId('pDiscount').value||0);
+      const whats = byId('pWhats').value.trim();
+      const files = byId('pImages').files;
+      if(!name || !category || !price || !whats || !files.length){ toast(byId('formMsg'),'Please fill all required fields*'); return }
+      byId('formMsg').textContent='Uploading images…';
+      try{
+        const images = await uploadMultiple(files);
+        byId('formMsg').textContent='Saving…';
+        const id = productsRef.push().key;
+        const product = { id, name, category, price, discount, images, whats, shopUid:user.uid, status:'pending', createdAt: Date.now() };
+        await productsRef.child(id).set(product);
+        byId('formMsg').textContent='Submitted! WAIT FOR APPROVAL';
+        // reset small form
+        byId('pName').value=''; byId('pCategory').value=''; byId('pPrice').value=''; byId('pDiscount').value=''; byId('pWhats').value=''; byId('pImages').value='';
+      }catch(e){ console.error(e); toast(byId('formMsg'),'Error: '+e.message) }
+    }
+
+    // ====== RENDER & STATE ======
+    let ALL_PRODUCTS = [];
+
+    // Live listener (newest first)
+    productsRef.on('value', snap=>{
+      const obj = snap.val() || {};
+      ALL_PRODUCTS = Object.values(obj).sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+      updateStats();
+      renderAll();
+      loadMyProducts();
+      renderAdmin();
+    });
+
+    // Filters
+    byId('filterCategory').addEventListener('change', renderAll);
+    byId('searchInput').addEventListener('input', ()=>{ clearTimeout(window.__srch); window.__srch = setTimeout(renderAll, 150); });
+
+    function updateStats(){
+      const total = ALL_PRODUCTS.length;
+      const approved = ALL_PRODUCTS.filter(p=>p.status==='approved').length;
+      const pending = ALL_PRODUCTS.filter(p=>p.status==='pending').length;
+      const rejected = ALL_PRODUCTS.filter(p=>p.status==='rejected').length;
+      byId('statTotal').textContent = `Total: ${total}`;
+      byId('statApproved').textContent = `Approved: ${approved}`;
+      byId('statPending').textContent = `Pending: ${pending}`;
+      byId('statRejected').textContent = `Rejected: ${rejected}`;
+      // Admin stats
+      byId('aTotal').textContent = `Total: ${total}`;
+      byId('aApproved').textContent = `Approved: ${approved}`;
+      byId('aPending').textContent = `Pending: ${pending}`;
+      byId('aRejected').textContent = `Rejected: ${rejected}`;
+    }
+
+    function applyFilters(list){
+      const cat = byId('filterCategory').value;
+      const q = byId('searchInput').value.trim().toLowerCase();
+      return list.filter(p=>{
+        if(cat && p.category!==cat) return false;
+        if(q && !(p.name||'').toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+
+    function renderAll(){ renderPublic(); }
+
+    // ===== CARD COMPONENT =====
+    function cardBadge(p){
+      if(p.status==='approved') return '<span class="badge approved">APPROVED</span>';
+      if(p.status==='pending') return '<span class="badge pending">WAIT FOR APPROVAL</span>';
+      if(p.status==='rejected') return '<span class="badge rejected">REJECTED</span>';
+      return '';
+    }
+    function waLink(p){
+      const msg = `हमें आपका product पसंद आया है: ${p.name} (${rupees(p.price)}). कृपया पूरी जानकारी दें।`;
+      const phone = (p.whats||'').replace(/\D/g,'');
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    }
+
+    function imageGalleryHTML(p){
+      const first = (p.images && p.images[0]) || '';
+      const count = (p.images||[]).length;
+      return `
+        <div class="media" data-idx="0">
+          <img src="${first}" alt="${p.name}"/>
+          ${count>1?`<div class="nav"><div class="icon-btn prev">‹</div><div class="icon-btn next">›</div></div>`:''}
+        </div>`;
+    }
+
+    function attachGalleryHandlers(cardEl, p){
+      const media = cardEl.querySelector('.media');
+      if(!media) return;
+      const img = media.querySelector('img');
+      const total = (p.images||[]).length;
+      function setIdx(i){ media.dataset.idx = String(i); img.src = p.images[i]; }
+      cardEl.querySelector('.prev')?.addEventListener('click', (e)=>{ e.stopPropagation(); const i=(+media.dataset.idx||0); setIdx((i-1+total)%total); });
+      cardEl.querySelector('.next')?.addEventListener('click', (e)=>{ e.stopPropagation(); const i=(+media.dataset.idx||0); setIdx((i+1)%total); });
+    }
+
+    function createCard(p, ctx){ // ctx: 'public' | 'mine' | 'admin'
+      const statusClass = p.status==='pending' ? 'pending' : (p.status==='rejected'?'rejected':'');
+      const discountTxt = p.discount ? `<span class="discount">-${p.discount}%</span>` : '';
+      const waBtn = `<a class="btn-3d" target="_blank" href="${waLink(p)}">WhatsApp</a>`;
+      let actions = '';
+      if(ctx==='mine' && auth.currentUser && p.shopUid===auth.currentUser.uid){
+        actions += `<button class=\"btn-3d btn-danger del\">Delete</button>`;
+      }
+      if(ctx==='admin'){
+        actions += `<button class=\"btn-3d btn-success approve\">Approve</button>`;
+        actions += `<button class=\"btn-3d btn-danger reject\">Reject</button>`;
+      }
+
+      const el = document.createElement('div');
+      el.className = `card ${statusClass}`;
+      el.innerHTML = `
+        ${cardBadge(p)}
+        ${imageGalleryHTML(p)}
+        <div class=\"body\">
+          <div class=\"name\">${p.name || ''}</div>
+          <div class=\"meta\">
+            <span>${(p.category||'').toUpperCase()}</span>
+            <span>•</span>
+            <span class=\"price\">${rupees(p.price||0)}</span>
+            ${discountTxt}
+          </div>
+          <div class=\"card-actions\">
+            ${waBtn}
+            ${actions}
+          </div>
+        </div>`;
+
+      // enlarge on click
+      el.addEventListener('click', (e)=>{
+        if(e.target.closest('.btn-3d') || e.target.classList.contains('icon-btn')) return; // ignore button/gallery clicks
+        openModal(p);
+      });
+
+      // actions handlers
+      if(ctx==='mine'){
+        el.querySelector('.del')?.addEventListener('click', async (e)=>{
+          e.stopPropagation();
+          if(confirm('Delete this product?')){
+            await productsRef.child(p.id).remove();
+          }
+        });
+      }
+      if(ctx==='admin'){
+        el.querySelector('.approve')?.addEventListener('click', async (e)=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'approved'}); });
+        el.querySelector('.reject')?.addEventListener('click', async (e)=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'rejected'}); });
+      }
+
+      // gallery
+      attachGalleryHandlers(el, p);
+      return el;
+    }
+
+    // ===== PUBLIC RENDER =====
+    function renderPublic(){
+      const grid = byId('publicGrid');
+      grid.innerHTML = '';
+      // Show approved + pending (not rejected)
+      const list = applyFilters(ALL_PRODUCTS.filter(p=>p.status!=='rejected'));
+      for(const p of list){ grid.appendChild(createCard(p,'public')); }
+      if(!list.length){ grid.innerHTML = '<div class="hint" style="grid-column:1/-1; padding:20px">No items found.</div>'; }
+    }
+
+    // ===== MY PRODUCTS (SHOPKEEPER) =====
+    function loadMyProducts(){
+      const grid = byId('myGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      const u = auth.currentUser; if(!u){ grid.innerHTML = '<div class="hint">Login to manage your products.</div>'; return; }
+      const mine = ALL_PRODUCTS.filter(p=>p.shopUid===u.uid);
+      for(const p of mine){ grid.appendChild(createCard(p,'mine')); }
+      if(!mine.length){ grid.innerHTML = '<div class="hint" style="grid-column:1/-1; padding:20px">No products yet. Add your first one!</div>'; }
+    }
+
+    // ===== ADMIN RENDER =====
+    function renderAdmin(){
+      const grid = byId('adminGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      for(const p of ALL_PRODUCTS){ grid.appendChild(createCard(p,'admin')); }
+      if(!ALL_PRODUCTS.length){ grid.innerHTML = '<div class="hint" style="grid-column:1/-1; padding:20px">No products in database.</div>'; }
+    }
+
+    // ===== MODAL =====
+    const modal = byId('modal');
+    const modalCard = byId('modalCard');
+    function openModal(p){
+      modalCard.innerHTML = `
+        ${imageGalleryHTML(p)}
+        <div class="body">
+          <div class="name" style="font-size:18px">${p.name}</div>
+          <div class="meta"><strong>${(p.category||'').toUpperCase()}</strong> • ${rupees(p.price)} ${p.discount?`<span class='discount'>-${p.discount}%</span>`:''}</div>
+          <div class="row">
+            <a class="btn-3d" target="_blank" href="${waLink(p)}">WhatsApp Shop</a>
+          </div>
+        </div>`;
+      modal.classList.add('show');
+      attachGalleryHandlers(modalCard, p);
+    }
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('show'); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') modal.classList.remove('show'); });
+
+    // Kick-off first render for empty state
+    renderAll();
+  </script>
+</body>
+</html>
