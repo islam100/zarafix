@@ -3,160 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Properties</title>
+  <title>ZaraFix Dashboard</title>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: #fff;
-    }
-    header {
-      padding: 15px;
-      text-align: center;
-      background: #1e1e1e;
-      font-size: 20px;
-      font-weight: bold;
-      color: #00e676;
+      margin:0; font-family: Arial, sans-serif;
+      background:#121212; color:#fff;
+      display:flex; justify-content:center; padding:20px;
     }
     .container {
-      max-width: 900px;
-      margin: 20px auto;
-      padding: 10px;
+      width:100%; max-width:800px;
     }
     .card {
-      background: #1c1c1c;
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-      margin: 15px 0;
-      padding: 15px;
+      background:#1e1e1e;
+      margin:10px 0; padding:15px;
+      border-radius:15px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.4);
       transition: transform 0.2s;
     }
-    .card:hover { transform: scale(1.02); }
-    .card img {
-      max-width: 100%;
-      border-radius: 12px;
-    }
-    .card h3 { margin: 10px 0 5px; color: #00e676; }
-    .card p { margin: 5px 0; }
+    .card:hover { transform:scale(1.02); }
     .btn {
-      display: inline-block;
-      padding: 6px 14px;
-      margin: 5px 5px 0 0;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.2s;
+      padding:8px 14px; margin:5px;
+      border:none; border-radius:8px;
+      cursor:pointer; font-weight:bold;
+      color:#fff;
     }
-    .approve { background: #00e676; color: #000; }
-    .reject { background: #ff1744; color: #fff; }
-    .delete { background: #ffa000; color: #000; }
-    .btn:hover { opacity: 0.8; transform: scale(1.05); }
-    .status {
-      margin-top: 8px;
-      font-size: 14px;
-      font-weight: bold;
-    }
+    .approve { background:#4caf50; }
+    .reject { background:#e53935; }
+    .delete { background:#f57c00; }
+    .status { font-size:14px; margin-top:5px; }
   </style>
 </head>
 <body>
-  <header>🏠 ZaraFix Property Listings</header>
-  <div class="container" id="posts"></div>
+  <div class="container">
+    <div id="posts"></div>
+  </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script type="module">
+    // Firebase config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
       authDomain: "property-20d6d.firebaseapp.com",
       databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
       projectId: "property-20d6d",
       storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "890079364836",
-      appId: "1:890079364836:web:cb7a9bfae87f6e22222"
+      messagingSenderId: "31457524392",
+      appId: "1:31457524392:web:99d9f2f28dcafc22b8f4c7"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     const postsDiv = document.getElementById("posts");
 
-    // Dummy: Replace with actual login role check
-    let currentUserId = "USER123";  
-    let isAdmin = true; // agar admin hai true, poster ke liye false
-
-    function loadPosts() {
-      db.ref("properties").orderByChild("timestamp").limitToLast(50).on("value", snapshot => {
-        postsDiv.innerHTML = "";
-        let posts = [];
-        snapshot.forEach(child => {
-          posts.push({ id: child.key, ...child.val() });
-        });
-        posts.reverse(); // Newest first
-        posts.forEach(post => renderCard(post));
+    // Load posts newest first
+    const postsRef = ref(db, "posts");
+    onValue(postsRef, snapshot => {
+      postsDiv.innerHTML = "";
+      let data = [];
+      snapshot.forEach(child => {
+        data.push({ id: child.key, ...child.val() });
       });
-    }
+      data.reverse().forEach(post => renderCard(post));
+    });
 
+    // Render Card
     function renderCard(post) {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        ${post.image ? `<img src="${post.image}" alt="Property">` : ""}
-        <h3>${post.title || "Untitled Property"}</h3>
-        <p><b>Price:</b> ₹${post.price || "N/A"}</p>
-        <p><b>Shop:</b> ${post.shop || "-"}</p>
-        <p><b>Category:</b> ${post.category || "-"}</p>
-        <p><b>Discount:</b> ₹${post.discount || 0}</p>
-        <p><b>Posted By:</b> ${post.userId}</p>
-        <p class="status">Status: ${post.status || "pending"}</p>
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <h3>${post.title || "No Title"}</h3>
+        <p><b>Category:</b> ${post.category || ""}</p>
+        <p><b>Shop:</b> ${post.shop || ""}</p>
+        <p><b>Discount:</b> ₹${post.discount || "0"}</p>
+        <p><b>Address:</b> ${post.address || ""}</p>
+        <div class="status"><b>Status:</b> ${post.status || "pending"}</div>
+        <button class="btn approve">Approve</button>
+        <button class="btn reject">Reject</button>
+        <button class="btn delete">Delete</button>
       `;
 
-      // Buttons row
-      if (isAdmin) {
-        let approveBtn = document.createElement("button");
-        approveBtn.innerText = "Approve";
-        approveBtn.className = "btn approve";
-        approveBtn.onclick = () => updateStatus(post.id, "approved");
+      // Approve
+      card.querySelector(".approve").onclick = () => {
+        update(ref(db, "posts/" + post.id), { status: "approved" });
+      };
+      // Reject
+      card.querySelector(".reject").onclick = () => {
+        update(ref(db, "posts/" + post.id), { status: "rejected" });
+      };
+      // Delete
+      card.querySelector(".delete").onclick = () => {
+        if (confirm("Are you sure you want to delete this post?")) {
+          remove(ref(db, "posts/" + post.id));
+        }
+      };
 
-        let rejectBtn = document.createElement("button");
-        rejectBtn.innerText = "Reject";
-        rejectBtn.className = "btn reject";
-        rejectBtn.onclick = () => updateStatus(post.id, "rejected");
-
-        let deleteBtn = document.createElement("button");
-        deleteBtn.innerText = "Delete";
-        deleteBtn.className = "btn delete";
-        deleteBtn.onclick = () => deletePost(post.id);
-
-        div.appendChild(approveBtn);
-        div.appendChild(rejectBtn);
-        div.appendChild(deleteBtn);
-      } else if (post.userId === currentUserId) {
-        let deleteBtn = document.createElement("button");
-        deleteBtn.innerText = "Delete";
-        deleteBtn.className = "btn delete";
-        deleteBtn.onclick = () => deletePost(post.id);
-        div.appendChild(deleteBtn);
-      }
-
-      postsDiv.appendChild(div);
+      postsDiv.appendChild(card);
     }
-
-    function updateStatus(postId, status) {
-      db.ref("properties/" + postId).update({ status });
-    }
-
-    function deletePost(postId) {
-      if (confirm("Are you sure to delete?")) {
-        db.ref("properties/" + postId).remove();
-      }
-    }
-
-    loadPosts();
   </script>
 </body>
 </html>
