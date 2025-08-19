@@ -1,64 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Marketplace</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zara Property — Fixed Cards</title>
   <style>
-    body { background: #0f172a; color: white; }
-    .logo { font-size: 2rem; font-weight: 900; background: linear-gradient(45deg, #ff00cc, #3333ff, #00ffcc); -webkit-background-clip: text; color: transparent; text-shadow: 2px 2px 10px #000; }
-    .btn-3d { background: linear-gradient(145deg, #3b82f6, #1e3a8a); color: #fff; padding: 8px 16px; border-radius: 12px; font-weight: bold; box-shadow: 0 6px #1e293b; transition: all 0.2s; }
-    .btn-3d:active { transform: translateY(4px); box-shadow: 0 2px #1e293b; }
-    .card-3d { background: linear-gradient(145deg, #1e293b, #334155); border-radius: 20px; padding: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.6); transition: transform 0.3s; }
-    .card-3d:hover { transform: scale(1.03); }
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content:center; align-items:center; z-index:50; }
-    .modal img { max-width:90%; max-height:90%; border-radius:20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+    #property-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card img {
+      width: 100%;
+      max-height: 220px;
+      border-radius: 10px;
+      object-fit: contain; /* zoom पर भी कटेगा नहीं */
+      transition: transform 0.3s ease;
+      cursor: zoom-in;
+      background: #000;
+    }
+    .card img:hover {
+      transform: scale(1.1);
+    }
+    .details {
+      margin-top: 12px;
+      text-align: center;
+    }
+    .details p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .approve { background: #16a34a; color: #fff; }
+    .reject { background: #dc2626; color: #fff; }
+    .delete { background: #6b7280; color: #fff; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
+  <h1>🏠 Zara Property Listings</h1>
+  <div id="property-list"></div>
 
-  <!-- Header -->
-  <header class="flex justify-between items-center p-4 border-b border-gray-700">
-    <div class="logo">ZARA FIX</div>
-    <div class="flex gap-6">
-      <select class="bg-gray-800 p-2 rounded-lg">
-        <option>All Services</option>
-        <option>Property</option>
-        <option>Ambulance</option>
-        <option>Home</option>
-      </select>
-      <select class="bg-gray-800 p-2 rounded-lg">
-        <option>Provider</option>
-        <option>About</option>
-        <option>Contact</option>
-        <option>Privacy Policy</option>
-      </select>
-    </div>
-    <button id="loginBtn" class="btn-3d">Login with Google</button>
-  </header>
-
-  <!-- Product Form (Shopkeeper) -->
-  <section id="shopForm" class="p-4 hidden">
-    <h2 class="text-xl font-bold mb-2">Add Product</h2>
-    <input id="pName" type="text" placeholder="Product Name" class="w-full p-2 mb-2 rounded bg-gray-700">
-    <input id="pPrice" type="text" placeholder="Price" class="w-full p-2 mb-2 rounded bg-gray-700">
-    <input id="pDiscount" type="text" placeholder="Discount" class="w-full p-2 mb-2 rounded bg-gray-700">
-    <input id="pWhatsapp" type="text" placeholder="Shop WhatsApp Number" class="w-full p-2 mb-2 rounded bg-gray-700">
-    <input id="pImages" type="file" multiple accept="image/*" class="w-full p-2 mb-2">
-    <button id="submitProduct" class="btn-3d">Submit</button>
-  </section>
-
-  <!-- Products Listing -->
-  <main id="productsList" class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4"></main>
-
-  <!-- Image Modal -->
-  <div id="imgModal" class="modal"><img id="modalImg" src=""></div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
+    // 🔑 Firebase Config (आपका actual config)
     const firebaseConfig = {
       apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
       authDomain: "loot-lo-15328.firebaseapp.com",
@@ -68,106 +87,53 @@
       messagingSenderId: "677769861892",
       appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
     };
-
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const shopForm = document.getElementById("shopForm");
-    const productsList = document.getElementById("productsList");
+    const listDiv = document.getElementById("property-list");
 
-    let currentUser = null;
-    const adminEmail = "zarasamajiksevasanstha@gmail.com";
-
-    loginBtn.onclick = () => {
-      if(currentUser) { auth.signOut(); }
-      else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
-      }
-    };
-
-    auth.onAuthStateChanged(user=>{
-      currentUser = user;
-      if(user){
-        loginBtn.innerText = "Logout";
-        shopForm.classList.remove("hidden");
-      } else {
-        loginBtn.innerText = "Login with Google";
-        shopForm.classList.add("hidden");
-      }
-    });
-
-    document.getElementById("submitProduct").onclick = async()=>{
-      const name = pName.value, price = pPrice.value, discount = pDiscount.value, whatsapp = pWhatsapp.value;
-      const files = pImages.files;
-      let urls = [];
-      for(let f of files){
-        const fd = new FormData();
-        fd.append("image", f);
-        const res = await fetch("https://api.imgbb.com/1/upload?key=ff05d1b5c3b3e139253856f0ad1123df", {method:"POST", body:fd});
-        const data = await res.json();
-        urls.push(data.data.url);
-      }
-      const newRef = db.ref("products").push();
-      newRef.set({
-        name, price, discount, whatsapp, images:urls, status:"pending", uid:currentUser.uid, createdAt: Date.now()
+    // 📌 Property Fetch
+    function fetchProperties() {
+      db.ref("properties").on("value", snap => {
+        listDiv.innerHTML = "";
+        snap.forEach(child => {
+          let data = child.val();
+          let id = child.key;
+          let card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <img src="${data.image || 'https://i.ibb.co/ff05d1b5c3b3e139253856f0ad1123df/bb.jpg'}" alt="Property Image" />
+            <div class="details">
+              <p><b>Title:</b> ${data.title || "N/A"}</p>
+              <p><b>Price:</b> ${data.price || "N/A"}</p>
+              <p><b>Status:</b> ${data.status || "Pending"}</p>
+            </div>
+            <div class="actions">
+              <button class="approve">Approve</button>
+              <button class="reject">Reject</button>
+              <button class="delete">Delete</button>
+            </div>
+          `;
+          // Approve
+          card.querySelector(".approve").onclick = () => {
+            db.ref("properties/" + id).update({ status: "Approved" });
+          };
+          // Reject
+          card.querySelector(".reject").onclick = () => {
+            db.ref("properties/" + id).update({ status: "Rejected" });
+          };
+          // Delete
+          card.querySelector(".delete").onclick = () => {
+            if(confirm("Delete this property permanently?")) {
+              db.ref("properties/" + id).remove();
+            }
+          };
+          listDiv.appendChild(card);
+        });
       });
-    };
-
-    db.ref("products").on("value",snap=>{
-      productsList.innerHTML="";
-      let items=[];
-      snap.forEach(child=> items.push({...child.val(), id:child.key}));
-      items.sort((a,b)=> b.createdAt - a.createdAt); // newest first
-      items.forEach(p=>{
-        let color = p.status==="approved" ? "card-3d" : "card-3d bg-red-900";
-        let card=document.createElement("div");
-        card.className=color;
-        card.innerHTML=`
-          <div class="w-full h-40 overflow-hidden rounded-lg cursor-pointer">
-            <img src="${p.images[0]||''}" class="w-full h-full object-cover">
-          </div>
-          <h3 class="font-bold mt-2">${p.name}</h3>
-          <p>₹${p.price} (-${p.discount}%)</p>
-          <button class="btn-3d mt-2" onclick="window.open('https://wa.me/${p.whatsapp}?text=Hi, I like your product ${p.name} for ₹${p.price}','_blank')">WhatsApp</button>
-          ${currentUser && currentUser.email===adminEmail ? adminButtons(p) : ""}
-          ${currentUser && p.uid===currentUser.uid ? shopButtons(p) : ""}
-          ${p.status!=="approved" ? "<p class='text-red-400 font-bold mt-2'>WAIT FOR APPROVAL</p>":""}
-        `;
-        productsList.appendChild(card);
-        card.querySelector("img").onclick=()=>{
-          document.getElementById("modalImg").src=p.images[0];
-          document.getElementById("imgModal").style.display="flex";
-        };
-      });
-    });
-
-    function adminButtons(p){
-      if(p.status==="approved"){
-        return `
-          <button class="btn-3d mt-2" onclick="updateStatus('${p.id}','rejected')">Reject</button>
-          <button class="btn-3d mt-2 bg-red-600" onclick="deleteProduct('${p.id}')">Delete</button>
-        `;
-      } else {
-        return `<button class="btn-3d mt-2 bg-green-600" onclick="updateStatus('${p.id}','approved')">Approve</button>`;
-      }
     }
 
-    function shopButtons(p){
-      return `<button class="btn-3d mt-2 bg-red-600" onclick="deleteProduct('${p.id}')">Delete</button>`;
-    }
-
-    function updateStatus(id,status){
-      db.ref("products/"+id).update({status});
-    }
-
-    function deleteProduct(id){
-      db.ref("products/"+id).remove();
-    }
-
-    document.getElementById("imgModal").onclick=()=> document.getElementById("imgModal").style.display="none";
+    fetchProperties();
   </script>
 </body>
 </html>
