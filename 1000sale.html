@@ -1,60 +1,38 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  ChevronDown,
-  LogIn,
-  LogOut,
-  PhoneCall,
-  ShieldCheck,
-  Trash2,
-  Settings,
-  Check,
-  X,
-  Image as ImageIcon,
-  PlusCircle,
-  Loader2,
-  Search,
-  Tag,
-} from "lucide-react";
-
-// shadcn/ui (assumed available in the environment)
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Toggle } from "@/components/ui/toggle";
-
-// Firebase
+import React, { useEffect, useState } from "react";
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
-  GoogleAuthProvider,
   signInWithPopup,
-  signOut as fbSignOut,
+  GoogleAuthProvider,
+  signOut,
   onAuthStateChanged,
 } from "firebase/auth";
 import {
   getFirestore,
   collection,
   addDoc,
+  query,
+  orderBy,
+  onSnapshot,
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
-  serverTimestamp,
   setDoc,
+  getDoc,
 } from "firebase/firestore";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Toggle } from "@/components/ui/toggle";
+import { Menu, X } from "lucide-react";
 
-/***************************
- * 🔧 CONFIG (User Provided)
- ***************************/
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
   authDomain: "loot-lo-15328.firebaseapp.com",
@@ -64,710 +42,170 @@ const firebaseConfig = {
   messagingSenderId: "677769861892",
   appId: "1:677769861892:web:bb235cb8479aeee9b58e51",
 };
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-const IMGBB_API_KEY = "ff05d1b5c3b3e139253856f0ad1123df";
 
-// Init Firebase singletons
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/***************************
- * 🔤 Types (JSDoc style)
- ***************************/
-/**
- * @typedef {Object} Product
- * @property {string} id
- * @property {string[]} images
- * @property {string} name
- * @property {number} price
- * @property {number} discount
- * @property {string} whatsapp
- * @property {"bike"|"car"|"cloth"|"watch"|"mobile"|"pc"|"other"} category
- * @property {"pending"|"approved"|"rejected"} status
- * @property {boolean} sold
- * @property {any} createdAt
- * @property {string} shopkeeperId
- */
-
-/***************************
- * 🧩 Helpers
- ***************************/
-const categories = [
-  { value: "bike", label: "Bike" },
-  { value: "car", label: "Car" },
-  { value: "cloth", label: "Cloth" },
-  { value: "watch", label: "Watch" },
-  { value: "mobile", label: "Mobile" },
-  { value: "pc", label: "PC" },
-  { value: "other", label: "Other" },
-];
-
-function classNames(...arr) {
-  return arr.filter(Boolean).join(" ");
-}
-
-function formatINR(n) {
-  if (isNaN(n)) return "";
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
-}
-
-function discountedPrice(price, discount) {
-  const pct = Number(discount) || 0;
-  return Math.max(0, Math.round(price - (price * pct) / 100));
-}
-
-function whatsappHref(number, product) {
-  const base = `https://wa.me/${number.replace(/[^0-9]/g, "")}`;
-  const text = `Namaste! Hame aapka product pasand aaya hai.\n\nProduct: ${product.name}\nPrice: ${formatINR(product.price)}\nDiscount: ${product.discount}%\nFinal: ${formatINR(discountedPrice(product.price, product.discount))}\n\nKripya puri jankari bheje.`;
-  return `${base}?text=${encodeURIComponent(text)}`;
-}
-
-/***************************
- * 🎨 3D / Visual tokens
- ***************************/
-const card3D = "rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 bg-gradient-to-br from-slate-800 via-slate-900 to-black border border-white/10";
-const btn3D = "rounded-2xl shadow-lg hover:shadow-2xl active:scale-[0.98] transition-all duration-200";
-const input3D = "rounded-xl bg-slate-900/60 border-white/10 focus:ring-2 focus:ring-cyan-400";
-
-/***************************
- * 🖼️ Imgbb Upload
- ***************************/
-async function uploadToImgbb(file) {
-  const toBase64 = (f) =>
-    new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result.split(",")[1]);
-      reader.onerror = rej;
-      reader.readAsDataURL(f);
-    });
-
-  const image64 = await toBase64(file);
-  const form = new FormData();
-  form.append("image", image64);
-
-  const url = `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`;
-  const resp = await fetch(url, { method: "POST", body: form });
-  const data = await resp.json();
-  if (!data?.success) throw new Error("Image upload failed");
-  return data.data.url;
-}
-
-/***************************
- * 🔐 Auth hooks
- ***************************/
-function useAuth() {
+// =============== HOOKS ===============
+const useAuth = () => {
   const [user, setUser] = useState(null);
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => setUser(u));
+    return onAuthStateChanged(auth, setUser);
   }, []);
-  const signIn = async () => {
+  return user;
+};
+
+const useProducts = () => {
+  const [products, setProducts] = useState([]);
+  useEffect(() => {
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (snapshot) => {
+      setProducts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+  }, []);
+  return products;
+};
+
+const useHeaderLinks = () => {
+  const [links, setLinks] = useState({ services: [], info: [] });
+  useEffect(() => {
+    const docRef = doc(db, "settings", "headerLinks");
+    getDoc(docRef).then((docSnap) => {
+      if (docSnap.exists()) setLinks(docSnap.data());
+    });
+  }, []);
+  return [links, setLinks];
+};
+
+// =============== COMPONENTS ===============
+
+const Dropdown = ({ title, items }) => (
+  <div className="relative group">
+    <Button variant="ghost" className="text-white">
+      {title}
+    </Button>
+    <div className="absolute hidden group-hover:block bg-gray-800 rounded p-2 mt-1 shadow-lg">
+      {items.map((item, i) => (
+        <a key={i} href="#" className="block text-white px-3 py-1 hover:bg-gray-700 rounded">
+          {item}
+        </a>
+      ))}
+    </div>
+  </div>
+);
+
+const Header = ({ user, isAdmin, onLogout, onLogin, links }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <header className="flex justify-between items-center p-4 bg-gray-900 shadow-md sticky top-0 z-50">
+      {/* Left Logo */}
+      <motion.h1
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 drop-shadow-lg"
+      >
+        ZARA FIX
+      </motion.h1>
+
+      {/* Middle Menus */}
+      <nav className="hidden md:flex gap-6">
+        <Dropdown title="Services" items={links.services} />
+        <Dropdown title="Info" items={links.info} />
+      </nav>
+
+      {/* Right Controls */}
+      <div className="flex items-center gap-4">
+        {user ? (
+          <Button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white shadow-xl">
+            Logout
+          </Button>
+        ) : (
+          <Button onClick={onLogin} className="bg-green-500 hover:bg-green-600 text-white shadow-xl">
+            Login with Google
+          </Button>
+        )}
+        {isAdmin && <Button variant="ghost" className="text-white">⚙ Edit Links</Button>}
+        <Button onClick={() => setMenuOpen(!menuOpen)} variant="ghost" className="md:hidden text-white">
+          {menuOpen ? <X /> : <Menu />}
+        </Button>
+      </div>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="absolute top-16 right-4 bg-gray-800 rounded-lg p-4 shadow-lg md:hidden">
+          <Dropdown title="Services" items={links.services} />
+          <Dropdown title="Info" items={links.info} />
+        </div>
+      )}
+    </header>
+  );
+};
+
+// =============== MAIN APP ===============
+export default function App() {
+  const user = useAuth();
+  const products = useProducts();
+  const [links] = useHeaderLinks();
+  const isAdmin = user?.email === "zarasamajiksevasanstha@gmail.com";
+
+  const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   };
-  const signOut = async () => fbSignOut(auth);
-  const isAdmin = user?.email === ADMIN_EMAIL;
-  return { user, isAdmin, signIn, signOut };
-}
-
-/***************************
- * 🔗 Header Links (editable by Admin)
- ***************************/
-function useHeaderLinks() {
-  const [links, setLinks] = useState({
-    services: {
-      all: "#",
-      property: "#",
-      ambulance: "#",
-      home: "#",
-    },
-    info: {
-      provider: "#",
-      about: "#",
-      contact: "#",
-      privacy: "#",
-    },
-  });
-
-  useEffect(() => {
-    const ref = doc(db, "settings", "headerLinks");
-    const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) setLinks(snap.data());
-    });
-    return () => unsub();
-  }, []);
-
-  const save = async (next) => {
-    const ref = doc(db, "settings", "headerLinks");
-    await setDoc(ref, next, { merge: true });
+  const handleLogout = async () => {
+    await signOut(auth);
   };
 
-  return { links, save };
-}
-
-/***************************
- * 🔎 Products hooks
- ***************************/
-function useProducts({ onlyMine = false, uid, statusFilter = null, category = "all", search = "" } = {}) {
-  const [products, setProducts] = useState(/** @type {Product[]} */([]));
-  useEffect(() => {
-    const colRef = collection(db, "products");
-    const constraints = [orderBy("createdAt", "desc")];
-    // Basic filters applied client-side (simpler)
-    const qRef = query(colRef, ...constraints);
-    const unsub = onSnapshot(qRef, (snap) => {
-      let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      if (onlyMine && uid) list = list.filter((p) => p.shopkeeperId === uid);
-      if (statusFilter) list = list.filter((p) => p.status === statusFilter);
-      if (category !== "all") list = list.filter((p) => p.category === category);
-      if (search) {
-        const s = search.toLowerCase();
-        list = list.filter((p) =>
-          (p.name || "").toLowerCase().includes(s) ||
-          (p.whatsapp || "").toLowerCase().includes(s)
-        );
-      }
-      setProducts(list);
-    });
-    return () => unsub();
-  }, [onlyMine, uid, statusFilter, category, search]);
-  return products;
-}
-
-/***************************
- * 🧱 UI Components
- ***************************/
-function ZaraLogo3D() {
   return (
-    <motion.div
-      initial={{ rotateX: 0, rotateY: 0, scale: 0.98 }}
-      whileHover={{ rotateX: 8, rotateY: -8, scale: 1.0 }}
-      className="select-none cursor-default"
-    >
-      <div className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] font-extrabold tracking-wider"
-           style={{ fontSize: "clamp(24px, 3vw, 38px)" }}>
-        ZARA <span className="ml-1">FIX</span>
-      </div>
-    </motion.div>
-  );
-}
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Header user={user} isAdmin={isAdmin} onLogin={handleLogin} onLogout={handleLogout} links={links} />
 
-function Header({ onEditLinks, linksEditable, onTabChange, activeTab, user, isAdmin, onLogin, onLogout }) {
-  return (
-    <header className="sticky top-0 z-50 backdrop-blur bg-black/50 border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between">
-        {/* Left: 3D colourful logo */}
-        <div className="flex items-center gap-3">
-          <ZaraLogo3D />
-        </div>
+      <main className="p-6 max-w-6xl mx-auto">
+        <Tabs defaultValue="public" className="w-full">
+          <TabsList className="flex gap-4 mb-6">
+            <TabsTrigger value="public">Public</TabsTrigger>
+            <TabsTrigger value="shop">Shopkeeper</TabsTrigger>
+            {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
+          </TabsList>
 
-        {/* Middle: Two dropdown menus */}
-        <div className="hidden md:flex items-center gap-4">
-          <Dropdown label="Services" items={[
-            { label: "Property", href: linksEditable.services?.property || "#" },
-            { label: "Ambulance", href: linksEditable.services?.ambulance || "#" },
-            { label: "All Services", href: linksEditable.services?.all || "#" },
-            { label: "Home", href: linksEditable.services?.home || "#" },
-          ]} />
-          <Dropdown label="Info" items={[
-            { label: "Provider", href: linksEditable.info?.provider || "#" },
-            { label: "About", href: linksEditable.info?.about || "#" },
-            { label: "Contact", href: linksEditable.info?.contact || "#" },
-            { label: "Privacy Policy", href: linksEditable.info?.privacy || "#" },
-          ]} />
-        </div>
-
-        {/* Right: Auth + Tabs */}
-        <div className="flex items-center gap-2">
-          <Tabs value={activeTab} onValueChange={onTabChange} className="hidden sm:block">
-            <TabsList className="bg-slate-800/60">
-              <TabsTrigger value="public">Public</TabsTrigger>
-              <TabsTrigger value="shop">Shopkeeper</TabsTrigger>
-              <TabsTrigger value="admin">Admin</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {isAdmin && (
-            <Button size="icon" variant="secondary" className={classNames(btn3D, "bg-slate-800/60 border border-white/10")}
-              onClick={onEditLinks} title="Edit Links">
-              <Settings className="w-4 h-4" />
-            </Button>
-          )}
-
-          {user ? (
-            <Button onClick={onLogout} className={classNames(btn3D, "bg-gradient-to-br from-fuchsia-500 to-rose-500 text-white border border-white/10")}> 
-              <LogOut className="w-4 h-4 mr-2" /> Logout
-            </Button>
-          ) : (
-            <Button onClick={onLogin} className={classNames(btn3D, "bg-gradient-to-br from-cyan-500 to-blue-600 text-white border border-white/10")}>
-              <LogIn className="w-4 h-4 mr-2" /> Login with Google
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      <div className="md:hidden border-t border-white/10 px-3 pb-3">
-        <div className="flex items-center gap-3 mt-2">
-          <Dropdown label="Services" items={[]}/>
-          <Dropdown label="Info" items={[]}/>
-          <Tabs value={activeTab} onValueChange={onTabChange}>
-            <TabsList className="bg-slate-800/60">
-              <TabsTrigger value="public">Public</TabsTrigger>
-              <TabsTrigger value="shop">Shop</TabsTrigger>
-              <TabsTrigger value="admin">Admin</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Dropdown({ label, items }) {
-  return (
-    <div className="relative group">
-      <Button variant="secondary" className={classNames(btn3D, "bg-slate-800/60 text-white flex items-center gap-2 border border-white/10")}> 
-        {label} <ChevronDown className="w-4 h-4" />
-      </Button>
-      {items?.length > 0 && (
-        <div className="absolute hidden group-hover:block mt-2 min-w-[220px] p-2 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl">
-          {items.map((it) => (
-            <a key={it.label} href={it.href} className="block px-3 py-2 rounded-lg hover:bg-white/5 text-sm">
-              {it.label}
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TinyStat({ label, value }) {
-  return (
-    <div className="flex flex-col p-3 rounded-xl bg-slate-800/60 border border-white/10">
-      <span className="text-xs text-white/70">{label}</span>
-      <span className="text-lg font-bold">{value}</span>
-    </div>
-  );
-}
-
-function EditLinksModal({ open, onClose, current, onSave }) {
-  const [form, setForm] = useState(current);
-  useEffect(() => setForm(current), [current, open]);
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center" onClick={onClose}>
-      <div className={classNames(card3D, "w-[min(700px,95vw)] p-5")} onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-xl font-semibold mb-4">Edit Dropdown Links</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(form).map(([sec, obj]) => (
-            <div key={sec} className="space-y-2">
-              <h4 className="font-semibold capitalize">{sec}</h4>
-              {Object.entries(obj).map(([k, v]) => (
-                <div key={k} className="space-y-1">
-                  <Label className="text-xs uppercase">{k}</Label>
-                  <Input className={input3D} value={v}
-                    onChange={(e) => setForm({ ...form, [sec]: { ...form[sec], [k]: e.target.value } })} />
-                </div>
+          <TabsContent value="public">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((p) => (
+                <Card key={p.id} className={`shadow-xl ${p.status === "pending" ? "border-red-500" : "border-green-500"}`}>
+                  <CardContent className="p-4">
+                    <h2 className="text-xl font-bold mb-2">{p.name}</h2>
+                    <p>₹{p.price} ({p.discount}% off)</p>
+                    <Button className="mt-2 w-full bg-green-600 hover:bg-green-700" asChild>
+                      <a
+                        href={`https://wa.me/${p.whatsapp}?text=Hi, I like your product ${p.name} (₹${p.price}) please share details.`}
+                        target="_blank"
+                      >
+                        WhatsApp Shop
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-2 mt-5">
-          <Button variant="secondary" onClick={onClose} className={btn3D}><X className="w-4 h-4 mr-2"/>Close</Button>
-          <Button onClick={() => onSave(form)} className={classNames(btn3D, "bg-gradient-to-br from-cyan-500 to-blue-600 text-white")}>
-            <Check className="w-4 h-4 mr-2"/>Save
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProductForm({ user }) {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [whatsapp, setWhatsapp] = useState("");
-  const [category, setCategory] = useState("bike");
-  const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
-
-  const onFiles = async (e) => {
-    const files = Array.from(e.target.files || []).slice(0, 5);
-    setUploading(true);
-    try {
-      const urls = [];
-      for (const f of files) {
-        const url = await uploadToImgbb(f);
-        urls.push(url);
-      }
-      setImages(urls);
-    } catch (err) {
-      alert("Image upload failed. Try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!user) return alert("Please login first");
-    if (!name || !price || !whatsapp) return alert("Fill all required fields");
-    const data = {
-      images,
-      name,
-      price: Number(price),
-      discount: Number(discount) || 0,
-      whatsapp,
-      category,
-      status: "pending",
-      sold: false,
-      createdAt: serverTimestamp(),
-      shopkeeperId: user.uid,
-    };
-    await addDoc(collection(db, "products"), data);
-    setName(""); setPrice(""); setDiscount(0); setWhatsapp(""); setCategory("bike"); setImages([]);
-    alert("Submitted! WAIT FOR APPROVAL");
-  };
-
-  return (
-    <Card className={classNames(card3D, "p-0")}> 
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Add Product</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Product Name*</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className={input3D} placeholder="eg. iPhone 14" />
-          </div>
-          <div className="space-y-2">
-            <Label>Price (INR)*</Label>
-            <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={input3D} placeholder="25000" />
-          </div>
-          <div className="space-y-2">
-            <Label>Discount %</Label>
-            <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className={input3D} placeholder="10" />
-          </div>
-          <div className="space-y-2">
-            <Label>WhatsApp Number*</Label>
-            <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className={input3D} placeholder="91XXXXXXXXXX" />
-          </div>
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={classNames(input3D, "w-full")}>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>Images (up to 5)</Label>
-            <div className="flex items-center gap-2">
-              <Input type="file" accept="image/*" multiple onChange={onFiles} className={input3D} />
-              {uploading && <Loader2 className="w-5 h-5 animate-spin" />}
-            </div>
-            {images.length > 0 && (
-              <div className="grid grid-cols-5 gap-2 mt-2">
-                {images.map((u, i) => (
-                  <img key={i} src={u} alt="preview" className="w-full h-20 object-cover rounded-lg border border-white/10" />
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="md:col-span-2 flex justify-end">
-            <Button type="submit" className={classNames(btn3D, "bg-gradient-to-br from-cyan-500 to-blue-600 text-white px-6")}>
-              <PlusCircle className="w-4 h-4 mr-2"/> Submit
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatusBadge({ status }) {
-  const map = {
-    approved: { label: "Approved", class: "bg-emerald-600/30 text-emerald-300" },
-    pending: { label: "WAIT FOR APPROVAL", class: "bg-red-600/30 text-red-300" },
-    rejected: { label: "Rejected", class: "bg-yellow-600/30 text-yellow-300" },
-  };
-  const s = map[status] || map.pending;
-  return <Badge className={classNames("rounded-full", s.class)}>{s.label}</Badge>;
-}
-
-function ProductCard({ p, canDelete, onDelete, isAdmin, onApprove, onReject }) {
-  const [expanded, setExpanded] = useState(false);
-  const priceFinal = discountedPrice(p.price, p.discount);
-  return (
-    <motion.div
-      layout
-      className={classNames(
-        card3D,
-        "p-3 relative text-white",
-        p.status === "pending" && "ring-2 ring-red-500/60",
-        "cursor-pointer"
-      )}
-      onClick={() => setExpanded(true)}
-    >
-      {/* Gallery */}
-      <div className="aspect-[4/3] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/50">
-        {p.images?.length ? (
-          <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-white/60">
-            <ImageIcon className="w-10 h-10" />
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-start justify-between gap-2">
-        <div>
-          <div className="font-semibold text-base leading-tight">{p.name}</div>
-          <div className="text-sm text-white/80 line-through">{formatINR(p.price)}</div>
-          <div className="text-lg font-extrabold">{formatINR(priceFinal)} <span className="text-emerald-400 text-xs ml-1">-{p.discount}%</span></div>
-        </div>
-        <StatusBadge status={p.status} />
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <a href={whatsappHref(p.whatsapp, p)} onClick={(e) => e.stopPropagation()} target="_blank" rel="noreferrer">
-          <Button className={classNames(btn3D, "bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center")}> 
-            <PhoneCall className="w-4 h-4 mr-2"/> WhatsApp
-          </Button>
-        </a>
-        {canDelete && (
-          <Button variant="destructive" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} className={classNames(btn3D)}>
-            <Trash2 className="w-4 h-4 mr-2"/> Delete
-          </Button>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="fixed inset-0 z-[70] bg-black/70" onClick={() => setExpanded(false)}>
-          <div className="absolute inset-0 overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="max-w-3xl mx-auto mt-10">
-              <div className={classNames(card3D, "p-4")}> 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="rounded-xl overflow-hidden border border-white/10">
-                      {p.images?.[0] && <img src={p.images[0]} alt={p.name} className="w-full object-cover" />}
-                    </div>
-                    {p.images?.length > 1 && (
-                      <div className="grid grid-cols-5 gap-2">
-                        {p.images.slice(1).map((u, i) => (
-                          <img key={i} src={u} alt="thumb" className="w-full h-16 object-cover rounded-lg border border-white/10" />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold">{p.name}</h3>
-                    <div className="text-white/80 line-through">{formatINR(p.price)}</div>
-                    <div className="text-2xl font-extrabold">{formatINR(priceFinal)}</div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={p.status} />
-                      <Badge variant="secondary" className="bg-slate-800/70 border border-white/10">
-                        <Tag className="w-3 h-3 mr-1"/> {p.category}
-                      </Badge>
-                    </div>
-                    <div className="pt-2">
-                      <a href={whatsappHref(p.whatsapp, p)} target="_blank" rel="noreferrer">
-                        <Button className={classNames(btn3D, "bg-gradient-to-br from-green-500 to-emerald-600 text-white")}>
-                          <PhoneCall className="w-4 h-4 mr-2"/> WhatsApp Shop
-                        </Button>
-                      </a>
-                    </div>
-
-                    {isAdmin && (
-                      <div className="flex gap-2 pt-3">
-                        <Button onClick={() => onApprove?.()} className={classNames(btn3D, "bg-emerald-600 text-white")}>
-                          <ShieldCheck className="w-4 h-4 mr-2"/> Approve
-                        </Button>
-                        <Button onClick={() => onReject?.()} variant="secondary" className={classNames(btn3D, "bg-yellow-600/30 text-yellow-200 border border-yellow-400/30")}>
-                          <X className="w-4 h-4 mr-2"/> Reject
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button onClick={() => setExpanded(false)} className={btn3D}><X className="w-4 h-4 mr-2"/>Close</Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
-function ProductsGrid({ products, gridColsMobile2 = true, onDeleteMine, isAdmin, onAdminAction }) {
-  return (
-    <div className={classNames("grid gap-3", gridColsMobile2 ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}> 
-      {products.map((p) => (
-        <ProductCard key={p.id} p={p}
-          canDelete={!!onDeleteMine}
-          onDelete={() => onDeleteMine?.(p)}
-          isAdmin={isAdmin}
-          onApprove={() => onAdminAction?.(p, "approved")}
-          onReject={() => onAdminAction?.(p, "rejected")} 
-        />
-      ))}
-    </div>
-  );
-}
-
-function PublicView() {
-  const [category, setCategory] = useState("all");
-  const [search, setSearch] = useState("");
-  const products = useProducts({ category, search });
-  const visible = products.filter((p) => p.status === "approved" || p.status === "pending");
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input placeholder="Search name / WhatsApp" value={search} onChange={(e) => setSearch(e.target.value)} className={classNames(input3D, "w-full sm:w-80")} />
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className={classNames(input3D, "w-48")}>
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <ProductsGrid products={visible} />
-    </div>
-  );
-}
-
-function ShopkeeperView({ user }) {
-  const products = useProducts({ onlyMine: true, uid: user?.uid });
-
-  const onDeleteMine = async (p) => {
-    if (!confirm("Delete this product?")) return;
-    await deleteDoc(doc(db, "products", p.id));
-  };
-
-  return (
-    <div className="space-y-4">
-      <ProductForm user={user} />
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">My Products</h3>
-        <div className="text-sm text-white/60">Newest first</div>
-      </div>
-      <ProductsGrid products={products} onDeleteMine={onDeleteMine} />
-    </div>
-  );
-}
-
-function AdminView() {
-  const { user } = useAuth();
-  const products = useProducts();
-  const counts = useMemo(() => ({
-    total: products.length,
-    approved: products.filter(p => p.status === "approved").length,
-    pending: products.filter(p => p.status === "pending").length,
-    rejected: products.filter(p => p.status === "rejected").length,
-    sold: products.filter(p => p.sold).length,
-  }), [products]);
-
-  const isAllowed = user?.email === ADMIN_EMAIL;
-  if (!isAllowed) return (
-    <div className={classNames(card3D, "p-4 text-center")}>
-      <div className="text-white/80">Admin access only</div>
-    </div>
-  );
-
-  const doAction = async (p, status) => {
-    await updateDoc(doc(db, "products", p.id), { status });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <TinyStat label="Total" value={counts.total} />
-        <TinyStat label="Approved" value={counts.approved} />
-        <TinyStat label="Pending" value={counts.pending} />
-        <TinyStat label="Rejected" value={counts.rejected} />
-        <TinyStat label="Sold" value={counts.sold} />
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">All Products</h3>
-        <ProductsGrid products={products} isAdmin onAdminAction={doAction} />
-      </div>
-    </div>
-  );
-}
-
-/***************************
- * 🌑 Root App
- ***************************/
-export default function App() {
-  const { user, isAdmin, signIn, signOut } = useAuth();
-  const { links, save } = useHeaderLinks();
-  const [activeTab, setActiveTab] = useState("public");
-  const [editOpen, setEditOpen] = useState(false);
-
-  useEffect(() => {
-    // default tab convenience
-    if (isAdmin) setActiveTab("admin");
-  }, [isAdmin]);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-black text-white">
-      <Header
-        onEditLinks={() => setEditOpen(true)}
-        linksEditable={links}
-        onTabChange={setActiveTab}
-        activeTab={activeTab}
-        user={user}
-        isAdmin={isAdmin}
-        onLogin={signIn}
-        onLogout={signOut}
-      />
-
-      <main className="max-w-6xl mx-auto px-3 py-6 space-y-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="public">
-            <PublicView />
           </TabsContent>
+
           <TabsContent value="shop">
-            {user ? <ShopkeeperView user={user} /> : (
-              <Card className={classNames(card3D, "p-6 text-center")}>
-                <CardTitle className="mb-2">Login Required</CardTitle>
-                <p className="text-white/70">Please login with Google to add and manage your products.</p>
-                <div className="mt-4">
-                  <Button onClick={signIn} className={classNames(btn3D, "bg-gradient-to-br from-cyan-500 to-blue-600 text-white")}>
-                    <LogIn className="w-4 h-4 mr-2"/> Login with Google
-                  </Button>
-                </div>
-              </Card>
-            )}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Your Products</h2>
+              {/* TODO: AddProductForm component */}
+            </div>
           </TabsContent>
-          <TabsContent value="admin">
-            <AdminView />
-          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="admin">
+              <h2 className="text-2xl font-bold mb-4">Admin Dashboard</h2>
+              {/* TODO: Approve / Reject product management */}
+            </TabsContent>
+          )}
         </Tabs>
       </main>
-
-      <footer className="py-6 text-center text-white/50 text-sm border-t border-white/10">© {new Date().getFullYear()} ZARA FIX</footer>
-
-      <EditLinksModal open={editOpen} onClose={() => setEditOpen(false)} current={links} onSave={async (v) => { await save(v); setEditOpen(false); }} />
     </div>
   );
 }
