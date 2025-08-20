@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - Real Estate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f9f9f9; }
+    header { background:#333; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:20px; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:5px; font-weight:bold; margin:2px; font-size:13px; }
+    .approveBtn { background:#4CAF50; color:#fff; }
+    .rejectBtn { background:#E53935; color:#fff; }
+    .deleteBtn { background:#9C27B0; color:#fff; }
+    table { width:100%; border-collapse:collapse; margin:10px auto; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
+    th, td { padding:8px; border:1px solid #ddd; text-align:left; font-size:14px; }
+    th { background:#2196F3; color:white; }
+    tr.pending { background:#ffcdd2; } /* red for pending */
+    tr.rejected { background:#ffe0b2; }
+    tr:hover { background:#f1f1f1; }
+    .status { font-weight:bold; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🏠 Admin Dashboard</h1>
+  <div>
+    <button id="logoutBtn" class="rejectBtn">Logout</button>
+  </div>
+</header>
+
+<main>
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>BHK</th>
+        <th>Price</th>
+        <th>Address</th>
+        <th>Poster</th>
+        <th>Phone</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="postTable"></tbody>
+  </table>
+</main>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+
+const logoutBtn=document.getElementById("logoutBtn");
+const postTable=document.getElementById("postTable");
+
+logoutBtn.onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  if(!u || u.email!=="zarasamajiksevasanstha@gmail.com"){
+    alert("Access denied! Admin only.");
+    window.location.href="index.html"; // back to user site
+  } else {
+    loadPosts();
+  }
+});
+
+// Load posts (Pending first, then Approved, then Rejected)
+function loadPosts(){
+  db.ref("posts").orderByChild("created").on("value",snap=>{
+    postTable.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>arr.push({...ch.val(), id:ch.key}));
+    
+    // sort: pending first
+    arr.sort((a,b)=>{
+      if(a.status==="pending" && b.status!=="pending") return -1;
+      if(b.status==="pending" && a.status!=="pending") return 1;
+      return b.created - a.created; // latest first
+    });
+
+    arr.forEach(p=>{
+      const tr=document.createElement("tr");
+      if(p.status==="pending") tr.classList.add("pending");
+      if(p.status==="rejected") tr.classList.add("rejected");
+
+      tr.innerHTML=`
+        <td>${p.propertyType||""}</td>
+        <td>${p.bhk||""}</td>
+        <td>₹${p.price||""}</td>
+        <td>${p.address||""}</td>
+        <td>${p.posterName||""} (${p.posterType||""})</td>
+        <td>${p.posterPhone||""}</td>
+        <td class="status">${p.status||""}</td>
+        <td>
+          <button class="approveBtn">Approve</button>
+          <button class="rejectBtn">Reject</button>
+          <button class="deleteBtn">Delete</button>
+        </td>
+      `;
+
+      const approveBtn=tr.querySelector(".approveBtn");
+      approveBtn.onclick=()=>db.ref("posts/"+p.id).update({status:"approved"});
+      const rejectBtn=tr.querySelector(".rejectBtn");
+      rejectBtn.onclick=()=>db.ref("posts/"+p.id).update({status:"rejected"});
+      const deleteBtn=tr.querySelector(".deleteBtn");
+      deleteBtn.onclick=()=>{ if(confirm("Delete permanently?")) db.ref("posts/"+p.id).remove(); };
+
+      postTable.appendChild(tr);
+    });
+  });
+}
+</script>
+</body>
+</html>
