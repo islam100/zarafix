@@ -1,149 +1,270 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>🧰 Poster Dashboard - ZaraFix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #fceabb, #f8b500);
-      margin: 0;
-      padding: 0;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zara Property - Home</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; padding:0; background: #f0f2f5;}
+  .button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px 10px;
+    flex-wrap: wrap;
+  }
+  .btn-3d {
+    position: relative;
+    padding: 12px 25px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 1em;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow:
+      0 6px 0 #999,
+      0 10px 20px rgba(0,0,0,0.3);
+    transition: all 0.15s ease;
+    width: 140px;
+    text-align: center;
+    user-select: none;
+  }
+  .btn-3d:active {
+    box-shadow: none;
+    transform: translateY(6px);
+  }
+  #homeBtn { background: linear-gradient(145deg, #4caf50, #388e3c); }
+  #addPropertyBtn { background: linear-gradient(145deg, #2196f3, #1565c0); }
+  #contactBtn { background: linear-gradient(145deg, #ff9800, #e67e22); }
+
+  /* Responsive */
+  @media(max-width: 480px) {
+    .button-container {
+      flex-direction: column;
+      gap: 15px;
+      align-items: center;
     }
-    .container {
-      max-width: 800px;
-      margin: 40px auto;
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    .btn-3d {
+      width: 90%;
+      max-width: 250px;
+      font-size: 1.2em;
+      padding: 15px 20px;
     }
-    h2 { text-align: center; }
-    .card {
-      background: #f9f9f9;
-      padding: 15px;
-      margin-top: 15px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
-    .btn {
-      background: green;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    .btn:disabled {
-      background: gray;
-      cursor: not-allowed;
-    }
-  </style>
+  }
+
+  /* Modal styles for Add Property form */
+  #addPropertyModal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+  }
+  #addPropertyModal .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+  }
+  #addPropertyModal .close-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    float: right;
+  }
+  #addPropertyModal label {
+    display: block;
+    margin-top: 10px;
+  }
+  #addPropertyModal input, #addPropertyModal textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    box-sizing: border-box;
+  }
+  #formMsg {
+    color: red;
+    margin-top: 10px;
+    text-align: center;
+  }
+  #submitProperty {
+    margin-top: 15px;
+    background: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>🧰 Poster Dashboard</h2>
-    <p><strong>Name:</strong> <span id="posterName">Loading...</span></p>
-    <p><strong>Address:</strong> <span id="posterAddress">Loading...</span></p>
-    <p><strong>Shop:</strong> <span id="posterShop">Loading...</span></p>
-    <p><strong>Category:</strong> <span id="posterCategory">Loading...</span></p>
-    <p><strong>WhatsApp:</strong> <span id="posterWhatsApp">Loading...</span></p>
-    <p><strong>Wallet:</strong> ₹<span id="wallet">0</span></p>
 
-    <div id="requestsContainer"></div>
+<div class="button-container">
+  <button id="homeBtn" class="btn-3d">Home</button>
+  <button id="addPropertyBtn" class="btn-3d">Add Property</button>
+  <button id="contactBtn" class="btn-3d">Contact</button>
+</div>
+
+<!-- Add Property Modal -->
+<div id="addPropertyModal">
+  <div class="modal-content">
+    <button class="close-btn" id="closeModalBtn">X</button>
+    <h3>Add Your Property</h3>
+    <form id="propertyForm">
+      <label for="title">Title</label>
+      <input type="text" id="title" required />
+      <label for="description">Description</label>
+      <textarea id="description" rows="4" required></textarea>
+      <label for="price">Price</label>
+      <input type="number" id="price" required />
+      <button type="submit" id="submitProperty">Submit</button>
+      <div id="formMsg"></div>
+    </form>
   </div>
+</div>
 
-  <script>
-    // ✅ Aapka diya hua Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.firebasestorage.app",
+    messagingSenderId: "916859697394",
+    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const homeBtn = document.getElementById('homeBtn');
+  const addPropertyBtn = document.getElementById('addPropertyBtn');
+  const contactBtn = document.getElementById('contactBtn');
+  const addPropertyModal = document.getElementById('addPropertyModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const propertyForm = document.getElementById('propertyForm');
+  const formMsg = document.getElementById('formMsg');
+
+  // Button links
+  homeBtn.onclick = () => window.location.href = 'index.html';
+  contactBtn.onclick = () => window.location.href = 'contact.html';
+
+  addPropertyBtn.onclick = () => {
+    if (!auth.currentUser) {
+      alert('Please login to add property.');
+      return;
+    }
+    formMsg.textContent = '';
+    propertyForm.reset();
+    addPropertyModal.style.display = 'flex';
+  };
+
+  closeModalBtn.onclick = () => {
+    addPropertyModal.style.display = 'none';
+  };
+
+  // Submit Property form
+  propertyForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const price = Number(document.getElementById('price').value);
+
+    if (!title || !description || !price) {
+      formMsg.textContent = 'Please fill all fields correctly.';
+      return;
+    }
+
+    const userId = auth.currentUser.uid;
+    const propertyData = {
+      userId,
+      title,
+      description,
+      price,
+      createdAt: Date.now()
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
 
-    let currentUserId = null;
-    let posterData = null;
-
-    auth.onAuthStateChanged(user => {
-      if (!user) return location.href = "index.html";
-      currentUserId = user.uid;
-      db.ref("posters/" + currentUserId).once("value").then(snap => {
-        posterData = snap.val();
-        if (!posterData) return alert("Poster profile not found.");
-
-        document.getElementById("posterName").textContent = posterData.name;
-        document.getElementById("posterAddress").textContent = posterData.address;
-        document.getElementById("posterShop").textContent = posterData.shop || "Not set";
-        document.getElementById("posterCategory").textContent = posterData.category;
-        document.getElementById("posterWhatsApp").textContent = posterData.whatsapp;
-        document.getElementById("wallet").textContent = posterData.wallet || 0;
-
-        loadRequests();
+    db.ref('properties').push(propertyData)
+      .then(() => {
+        formMsg.style.color = 'green';
+        formMsg.textContent = 'Property added successfully!';
+        setTimeout(() => {
+          addPropertyModal.style.display = 'none';
+        }, 1500);
+      })
+      .catch(err => {
+        formMsg.style.color = 'red';
+        formMsg.textContent = 'Error adding property: ' + err.message;
       });
-    });
+  });
 
-    function loadRequests() {
-      db.ref("requests").once("value").then(snap => {
-        const container = document.getElementById("requestsContainer");
-        container.innerHTML = "";
-        const requests = snap.val();
-        for (let id in requests) {
-          const req = requests[id];
+  // Google Login UI in corner
+  const userDiv = document.createElement('div');
+  userDiv.style.position = 'fixed';
+  userDiv.style.top = '10px';
+  userDiv.style.right = '10px';
+  userDiv.style.zIndex = '1001';
+  userDiv.style.background = '#eee';
+  userDiv.style.padding = '5px 10px';
+  userDiv.style.borderRadius = '10px';
+  userDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+  document.body.appendChild(userDiv);
 
-          // ✅ Filter: only pending requests of same category
-          if (req.category === posterData.category && req.status !== "accepted") {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = `
-              <p><strong>Name:</strong> ${req.name}</p>
-              <p><strong>Address:</strong> ${req.address}</p>
-              <p><strong>Problem:</strong> ${req.problem}</p>
-              <button class="btn" onclick="acceptJob('${id}', this)">Accept Job</button>
-            `;
-            container.appendChild(card);
-          }
-        }
-      });
+  const loginBtn = document.createElement('button');
+  loginBtn.textContent = 'Login with Google';
+  loginBtn.style.cursor = 'pointer';
+
+  const logoutBtn = document.createElement('button');
+  logoutBtn.textContent = 'Logout';
+  logoutBtn.style.cursor = 'pointer';
+  logoutBtn.style.display = 'none';
+
+  userDiv.appendChild(loginBtn);
+  userDiv.appendChild(logoutBtn);
+
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  loginBtn.onclick = () => {
+    auth.signInWithPopup(provider).catch(err => alert(err.message));
+  };
+
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      userDiv.textContent = `Hi, ${user.displayName}`;
+      userDiv.appendChild(logoutBtn);
+      userDiv.appendChild(loginBtn);
+    } else {
+      loginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+      userDiv.textContent = '';
+      userDiv.appendChild(loginBtn);
+      userDiv.appendChild(logoutBtn);
     }
+  });
+</script>
 
-    function acceptJob(reqId, btn) {
-      if (posterData.wallet < 20) {
-        alert("❌ Insufficient wallet balance.");
-        return;
-      }
-      btn.disabled = true;
-
-      const updates = {};
-      updates["posters/" + currentUserId + "/wallet"] = posterData.wallet - 20;
-      updates["requests/" + reqId + "/status"] = "accepted";
-      updates["requests/" + reqId + "/acceptedBy"] = {
-        uid: currentUserId,
-        name: posterData.name,
-        whatsapp: posterData.whatsapp
-      };
-
-      db.ref().update(updates, (err) => {
-        if (!err) {
-          posterData.wallet -= 20;
-          document.getElementById("wallet").textContent = posterData.wallet;
-          alert("✅ Job accepted! ₹20 deducted.");
-          btn.parentElement.remove(); // Remove request from list
-        } else {
-          alert("Something went wrong.");
-        }
-      });
-    }
-  </script>
 </body>
 </html>
