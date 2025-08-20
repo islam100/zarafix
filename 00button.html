@@ -1,104 +1,63 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZaraFix Portal</title>
-
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
-
-  <!-- Firebase (v8 compatible scripts) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zara Fix Portal</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <style>
     body {
       margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #ff8a00, #e52e71, #00c6ff);
-      background-size: 400% 400%;
-      animation: gradientBG 12s ease infinite;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    @keyframes gradientBG {
-      0% {background-position: 0% 50%;}
-      50% {background-position: 100% 50%;}
-      100% {background-position: 0% 50%;}
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      text-align: center;
     }
 
     header {
-      width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 15px 20px;
-      box-sizing: border-box;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
 
     .logo {
-      font-size: 2rem;
+      font-size: 26px;
       font-weight: bold;
-      color: white;
-      text-shadow: 3px 3px 8px rgba(0,0,0,0.6);
-      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
     }
 
     .btn-3d {
-      background: linear-gradient(145deg, #ffffff, #d1d1d1);
+      padding: 12px 20px;
+      margin: 12px;
       border: none;
-      border-radius: 12px;
-      padding: 12px 22px;
-      margin: 10px;
-      font-size: 1rem;
+      border-radius: 10px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.3),
-                  -5px -5px 15px rgba(255,255,255,0.4);
+      color: white;
+      box-shadow: 0 5px 0 #444, 0 8px 15px rgba(0,0,0,0.4);
       transition: all 0.2s ease;
-      text-decoration: none;
-      color: black;
-      display: inline-block;
     }
-
-    .btn-3d:hover {
-      transform: translateY(-4px);
-    }
-
     .btn-3d:active {
-      transform: translateY(2px);
-      box-shadow: inset 5px 5px 12px rgba(0,0,0,0.3);
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #444;
     }
 
-    #buttons {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 30px;
-    }
-
+    .btn-provider { background: linear-gradient(45deg,#06beb6,#48b1bf); }
+    .btn-admin { background: linear-gradient(45deg,#ff512f,#dd2476); }
     .btn-disabled {
-      opacity: 0.5;
+      background: gray !important;
       pointer-events: none;
+      opacity: 0.6;
     }
 
-    .notice-board {
-      margin-top: 30px;
-      width: 90%;
-      max-width: 500px;
-      padding: 20px;
-      border-radius: 15px;
-      background: linear-gradient(145deg, #ffffff, #d1d1d1);
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.4),
-                  -5px -5px 15px rgba(255,255,255,0.5);
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: bold;
-      display: none;
+    .buttons {
+      margin-top: 40px;
     }
   </style>
 </head>
@@ -108,15 +67,19 @@
     <button id="loginBtn" class="btn-3d">Login with Google</button>
   </header>
 
-  <div id="buttons">
-    <a id="providerBtn" href="https://zarafix.vercel.app/2poster.html" target="_blank" class="btn-3d">Provider</a>
-    <a id="adminBtn" href="https://zarafix.vercel.app/4-button.html" target="_blank" class="btn-3d btn-disabled">Admin</a>
+  <div class="buttons">
+    <!-- Provider Button -->
+    <a href="https://zarafix.vercel.app/2poster.html">
+      <button class="btn-3d btn-provider">Provider</button>
+    </a>
+
+    <!-- Admin Button (Initially disabled) -->
+    <a id="adminLink" href="https://zarafix.vercel.app/4-button.html">
+      <button id="adminBtn" class="btn-3d btn-admin btn-disabled">Admin</button>
+    </a>
   </div>
 
-  <div id="noticeBoard" class="notice-board"></div>
-
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
       authDomain: "loot-lo-15328.firebaseapp.com",
@@ -127,18 +90,15 @@
       appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    const loginBtn = document.getElementById('loginBtn');
-    const adminBtn = document.getElementById('adminBtn');
-    const noticeBoard = document.getElementById('noticeBoard');
+    const loginBtn = document.getElementById("loginBtn");
+    const adminBtn = document.getElementById("adminBtn");
+    const adminLink = document.getElementById("adminLink");
 
-    const ADMIN_EMAIL = "zarasamajiksevasansth@gmail.com";
-
-    // Login/Logout Button
-    loginBtn.addEventListener('click', () => {
+    // Login/Logout Button Click
+    loginBtn.addEventListener("click", () => {
       if (auth.currentUser) {
         auth.signOut();
       } else {
@@ -152,19 +112,21 @@
       if (user) {
         loginBtn.textContent = "Logout";
 
-        if (user.email === ADMIN_EMAIL) {
+        if (user.email === "zarasamajiksevasansth@gmail.com") {
+          // ✅ Admin login
           adminBtn.classList.remove("btn-disabled");
-          noticeBoard.style.display = "block";
-          noticeBoard.textContent = "📢 Welcome Admin! यहाँ आप Notice लिख सकते हैं।";
+          adminLink.style.pointerEvents = "auto";
         } else {
+          // ❌ Not Admin
           adminBtn.classList.add("btn-disabled");
-          noticeBoard.style.display = "none";
+          adminLink.style.pointerEvents = "none";
         }
 
       } else {
+        // Logged out
         loginBtn.textContent = "Login with Google";
         adminBtn.classList.add("btn-disabled");
-        noticeBoard.style.display = "none";
+        adminLink.style.pointerEvents = "none";
       }
     });
   </script>
