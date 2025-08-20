@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zara Property — Sale & Rent</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px;}
+    h2 { text-align:center; margin-bottom:20px; }
+    .form, .list { background:#fff; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); margin-bottom:20px;}
+    label { display:block; margin-top:10px; }
+    input, select, textarea { width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:5px;}
+    button { margin-top:15px; padding:10px 15px; border:none; background:#2563eb; color:#fff; border-radius:5px; cursor:pointer;}
+    button:hover { background:#1d4ed8; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:15px; }
+    .card { background:#fff; border:1px solid #ddd; border-radius:10px; padding:15px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+    .status { font-size:13px; padding:3px 8px; border-radius:5px; display:inline-block; margin-top:5px;}
+    .approved { background:#d1fae5; color:#065f46;}
+    .rejected { background:#fee2e2; color:#991b1b;}
+    .pending { background:#fef3c7; color:#92400e;}
+    .adminBtns button{margin-right:5px;}
+  </style>
+</head>
+<body>
+
+  <h2>🏠 Zara Property — Sale & Rent</h2>
+
+  <!-- Add Property Form -->
+  <div class="form">
+    <h3>Add New Property</h3>
+    <label>Type</label>
+    <select id="pType">
+      <option value="Sale">Sale</option>
+      <option value="Rent">Rent</option>
+    </select>
+
+    <label>Title</label>
+    <input type="text" id="pTitle" placeholder="Beautiful 2BHK Flat">
+
+    <label>Price (₹)</label>
+    <input type="number" id="pPrice" placeholder="1000000">
+
+    <label>Location</label>
+    <input type="text" id="pLocation" placeholder="Mumbai, India">
+
+    <label>Owner Name</label>
+    <input type="text" id="pOwner" placeholder="Owner Name">
+
+    <label>Owner Contact (WhatsApp)</label>
+    <input type="text" id="pContact" placeholder="+91 98765 43210">
+
+    <label>Image URL</label>
+    <input type="text" id="pImage" placeholder="https://...">
+
+    <label>Description</label>
+    <textarea id="pDesc"></textarea>
+
+    <button onclick="addProperty()">Submit</button>
+  </div>
+
+  <!-- Property List -->
+  <div class="list">
+    <h3>All Properties</h3>
+    <div id="propertyList" class="grid"></div>
+  </div>
+
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+    authDomain: "property-20d6d.firebaseapp.com",
+    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+    projectId: "property-20d6d",
+    storageBucket: "property-20d6d.appspot.com",
+    messagingSenderId: "1063297561306",
+    appId: "1:1063297561306:web:c8d53122db7a52f6dc93ac"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Add Property
+  function addProperty(){
+    let type = document.getElementById('pType').value;
+    let title = document.getElementById('pTitle').value;
+    let price = document.getElementById('pPrice').value;
+    let location = document.getElementById('pLocation').value;
+    let owner = document.getElementById('pOwner').value;
+    let contact = document.getElementById('pContact').value;
+    let image = document.getElementById('pImage').value;
+    let desc = document.getElementById('pDesc').value;
+
+    let id = Date.now();
+
+    db.ref("properties/"+id).set({
+      id, type, title, price, location, owner, contact, image, desc,
+      status:"pending"
+    });
+
+    alert("Property Added!");
+    document.querySelector('.form').reset;
+  }
+
+  // Fetch Properties
+  db.ref("properties").on("value", (snap)=>{
+    let data = snap.val();
+    let list = document.getElementById("propertyList");
+    list.innerHTML="";
+    for(let k in data){
+      let p = data[k];
+      list.innerHTML += `
+        <div class="card">
+          <img src="${p.image}" alt="" style="width:100%;height:180px;object-fit:cover;border-radius:8px;">
+          <h4>${p.title}</h4>
+          <p><b>Type:</b> ${p.type}</p>
+          <p><b>Price:</b> ₹${p.price}</p>
+          <p><b>Location:</b> ${p.location}</p>
+          <p><b>Owner:</b> ${p.owner}</p>
+          <p><b>Contact:</b> <a href="https://wa.me/${p.contact.replace(/\D/g,'')}" target="_blank">${p.contact}</a></p>
+          <p>${p.desc}</p>
+          <span class="status ${p.status}">${p.status}</span>
+          <div class="adminBtns">
+            <button onclick="approveProperty(${p.id})">Approve</button>
+            <button onclick="rejectProperty(${p.id})">Reject</button>
+            <button onclick="deleteProperty(${p.id})">Delete</button>
+          </div>
+        </div>`;
+    }
+  });
+
+  // Approve
+  function approveProperty(id){
+    db.ref("properties/"+id).update({status:"approved"});
+  }
+  // Reject
+  function rejectProperty(id){
+    db.ref("properties/"+id).update({status:"rejected"});
+  }
+  // Delete
+  function deleteProperty(id){
+    db.ref("properties/"+id).remove();
+  }
+</script>
+
+</body>
+</html>
