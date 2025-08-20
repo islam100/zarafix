@@ -2,130 +2,157 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix – ImgBB Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zara Property — Fixed Cards</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 20px;
-      background: #f3f4f6;
+      background: #f4f4f4;
     }
     h1 {
       text-align: center;
       margin-bottom: 20px;
     }
-    form {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-    input[type="file"] {
-      padding: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-left: 10px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    button:hover {
-      background: #1d4ed8;
-    }
-    .grid {
+    .property-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
     }
-    .card {
-      background: white;
+    .property-card {
+      background: #fff;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       overflow: hidden;
-      transition: transform 0.3s;
+      transition: transform 0.2s;
     }
-    .card:hover {
-      transform: scale(1.05);
+    .property-card:hover {
+      transform: scale(1.02);
     }
-    .card img {
+    .property-image {
       width: 100%;
       height: 200px;
-      object-fit: contain; /* कटेगी नहीं */
-      background: #f9fafb;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
     }
-    .card-body {
+    .property-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* contain रखा ताकि image कटे नहीं */
+      transition: transform 0.3s ease;
+    }
+    .property-card:hover .property-image img {
+      transform: scale(1.1);
+    }
+    .property-details {
       padding: 15px;
     }
+    .property-details h3 {
+      margin: 0 0 10px;
+    }
     .price {
-      color: #2563eb;
       font-size: 18px;
       font-weight: bold;
+      color: #2c3e50;
     }
     .discount {
-      color: #ef4444;
+      color: red;
       font-size: 16px;
+      font-weight: bold;
       margin-left: 10px;
-      text-decoration: line-through;
+    }
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .accept {
+      background: #27ae60;
+      color: white;
+    }
+    .reject {
+      background: #c0392b;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <h1>📸 ZaraFix – ImgBB Upload</h1>
-  <form id="uploadForm">
-    <input type="file" id="imageInput" accept="image/*" />
-    <button type="submit">Upload</button>
-  </form>
-  <div class="grid" id="imageGrid"></div>
+  <h1>🏠 Zara Property Listings</h1>
+  <div class="property-list" id="propertyList"></div>
 
   <script>
-    const apiKey = "ff05d1b5c3b3e139253856f0ad1123df"; // ImgBB API Key
-    const uploadForm = document.getElementById("uploadForm");
-    const imageInput = document.getElementById("imageInput");
-    const imageGrid = document.getElementById("imageGrid");
-
-    uploadForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const file = imageInput.files[0];
-      if (!file) return alert("कृपया कोई इमेज चुनें!");
-
-      const formData = new FormData();
-      formData.append("image", file);
-
-      try {
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-        if (data.success) {
-          addCard(data.data.url);
-        } else {
-          alert("Upload विफल रहा!");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Error uploading image.");
+    // Sample Data (Database से आएगा future में)
+    const properties = [
+      {
+        id: 1,
+        title: "2 BHK Flat",
+        price: 2500000,
+        discount: 200000, // रुपये में discount
+        image: "https://via.placeholder.com/400x250"
+      },
+      {
+        id: 2,
+        title: "3 BHK Luxury Apartment",
+        price: 4500000,
+        discount: 350000,
+        image: "https://via.placeholder.com/400x250"
+      },
+      {
+        id: 3,
+        title: "1 BHK Budget Home",
+        price: 1500000,
+        discount: 100000,
+        image: "https://via.placeholder.com/400x250"
       }
-    });
+    ];
 
-    function addCard(imageUrl) {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <img src="${imageUrl}" alt="Uploaded Image">
-        <div class="card-body">
-          <div>
-            <span class="price">₹499</span>
-            <span class="discount">₹999</span>
+    const propertyList = document.getElementById("propertyList");
+
+    function renderProperties() {
+      propertyList.innerHTML = "";
+      properties.forEach(prop => {
+        const card = document.createElement("div");
+        card.className = "property-card";
+        card.innerHTML = `
+          <div class="property-image">
+            <img src="${prop.image}" alt="${prop.title}">
           </div>
-          <p>Beautiful Product</p>
-        </div>
-      `;
-      imageGrid.prepend(div);
+          <div class="property-details">
+            <h3>${prop.title}</h3>
+            <div class="price">₹${prop.price.toLocaleString()}
+              <span class="discount">- ₹${prop.discount.toLocaleString()}</span>
+            </div>
+            <div class="actions">
+              <button class="btn accept" onclick="acceptProperty(${prop.id})">Accept</button>
+              <button class="btn reject" onclick="rejectProperty(${prop.id})">Reject</button>
+            </div>
+          </div>
+        `;
+        propertyList.appendChild(card);
+      });
     }
+
+    function acceptProperty(id) {
+      alert("Property ID " + id + " Accepted ✅");
+    }
+
+    function rejectProperty(id) {
+      alert("Property ID " + id + " Rejected ❌");
+    }
+
+    renderProperties();
   </script>
 </body>
 </html>
