@@ -82,7 +82,7 @@
     // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-      authDomain: "loot-lo-15328.firebaseapp.com",
+      authDomain: "loot-lo-15328.firebaseapp.com",   // ✅ keep same
       projectId: "loot-lo-15328",
     };
 
@@ -92,16 +92,25 @@
     const loginBtn = document.getElementById("loginBtn");
     const adminBtn = document.getElementById("adminBtn");
 
-    // ✅ Admin email fix
+    // ✅ Admin email
     const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
 
-    // Login / Logout
+    // Force only popup login (no redirect)
+    auth.useDeviceLanguage();
+
     loginBtn.addEventListener("click", () => {
       if (auth.currentUser) {
         auth.signOut();
       } else {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
+        // ✅ Popup only
+        auth.signInWithPopup(provider)
+          .then(result => {
+            console.log("Signed in:", result.user.email);
+          })
+          .catch(err => {
+            console.error("Login error:", err.message);
+          });
       }
     });
 
@@ -109,22 +118,17 @@
     auth.onAuthStateChanged(user => {
       if (user) {
         loginBtn.textContent = "Logout";
-        console.log("Logged in as:", user.email);
 
         if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-          // ✅ Enable Admin
           adminBtn.classList.remove("btn-disabled");
           adminBtn.onclick = () => {
-            console.log("Redirecting to Admin page...");
             window.location.href = "https://zarafix.vercel.app/4-button.html";
           };
         } else {
-          // ❌ Disable Admin
           adminBtn.classList.add("btn-disabled");
           adminBtn.onclick = null;
         }
       } else {
-        // Logged out
         loginBtn.textContent = "Login with Google";
         adminBtn.classList.add("btn-disabled");
         adminBtn.onclick = null;
