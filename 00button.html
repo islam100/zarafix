@@ -6,6 +6,7 @@
   <title>ZaraFix Portal</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
   <style>
     body {
@@ -62,6 +63,7 @@
     .btn-disabled {
       opacity: 0.4;
       cursor: not-allowed;
+      pointer-events: none;
       box-shadow: none;
     }
 
@@ -74,6 +76,29 @@
       border-radius: 15px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.6);
       display: none;
+    }
+
+    #noticeText {
+      font-size: 1.1rem;
+      margin-top: 10px;
+    }
+
+    #noticeInput {
+      width: 90%;
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
+    }
+
+    #saveNotice {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
     }
 
     #loginBtn {
@@ -111,7 +136,14 @@
 
     <div id="notice">
       <h3>📢 Notice Board</h3>
-      <p id="noticeText"></p>
+      <p id="noticeText">Loading...</p>
+
+      <!-- Admin Only Inputs -->
+      <div id="adminControls" style="display:none; margin-top:15px;">
+        <input type="text" id="noticeInput" placeholder="Write a new notice..." />
+        <br />
+        <button id="saveNotice">Save Notice</button>
+      </div>
     </div>
   </main>
 
@@ -129,12 +161,17 @@
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
     const adminBtn = document.getElementById("adminBtn");
-    const adminLink = document.getElementById("adminLink");
     const notice = document.getElementById("notice");
     const noticeText = document.getElementById("noticeText");
+    const adminControls = document.getElementById("adminControls");
+    const noticeInput = document.getElementById("noticeInput");
+    const saveNotice = document.getElementById("saveNotice");
+
+    const ADMIN_EMAIL = "zarasamajiksevasansth@gmail.com";
 
     // Google Login
     loginBtn.addEventListener("click", () => {
@@ -146,30 +183,47 @@
       }
     });
 
+    // Save Notice (Admin only)
+    saveNotice.addEventListener("click", () => {
+      const text = noticeInput.value.trim();
+      if (text) {
+        db.ref("notice").set(text);
+        noticeInput.value = "";
+      }
+    });
+
+    // Load Notice (everyone)
+    db.ref("notice").on("value", snapshot => {
+      if (snapshot.exists()) {
+        noticeText.textContent = snapshot.val();
+      } else {
+        noticeText.textContent = "कोई Notice नहीं है।";
+      }
+    });
+
     // Auth State
     auth.onAuthStateChanged(user => {
       if (user) {
         loginBtn.textContent = "Logout";
 
-        if (user.email === "zarasamajiksevasansth@gmail.com") {
-          // ✅ Admin allowed
+        if (user.email === ADMIN_EMAIL) {
+          // ✅ Admin
           adminBtn.classList.remove("btn-disabled");
-          adminLink.style.pointerEvents = "auto"; // enable link
           notice.style.display = "block";
-          noticeText.textContent = "Welcome Admin! यहाँ Notice लिख सकते हो।";
+          adminControls.style.display = "block"; // show input
         } else {
-          // ❌ Not Admin
+          // Normal user
           adminBtn.classList.add("btn-disabled");
-          adminLink.style.pointerEvents = "none"; // disable link
-          notice.style.display = "none";
+          notice.style.display = "block"; // सिर्फ read-only notice दिखे
+          adminControls.style.display = "none";
         }
 
       } else {
         // ❌ Logged out
         loginBtn.textContent = "Login with Google";
         adminBtn.classList.add("btn-disabled");
-        adminLink.style.pointerEvents = "none"; 
         notice.style.display = "none";
+        adminControls.style.display = "none";
       }
     });
   </script>
