@@ -3,139 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Login Buttons</title>
+  <title>ZaraFix Login Page</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #6a11cb, #2575fc);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center;
       height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
     }
-    h1 {
-      margin-bottom: 20px;
-      font-size: 2rem;
-      text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+    .container {
+      text-align: center;
+      background: rgba(0,0,0,0.6);
+      padding: 30px;
+      border-radius: 20px;
+      width: 320px;
     }
-    button {
-      margin: 10px;
-      padding: 15px 30px;
+    h1 { margin-bottom: 20px; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 18px;
+      font-weight: bold;
       border: none;
       border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      transform: scale(1);
-      transition: all 0.2s ease;
-      background: #444;
-      color: #fff;
-      pointer-events: none; /* login ke pehle disable */
-      opacity: 0.5;
+      transition: all 0.3s;
     }
-    button:hover {
-      transform: scale(1.05);
+    .btn:disabled {
+      background: grey;
+      cursor: not-allowed;
+      opacity: 0.7;
     }
-    .active {
-      background: #00ff99 !important;
-      color: black !important;
-      pointer-events: auto !important;
-      opacity: 1 !important;
-    }
-    .admin-active {
-      background: #ffcc00 !important;
-      color: black !important;
-      pointer-events: auto !important;
-      opacity: 1 !important;
-    }
-    #loginBtn, #logoutBtn {
-      background: #fff;
-      color: #2575fc;
-      margin-bottom: 20px;
-      pointer-events: auto;
-      opacity: 1;
-    }
-    #logoutBtn { display: none; }
+    .login-btn { background: #ff9800; }
+    .logout-btn { background: #f44336; display: none; }
+    .admin-btn { background: #4CAF50; }
+    .service-btn { background: #2196F3; }
   </style>
 </head>
 <body>
-  <h1>ZaraFix Dashboard</h1>
-  <button id="loginBtn">Login with Google</button>
-  <button id="logoutBtn">Logout</button>
-
-  <button id="userBtn">User Button</button>
-  <button id="adminBtn">Admin Button</button>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <div class="container">
+    <h1>ZaraFix</h1>
+    <button id="loginBtn" class="btn login-btn">Login with Google</button>
+    <button id="logoutBtn" class="btn logout-btn">Logout</button>
+    <hr>
+    <button id="adminBtn" class="btn admin-btn" disabled>Admin Dashboard</button>
+    <button id="serviceBtn" class="btn service-btn" disabled>Service Page</button>
+  </div>
 
   <script>
+    // Firebase config (replace with yours)
     const firebaseConfig = {
-      apiKey: "AIzaSyCzH-6kN9M8YvAfQfxG4lNm8EmmNSJPw",
-      authDomain: "zarafix.firebaseapp.com",
-      projectId: "zarafix",
-      storageBucket: "zarafix.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456"
-    };
-
-    const app = firebase.initializeApp(firebaseConfig);
+  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+  authDomain: "loot-lo-15328.firebaseapp.com",
+  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+  projectId: "loot-lo-15328",
+  storageBucket: "loot-lo-15328.appspot.com",
+  messagingSenderId: "677769861892",
+  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+};
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const provider = new firebase.auth.GoogleAuthProvider();
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const userBtn = document.getElementById("userBtn");
     const adminBtn = document.getElementById("adminBtn");
+    const serviceBtn = document.getElementById("serviceBtn");
 
+    // Login with Google
     loginBtn.onclick = () => {
-      auth.signInWithPopup(provider)
-        .then(result => {
-          console.log("Logged in:", result.user.email);
-        })
-        .catch(err => console.error(err));
+      auth.signInWithPopup(provider).then(result => {
+        alert("Login Successful: " + result.user.displayName);
+      }).catch(err => alert(err.message));
     };
 
+    // Logout
     logoutBtn.onclick = () => {
       auth.signOut();
     };
 
+    // Auth State Change
     auth.onAuthStateChanged(user => {
       if (user) {
         loginBtn.style.display = "none";
         logoutBtn.style.display = "block";
-
-        // sabko user button enable milega
-        userBtn.classList.add("active");
-
-        // agar admin hai
-        if (user.email === "admin@gmail.com") {
-          adminBtn.classList.add("admin-active");
-        }
+        adminBtn.disabled = false;
+        serviceBtn.disabled = false;
       } else {
         loginBtn.style.display = "block";
         logoutBtn.style.display = "none";
-        userBtn.classList.remove("active");
-        adminBtn.classList.remove("admin-active");
+        adminBtn.disabled = true;
+        serviceBtn.disabled = true;
       }
     });
 
-    userBtn.onclick = () => {
-      if (userBtn.classList.contains("active")) {
-        alert("User Button Clicked!");
-      }
-    };
-
-    adminBtn.onclick = () => {
-      if (adminBtn.classList.contains("admin-active")) {
-        alert("Admin Button Clicked!");
-      }
-    };
+    // Button actions
+    adminBtn.onclick = () => alert("Admin Dashboard Opened ✅");
+    serviceBtn.onclick = () => alert("Service Page Opened ✅");
   </script>
 </body>
 </html>
