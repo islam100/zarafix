@@ -3,142 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - 3D Buttons</title>
+  <title>ZaraFix 3D Buttons</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #2c3e50, #3498db);
       margin: 0;
-      padding: 0;
-      color: #fff;
-      text-align: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
     }
     header {
+      position: absolute;
+      top: 10px;
+      right: 20px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 15px;
-      background: rgba(0, 0, 0, 0.3);
+      gap: 10px;
     }
-    .logo {
-      font-size: 26px;
+    h1 {
+      font-size: 36px;
       font-weight: bold;
-      color: #ffeb3b;
-      text-shadow: 2px 2px 5px black;
+      text-shadow: 2px 2px 5px #000;
     }
-    .auth-btn {
-      padding: 10px 20px;
+    .btn {
       background: #ff9800;
       border: none;
+      padding: 15px 30px;
+      margin: 15px;
+      font-size: 18px;
+      border-radius: 15px;
+      cursor: pointer;
+      box-shadow: 0 6px #c66900;
+      transition: all 0.2s ease;
+      pointer-events: none; /* Default disable */
+      opacity: 0.5;
+    }
+    .btn:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px #b36600;
+    }
+    .btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px #b36600;
+    }
+    .enabled {
+      pointer-events: auto;
+      opacity: 1;
+    }
+    .admin-btn {
+      background: #ff4444;
+    }
+    .admin-active {
+      background: #cc0000 !important;
+      font-weight: bold;
+    }
+    .google-btn {
+      background: white;
+      color: black;
+      padding: 10px 20px;
       border-radius: 10px;
       cursor: pointer;
-      color: white;
-      font-weight: bold;
-      box-shadow: 0px 4px 6px rgba(0,0,0,0.4);
-      transition: transform 0.2s;
-    }
-    .auth-btn:hover { transform: scale(1.1); }
-    .container {
-      margin-top: 50px;
-    }
-    .btn-3d {
-      display: inline-block;
-      margin: 15px;
-      padding: 20px 40px;
-      font-size: 18px;
-      font-weight: bold;
-      color: white;
-      background: #6c5ce7;
-      border: none;
-      border-radius: 15px;
-      box-shadow: 0px 6px #3d3d3d;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-3d:active {
-      box-shadow: 0px 2px #3d3d3d;
-      transform: translateY(4px);
-    }
-    /* Admin button disabled look */
-    .disabled {
-      background: gray !important;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    /* Admin button enabled after login */
-    .enabled {
-      background: #e91e63 !important;
     }
   </style>
 </head>
 <body>
+  <header>
+    <button id="loginBtn" class="google-btn">Login with Google</button>
+    <button id="logoutBtn" class="google-btn" style="display:none;">Logout</button>
+  </header>
 
-<header>
-  <div class="logo">ZaraFix</div>
-  <button id="authBtn" class="auth-btn">Login with Google</button>
-</header>
+  <h1>ZaraFix 3D Page</h1>
+  <div>
+    <button class="btn" id="serviceBtn">Service</button>
+    <button class="btn" id="propertyBtn">Property</button>
+    <button class="btn" id="adminBtn">Admin</button>
+  </div>
 
-<div class="container">
-  <button class="btn-3d">Service</button>
-  <button class="btn-3d">Property</button>
-  <button class="btn-3d">Ambulance</button>
-  <button class="btn-3d">Home</button>
-  <br>
-  <button class="btn-3d disabled" id="adminBtn" disabled>Admin</button>
-</div>
+  <script type="module">
+    // Firebase Config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "214774699233",
+      appId: "1:214774699233:web:2a59bff59598e94b9b0cf6"
+    };
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "772498772219",
-    appId: "1:772498772219:web:3b982a99e998c4fc7e9e07"
-  };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-  const app = firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const provider = new firebase.auth.GoogleAuthProvider();
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const adminBtn = document.getElementById("adminBtn");
+    const serviceBtn = document.getElementById("serviceBtn");
+    const propertyBtn = document.getElementById("propertyBtn");
 
-  const authBtn = document.getElementById("authBtn");
-  const adminBtn = document.getElementById("adminBtn");
+    const adminEmail = "admin@gmail.com"; // <-- Yahan apna Admin Email set karo
 
-  // Login / Logout toggle
-  authBtn.onclick = () => {
-    if (auth.currentUser) {
-      auth.signOut();
-    } else {
-      auth.signInWithPopup(provider);
-    }
-  };
+    // Login
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        alert("Login Error: " + err.message);
+      }
+    });
 
-  // Firebase auth state check
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      authBtn.textContent = "Logout";
-      adminBtn.disabled = false;
-      adminBtn.classList.remove("disabled");
-      adminBtn.classList.add("enabled");
+    // Logout
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
 
-      adminBtn.onclick = () => {
-        alert("Welcome Admin: " + user.displayName);
-        window.location.href = "admin.html"; // 👈 admin page link
-      };
+    // Auth State Change
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
 
-    } else {
-      authBtn.textContent = "Login with Google";
-      adminBtn.disabled = true;
-      adminBtn.classList.add("disabled");
-      adminBtn.classList.remove("enabled");
-      adminBtn.onclick = null;
-    }
-  });
-</script>
+        // Enable service/property buttons for all logged in users
+        serviceBtn.classList.add("enabled");
+        propertyBtn.classList.add("enabled");
 
+        if (user.email === adminEmail) {
+          // Admin Login
+          adminBtn.classList.add("enabled", "admin-active");
+          adminBtn.addEventListener("click", () => {
+            alert("Welcome Admin Dashboard");
+          });
+        } else {
+          // Non-admin
+          adminBtn.classList.remove("enabled", "admin-active");
+        }
+
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+
+        // Disable all buttons when not logged in
+        serviceBtn.classList.remove("enabled");
+        propertyBtn.classList.remove("enabled");
+        adminBtn.classList.remove("enabled", "admin-active");
+      }
+    });
+  </script>
 </body>
 </html>
