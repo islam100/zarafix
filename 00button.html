@@ -3,129 +3,166 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-
+  <title>ZaraFix Role Based Login</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #6a11cb, #2575fc);
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-      text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 15px 30px;
-      margin: 15px;
-      border-radius: 15px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      text-decoration: none;
-      color: white;
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
-      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-5px) scale(1.05);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-    }
-
-    #logoutBtn {
-      margin-top: 30px;
-      background: linear-gradient(45deg, #ff512f, #dd2476);
-    }
-
-    #loginSection, #dashboard {
-      display: none;
-    }
-
-    .logo {
-      font-size: 2.5rem;
-      font-weight: bold;
-      margin-bottom: 40px;
-      color: yellow;
-      text-shadow: 3px 3px 10px black;
-    }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
+    header { background:#007bff; padding:15px; color:#fff; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:22px; font-weight:bold; }
+    header button { background:#fff; color:#007bff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .container { padding:20px; }
+    .card { background:#fff; padding:20px; margin:10px 0; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
+    .hidden { display:none; }
+    button { padding:10px 18px; margin:5px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .googleBtn { background:#db4437; color:#fff; }
+    .logoutBtn { background:#007bff; color:#fff; }
+    .admin { background:#28a745; color:#fff; }
+    .provider { background:#ffc107; }
+    .user { background:#17a2b8; color:#fff; }
   </style>
 </head>
 <body>
 
-  <div class="logo">ZaraFix</div>
+  <header>
+    <h1>ZaraFix</h1>
+    <div id="authSection">
+      <button id="googleLogin" class="googleBtn">Login with Google</button>
+      <button id="logoutBtn" class="logoutBtn hidden">Logout</button>
+    </div>
+  </header>
 
-  <!-- Login Section -->
-  <div id="loginSection">
-    <h1>Login to Continue</h1>
-    <button class="btn" onclick="googleLogin()">Login with Google</button>
+  <div class="container">
+    <!-- Registration (role select) -->
+    <div id="registerBox" class="card hidden">
+      <h2>Register</h2>
+      <p>Select your role:</p>
+      <select id="roleSelect">
+        <option value="user">User</option>
+        <option value="provider">Service Provider</option>
+      </select><br><br>
+      <button id="saveRole">Save</button>
+    </div>
+
+    <!-- Dashboards -->
+    <div id="adminDashboard" class="card hidden admin">
+      <h2>Admin Dashboard</h2>
+      <p>✅ You can see all users, all requests, all wallets here.</p>
+    </div>
+
+    <div id="providerDashboard" class="card hidden provider">
+      <h2>Provider Dashboard</h2>
+      <p>✅ You can see jobs matching your category here.</p>
+    </div>
+
+    <div id="userDashboard" class="card hidden user">
+      <h2>User Dashboard</h2>
+      <p>✅ You can see your service requests here.</p>
+    </div>
   </div>
 
-  <!-- Dashboard Section -->
-  <div id="dashboard">
-    <h1>Welcome to Dashboard</h1>
-    <a href="admin.html" class="btn">Admin</a>
-    <a href="provider.html" class="btn">Provider</a>
-    <a href="notice.html" class="btn">Notice Board</a>
-    <br>
-    <button id="logoutBtn" class="btn" onclick="logout()">Logout</button>
-  </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
   <script>
-    // ✅ Firebase Config (apna config yahan daalo)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "89021604222",
-      appId: "1:89021604222:web:bd18e3eb2a054eecf946d2"
-    };
+    // 🔹 Replace with your Firebase Config
+   const firebaseConfig = {
+  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+  authDomain: "loot-lo-15328.firebaseapp.com",
+  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+  projectId: "loot-lo-15328",
+  storageBucket: "loot-lo-15328.appspot.com",
+  messagingSenderId: "677769861892",
+  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+};
+
 
     const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.getAuth(app);
-    const provider = new firebase.GoogleAuthProvider();
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-    // Google Login
-    function googleLogin() {
-      firebase.signInWithPopup(auth, provider)
-      .then((result) => {
-        console.log("User signed in:", result.user);
-      }).catch((error) => {
-        console.error(error);
+    const googleLoginBtn = document.getElementById("googleLogin");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const registerBox = document.getElementById("registerBox");
+    const saveRoleBtn = document.getElementById("saveRole");
+
+    const adminDashboard = document.getElementById("adminDashboard");
+    const providerDashboard = document.getElementById("providerDashboard");
+    const userDashboard = document.getElementById("userDashboard");
+
+    let currentUser = null;
+
+    // 🔹 Google Login
+    googleLoginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        currentUser = result.user;
+        checkUserRole(currentUser.uid);
       });
-    }
+    };
 
-    // Logout
-    function logout() {
-      firebase.signOut(auth).then(() => {
-        console.log("User signed out");
+    // 🔹 Logout
+    logoutBtn.onclick = () => {
+      auth.signOut().then(() => {
+        location.reload();
       });
-    }
+    };
 
-    // Auth State Change
-    firebase.onAuthStateChanged(auth, (user) => {
-      if (user) {
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
+    // 🔹 Auth State Change
+    auth.onAuthStateChanged(user => {
+      if(user) {
+        currentUser = user;
+        googleLoginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        checkUserRole(user.uid);
       } else {
-        document.getElementById("loginSection").style.display = "block";
-        document.getElementById("dashboard").style.display = "none";
+        googleLoginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
       }
     });
+
+    // 🔹 Check Role
+    function checkUserRole(uid){
+      db.ref("users/"+uid).once("value").then(snapshot => {
+        if(snapshot.exists()){
+          const role = snapshot.val().role;
+          showDashboard(role);
+        } else {
+          // ask to register
+          registerBox.classList.remove("hidden");
+        }
+      });
+    }
+
+    // 🔹 Save Role
+    saveRoleBtn.onclick = () => {
+      const role = document.getElementById("roleSelect").value;
+      db.ref("users/"+currentUser.uid).set({
+        name: currentUser.displayName,
+        email: currentUser.email,
+        role: role
+      }).then(() => {
+        registerBox.classList.add("hidden");
+        showDashboard(role);
+      });
+    };
+
+    // 🔹 Show dashboard based on role
+    function showDashboard(role){
+      adminDashboard.classList.add("hidden");
+      providerDashboard.classList.add("hidden");
+      userDashboard.classList.add("hidden");
+
+      if(currentUser.email === "admin@gmail.com"){ // 👑 hardcoded admin
+        adminDashboard.classList.remove("hidden");
+      }
+      else if(role === "provider"){
+        providerDashboard.classList.remove("hidden");
+      }
+      else {
+        userDashboard.classList.remove("hidden");
+      }
+    }
   </script>
 </body>
 </html>
