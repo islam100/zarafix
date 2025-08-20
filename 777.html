@@ -1,205 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZARA FIX Marketplace</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ImgBB Upload + Zoom</title>
   <style>
-    body { background: #111; color: white; font-family: sans-serif; }
-    .logo { font-size: 2rem; font-weight: 900; background: linear-gradient(45deg, #ff0080, #7928ca, #00e0ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
-    .card { transition: transform 0.3s ease; cursor: pointer; }
-    .card:hover { transform: scale(1.05); }
-    .card.expanded { transform: scale(1.2); z-index: 50; position: relative; }
-    .btn3d { background: linear-gradient(145deg, #00e0ff, #0077ff); padding: 8px 14px; border-radius: 12px; font-weight: bold; color: white; box-shadow: 2px 2px 6px #000; transition: 0.2s; }
-    .btn3d:hover { transform: translateY(-2px); box-shadow: 3px 3px 8px #000; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .gallery img {
+      max-width: 250px;
+      height: auto;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .gallery img:hover {
+      transform: scale(1.05);
+    }
+    .fullscreen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .fullscreen img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+    }
+    .delete-btn {
+      display: block;
+      margin-top: 5px;
+      padding: 5px 10px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 🔹 Header -->
-  <header class="flex justify-between items-center p-4 bg-gray-900 shadow-lg">
-    <div class="logo">ZARA FIX</div>
+  <h2>ImgBB Image Upload + Zoom</h2>
+  <input type="file" id="fileInput" accept="image/*">
+  <button onclick="uploadImage()">Upload</button>
 
-    <nav class="hidden md:flex gap-6">
-      <div>
-        <button class="btn3d">Services ▼</button>
-        <div class="absolute hidden bg-gray-800 p-2 rounded shadow-lg">
-          <a href="#">Property</a><br>
-          <a href="#">Ambulance</a><br>
-          <a href="#">All Services</a>
-        </div>
-      </div>
-      <div>
-        <button class="btn3d">Info ▼</button>
-        <div class="absolute hidden bg-gray-800 p-2 rounded shadow-lg">
-          <a href="#">Provider</a><br>
-          <a href="#">About</a><br>
-          <a href="#">Contact</a><br>
-          <a href="#">Privacy Policy</a>
-        </div>
-      </div>
-    </nav>
+  <div class="gallery" id="gallery"></div>
 
-    <div>
-      <button id="loginBtn" class="btn3d">Login with Google</button>
-      <button id="logoutBtn" class="btn3d hidden">Logout</button>
-    </div>
-  </header>
+  <!-- Fullscreen Viewer -->
+  <div class="fullscreen" id="fullscreen">
+    <span class="close-btn" onclick="closeFullscreen()">&times;</span>
+    <img id="fullscreenImg" src="">
+  </div>
 
-  <!-- 🔹 Product Form (Shopkeeper) -->
-  <section id="shopForm" class="hidden p-4">
-    <h2 class="text-xl mb-2">➕ Add New Product</h2>
-    <input id="productName" placeholder="Product Name" class="p-2 m-2 text-black rounded" /><br>
-    <input id="productPrice" placeholder="Price" class="p-2 m-2 text-black rounded" /><br>
-    <input id="productDiscount" placeholder="Discount" class="p-2 m-2 text-black rounded" /><br>
-    <input id="whatsappNumber" placeholder="WhatsApp Number" class="p-2 m-2 text-black rounded" /><br>
-    <input id="images" type="file" multiple accept="image/*" class="m-2" /><br>
-    <button id="submitProduct" class="btn3d">Submit Product</button>
-  </section>
+  <script>
+    const apiKey = "ff05d1b5c3b3e139253856f0ad1123df"; // आपकी ImgBB API key
 
-  <!-- 🔹 Products List -->
-  <section id="products" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4"></section>
+    // Upload Function
+    function uploadImage() {
+      const fileInput = document.getElementById("fileInput");
+      if (!fileInput.files[0]) {
+        alert("कृपया एक image चुनें।");
+        return;
+      }
 
-  <script type="module">
-    // 🔥 Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-      authDomain: "loot-lo-15328.firebaseapp.com",
-      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-      projectId: "loot-lo-15328",
-      storageBucket: "loot-lo-15328.appspot.com",
-      messagingSenderId: "677769861892",
-      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-    };
+      let formData = new FormData();
+      formData.append("image", fileInput.files[0]);
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.getAuth();
-    const db = firebase.getDatabase();
-
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const shopForm = document.getElementById("shopForm");
-    const productsDiv = document.getElementById("products");
-
-    let currentUser = null;
-
-    // 🔹 Google Login
-    loginBtn.onclick = async () => {
-      const provider = new firebase.GoogleAuthProvider();
-      await firebase.signInWithPopup(auth, provider);
-    };
-
-    logoutBtn.onclick = async () => {
-      await firebase.signOut(auth);
-    };
-
-    firebase.onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        loginBtn.classList.add("hidden");
-        logoutBtn.classList.remove("hidden");
-
-        // अगर shopkeeper है
-        shopForm.classList.remove("hidden");
-
-        // अगर admin है
-        if (user.email === "zarasamajiksevasanstha@gmail.com") {
-          alert("✅ Admin Mode Active");
+      fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          addImage(data.data.url);
+        } else {
+          alert("Upload error!");
         }
-      } else {
-        currentUser = null;
-        loginBtn.classList.remove("hidden");
-        logoutBtn.classList.add("hidden");
-        shopForm.classList.add("hidden");
-      }
-    });
-
-    // 🔹 ImgBB Upload
-    async function uploadImages(files) {
-      const urls = [];
-      for (let file of files) {
-        let form = new FormData();
-        form.append("image", file);
-        let res = await fetch("https://api.imgbb.com/1/upload?key=ff05d1b5c3b3e139253856f0ad1123df", {
-          method: "POST",
-          body: form
-        });
-        let data = await res.json();
-        urls.push(data.data.url);
-      }
-      return urls;
+      })
+      .catch(err => console.error(err));
     }
 
-    // 🔹 Add Product
-    document.getElementById("submitProduct").onclick = async () => {
-      let name = document.getElementById("productName").value;
-      let price = document.getElementById("productPrice").value;
-      let discount = document.getElementById("productDiscount").value;
-      let whatsapp = document.getElementById("whatsappNumber").value;
-      let files = document.getElementById("images").files;
+    // Add image to gallery
+    function addImage(url) {
+      const gallery = document.getElementById("gallery");
+      const div = document.createElement("div");
 
-      let imgUrls = await uploadImages(files);
+      div.innerHTML = `
+        <img src="${url}" onclick="openFullscreen('${url}')">
+        <button class="delete-btn" onclick="this.parentElement.remove()">Delete</button>
+      `;
 
-      let newRef = firebase.push(firebase.ref(db, "products"));
-      firebase.set(newRef, {
-        name, price, discount, whatsapp,
-        images: imgUrls,
-        status: "pending",
-        createdAt: Date.now(),
-        user: currentUser.email
-      });
-      alert("✅ Product Submitted! Wait for admin approval.");
-    };
+      gallery.appendChild(div);
+    }
 
-    // 🔹 Load Products
-    firebase.onValue(firebase.ref(db, "products"), (snapshot) => {
-      productsDiv.innerHTML = "";
-      let data = snapshot.val();
-      if (!data) return;
+    // Open Fullscreen
+    function openFullscreen(url) {
+      document.getElementById("fullscreenImg").src = url;
+      document.getElementById("fullscreen").style.display = "flex";
+    }
 
-      let items = Object.entries(data).sort((a,b)=> b[1].createdAt - a[1].createdAt);
-
-      items.forEach(([id, product]) => {
-        let card = document.createElement("div");
-        card.className = "card p-4 rounded-xl shadow-lg " + (product.status === "pending" ? "bg-red-700" : "bg-gray-800");
-
-        card.innerHTML = `
-          <img src="${product.images[0]}" class="w-full rounded-lg mb-2" />
-          <h3 class="text-xl font-bold">${product.name}</h3>
-          <p>💰 ${product.price} | 🔻 ${product.discount}%</p>
-          <a href="https://wa.me/${product.whatsapp}?text=Hi, I like your product ${product.name} priced at ${product.price}, please send details." 
-             class="btn3d inline-block mt-2">WhatsApp Shop</a>
-          <div class="mt-2">
-            ${currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com" ? `
-              ${product.status==="pending" ? `<button onclick="approveProduct('${id}')" class="btn3d">Approve</button>` : ""}
-              <button onclick="rejectProduct('${id}')" class="btn3d">Reject</button>
-            ` : ""}
-            ${currentUser && currentUser.email===product.user ? `
-              <button onclick="deleteProduct('${id}')" class="btn3d">Delete</button>
-            ` : ""}
-          </div>
-          ${product.status==="pending" ? "<p class='mt-2 text-yellow-300 font-bold'>WAIT FOR APPROVAL</p>" : ""}
-        `;
-        productsDiv.appendChild(card);
-
-        card.onclick = () => card.classList.toggle("expanded");
-      });
-    });
-
-    // 🔹 Approve / Reject / Delete
-    window.approveProduct = (id) => {
-      firebase.update(firebase.ref(db,"products/"+id), {status:"approved"});
-    };
-    window.rejectProduct = (id) => {
-      firebase.update(firebase.ref(db,"products/"+id), {status:"rejected"});
-    };
-    window.deleteProduct = (id) => {
-      firebase.remove(firebase.ref(db,"products/"+id));
-    };
+    // Close Fullscreen
+    function closeFullscreen() {
+      document.getElementById("fullscreen").style.display = "none";
+    }
   </script>
+
 </body>
 </html>
