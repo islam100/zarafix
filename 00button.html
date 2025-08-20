@@ -1,112 +1,174 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Login Page</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix Portal</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      display: flex; justify-content: center; align-items: center;
-      height: 100vh;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-    }
-    .container {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
       text-align: center;
-      background: rgba(0,0,0,0.6);
-      padding: 30px;
-      border-radius: 20px;
-      width: 320px;
     }
-    h1 { margin-bottom: 20px; }
 
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 15px;
-      margin: 10px 0;
-      font-size: 18px;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+    }
+
+    .logo {
+      font-size: 1.8rem;
       font-weight: bold;
+      background: linear-gradient(45deg, #ff0057, #ff7b00, #00d4ff, #7cff00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 2px 2px 8px rgba(255,255,255,0.3);
+      transform: perspective(500px) rotateX(10deg);
+    }
+
+    .btn-3d {
+      display: inline-block;
+      margin: 12px;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(145deg, #1e90ff, #0066cc);
       border: none;
       border-radius: 12px;
       cursor: pointer;
-      transition: all 0.3s;
+      box-shadow: 0 6px #004080;
+      transition: all 0.2s ease;
     }
-    .btn:disabled {
-      background: grey;
+    .btn-3d:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px #004080;
+    }
+
+    .btn-admin {
+      background: linear-gradient(145deg, #ff4b2b, #ff416c);
+      box-shadow: 0 6px #800020;
+    }
+
+    .btn-disabled {
+      opacity: 0.4;
       cursor: not-allowed;
-      opacity: 0.7;
+      box-shadow: none;
     }
-    .login-btn { background: #ff9800; }
-    .logout-btn { background: #f44336; display: none; }
-    .admin-btn { background: #4CAF50; }
-    .service-btn { background: #2196F3; }
+
+    #notice {
+      margin: 20px auto;
+      padding: 20px;
+      width: 85%;
+      max-width: 500px;
+      background: linear-gradient(145deg, #444, #222);
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      display: none;
+    }
+
+    #loginBtn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      background: linear-gradient(145deg, #00c6ff, #0072ff);
+      color: white;
+      box-shadow: 0 5px #004080;
+    }
+    #loginBtn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px #004080;
+    }
+
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>ZaraFix</h1>
-    <button id="loginBtn" class="btn login-btn">Login with Google</button>
-    <button id="logoutBtn" class="btn logout-btn">Logout</button>
-    <hr>
-    <button id="adminBtn" class="btn admin-btn" disabled>Admin Dashboard</button>
-    <button id="serviceBtn" class="btn service-btn" disabled>Service Page</button>
-  </div>
+
+  <header>
+    <div class="logo">ZaraFix</div>
+    <button id="loginBtn">Login with Google</button>
+  </header>
+
+  <main>
+    <div>
+      <a href="https://zarafix.vercel.app/2poster.html">
+        <button class="btn-3d">Provider</button>
+      </a>
+      <a id="adminLink" href="https://zarafix.vercel.app/4-button.html">
+        <button id="adminBtn" class="btn-3d btn-admin btn-disabled" disabled>Admin</button>
+      </a>
+    </div>
+
+    <div id="notice">
+      <h3>📢 Notice Board</h3>
+      <p id="noticeText"></p>
+    </div>
+  </main>
 
   <script>
-    // Firebase config (replace with yours)
+    // Firebase Config
     const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-};
+      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+      authDomain: "loot-lo-15328.firebaseapp.com",
+      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+      projectId: "loot-lo-15328",
+      storageBucket: "loot-lo-15328.appspot.com",
+      messagingSenderId: "677769861892",
+      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
 
     const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
     const adminBtn = document.getElementById("adminBtn");
-    const serviceBtn = document.getElementById("serviceBtn");
+    const adminLink = document.getElementById("adminLink");
+    const notice = document.getElementById("notice");
+    const noticeText = document.getElementById("noticeText");
 
-    // Login with Google
-    loginBtn.onclick = () => {
-      auth.signInWithPopup(provider).then(result => {
-        alert("Login Successful: " + result.user.displayName);
-      }).catch(err => alert(err.message));
-    };
-
-    // Logout
-    logoutBtn.onclick = () => {
-      auth.signOut();
-    };
-
-    // Auth State Change
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "block";
-        adminBtn.disabled = false;
-        serviceBtn.disabled = false;
+    // Google Login
+    loginBtn.addEventListener("click", () => {
+      if (auth.currentUser) {
+        auth.signOut();
       } else {
-        loginBtn.style.display = "block";
-        logoutBtn.style.display = "none";
-        adminBtn.disabled = true;
-        serviceBtn.disabled = true;
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider);
       }
     });
 
-    // Button actions
-    adminBtn.onclick = () => alert("Admin Dashboard Opened ✅");
-    serviceBtn.onclick = () => alert("Service Page Opened ✅");
+    // Auth State
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.textContent = "Logout";
+        if (user.email === "zarasamajiksevasansth@gmail.com") {
+          adminBtn.disabled = false;
+          adminBtn.classList.remove("btn-disabled");
+          notice.style.display = "block";
+          noticeText.textContent = "Welcome Admin! यहाँ Notice लिख सकते हो।";
+        } else {
+          adminBtn.disabled = true;
+          adminBtn.classList.add("btn-disabled");
+          notice.style.display = "none";
+        }
+      } else {
+        loginBtn.textContent = "Login with Google";
+        adminBtn.disabled = true;
+        adminBtn.classList.add("btn-disabled");
+        notice.style.display = "none";
+      }
+    });
   </script>
+
 </body>
 </html>
