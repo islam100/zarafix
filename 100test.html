@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>All Service Provider</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+    header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+             display:flex; align-items:center; justify-content:space-between;
+             padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
+    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+             box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+    .btn3d { background:#4CAF50; color:#fff; }
+    .btn3d:disabled { background:#999; box-shadow:none; }
+    .logoutBtn { background:#E53935; color:#fff; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
+    .waBtn { background:#25D366; color:#fff; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:12px; padding:12px; }
+    .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+            padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px; }
+    .card:hover { transform:scale(1.02); }
+    .card img { width:100%; height:120px; object-fit:cover; border-radius:6px; }
+    .card h3 { margin:6px 0 3px; font-size:15px; }
+    .card p { margin:1px 0; font-size:13px; }
+    .pending { background:#ffcdd2; border:2px solid #f44336;
+               animation: blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+             background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                     max-height:90%; overflow:auto; position:relative; font-size:14px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+    form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+    form input, form select { width:100%; padding:5px; margin:3px 0 8px;
+                              border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🏠 All Service Provider</h1>
+  <div>
+    <button id="loginBtn" class="btn3d">Login</button>
+    <button id="logoutBtn" class="logoutBtn" style="display:none;">Logout</button>
+    <button id="newPostBtn" class="newPostBtn" style="display:none;">+ New Post</button>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Add New Service</h2>
+    <form id="postForm">
+      <label>Shop Name</label>
+      <input type="text" id="shopName" required>
+      <label>Owner Name</label>
+      <input type="text" id="ownerName" required>
+      <label>Address</label>
+      <input type="text" id="address" required>
+      <label>Whatsapp</label>
+      <input type="tel" id="whatsapp" required>
+      <label>Category</label>
+      <select id="posterType" required>
+        <option value="">-- Select Category --</option>
+        <option value="Car">Car</option>
+        <option value="Bike">Bike</option>
+        <option value="AC">AC / Refrigerator</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+        <option value="Carpenter">Carpenter</option>
+        <option value="Painter">Painter</option>
+        <option value="Driver">Driver</option>
+        <option value="Cleaner">Cleaner</option>
+        <option value="Gardener">Gardener</option>
+        <option value="Home Appliances">Home Appliances</option>
+        <option value="Computer & Laptop">Computer & Laptop</option>
+        <option value="Mobile Repair">Mobile Repair</option>
+        <option value="CCTV & Security">CCTV & Security</option>
+        <option value="Packers & Movers">Packers & Movers</option>
+        <option value="Event Management">Event Management</option>
+        <option value="Catering">Catering</option>
+        <option value="Beauty & Salon">Beauty & Salon</option>
+        <option value="Tutor">Tutor</option>
+        <option value="Doctor / Health">Doctor / Health</option>
+        <option value="Fitness Trainer">Fitness Trainer</option>
+        <option value="Courier">Courier</option>
+        <option value="Travel & Taxi">Travel & Taxi</option>
+        <option value="Others">Others</option>
+      </select>
+      <label>Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit Post</button>
+    </form>
+  </div>
+</div>
+
+<!-- Card View Modal -->
+<div class="modal" id="cardModal">
+  <div class="modal-content" id="cardContent">
+    <span class="close" id="closeCard">&times;</span>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
+const cardModal=document.getElementById('cardModal');
+const cardContent=document.getElementById('cardContent');
+const closeCard=document.getElementById('closeCard');
+
+let currentUser=null;
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
+  loadPosts();
+});
+
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+closeCard.onclick=()=>cardModal.style.display="none";
+
+// Upload images (imgbb)
+async function uploadImages(files){
+  const urls=[];
+  for(let i=0;i<Math.min(5,files.length);i++){
+    const f=files[i];
+    const fd=new FormData();
+    fd.append("image",f);
+    const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
+    const j=await r.json();
+    urls.push(j.data.url);
+  }
+  return urls;
+}
+
+// Post submit
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Login first");
+  const submitBtn=postForm.querySelector("button[type=submit]");
+  submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
+
+  const post={
+    shopName:document.getElementById('shopName').value,
+    ownerName:document.getElementById('ownerName').value,
+    address:document.getElementById('address').value,
+    whatsapp:document.getElementById('whatsapp').value,
+    posterType:document.getElementById('posterType').value,
+    posterName:currentUser.displayName,
+    posterUid:currentUser.uid,
+    status:"pending",
+    created:Date.now()
+  };
+  const files=document.getElementById('images').files;
+  if(files.length>0) post.images=await uploadImages(files);
+
+  db.ref("services").push(post,(err)=>{
+    if(err){ alert("❌ Error"); }
+    else{ alert("✅ Service submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
+  });
+};
+
+// Load posts
+function loadPosts(){
+  db.ref("services").orderByChild("created").on("value",snap=>{
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse();
+
+    arr.forEach(p=>{
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){
+        // admin sees all
+      } else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status==="pending") card.classList.add("pending");
+      if(p.status==="rejected") card.style.background="#ffe0b2";
+
+      if(p.images && p.images.length) {
+        const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
+      }
+      const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+      const owner=document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
+      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
+      const ph=document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
+      const cat=document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
+
+      const st=document.createElement("p");
+      if(p.status==="approved") st.textContent="✅ Approved";
+      else if(p.status==="rejected") st.textContent="❌ Rejected";
+      else st.textContent="⏳ Pending Approval";
+      card.appendChild(st);
+
+      const btnRow=document.createElement("div"); btnRow.className="btnRow";
+
+      // WhatsApp button
+      const wa=document.createElement("button");
+      wa.textContent="💬 WhatsApp";
+      wa.className="waBtn";
+      wa.onclick=(e)=>{ e.stopPropagation(); window.open(`https://wa.me/${p.whatsapp}?text=Hello, I am interested in your service (${p.shopName}).`,"_blank"); };
+      btnRow.appendChild(wa);
+
+      if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
+        const del=document.createElement("button");
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
+        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("services/"+p.id).remove(); };
+        btnRow.appendChild(del);
+      }
+
+      if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+        const ap=document.createElement("button");
+        ap.textContent="✅ Approve"; ap.className="btn3d";
+        ap.onclick=async e=>{ e.stopPropagation(); await db.ref("services/"+p.id).update({status:"approved"}); };
+        const rj=document.createElement("button");
+        rj.textContent="❌ Reject"; rj.className="logoutBtn";
+        rj.onclick=async e=>{ e.stopPropagation(); await db.ref("services/"+p.id).update({status:"rejected"}); };
+        const del=document.createElement("button");
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
+        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("services/"+p.id).remove(); };
+        btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
+      }
+
+      card.appendChild(btnRow);
+      postsDiv.appendChild(card);
+    });
+  });
+}
+</script>
+</body>
+</html>
