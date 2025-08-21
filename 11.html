@@ -1,153 +1,162 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix – Services</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, select, button { padding: 8px; margin: 5px 0; width: 100%; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    button { cursor: pointer; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZaraFix All Services Listing</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<style>
+  body {background: #f0f4f8;}
+  .card {transition: transform 0.3s;}
+  .card:hover {transform: scale(1.05);}
+  .unapproved {background-color: #fee2e2;}
+  .approved {background-color: #dcfce7;}
+</style>
 </head>
-<body>
+<body class="p-4">
 
-<h2>Add Service</h2>
-<form id="serviceForm">
-  <input type="text" id="ShopName" placeholder="Shop Name" required />
-  <input type="text" id="OwnerName" placeholder="Owner Name" required />
-  <input type="text" id="address" placeholder="Address" required />
-  <input type="text" id="Whatsapp" placeholder="Whatsapp Number" required />
-  <select id="posterType">
-    <option value="public">Public</option>
-    <option value="shopkeeper">Shopkeeper</option>
-  </select>
-  <button type="submit">Add Service</button>
-</form>
+<h1 class="text-3xl font-bold text-center mb-4">ZaraFix Services</h1>
+<div class="flex justify-center mb-4">
+  <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded-xl mr-2">Login with Google</button>
+  <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-xl hidden">Logout</button>
+</div>
 
-<h2>All Services List</h2>
-<table id="servicesTable">
-  <thead>
-    <tr>
-      <th>Shop Name</th>
-      <th>Owner Name</th>
-      <th>Address</th>
-      <th>Whatsapp</th>
-      <th>Type</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="servicesList"></tbody>
-</table>
+<div id="providerForm" class="max-w-md mx-auto p-4 bg-white rounded-2xl shadow-lg mb-6 hidden">
+  <h2 class="text-xl font-semibold mb-2">Add Service</h2>
+  <input type="text" id="serviceName" placeholder="Service Name" class="w-full px-3 py-2 mb-2 rounded-xl border">
+  <input type="text" id="contactNumber" placeholder="Contact Number" class="w-full px-3 py-2 mb-2 rounded-xl border">
+  <input type="file" id="serviceImage" class="mb-2">
+  <textarea id="serviceDesc" placeholder="Description" class="w-full px-3 py-2 mb-2 rounded-xl border"></textarea>
+  <button id="submitService" class="bg-green-500 text-white px-4 py-2 rounded-xl w-full">Submit</button>
+</div>
+
+<div id="listing" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
 
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
 
-  // Mock currentUser (replace with Firebase Auth login)
-  const currentUser = { displayName: "Admin", uid: "admin123" };
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
 
-  const form = document.getElementById('serviceForm');
-  const servicesList = document.getElementById('servicesList');
+let currentUser = null;
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-  // Submit handler
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
+// Login
+document.getElementById('loginBtn').onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+};
 
-    const post = {
-      shopName: document.getElementById('ShopName').value,
-      ownerName: document.getElementById('OwnerName').value,
-      address: document.getElementById('address').value,
-      posterPhone: document.getElementById('Whatsapp').value,
-      posterType: document.getElementById('posterType').value,
-      posterName: currentUser.displayName,
-      posterUid: currentUser.uid,
-      created: Date.now()
-    };
+document.getElementById('logoutBtn').onclick = () => {
+  auth.signOut();
+};
 
-    firebase.database().ref('services/').push(post)
-      .then(() => {
-        alert('Service added successfully!');
-        form.reset();
-      })
-      .catch(err => alert('Error: ' + err));
-  });
-
-  // Load services from Firebase
-  firebase.database().ref('services/').on('value', snapshot => {
-    servicesList.innerHTML = '';
-    snapshot.forEach(child => {
-      const data = child.val();
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${data.shopName}</td>
-        <td>${data.ownerName}</td>
-        <td>${data.address}</td>
-        <td>${data.posterPhone}</td>
-        <td>${data.posterType}</td>
-        <td>
-          <button onclick="editService('${child.key}')">Edit</button>
-          <button onclick="deleteService('${child.key}')">Delete</button>
-        </td>
-      `;
-      servicesList.appendChild(tr);
-    });
-  });
-
-  function deleteService(id) {
-    if(confirm('Are you sure to delete?')) {
-      firebase.database().ref('services/' + id).remove();
+auth.onAuthStateChanged(user => {
+  if(user){
+    currentUser = user;
+    document.getElementById('loginBtn').classList.add('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
+    if(user.email === adminEmail){
+      document.getElementById('providerForm').classList.add('hidden');
+    } else {
+      document.getElementById('providerForm').classList.remove('hidden');
     }
+    loadListings();
+  } else {
+    currentUser = null;
+    document.getElementById('loginBtn').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('providerForm').classList.add('hidden');
   }
+});
 
-  function editService(id) {
-    firebase.database().ref('services/' + id).get().then(snapshot => {
-      if(snapshot.exists()){
-        const data = snapshot.val();
-        document.getElementById('ShopName').value = data.shopName;
-        document.getElementById('OwnerName').value = data.ownerName;
-        document.getElementById('address').value = data.address;
-        document.getElementById('Whatsapp').value = data.posterPhone;
-        document.getElementById('posterType').value = data.posterType;
+// Submit Service
+document.getElementById('submitService').onclick = async () => {
+  const name = document.getElementById('serviceName').value;
+  const contact = document.getElementById('contactNumber').value;
+  const desc = document.getElementById('serviceDesc').value;
+  const file = document.getElementById('serviceImage').files[0];
+  if(!name || !contact || !desc || !file){alert('Fill all fields'); return;}
 
-        // Update button temporarily
-        const btn = form.querySelector('button[type="submit"]');
-        btn.textContent = 'Update Service';
+  const formData = new FormData();
+  formData.append('image', file);
+  formData.append('key','4dc5e5cb7654ffc308d5ca45452b014b');
 
-        form.onsubmit = function(e){
-          e.preventDefault();
-          const updated = {
-            shopName: document.getElementById('ShopName').value,
-            ownerName: document.getElementById('OwnerName').value,
-            address: document.getElementById('address').value,
-            posterPhone: document.getElementById('Whatsapp').value,
-            posterType: document.getElementById('posterType').value
-          };
-          firebase.database().ref('services/' + id).update(updated)
-            .then(()=> {
-              alert('Service updated!');
-              form.reset();
-              btn.textContent = 'Add Service';
-              form.onsubmit = null; // reset submit
-            });
-        };
-      }
+  const res = await fetch('https://api.imgbb.com/1/upload',{
+    method:'POST',
+    body: formData
+  });
+  const data = await res.json();
+  const imgUrl = data.data.url;
+
+  const newRef = db.ref('services').push();
+  newRef.set({
+    name, contact, desc, imgUrl, approved:false, uid: currentUser.uid, timestamp: Date.now()
+  });
+
+  alert('Service submitted for approval');
+  document.getElementById('serviceName').value='';
+  document.getElementById('contactNumber').value='';
+  document.getElementById('serviceDesc').value='';
+  document.getElementById('serviceImage').value='';
+};
+
+// Load Listings
+function loadListings(){
+  db.ref('services').orderByChild('timestamp').on('value', snap => {
+    const listing = document.getElementById('listing');
+    listing.innerHTML='';
+    const services = [];
+    snap.forEach(child => services.push({key: child.key, ...child.val()}));
+    services.reverse(); // newest first
+
+    services.forEach(s => {
+      const isAdmin = currentUser.email === adminEmail;
+      const isOwner = currentUser.uid === s.uid;
+      const card = document.createElement('div');
+      card.className = 'card p-3 rounded-2xl shadow-lg ' + (s.approved?'approved':'unapproved');
+      card.innerHTML = `
+        <img src='${s.imgUrl}' class='rounded-xl mb-2 w-full h-40 object-cover cursor-pointer' onclick="window.open('${s.imgUrl}','_blank')">
+        <h3 class='font-semibold text-lg'>${s.name}</h3>
+        <p>${s.desc}</p>
+        <p class='font-bold'>Contact: ${s.contact}</p>
+        <div class='mt-2 flex gap-2'>
+          ${isAdmin?`<button onclick='approveService("${s.key}")' class='bg-green-500 text-white px-2 py-1 rounded'>Approve</button>
+                     <button onclick='rejectService("${s.key}")' class='bg-red-500 text-white px-2 py-1 rounded'>Reject</button>
+                     <button onclick='deleteService("${s.key}")' class='bg-gray-500 text-white px-2 py-1 rounded'>Delete</button>`:''}
+          ${isOwner && !isAdmin?`<button onclick='deleteService("${s.key}")' class='bg-gray-500 text-white px-2 py-1 rounded'>Delete</button>`:''}
+          <a href='https://wa.me/${s.contact}?text=Zara%20Fix%20ने%20आपको%20customer%20दिया%20है' target='_blank' class='bg-green-600 text-white px-2 py-1 rounded'>WhatsApp</a>
+        </div>
+        ${!s.approved?'<p class="text-red-600 font-bold mt-1">Not Approved</p>':''}
+      `;
+      listing.appendChild(card);
     });
-  }
+  });
+}
+
+function approveService(key){
+  db.ref('services/'+key).update({approved:true});
+}
+function rejectService(key){
+  db.ref('services/'+key).update({approved:false});
+}
+function deleteService(key){
+  db.ref('services/'+key).remove();
+}
 </script>
 </body>
 </html>
