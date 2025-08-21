@@ -10,22 +10,23 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 .card:hover { transform: rotateY(10deg) scale(1.05); transition:0.3s; }
-.fullscreen-img { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; justify-content:center; align-items:center; z-index:50; }
-.fullscreen-img img { max-width:95%; max-height:95%; border-radius:10px; }
+button:hover { transform: scale(1.1); transition:0.3s; }
 </style>
 </head>
 <body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
 
 <div class="container mx-auto p-4">
-<h1 class="text-3xl font-bold text-center mb-4">Provider - Add New Service</h1>
-<div class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto">
-  <input type="text" id="title" placeholder="Service Title" class="w-full mb-2 p-2 border rounded">
-  <textarea id="description" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
-  <input type="text" id="posterName" placeholder="Your Name" class="w-full mb-2 p-2 border rounded">
-  <input type="text" id="posterWhatsapp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
-  <input type="file" id="imageFile" class="mb-2">
-  <button onclick="addPost()" class="bg-green-500 text-white px-4 py-2 rounded w-full hover:scale-105 transition">Submit Post</button>
+<h1 class="text-3xl font-bold text-center mb-4">Provider - Add Your Shop</h1>
+<div id="providerForm" class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto card">
+  <input type="text" id="shopName" placeholder="Shop Name" class="w-full mb-2 p-2 border rounded">
+  <input type="text" id="ownerName" placeholder="Owner Name" class="w-full mb-2 p-2 border rounded">
+  <textarea id="shopAddress" placeholder="Shop Address" class="w-full mb-2 p-2 border rounded"></textarea>
+  <input type="text" id="whatsappNo" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
+  <input type="file" id="shopImage" class="mb-2">
+  <button onclick="addShop()" class="bg-green-500 text-white px-4 py-2 rounded w-full">Submit Shop</button>
 </div>
+
+<div id="statusMessage" class="text-center mt-4 text-xl font-semibold hidden"></div>
 </div>
 
 <script>
@@ -43,57 +44,83 @@ const auth = firebase.auth();
 
 const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
-// Simple login (prompt)
+// Login
 async function login() {
   const email = prompt("Email:");
   const pass = prompt("Password:");
   await auth.signInWithEmailAndPassword(email, pass).catch(e => alert(e.message));
 }
 
-auth.onAuthStateChanged(user => {
-  if (!user) login();
+auth.onAuthStateChanged(async user => {
+  if(!user) { login(); return; }
+
+  // Check if user already has active shop
+  const query = await db.collection("posts").where("posterEmail", "==", user.email).get();
+  if(!query.empty){
+    const doc = query.docs[0];
+    const post = doc.data();
+    const now = new Date();
+    if(post.status=="approved" && post.expiryDate.toDate() > now){
+      document.getElementById("providerForm").style.display="none";
+      document.getElementById("statusMessage").innerText = `You are active! Shop will expire on ${post.expiryDate.toDate().toDateString()}`;
+      document.getElementById("statusMessage").classList.remove("hidden");
+    } else if(post.status=="approved" && post.expiryDate.toDate() <= now){
+      document.getElementById("providerForm").style.display="none";
+      document.getElementById("statusMessage").innerText = "You are inactive. Please contact admin to recharge!";
+      document.getElementById("statusMessage").classList.remove("hidden");
+    } else if(post.status=="pending"){
+      document.getElementById("providerForm").style.display="none";
+      document.getElementById("statusMessage").innerText = "Your shop is pending admin approval.";
+      document.getElementById("statusMessage").classList.remove("hidden");
+    }
+  }
 });
 
-// Upload image to IMUGEBB
-async function uploadImage(file) {
+// Upload Image
+async function uploadImage(file){
   const formData = new FormData();
   formData.append("image", file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
-    method: "POST",
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`,{
+    method:"POST",
     body: formData
   });
   const data = await res.json();
   return data.data.url;
 }
 
-// Add Post
-async function addPost() {
-  const title = document.getElementById("title").value;
-  const description = document.getElementById("description").value;
-  const posterName = document.getElementById("posterName").value;
-  const posterWhatsapp = document.getElementById("posterWhatsapp").value;
-  const file = document.getElementById("imageFile").files[0];
+// Add Shop
+async function addShop(){
+  const shopName = document.getElementById("shopName").value;
+  const ownerName = document.getElementById("ownerName").value;
+  const shopAddress = document.getElementById("shopAddress").value;
+  const whatsappNo = document.getElementById("whatsappNo").value;
+  const shopImage = document.getElementById("shopImage").files[0];
 
-  if(!title || !description || !posterName || !posterWhatsapp || !file) { alert("Fill all fields"); return; }
+  if(!shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
+    alert("Please fill all fields!");
+    return;
+  }
 
-  const imageUrl = await uploadImage(file);
+  const imageUrl = await uploadImage(shopImage);
   const now = new Date();
   const expiry = new Date(now.getTime() + 30*24*60*60*1000);
 
   await db.collection("posts").add({
-    title,
-    description,
-    posterName,
-    posterWhatsapp,
+    shopName,
+    ownerName,
+    shopAddress,
+    whatsappNo,
     posterEmail: auth.currentUser.email,
     imageUrl,
     status: "pending",
     createdAt: firebase.firestore.Timestamp.fromDate(now),
     expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
   });
-  alert("Post submitted for admin approval!");
+
+  document.getElementById("providerForm").style.display="none";
+  document.getElementById("statusMessage").innerText = "Your shop is submitted! Waiting for admin approval.";
+  document.getElementById("statusMessage").classList.remove("hidden");
 }
 </script>
-
 </body>
 </html>
