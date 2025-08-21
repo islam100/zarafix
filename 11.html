@@ -19,8 +19,8 @@
 <div class="container mx-auto p-4">
   <h1 class="text-3xl font-bold text-center mb-4">Zara Fix - All Services</h1>
 
-  <!-- Provider Listing Form -->
-  <div class="bg-white p-4 rounded-lg shadow-lg mb-6">
+  <!-- Provider Form -->
+  <div id="providerForm" class="bg-white p-4 rounded-lg shadow-lg mb-6">
     <h2 class="font-bold text-xl mb-2">Add New Service</h2>
     <input type="text" id="title" placeholder="Service Title" class="w-full mb-2 p-2 border rounded"/>
     <textarea id="description" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
@@ -30,7 +30,7 @@
     <button onclick="addPost()" class="bg-green-500 text-white px-4 py-2 rounded">Submit Post</button>
   </div>
 
-  <!-- Posts Listing -->
+  <!-- Listing -->
   <div id="postsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 </div>
 
@@ -50,20 +50,18 @@ const auth = firebase.auth();
 const admins = ["zarasamajiksevasanstha@gmail.com"];
 const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
-// -------- Authentication (simple email/password) --------
+// -------- Authentication --------
 async function signIn() {
   const email = prompt("Email:");
   const password = prompt("Password:");
   try {
-    await auth.signInWithEmailAndPassword(email, password);
+    await auth.signInWithEmailAndPassword(email,password);
     loadPosts();
-  } catch(e) {
-    alert("Login failed: "+e.message);
-  }
+  } catch(e){ alert("Login failed: "+e.message);}
 }
 auth.onAuthStateChanged(user => { if(!user) signIn(); else loadPosts(); });
 
-// -------- IMUGEBB Image Upload --------
+// -------- IMUGEBB Upload --------
 async function uploadImage(file){
   const formData = new FormData();
   formData.append("image", file);
@@ -74,7 +72,7 @@ async function uploadImage(file){
   return data.data.url;
 }
 
-// -------- Add New Post --------
+// -------- Add Post --------
 async function addPost(){
   const title = document.getElementById("title").value;
   const description = document.getElementById("description").value;
@@ -85,12 +83,12 @@ async function addPost(){
 
   const imageUrl = await uploadImage(file);
   const now = new Date();
-  const expiryDate = new Date(now.getTime() + 30*24*60*60*1000); // 30 days later
+  const expiryDate = new Date(now.getTime() + 30*24*60*60*1000);
 
   await db.collection('posts').add({
     title, description, posterName, posterWhatsapp,
-    imageUrl, status:"pending",
     posterEmail: auth.currentUser.email,
+    imageUrl, status:"pending",
     createdAt: firebase.firestore.Timestamp.fromDate(now),
     expiryDate: firebase.firestore.Timestamp.fromDate(expiryDate)
   });
@@ -105,18 +103,18 @@ async function loadPosts(){
   container.innerHTML = "";
   const now = new Date();
 
-  snapshot.forEach(doc => {
+  snapshot.forEach(doc=>{
     const post = doc.data();
     const id = doc.id;
 
     // Auto expire
-    if(post.expiryDate && post.expiryDate.toDate() < now && post.status !== 'expired'){
+    if(post.expiryDate && post.expiryDate.toDate()<now && post.status!=="expired"){
       db.collection('posts').doc(id).update({status:'expired'});
     }
 
     const card = document.createElement("div");
     card.className = `card p-3 rounded-xl shadow-lg flex flex-col items-center bg-white ${
-      post.status==="pending" ? "border-4 border-yellow-500" : "border-2 border-green-500"
+      post.status==="pending"?"border-4 border-yellow-500":"border-2 border-green-500"
     }`;
 
     card.innerHTML = `
@@ -125,13 +123,13 @@ async function loadPosts(){
       <p class="text-sm">${post.description}</p>
       <p class="text-xs mt-1">Posted by: ${post.posterName}</p>
       <a href="https://wa.me/${post.posterWhatsapp}?text=Zara%20Fix%20ne%20apko%20customer%20diya%20hai" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded mt-2 inline-block">WhatsApp</a>
-      ${admins.includes(auth.currentUser.email) ? `
+      ${admins.includes(auth.currentUser.email)?`
       <div class="flex mt-2 gap-2">
         <button onclick="approvePost('${id}')" class="bg-blue-500 text-white px-2 py-1 rounded">Approve</button>
         <button onclick="rejectPost('${id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
         <button onclick="deletePost('${id}')" class="bg-gray-500 text-white px-2 py-1 rounded">Delete</button>
-      </div>` : `
-      ${post.posterEmail===auth.currentUser.email ? `<button onclick="deletePost('${id}')" class="bg-red-500 text-white px-2 py-1 rounded mt-2">Delete My Post</button>` : ''}
+      </div>`:`
+      ${post.posterEmail===auth.currentUser.email?`<button onclick="deletePost('${id}')" class="bg-red-500 text-white px-2 py-1 rounded mt-2">Delete My Post</button>`:""}
       `}
     `;
     container.appendChild(card);
@@ -146,9 +144,9 @@ function deletePost(id){ db.collection('posts').doc(id).delete(); loadPosts(); }
 // -------- Fullscreen Image --------
 function openFullScreen(url){
   const modal = document.createElement("div");
-  modal.className = "fullscreen-img";
-  modal.innerHTML = `<img src="${url}"/>`;
-  modal.onclick = ()=> modal.remove();
+  modal.className="fullscreen-img";
+  modal.innerHTML=`<img src="${url}"/>`;
+  modal.onclick=()=>modal.remove();
   document.body.appendChild(modal);
 }
 </script>
