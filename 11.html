@@ -1,139 +1,156 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>🛠️ ZaraFix Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: Arial; margin: 0; padding: 0; background: #f4f4f4; }
-    h2 { text-align: center; background: #6200ea; color: white; padding: 10px; margin: 0; }
-    select { margin: 10px; padding: 10px; font-size: 16px; }
-    .card {
-      background: white;
-      margin: 10px;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .led {
-      height: 15px;
-      width: 15px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 10px;
-    }
-    .led.green { background-color: #00c853; }
-    .led.yellow {
-      background-color: #ffeb3b;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-    button {
-      padding: 6px 12px;
-      background: #d32f2f;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 5px;
-    }
-    button.approve { background: #388e3c; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zara Fix - All Services</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+.card:hover { transform: rotateY(8deg) scale(1.05); transition: 0.3s; }
+.fullscreen-img { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; justify-content:center; align-items:center; z-index:50; }
+.fullscreen-img img { max-width:95%; max-height:95%; border-radius:10px; }
+</style>
 </head>
-<body>
-  <h2>🔧 ZaraFix Admin Dashboard</h2>
-  <div style="text-align:center">
-    <select id="viewType">
-      <option value="provider">📋 Providers</option>
-      <option value="request">🧾 Requests</option>
-      <option value="recharge">💰 Recharge</option>
-    </select>
+<body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
+
+<div class="container mx-auto p-4">
+  <h1 class="text-3xl font-bold text-center mb-4">Zara Fix - All Services</h1>
+
+  <!-- Provider Listing Form -->
+  <div class="bg-white p-4 rounded-lg shadow-lg mb-6">
+    <h2 class="font-bold text-xl mb-2">Add New Service</h2>
+    <input type="text" id="title" placeholder="Service Title" class="w-full mb-2 p-2 border rounded"/>
+    <textarea id="description" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
+    <input type="text" id="posterName" placeholder="Your Name" class="w-full mb-2 p-2 border rounded"/>
+    <input type="text" id="posterWhatsapp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded"/>
+    <input type="file" id="imageFile" class="mb-2"/>
+    <button onclick="addPost()" class="bg-green-500 text-white px-4 py-2 rounded">Submit Post</button>
   </div>
-  <div id="output"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  <!-- Posts Listing -->
+  <div id="postsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
-    const viewType = document.getElementById("viewType");
-    const output = document.getElementById("output");
+const admins = ["zarasamajiksevasanstha@gmail.com"];
+const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
-    viewType.addEventListener("change", loadData);
-    window.onload = loadData;
+// -------- Authentication (simple email/password) --------
+async function signIn() {
+  const email = prompt("Email:");
+  const password = prompt("Password:");
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    loadPosts();
+  } catch(e) {
+    alert("Login failed: "+e.message);
+  }
+}
+auth.onAuthStateChanged(user => { if(!user) signIn(); else loadPosts(); });
 
-    function loadData() {
-      const type = viewType.value;
-      output.innerHTML = "";
-      if (type === "provider") {
-        const refData = ref(db, 'posters');
-        onValue(refData, snap => {
-          output.innerHTML = '';
-          snap.forEach(child => {
-            const data = child.val();
-            const approved = data.approved;
-            const led = approved ? '<span class="led green"></span>' : '<span class="led yellow"></span>';
-            const btn = approved ? '✅ Approved' : `<button class='approve' onclick="approvePoster('${child.key}')">Approve</button>`;
-            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Shop: ${data.shop}<br>Category: ${data.category}<br>WhatsApp: ${data.whatsapp}<br>${btn}<br><button onclick="deletePoster('${child.key}')">❌ Delete</button></div>`;
-          });
-        });
-      } else if (type === "request") {
-        const refData = ref(db, 'requests');
-        onValue(refData, snap => {
-          output.innerHTML = '';
-          snap.forEach(user => {
-            user.forEach(child => {
-              const data = child.val();
-              const pending = !data.acceptedBy || Object.keys(data.acceptedBy).length === 0;
-              const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
-              output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>${data.problem}<br>${data.address}<br>WhatsApp: ${data.whatsapp}<br><button onclick="deleteRequest('${user.key}', '${child.key}')">❌ Delete</button></div>`;
-            });
-          });
-        });
-      } else if (type === "recharge") {
-        const refData = ref(db, 'recharges');
-        onValue(refData, snap => {
-          output.innerHTML = '';
-          snap.forEach(child => {
-            const data = child.val();
-            const pending = !data.approved;
-            const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
-            const btn = pending ? `<button class='approve' onclick="approveRecharge('${child.key}')">Approve</button>` : '✅ Approved';
-            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Screenshot: <a href="${data.screenshot}" target="_blank">View</a><br>${btn}<br><button onclick="deleteRecharge('${child.key}')">❌ Delete</button></div>`;
-          });
-        });
-      }
+// -------- IMUGEBB Image Upload --------
+async function uploadImage(file){
+  const formData = new FormData();
+  formData.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
+    method:"POST", body: formData
+  });
+  const data = await res.json();
+  return data.data.url;
+}
+
+// -------- Add New Post --------
+async function addPost(){
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+  const posterName = document.getElementById("posterName").value;
+  const posterWhatsapp = document.getElementById("posterWhatsapp").value;
+  const file = document.getElementById("imageFile").files[0];
+  if(!title || !description || !posterName || !posterWhatsapp || !file){ alert("Fill all fields"); return; }
+
+  const imageUrl = await uploadImage(file);
+  const now = new Date();
+  const expiryDate = new Date(now.getTime() + 30*24*60*60*1000); // 30 days later
+
+  await db.collection('posts').add({
+    title, description, posterName, posterWhatsapp,
+    imageUrl, status:"pending",
+    posterEmail: auth.currentUser.email,
+    createdAt: firebase.firestore.Timestamp.fromDate(now),
+    expiryDate: firebase.firestore.Timestamp.fromDate(expiryDate)
+  });
+  alert("Post submitted for approval!");
+  loadPosts();
+}
+
+// -------- Load Posts --------
+async function loadPosts(){
+  const snapshot = await db.collection('posts').orderBy('createdAt','desc').get();
+  const container = document.getElementById("postsContainer");
+  container.innerHTML = "";
+  const now = new Date();
+
+  snapshot.forEach(doc => {
+    const post = doc.data();
+    const id = doc.id;
+
+    // Auto expire
+    if(post.expiryDate && post.expiryDate.toDate() < now && post.status !== 'expired'){
+      db.collection('posts').doc(id).update({status:'expired'});
     }
 
-    window.approvePoster = (id) => {
-      update(ref(db, 'posters/' + id), { approved: true });
-      alert("Poster Approved");
-    }
-    window.deletePoster = (id) => {
-      if (confirm("Delete this poster?")) remove(ref(db, 'posters/' + id));
-    }
-    window.deleteRequest = (uid, rid) => {
-      if (confirm("Delete this request?")) remove(ref(db, `requests/${uid}/${rid}`));
-    }
-    window.approveRecharge = (id) => {
-      update(ref(db, 'recharges/' + id), { approved: true });
-      alert("Recharge Approved");
-    }
-    window.deleteRecharge = (id) => {
-      if (confirm("Delete this recharge request?")) remove(ref(db, 'recharges/' + id));
-    }
-  </script>
+    const card = document.createElement("div");
+    card.className = `card p-3 rounded-xl shadow-lg flex flex-col items-center bg-white ${
+      post.status==="pending" ? "border-4 border-yellow-500" : "border-2 border-green-500"
+    }`;
+
+    card.innerHTML = `
+      <img src="${post.imageUrl}" class="rounded-lg cursor-pointer w-full" onclick="openFullScreen('${post.imageUrl}')"/>
+      <h2 class="text-lg font-bold mt-2">${post.title}</h2>
+      <p class="text-sm">${post.description}</p>
+      <p class="text-xs mt-1">Posted by: ${post.posterName}</p>
+      <a href="https://wa.me/${post.posterWhatsapp}?text=Zara%20Fix%20ne%20apko%20customer%20diya%20hai" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded mt-2 inline-block">WhatsApp</a>
+      ${admins.includes(auth.currentUser.email) ? `
+      <div class="flex mt-2 gap-2">
+        <button onclick="approvePost('${id}')" class="bg-blue-500 text-white px-2 py-1 rounded">Approve</button>
+        <button onclick="rejectPost('${id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
+        <button onclick="deletePost('${id}')" class="bg-gray-500 text-white px-2 py-1 rounded">Delete</button>
+      </div>` : `
+      ${post.posterEmail===auth.currentUser.email ? `<button onclick="deletePost('${id}')" class="bg-red-500 text-white px-2 py-1 rounded mt-2">Delete My Post</button>` : ''}
+      `}
+    `;
+    container.appendChild(card);
+  });
+}
+
+// -------- Admin Actions --------
+function approvePost(id){ db.collection('posts').doc(id).update({status:'approved'}); loadPosts(); }
+function rejectPost(id){ db.collection('posts').doc(id).update({status:'rejected'}); loadPosts(); }
+function deletePost(id){ db.collection('posts').doc(id).delete(); loadPosts(); }
+
+// -------- Fullscreen Image --------
+function openFullScreen(url){
+  const modal = document.createElement("div");
+  modal.className = "fullscreen-img";
+  modal.innerHTML = `<img src="${url}"/>`;
+  modal.onclick = ()=> modal.remove();
+  document.body.appendChild(modal);
+}
+</script>
 </body>
 </html>
