@@ -9,39 +9,75 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-.card:hover { transform: rotateY(10deg) scale(1.05); transition:0.3s; }
-button:hover { transform: scale(1.1); transition:0.3s; }
+body { font-family: 'Arial', sans-serif; }
+.card {
+  perspective: 1000px;
+}
+.form-card {
+  background: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 15px 25px rgba(0,0,0,0.3);
+  transition: transform 0.5s;
+}
+.form-card:hover {
+  transform: rotateY(10deg) scale(1.05);
+}
+input, textarea, select {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 12px;
+  width: 100%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  transform: scale(1.02);
+}
+button {
+  background: linear-gradient(45deg, #6a11cb, #2575fc);
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 15px;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+button:hover { transform: scale(1.1); }
+button:disabled { background: gray; cursor: not-allowed; }
 </style>
 </head>
-<body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
+<body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen flex items-center justify-center">
 
-<div class="container mx-auto p-4">
-<h1 class="text-3xl font-bold text-center mb-4">Provider - Add Your Shop/Service</h1>
-<div id="providerForm" class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto card">
-
-  <select id="serviceCategory" class="w-full mb-2 p-2 border rounded">
-    <option value="">Select Service Category</option>
-    <option value="Plumbing">Plumbing</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Home Cleaning">Home Cleaning</option>
-    <option value="Grocery Delivery">Grocery Delivery</option>
-    <option value="Salon">Salon</option>
-    <option value="Courier">Courier</option>
-    <option value="Painting">Painting</option>
-    <option value="Appliance Repair">Appliance Repair</option>
-    <option value="Education/Tuition">Education/Tuition</option>
-    <option value="Other">Other</option>
-  </select>
-
-  <input type="text" id="shopName" placeholder="Shop Name" class="w-full mb-2 p-2 border rounded">
-  <input type="text" id="ownerName" placeholder="Owner Name" class="w-full mb-2 p-2 border rounded">
-  <textarea id="shopAddress" placeholder="Shop Address" class="w-full mb-2 p-2 border rounded"></textarea>
-  <input type="text" id="whatsappNo" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
-  <input type="file" id="shopImage" class="mb-2">
-  <button onclick="addShop()" class="bg-green-500 text-white px-4 py-2 rounded w-full">Submit Shop</button>
-</div>
-
-<div id="statusMessage" class="text-center mt-4 text-xl font-semibold hidden"></div>
+<div class="w-full max-w-md card">
+  <h1 class="text-3xl font-bold text-center mb-6 text-white drop-shadow-lg">Provider - Add Your Shop/Service</h1>
+  <div id="providerForm" class="form-card">
+    <select id="serviceCategory">
+      <option value="">Select Service Category</option>
+      <option value="Plumbing">Plumbing</option>
+      <option value="Electrician">Electrician</option>
+      <option value="Home Cleaning">Home Cleaning</option>
+      <option value="Grocery Delivery">Grocery Delivery</option>
+      <option value="Salon">Salon</option>
+      <option value="Courier">Courier</option>
+      <option value="Painting">Painting</option>
+      <option value="Appliance Repair">Appliance Repair</option>
+      <option value="Education/Tuition">Education/Tuition</option>
+      <option value="Other">Other</option>
+    </select>
+    <input type="text" id="shopName" placeholder="Shop Name">
+    <input type="text" id="ownerName" placeholder="Owner Name">
+    <textarea id="shopAddress" placeholder="Shop Address"></textarea>
+    <input type="text" id="whatsappNo" placeholder="WhatsApp Number">
+    <input type="file" id="shopImage">
+    <button id="submitBtn" onclick="addShop()">Submit Shop</button>
+  </div>
+  <div id="statusMessage" class="text-center mt-4 text-xl font-semibold hidden text-white drop-shadow-lg"></div>
 </div>
 
 <script>
@@ -59,7 +95,6 @@ const auth = firebase.auth();
 
 const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
-// Login
 async function login() {
   const email = prompt("Email:");
   const pass = prompt("Password:");
@@ -74,23 +109,24 @@ auth.onAuthStateChanged(async user => {
     const doc = query.docs[0];
     const post = doc.data();
     const now = new Date();
+    const form = document.getElementById("providerForm");
+    const msg = document.getElementById("statusMessage");
     if(post.status=="approved" && post.expiryDate.toDate() > now){
-      document.getElementById("providerForm").style.display="none";
-      document.getElementById("statusMessage").innerText = `You are active! Shop will expire on ${post.expiryDate.toDate().toDateString()}`;
-      document.getElementById("statusMessage").classList.remove("hidden");
+      form.style.display="none";
+      msg.innerText = `You are active! Shop will expire on ${post.expiryDate.toDate().toDateString()}`;
+      msg.classList.remove("hidden");
     } else if(post.status=="approved" && post.expiryDate.toDate() <= now){
-      document.getElementById("providerForm").style.display="none";
-      document.getElementById("statusMessage").innerText = "You are inactive. Please contact admin to recharge!";
-      document.getElementById("statusMessage").classList.remove("hidden");
+      form.style.display="none";
+      msg.innerText = "You are inactive. Please contact admin to recharge!";
+      msg.classList.remove("hidden");
     } else if(post.status=="pending"){
-      document.getElementById("providerForm").style.display="none";
-      document.getElementById("statusMessage").innerText = "Your shop/service is pending admin approval.";
-      document.getElementById("statusMessage").classList.remove("hidden");
+      form.style.display="none";
+      msg.innerText = "Your shop/service is pending admin approval.";
+      msg.classList.remove("hidden");
     }
   }
 });
 
-// Upload Image
 async function uploadImage(file){
   const formData = new FormData();
   formData.append("image", file);
@@ -102,8 +138,10 @@ async function uploadImage(file){
   return data.data.url;
 }
 
-// Add Shop/Service
 async function addShop(){
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+
   const serviceCategory = document.getElementById("serviceCategory").value;
   const shopName = document.getElementById("shopName").value;
   const ownerName = document.getElementById("ownerName").value;
@@ -113,6 +151,7 @@ async function addShop(){
 
   if(!serviceCategory || !shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
     alert("Please fill all fields!");
+    btn.disabled = false;
     return;
   }
 
@@ -134,8 +173,9 @@ async function addShop(){
   });
 
   document.getElementById("providerForm").style.display="none";
-  document.getElementById("statusMessage").innerText = "Your shop/service is submitted! Waiting for admin approval.";
-  document.getElementById("statusMessage").classList.remove("hidden");
+  const msg = document.getElementById("statusMessage");
+  msg.innerText = "Your shop/service is submitted! Waiting for admin approval.";
+  msg.classList.remove("hidden");
 }
 </script>
 </body>
