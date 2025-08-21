@@ -16,8 +16,23 @@ button:hover { transform: scale(1.1); transition:0.3s; }
 <body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
 
 <div class="container mx-auto p-4">
-<h1 class="text-3xl font-bold text-center mb-4">Provider - Add Your Shop</h1>
+<h1 class="text-3xl font-bold text-center mb-4">Provider - Add Your Shop/Service</h1>
 <div id="providerForm" class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto card">
+
+  <select id="serviceCategory" class="w-full mb-2 p-2 border rounded">
+    <option value="">Select Service Category</option>
+    <option value="Plumbing">Plumbing</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Home Cleaning">Home Cleaning</option>
+    <option value="Grocery Delivery">Grocery Delivery</option>
+    <option value="Salon">Salon</option>
+    <option value="Courier">Courier</option>
+    <option value="Painting">Painting</option>
+    <option value="Appliance Repair">Appliance Repair</option>
+    <option value="Education/Tuition">Education/Tuition</option>
+    <option value="Other">Other</option>
+  </select>
+
   <input type="text" id="shopName" placeholder="Shop Name" class="w-full mb-2 p-2 border rounded">
   <input type="text" id="ownerName" placeholder="Owner Name" class="w-full mb-2 p-2 border rounded">
   <textarea id="shopAddress" placeholder="Shop Address" class="w-full mb-2 p-2 border rounded"></textarea>
@@ -54,7 +69,6 @@ async function login() {
 auth.onAuthStateChanged(async user => {
   if(!user) { login(); return; }
 
-  // Check if user already has active shop
   const query = await db.collection("posts").where("posterEmail", "==", user.email).get();
   if(!query.empty){
     const doc = query.docs[0];
@@ -70,7 +84,7 @@ auth.onAuthStateChanged(async user => {
       document.getElementById("statusMessage").classList.remove("hidden");
     } else if(post.status=="pending"){
       document.getElementById("providerForm").style.display="none";
-      document.getElementById("statusMessage").innerText = "Your shop is pending admin approval.";
+      document.getElementById("statusMessage").innerText = "Your shop/service is pending admin approval.";
       document.getElementById("statusMessage").classList.remove("hidden");
     }
   }
@@ -88,15 +102,16 @@ async function uploadImage(file){
   return data.data.url;
 }
 
-// Add Shop
+// Add Shop/Service
 async function addShop(){
+  const serviceCategory = document.getElementById("serviceCategory").value;
   const shopName = document.getElementById("shopName").value;
   const ownerName = document.getElementById("ownerName").value;
   const shopAddress = document.getElementById("shopAddress").value;
   const whatsappNo = document.getElementById("whatsappNo").value;
   const shopImage = document.getElementById("shopImage").files[0];
 
-  if(!shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
+  if(!serviceCategory || !shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
     alert("Please fill all fields!");
     return;
   }
@@ -106,6 +121,7 @@ async function addShop(){
   const expiry = new Date(now.getTime() + 30*24*60*60*1000);
 
   await db.collection("posts").add({
+    serviceCategory,
     shopName,
     ownerName,
     shopAddress,
@@ -118,7 +134,7 @@ async function addShop(){
   });
 
   document.getElementById("providerForm").style.display="none";
-  document.getElementById("statusMessage").innerText = "Your shop is submitted! Waiting for admin approval.";
+  document.getElementById("statusMessage").innerText = "Your shop/service is submitted! Waiting for admin approval.";
   document.getElementById("statusMessage").classList.remove("hidden");
 }
 </script>
