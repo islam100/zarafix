@@ -1,130 +1,211 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Provider - Zara Fix</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body { background: linear-gradient(135deg, #fce4ec, #e0f7fa); min-height:100vh; font-family:Arial,sans-serif; display:flex; justify-content:center; align-items:center; padding:15px; }
-.form-container { background:white; border-radius:15px; padding:20px; max-width:400px; width:100%; box-shadow:0 8px 20px rgba(0,0,0,0.2);}
-input, textarea, select { width:100%; padding:12px; margin-bottom:12px; border-radius:10px; border:1px solid #ccc; font-size:15px; }
-textarea { resize:vertical; min-height:80px; }
-button { width:100%; padding:14px; border:none; border-radius:12px; background: linear-gradient(45deg,#6a11cb,#2575fc); color:white; font-weight:bold; font-size:16px; cursor:pointer; transition:0.3s; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
-button:hover { transform:scale(1.05); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
-button:disabled { background:gray; cursor:not-allowed; }
-h1 { text-align:center; font-size:22px; margin-bottom:20px; color:#333; }
-#statusMessage { text-align:center; margin-top:15px; font-weight:bold; color:#333; }
-</style>
+  <title>🛠️ ZaraFix - Poster Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 10px;
+    }
+
+    .card, .form, .request {
+      background: white;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .button {
+      background: linear-gradient(to right, #4caf50, #81c784);
+      color: white;
+      padding: 12px;
+      border: none;
+      margin: 8px 4px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: scale(1.05);
+    }
+
+    .led {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    @media(max-width: 600px) {
+      .form, .card, .request {
+        padding: 10px;
+      }
+      .button {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="card">
+    <h2>🛠️ ZaraFix - Service Provider Panel</h2>
+    <div>💰 Wallet: ₹<span id="wallet">--</span></div>
+    <div>Status: <span id="led" class="led" style="background:gray;"></span> <span id="statusText">Checking...</span></div>
+  </div>
 
-<div class="form-container">
-<h1>Provider - Add Your Shop/Service</h1>
-<div id="providerForm">
-    <select id="serviceCategory">
-        <option value="">Select Service Category</option>
-        <option value="Plumbing">Plumbing</option>
-        <option value="Electrician">Electrician</option>
-        <option value="Home Cleaning">Home Cleaning</option>
-        <option value="Grocery Delivery">Grocery Delivery</option>
-        <option value="Salon">Salon</option>
-        <option value="Courier">Courier</option>
-        <option value="Painting">Painting</option>
-        <option value="Appliance Repair">Appliance Repair</option>
-        <option value="Education/Tuition">Education/Tuition</option>
-        <option value="Other">Other</option>
-    </select>
-    <input type="text" id="shopName" placeholder="Shop Name">
-    <input type="text" id="ownerName" placeholder="Owner Name">
-    <textarea id="shopAddress" placeholder="Shop Address"></textarea>
-    <input type="text" id="whatsappNo" placeholder="WhatsApp Number">
-    <input type="file" id="shopImage">
-    <button id="submitBtn" onclick="addShop()">Submit Shop</button>
-</div>
-<div id="statusMessage" class="hidden"></div>
-</div>
+  <div class="form" id="registrationForm" style="display:none;">
+    <h3>🔐 Register as Service Provider</h3>
+    <input placeholder="Name" id="regName"><br><br>
+    <input placeholder="Shop Name" id="regShop"><br><br>
+    <select id="regCategory">
+      <option value="">Select Category</option>
+      <option>AC Mechanic</option>
+      <option>Car Mechanic</option>
+      <option>Electrician</option>
+    </select><br><br>
+    <input placeholder="WhatsApp Number" id="regWhatsapp"><br><br>
+    <button class="button" onclick="submitRegistration()">Submit Registration</button>
+  </div>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
+  <div class="card" id="requestsCard" style="display:none;">
+    <h3>📋 Matching Service Requests</h3>
+    <div id="requests"></div>
+  </div>
 
-// Simple login
-async function login() {
-  const email = prompt("Email:");
-  const pass = prompt("Password:");
-  await auth.signInWithEmailAndPassword(email, pass).catch(e=>alert(e.message));
-}
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-auth.onAuthStateChanged(user=>{
-    if(!user) login();
-});
+    const app = initializeApp({
+      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+      authDomain: "zara-fix-2e35a.firebaseapp.com",
+      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+      projectId: "zara-fix-2e35a",
+      storageBucket: "zara-fix-2e35a.appspot.com",
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+    });
 
-async function uploadImage(file){
-    const formData = new FormData();
-    formData.append("image",file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`,{method:"POST",body:formData});
-    const data = await res.json();
-    return data.data.url;
-}
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-async function addShop(){
-    const btn = document.getElementById("submitBtn");
-    btn.disabled = true;
+    onAuthStateChanged(auth, user => {
+      if (!user) return signInWithPopup(auth, provider);
+      const uid = user.uid;
 
-    const serviceCategory = document.getElementById("serviceCategory").value.trim();
-    const shopName = document.getElementById("shopName").value.trim();
-    const ownerName = document.getElementById("ownerName").value.trim();
-    const shopAddress = document.getElementById("shopAddress").value.trim();
-    const whatsappNo = document.getElementById("whatsappNo").value.trim();
-    const shopImage = document.getElementById("shopImage").files[0];
+      get(ref(db, "posters/" + uid)).then(snapshot => {
+        if (!snapshot.exists()) {
+          document.getElementById('registrationForm').style.display = 'block';
+          return;
+        }
 
-    if(!serviceCategory || !shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
-        alert("Please fill all fields!");
-        btn.disabled = false;
-        return;
-    }
+        const data = snapshot.val();
+        document.getElementById("wallet").innerText = data.wallet || 0;
+        const cat = data.category;
+        document.getElementById("registrationForm").style.display = "none";
+        document.getElementById("requestsCard").style.display = "block";
 
-    try {
-        const imageUrl = await uploadImage(shopImage);
-        const now = new Date();
-        const expiry = new Date(now.getTime() + 30*24*60*60*1000);
+        onValue(ref(db, "requests"), snap => {
+          const requests = snap.val();
+          let found = false, accepted = false;
+          let html = "";
+          for (let userId in requests) {
+            for (let key in requests[userId]) {
+              const r = requests[userId][key];
+              if (r.category === cat) {
+                found = true;
+                if (r.acceptedBy && r.acceptedBy[uid]) accepted = true;
+                html += `
+                  <div class="request">
+                    <b>${r.name}</b> (${r.address})<br>
+                    Issue: ${r.problem}<br>
+                    <button class="button" onclick="accept('${userId}', '${key}')">Accept</button>
+                  </div>`;
+              }
+            }
+          }
 
-        await db.collection("posts").add({
-            serviceCategory,
-            shopName,
-            ownerName,
-            shopAddress,
-            whatsappNo,
-            posterEmail: auth.currentUser.email,
-            imageUrl,
-            status:"pending",
-            createdAt: firebase.firestore.Timestamp.fromDate(now),
-            expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
+          if (!found) {
+            document.getElementById("statusText").innerText = "Waiting for work";
+            document.getElementById("led").style.background = "green";
+            document.getElementById("requests").innerHTML = "No matching work found.";
+          } else {
+            document.getElementById("statusText").innerText = accepted ? "Work Accepted" : "Work Found";
+            document.getElementById("led").style.background = accepted ? "blue" : "yellow";
+            document.getElementById("requests").innerHTML = html;
+          }
         });
+      });
 
-        document.getElementById("providerForm").reset();
-        document.getElementById("statusMessage").innerText = "Submitted! Waiting for admin approval.";
-        document.getElementById("statusMessage").classList.remove("hidden");
-    } catch(e){
-        alert("Error submitting post: " + e.message);
-    } finally {
-        btn.disabled = false;
+      // Daily ₹3 deduction
+      const today = new Date().toDateString();
+      const stampRef = ref(db, "posters/" + uid + "/lastDeduct");
+      get(stampRef).then(snap => {
+        if (snap.val() !== today) {
+          const wRef = ref(db, "posters/" + uid);
+          get(wRef).then(snap => {
+            if (snap.exists()) {
+              const wallet = snap.val().wallet || 0;
+              if (wallet >= 3) {
+                update(wRef, {
+                  wallet: wallet - 3,
+                  lastDeduct: today
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+
+    window.submitRegistration = function () {
+      const uid = auth.currentUser.uid;
+      const data = {
+        name: regName.value,
+        shop: regShop.value,
+        category: regCategory.value,
+        whatsapp: regWhatsapp.value,
+        wallet: 100
+      };
+      set(ref(db, "posters/" + uid), data).then(() => location.reload());
     }
-}
-</script>
+
+    window.accept = function (userId, key) {
+      const uid = auth.currentUser.uid;
+      get(ref(db, "posters/" + uid)).then(snap => {
+        const data = snap.val();
+        if (data.wallet < 20) {
+          alert("Not enough wallet balance to accept (₹20 needed).");
+          return;
+        }
+        update(ref(db, "requests/" + userId + "/" + key + "/acceptedBy/" + uid), {
+          name: data.name,
+          whatsapp: data.whatsapp,
+          timestamp: Date.now()
+        });
+        update(ref(db, "posters/" + uid), {
+          wallet: data.wallet - 20
+        });
+      });
+    }
+  </script>
 </body>
 </html>
