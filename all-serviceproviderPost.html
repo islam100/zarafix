@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider - Zara Fix</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+.card:hover { transform: rotateY(10deg) scale(1.05); transition:0.3s; }
+.fullscreen-img { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; justify-content:center; align-items:center; z-index:50; }
+.fullscreen-img img { max-width:95%; max-height:95%; border-radius:10px; }
+</style>
+</head>
+<body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
+
+<div class="container mx-auto p-4">
+<h1 class="text-3xl font-bold text-center mb-4">Provider - Add New Service</h1>
+<div class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto">
+  <input type="text" id="title" placeholder="Service Title" class="w-full mb-2 p-2 border rounded">
+  <textarea id="description" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
+  <input type="text" id="posterName" placeholder="Your Name" class="w-full mb-2 p-2 border rounded">
+  <input type="text" id="posterWhatsapp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
+  <input type="file" id="imageFile" class="mb-2">
+  <button onclick="addPost()" class="bg-green-500 text-white px-4 py-2 rounded w-full hover:scale-105 transition">Submit Post</button>
+</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
+
+// Simple login (prompt)
+async function login() {
+  const email = prompt("Email:");
+  const pass = prompt("Password:");
+  await auth.signInWithEmailAndPassword(email, pass).catch(e => alert(e.message));
+}
+
+auth.onAuthStateChanged(user => {
+  if (!user) login();
+});
+
+// Upload image to IMUGEBB
+async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
+    method: "POST",
+    body: formData
+  });
+  const data = await res.json();
+  return data.data.url;
+}
+
+// Add Post
+async function addPost() {
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+  const posterName = document.getElementById("posterName").value;
+  const posterWhatsapp = document.getElementById("posterWhatsapp").value;
+  const file = document.getElementById("imageFile").files[0];
+
+  if(!title || !description || !posterName || !posterWhatsapp || !file) { alert("Fill all fields"); return; }
+
+  const imageUrl = await uploadImage(file);
+  const now = new Date();
+  const expiry = new Date(now.getTime() + 30*24*60*60*1000);
+
+  await db.collection("posts").add({
+    title,
+    description,
+    posterName,
+    posterWhatsapp,
+    posterEmail: auth.currentUser.email,
+    imageUrl,
+    status: "pending",
+    createdAt: firebase.firestore.Timestamp.fromDate(now),
+    expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
+  });
+  alert("Post submitted for admin approval!");
+}
+</script>
+
+</body>
+</html>
