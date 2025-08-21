@@ -82,18 +82,18 @@ async function login() {
 
 auth.onAuthStateChanged(async user=>{
   if(!user){ login(); return; }
-
   const query = await db.collection("posts").where("posterEmail","==",user.email).get();
+  const form = document.getElementById("providerForm");
+  const msg = document.getElementById("statusMessage");
+
   if(!query.empty){
     const doc = query.docs[0];
     const post = doc.data();
     const now = new Date();
-    const form = document.getElementById("providerForm");
-    const msg = document.getElementById("statusMessage");
 
     if(post.status=="approved" && post.expiryDate.toDate() > now){
       form.style.display="none";
-      msg.innerText=`You are active! Shop will expire on ${post.expiryDate.toDate().toDateString()}`;
+      msg.innerText = `You are active! Shop will expire on ${post.expiryDate.toDate().toDateString()}`;
       msg.classList.remove("hidden");
     } else if(post.status=="approved" && post.expiryDate.toDate() <= now){
       form.style.display="none";
@@ -149,11 +149,16 @@ async function addShop(){
     expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
   });
 
-  document.getElementById("providerForm").style.display="none";
+  // Clear form
+  document.getElementById("providerForm").reset();
+  btn.disabled = false;
+
+  // Show notification
   const msg = document.getElementById("statusMessage");
-  msg.innerText="Your shop/service is submitted! Waiting for admin approval.";
+  msg.innerText = "Submitted! Waiting for admin approval.";
   msg.classList.remove("hidden");
 }
 </script>
+
 </body>
 </html>
