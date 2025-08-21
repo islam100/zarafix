@@ -1,107 +1,25 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>All Services Provider</title>
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase compat -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Login Demo</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
   <style>
-    :root{
-      --bg:#0b1220; --panel:#0e1524; --line:rgba(255,255,255,.1); --soft:rgba(255,255,255,.05);
-    }
-    body{ background:var(--bg); color:#e5e7eb; }
-    .btn-3d{ box-shadow:0 6px 0 rgba(0,0,0,.6); transform:translateY(0); transition:transform .08s, box-shadow .08s, filter .2s; }
-    .btn-3d:hover{ filter:brightness(1.05); }
-    .btn-3d:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.6); }
-    .card-3d{ background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); border-radius:18px; overflow:hidden; box-shadow:0 14px 36px rgba(0,0,0,.45); user-select:none; }
-    .card-3d.colourful{ border-image:linear-gradient(45deg,#8b5cf6,#06b6d4,#22c55e,#f59e0b) 1; border-width:1px; }
-    .gal-img{ width:100%; height:190px; object-fit:contain; background:#07101d; }
-    @media(min-width:640px){ .gal-img{ height:210px } }
-    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:70; }
-    .modal.show{ display:flex }
-    .modal-card{ width:min(95vw,900px); background:var(--panel); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
-    .badge{ position:absolute; top:10px; left:10px; background:7fff00; border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; }
-    .badge-sold{ background:#3b1d1d; border-color:#4444ef; }
-    .logo-3d{ font-weight:900; letter-spacing:.08em; background:conic-gradient(from 210deg, #ff4ecd, #8b5cf6, #06b6d4, #22c55e, #f59e0b, #ff4ecd); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow: 0 2px 0 rgba(0,0,0,.7), 0 10px 30px rgba(0,0,0,.5); filter:drop-shadow(0 8px 18px rgba(16,185,129,.35)); }
-    .hdr-btn{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); }
-    .inpt{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12) }
+    body { font-family: sans-serif; background:#0b1220; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; }
+    button { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; background:#06b6d4; color:#fff; font-weight:bold; }
+    #user { margin-top:20px; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-<!-- Header -->
-<header class="sticky top-0 z-50 bg-[#0b1220]/90 backdrop-blur border-b border-white/10">
-  <div class="max-w-7xl mx-auto flex items-center justify-between p-4">
-    <div class="text-xl font-bold text-white logo-3d">All Services</div>
-    <div class="flex items-center space-x-4 relative z-50">
-      <!-- Dropdown Menu -->
-      <div class="relative">
-        <button id="btn-menu1" class="bg-gray-800 text-white text-sm px-2 py-1 rounded-md hover:bg-gray-700">Categories ▼</button>
-        <div id="menu1" class="absolute left-0 mt-1 min-w-[150px] bg-white rounded-md shadow-md hidden z-50">
-          <a href="#" class="block px-3 py-1 text-sm text-black hover:bg-gray-200">All Services</a>
-          <a href="#" class="block px-3 py-1 text-sm text-black hover:bg-gray-200">Property</a>
-          <a href="#" class="block px-3 py-1 text-sm text-black hover:bg-gray-200">Ambulance</a>
-          <a href="#" class="block px-3 py-1 text-sm text-black hover:bg-gray-200">Home</a>
-        </div>
-      </div>
-      <button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>
-    </div>
-  </div>
-</header>
-
-<!-- Tabs -->
-<div class="max-w-6xl mx-auto px-3 py-2">
-  <div class="flex gap-2 justify-start">
-    <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/10 font-semibold" data-tab="public">Public</button>
-    <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold" data-tab="provider">Provider</button>
-  </div>
-</div>
-
-<!-- Content -->
-<main class="w-full max-w-6xl mx-auto flex-1 p-3">
-  <!-- PUBLIC -->
-  <section id="public" class="space-y-3">
-    <div id="publicGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
-  </section>
-
-  <!-- PROVIDER -->
-  <section id="provider" class="hidden">
-    <div id="providerGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
-  </section>
-</main>
-
-<!-- Modal -->
-<div id="modal" class="modal">
-  <div id="modalCard" class="modal-card"></div>
-</div>
+<h1>Google Login Demo</h1>
+<button id="loginBtn">Login with Google</button>
+<div id="user"></div>
 
 <script>
-  // Dropdown toggle
-  document.getElementById('btn-menu1').addEventListener('click', e=>{
-    e.stopPropagation();
-    document.getElementById('menu1').classList.toggle('hidden');
-  });
-  window.addEventListener('click', ()=> document.getElementById('menu1').classList.add('hidden'));
-
-  // Tabs
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab').forEach(x=>{ x.classList.remove('bg-white/10'); x.classList.add('bg-white/5'); });
-      t.classList.add('bg-white/10'); t.classList.remove('bg-white/5');
-      ['public','provider'].forEach(id=> document.getElementById(id).classList.add('hidden'));
-      document.getElementById(t.dataset.tab).classList.remove('hidden');
-    });
-  });
-
-  /***** Firebase setup *****/
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
     authDomain: "loot-lo-15328.firebaseapp.com",
@@ -113,66 +31,37 @@
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
-  const db = firebase.database();
-  const productsRef = db.ref('products');
 
-  // Helpers
-  const rupees = n=> '₹'+(n||0).toLocaleString('en-IN');
-  const clean = s=> (s||'').replace(/</g,'&lt;');
-  const modal = document.getElementById('modal');
-  const modalCard = document.getElementById('modalCard');
+  const loginBtn = document.getElementById('loginBtn');
+  const userDiv = document.getElementById('user');
 
-  function makeCard(p){
-    const el = document.createElement('div');
-    el.className='card-3d colourful border border-white/10';
-    const img = p.images?.[0]||'';
-    el.innerHTML=`
-      <div class="relative">${p.sold?'<span class="badge badge-sold">SOLD</span>':''}</div>
-      <img class="gal-img" src="${img}" alt="${clean(p.name)}"/>
-      <div class="p-3">
-        <div class="font-bold text-[15px]">${clean(p.name)}</div>
-        <div class="text-sm opacity-80 mt-1">${clean(p.category)} • <span class="font-bold">${rupees(p.price)}</span></div>
-      </div>`;
-    el.addEventListener('click', ()=> openModal(p));
-    return el;
-  }
+  loginBtn.onclick = async () => {
+    if(auth.currentUser){
+      // Already logged in, sign out
+      await auth.signOut();
+      userDiv.innerHTML = '';
+      loginBtn.textContent = "Login with Google";
+      console.log("Signed out");
+      return;
+    }
 
-  function renderPublic(list){
-    const grid = document.getElementById('publicGrid');
-    grid.innerHTML='';
-    list.filter(p=>p.status==='approved').forEach(p=> grid.appendChild(makeCard(p)));
-  }
-
-  function renderProvider(list){
-    const grid = document.getElementById('providerGrid');
-    grid.innerHTML='';
-    list.forEach(p=> grid.appendChild(makeCard(p)));
-  }
-
-  function openModal(p){
-    modalCard.innerHTML=`
-      <img class="gal-img" src="${p.images?.[0]||''}" />
-      <div class="p-4">
-        <div class="font-bold text-xl">${clean(p.name)}</div>
-        <div class="opacity-80 mt-1">${clean(p.category)} • <span class="font-bold">${rupees(p.price)}</span></div>
-      </div>`;
-    modal.classList.add('show');
-  }
-  modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('show'); });
-
-  // Load products
-  productsRef.on('value', snap=>{
-    const list = Object.values(snap.val()||{}).sort((a,b)=>b.createdAt-a.createdAt);
-    renderPublic(list);
-    renderProvider(list);
-  });
-
-  // Login with Google
-  document.getElementById('loginBtn').onclick=async()=>{
-    if(auth.currentUser){ return auth.signOut(); }
     const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    try {
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+      console.log("User:", user);
+      userDiv.innerHTML = `
+        <p>Welcome, ${user.displayName}</p>
+        <p>Email: ${user.email}</p>
+        <img src="${user.photoURL}" width="100" style="border-radius:50%; margin-top:10px;">
+      `;
+      loginBtn.textContent = "Logout";
+    } catch(error) {
+      console.error("Login Error:", error.code, error.message);
+      alert("Login failed: " + error.message);
+    }
   };
 </script>
+
 </body>
 </html>
