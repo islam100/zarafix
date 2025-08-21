@@ -3,55 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix – Services</title>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<title>ZaraFix All Services</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* 3D Card style */
-.card {
-  perspective: 1000px;
-  transition: transform 0.3s;
+/* 3D button effect */
+.btn-3d { 
+  transition: transform 0.2s; 
+  box-shadow: 0 5px #666; 
 }
-.card:hover {
-  transform: rotateY(10deg) rotateX(5deg) scale(1.05);
+.btn-3d:active { 
+  transform: translateY(4px); 
+  box-shadow: 0 2px #666; 
 }
-.not-approved {
-  background-color: #fde2e2; /* redish for not approved */
+.card-3d {
+  transition: transform 0.2s;
 }
-.approved {
-  background-color: #e2fdf2; /* greenish for approved */
+.card-3d:hover {
+  transform: translateY(-5px) scale(1.02);
 }
+.unapproved { background-color: #fee2e2; } /* Redish for unapproved */
+.approved { background-color: #dcfce7; } /* Greenish for approved */
 </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gradient-to-b from-blue-100 to-purple-100 min-h-screen">
 
-<div class="p-4 max-w-xl mx-auto">
-  <h1 class="text-2xl font-bold text-center mb-4">ZaraFix – Services</h1>
+<div class="container mx-auto p-4">
 
-  <!-- Login Button -->
-  <div id="loginDiv" class="text-center mb-4">
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
-  </div>
+<h1 class="text-2xl font-bold text-center mb-4">ZaraFix All Services</h1>
 
-  <!-- Provider Form -->
-  <div id="providerFormDiv" class="hidden mb-4 bg-white p-4 rounded shadow">
-    <h2 class="font-bold mb-2">New Service Post</h2>
-    <input type="text" id="title" placeholder="Service Title" class="border p-2 w-full mb-2 rounded">
-    <textarea id="desc" placeholder="Description" class="border p-2 w-full mb-2 rounded"></textarea>
-    <input type="text" id="phone" placeholder="Your WhatsApp number" class="border p-2 w-full mb-2 rounded">
-    <input type="file" id="imageFile" class="mb-2">
-    <button id="submitBtn" class="bg-green-500 text-white px-4 py-2 rounded">Submit Service</button>
-  </div>
+<!-- Provider Form -->
+<div id="providerForm" class="bg-white p-4 rounded-xl shadow-lg mb-6">
+<h2 class="font-semibold mb-2">Submit Your Service</h2>
+<input type="text" id="serviceName" placeholder="Service Name" class="border p-2 rounded w-full mb-2">
+<input type="text" id="providerName" placeholder="Your Name" class="border p-2 rounded w-full mb-2">
+<input type="text" id="whatsapp" placeholder="WhatsApp Number" class="border p-2 rounded w-full mb-2">
+<input type="file" id="serviceImage" class="mb-2">
+<button id="submitService" class="bg-blue-500 text-white px-4 py-2 rounded btn-3d">Submit</button>
+</div>
 
-  <!-- Listings -->
-  <div id="listingDiv" class="grid grid-cols-1 gap-4"></div>
+<!-- Listing -->
+<div id="listing" class="grid sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
 
 </div>
 
 <script>
-// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -60,128 +58,107 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
+
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.database();
 
 const adminEmail = "zarasamajiksevasanstha@gmail.com";
-const imgbbApiKey = "4dc5e5cb7654ffc308d5ca45452b014b";
+let currentUserEmail = "";
 
-// Login
-document.getElementById('loginBtn').onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-};
+// Submit service
+document.getElementById("submitService").addEventListener("click", async ()=>{
+    const name = document.getElementById("serviceName").value;
+    const provider = document.getElementById("providerName").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const file = document.getElementById("serviceImage").files[0];
 
-// Auth State
-auth.onAuthStateChanged(user => {
-  if(user){
-    document.getElementById('loginDiv').classList.add('hidden');
-    loadListings();
-
-    if(user.email === adminEmail){
-      showAdminControls();
-    } else {
-      document.getElementById('providerFormDiv').classList.remove('hidden');
-      document.getElementById('submitBtn').onclick = submitService;
+    if(!name || !provider || !whatsapp || !file){
+        alert("सभी फील्ड भरें और image select करें");
+        return;
     }
-  } else {
-    document.getElementById('loginDiv').classList.remove('hidden');
-    document.getElementById('providerFormDiv').classList.add('hidden');
-  }
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("key", "4dc5e5cb7654ffc308d5ca45452b014b"); // ImgBB API Key
+
+    const res = await fetch("https://api.imgbb.com/1/upload?key=4dc5e5cb7654ffc308d5ca45452b014b", {
+        method: "POST",
+        body: formData
+    });
+    const data = await res.json();
+    const imageUrl = data.data.display_url;
+
+    const newPostRef = db.ref("services").push();
+    newPostRef.set({
+        name, provider, whatsapp, imageUrl, approved: false, timestamp: Date.now()
+    });
+
+    alert("Service submitted. Admin approval required!");
+    document.getElementById("serviceName").value = "";
+    document.getElementById("providerName").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("serviceImage").value = "";
 });
 
-// Submit Service
-function submitService(){
-  const title = document.getElementById('title').value.trim();
-  const desc = document.getElementById('desc').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const file = document.getElementById('imageFile').files[0];
-
-  if(!title || !desc || !phone || !file) return alert("सभी fields भरें");
-
-  const reader = new FileReader();
-  reader.onload = function(){
-    const formData = new FormData();
-    formData.append('image', reader.result.split(',')[1]);
-
-    fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-      method: 'POST',
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      const newServiceRef = db.ref('services').push();
-      newServiceRef.set({
-        title, desc, phone, imageUrl: data.data.url,
-        userEmail: auth.currentUser.email,
-        approved: false,
-        timestamp: Date.now()
-      });
-      alert("Service submitted for approval");
-      document.getElementById('title').value = "";
-      document.getElementById('desc').value = "";
-      document.getElementById('phone').value = "";
-      document.getElementById('imageFile').value = "";
-    })
-    .catch(err => console.error(err));
-  }
-  reader.readAsDataURL(file);
-}
-
-// Load Listings
-function loadListings(){
-  db.ref('services').orderByChild('timestamp').on('value', snapshot => {
-    const listingDiv = document.getElementById('listingDiv');
-    listingDiv.innerHTML = '';
-    const services = snapshot.val();
-    if(!services) return;
-    const arr = Object.entries(services).sort((a,b) => b[1].timestamp - a[1].timestamp); // newest first
-    arr.forEach(([key, service]) => {
-      const card = document.createElement('div');
-      card.className = `card p-3 rounded shadow ${service.approved ? 'approved' : 'not-approved'}`;
-      card.innerHTML = `
-        <h3 class="font-bold">${service.title}</h3>
-        <img src="${service.imageUrl}" class="w-full max-h-48 object-cover my-2 cursor-pointer" onclick="window.open('${service.imageUrl}','_blank')">
-        <p>${service.desc}</p>
-        <p>WhatsApp: <a href="https://wa.me/${service.phone}?text=Zara%20Fix%20ने%20आपको%20customer%20दिया%20है" target="_blank">${service.phone}</a></p>
-        <p>Status: ${service.approved ? 'Approved' : 'Not Approved'}</p>
-        ${auth.currentUser.email === adminEmail ? `
-          <button onclick="approve('${key}')" class="bg-green-500 text-white px-2 py-1 rounded mt-2">Approve</button>
-          <button onclick="reject('${key}')" class="bg-red-500 text-white px-2 py-1 rounded mt-2">Reject</button>
-          <button onclick="deletePost('${key}')" class="bg-gray-700 text-white px-2 py-1 rounded mt-2">Delete</button>
-        ` : ''}
-        ${auth.currentUser.email !== adminEmail && service.userEmail === auth.currentUser.email ? `
-          <button onclick="deletePost('${key}')" class="bg-gray-700 text-white px-2 py-1 rounded mt-2">Delete My Post</button>
-        ` : ''}
-      `;
-      listingDiv.appendChild(card);
+// Display services
+function renderServices(snapshot){
+    const container = document.getElementById("listing");
+    container.innerHTML = "";
+    let servicesArray = [];
+    snapshot.forEach(snap=>{
+        servicesArray.push({id: snap.key, ...snap.val()});
     });
-  });
-}
+    // Sort: newest first
+    servicesArray.sort((a,b)=> b.timestamp - a.timestamp);
+    servicesArray.forEach(service=>{
+        const div = document.createElement("div");
+        div.className = `p-3 rounded-xl shadow card-3d ${service.approved ? "approved" : "unapproved"}`;
 
-// Admin Controls
-function showAdminControls(){
-  alert("Admin logged in");
-}
+        div.innerHTML = `
+        <h3 class="font-semibold">${service.name}</h3>
+        <p>Provider: ${service.provider}</p>
+        <img src="${service.imageUrl}" class="w-full h-40 object-cover rounded mb-2 cursor-pointer" onclick="window.open('${service.imageUrl}','_blank')">
+        <p>WhatsApp: <a href="https://wa.me/${service.whatsapp}?text=Zara%20Fix%20ne%20apko%20customer%20diya%20hai" target="_blank" class="text-green-600 font-semibold">${service.whatsapp}</a></p>
+        <p>Status: ${service.approved ? "Approved" : "Not Approved"}</p>
+        `;
 
-// Admin Actions
-function approve(key){ db.ref('services/'+key+'/approved').set(true); }
-function reject(key){ db.ref('services/'+key+'/approved').set(false); }
-function deletePost(key){ db.ref('services/'+key).remove(); }
+        // Admin controls
+        const userEmail = currentUserEmail;
+        if(userEmail === adminEmail){
+            const approveBtn = document.createElement("button");
+            approveBtn.innerText = service.approved ? "Reject" : "Approve";
+            approveBtn.className = "bg-blue-500 text-white px-2 py-1 rounded btn-3d mr-2 mt-2";
+            approveBtn.onclick = ()=> {
+                db.ref("services/"+service.id+"/approved").set(!service.approved);
+            };
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "Delete";
+            deleteBtn.className = "bg-red-500 text-white px-2 py-1 rounded btn-3d mt-2";
+            deleteBtn.onclick = ()=> db.ref("services/"+service.id).remove();
 
-// Auto reject after 30 days
-setInterval(()=>{
-  db.ref('services').once('value', snap => {
-    const now = Date.now();
-    snap.forEach(child => {
-      if(now - child.val().timestamp > 30*24*60*60*1000){
-        db.ref('services/'+child.key+'/approved').set(false);
-      }
+            div.appendChild(approveBtn);
+            div.appendChild(deleteBtn);
+        }
+
+        // Provider delete own post
+        if(userEmail && userEmail !== adminEmail){
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "Delete My Post";
+            deleteBtn.className = "bg-red-500 text-white px-2 py-1 rounded btn-3d mt-2";
+            deleteBtn.onclick = ()=> db.ref("services/"+service.id).remove();
+            div.appendChild(deleteBtn);
+        }
+
+        container.appendChild(div);
     });
-  });
-}, 24*60*60*1000); // daily check
+}
 
+// Listen to DB
+db.ref("services").on("value", renderServices);
+
+// Authentication (email prompt)
+currentUserEmail = prompt("अपना Email डालें (Admin: zarasamajiksevasanstha@gmail.com)");
 </script>
+
 </body>
 </html>
