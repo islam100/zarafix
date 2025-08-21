@@ -1,69 +1,61 @@
-<div style="text-align: center; margin-top: 50px;">
-  <button onclick="checkPassword()" style="
-    padding: 15px 30px;
-    background: linear-gradient(to bottom, #007bff, #004e99);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: bold;<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-  <title>🧾 Your Service Requests</title>
+  <title>🛠️ ZaraFix Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #f8f9fa, #ffffff);
-      margin: 0;
-      padding: 10px;
-      text-align: center;
-    }
-    h2 {
-      color: #333;
-      margin-bottom: 10px;
-    }
+    body { font-family: Arial; margin: 0; padding: 0; background: #f4f4f4; }
+    h2 { text-align: center; background: #6200ea; color: white; padding: 10px; margin: 0; }
+    select { margin: 10px; padding: 10px; font-size: 16px; }
     .card {
-      background: #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      background: white;
+      margin: 10px;
       padding: 15px;
-      margin: 15px auto;
-      max-width: 500px;
-      text-align: left;
-      transition: transform 0.3s ease;
-    }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    .btn {
-      background-color: #dc3545;
-      color: white;
-      padding: 8px 16px;
-      border: none;
       border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .led {
+      height: 15px;
+      width: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    .led.green { background-color: #00c853; }
+    .led.yellow {
+      background-color: #ffeb3b;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    button {
+      padding: 6px 12px;
+      background: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 5px;
     }
-    .btn:hover {
-      background-color: #c82333;
-    }
-    .accept-info {
-      background: #e6f7ff;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
+    button.approve { background: #388e3c; }
   </style>
 </head>
 <body>
-  <h2>📋 Your Service Requests</h2>
-  <div id="requestsContainer">Loading...</div>
+  <h2>🔧 ZaraFix Admin Dashboard</h2>
+  <div style="text-align:center">
+    <select id="viewType">
+      <option value="provider">📋 Providers</option>
+      <option value="request">🧾 Requests</option>
+      <option value="recharge">💰 Recharge</option>
+    </select>
+  </div>
+  <div id="output"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
@@ -73,100 +65,75 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase();
-    const auth = getAuth();
+    const db = getDatabase(app);
 
-    const container = document.getElementById('requestsContainer');
+    const viewType = document.getElementById("viewType");
+    const output = document.getElementById("output");
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const userId = user.uid;
-        const userRef = ref(db, 'requests/' + userId);
-        onValue(userRef, (snapshot) => {
-          container.innerHTML = '';
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            Object.keys(data).forEach((key) => {
-              const req = data[key];
-              const card = document.createElement('div');
-              card.className = 'card';
+    viewType.addEventListener("change", loadData);
+    window.onload = loadData;
 
-              const date = new Date(req.timestamp || Date.now());
-              const dateTime = date.toLocaleString();
-
-              card.innerHTML = `
-                <strong>👤 Name:</strong> ${req.name}<br>
-                <strong>📂 Category:</strong> ${req.category}<br>
-                <strong>📍 Address:</strong> ${req.address}<br>
-                <strong>⚠️ Problem:</strong> ${req.problem}<br>
-                <strong>📅 Date:</strong> ${dateTime}<br>
-                <strong>📌 Status:</strong> ${req.status}<br><br>
-              `;
-
-              // Accepted By
-              if (req.acceptedBy) {
-                const acceptDiv = document.createElement('div');
-                acceptDiv.className = 'accept-info';
-
-                const accepted = Object.values(req.acceptedBy);
-                acceptDiv.innerHTML = `<strong>✅ Accepted By: ${accepted.length}</strong><br>`;
-                accepted.forEach(poster => {
-                  acceptDiv.innerHTML += `
-                    👨‍🔧 ${poster.name}<br>
-                    📞 <a href="https://wa.me/91${poster.whatsapp}" target="_blank">WhatsApp</a><br>
-                    🗺️ <a href="https://www.google.com/maps?q=${poster.lat},${poster.lng}" target="_blank">Live Location</a><br><br>
-                  `;
-                });
-                card.appendChild(acceptDiv);
-              } else {
-                card.innerHTML += `<strong>❌ No one accepted yet</strong><br>`;
-              }
-
-              // Delete button
-              const delBtn = document.createElement('button');
-              delBtn.className = 'btn';
-              delBtn.innerText = '🗑️ Delete Request';
-              delBtn.onclick = () => {
-                if (confirm('Are you sure you want to delete this request?')) {
-                  remove(ref(db, `requests/${userId}/${key}`));
-                }
-              };
-              card.appendChild(delBtn);
-
-              container.appendChild(card);
-            });
-          } else {
-            container.innerHTML = '🛠️ You have not submitted any requests yet.';
-          }
+    function loadData() {
+      const type = viewType.value;
+      output.innerHTML = "";
+      if (type === "provider") {
+        const refData = ref(db, 'posters');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const approved = data.approved;
+            const led = approved ? '<span class="led green"></span>' : '<span class="led yellow"></span>';
+            const btn = approved ? '✅ Approved' : `<button class='approve' onclick="approvePoster('${child.key}')">Approve</button>`;
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Shop: ${data.shop}<br>Category: ${data.category}<br>WhatsApp: ${data.whatsapp}<br>${btn}<br><button onclick="deletePoster('${child.key}')">❌ Delete</button></div>`;
+          });
         });
-      } else {
-        container.innerHTML = "🔒 Please login to see your dashboard.";
+      } else if (type === "request") {
+        const refData = ref(db, 'requests');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(user => {
+            user.forEach(child => {
+              const data = child.val();
+              const pending = !data.acceptedBy || Object.keys(data.acceptedBy).length === 0;
+              const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+              output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>${data.problem}<br>${data.address}<br>WhatsApp: ${data.whatsapp}<br><button onclick="deleteRequest('${user.key}', '${child.key}')">❌ Delete</button></div>`;
+            });
+          });
+        });
+      } else if (type === "recharge") {
+        const refData = ref(db, 'recharges');
+        onValue(refData, snap => {
+          output.innerHTML = '';
+          snap.forEach(child => {
+            const data = child.val();
+            const pending = !data.approved;
+            const led = pending ? '<span class="led yellow"></span>' : '<span class="led green"></span>';
+            const btn = pending ? `<button class='approve' onclick="approveRecharge('${child.key}')">Approve</button>` : '✅ Approved';
+            output.innerHTML += `<div class='card'>${led}<b>${data.name}</b><br>Screenshot: <a href="${data.screenshot}" target="_blank">View</a><br>${btn}<br><button onclick="deleteRecharge('${child.key}')">❌ Delete</button></div>`;
+          });
+        });
       }
-    });
+    }
+
+    window.approvePoster = (id) => {
+      update(ref(db, 'posters/' + id), { approved: true });
+      alert("Poster Approved");
+    }
+    window.deletePoster = (id) => {
+      if (confirm("Delete this poster?")) remove(ref(db, 'posters/' + id));
+    }
+    window.deleteRequest = (uid, rid) => {
+      if (confirm("Delete this request?")) remove(ref(db, `requests/${uid}/${rid}`));
+    }
+    window.approveRecharge = (id) => {
+      update(ref(db, 'recharges/' + id), { approved: true });
+      alert("Recharge Approved");
+    }
+    window.deleteRecharge = (id) => {
+      if (confirm("Delete this recharge request?")) remove(ref(db, 'recharges/' + id));
+    }
   </script>
 </body>
 </html>
-
-    box-shadow: 0 4px #003c7e;
-    cursor: pointer;
-    transition: transform 0.2s;
-  " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-    🔐 Admin Dashboard
-  </button>
-</div>
-
-<script>
-  const correctPassword = "2019"; // Password yahan set karein
-  const destinationLink = "https://zararealstate.blogspot.com/p/admin-property-dashboard-body-font.html";
-
-  function checkPassword() {
-    const userInput = prompt("🔑 Enter 4-digit password to continue:");
-    if (userInput === correctPassword) {
-      window.location.href = destinationLink; // Same tab me link open
-    } else {
-      alert("❌ Incorrect password!");
-    }
-  }
-</script>
