@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Poster Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 10px;
+    }
+
+    .poster-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      padding: 15px;
+      margin-bottom: 20px;
+      max-width: 400px;
+      margin: 20px auto;
+      transition: transform 0.2s;
+    }
+
+    .poster-card:hover {
+      transform: scale(1.01);
+    }
+
+    .poster-card h3 {
+      margin: 0 0 10px;
+    }
+
+    .btn-3d {
+      background: linear-gradient(145deg, #4CAF50, #388E3C);
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 5px 0 #2e7d32;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-3d:active {
+      box-shadow: none;
+      transform: translateY(5px);
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+    }
+
+    @media(max-width: 500px) {
+      .poster-card {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="posterContainer"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
+    authDomain: "zara-fix.firebaseapp.com",
+    databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
+    projectId: "zara-fix",
+    storageBucket: "zara-fix.appspot.com",
+    messagingSenderId: "683242260121",
+    appId: "1:683242260121:web:7dc72c662cf8b348160a30"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
+
+  const container = document.getElementById("posterContainer");
+
+  db.ref("posters").once("value", (snapshot) => {
+    container.innerHTML = "";
+    snapshot.forEach((child) => {
+      const uid = child.key;
+      const data = child.val();
+
+      const card = document.createElement("div");
+      card.className = "poster-card";
+      card.innerHTML = `
+        <h3>${data.name}</h3>
+        <p><strong>Shop:</strong> ${data.shop}</p>
+        <p><strong>Category:</strong> ${data.category}</p>
+        <p><strong>Whatsapp:</strong> ${data.whatsapp}</p>
+        <p><strong>Wallet:</strong> ₹${data.wallet || 0}</p>
+        <p><strong>Address:</strong> ${data.address || 'N/A'}</p>
+
+        <label>Recharge Screenshot:</label><br>
+        <input type="file" id="file-${uid}" /><br>
+        <button class="btn-3d" onclick="recharge('${uid}')">Recharge ₹100</button>
+      `;
+
+      container.appendChild(card);
+    });
+  });
+
+  function recharge(uid) {
+    const fileInput = document.getElementById("file-" + uid);
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Please upload a screenshot.");
+      return;
+    }
+
+    const fileName = `recharge_${uid}_${Date.now()}.png`;
+    const storageRef = storage.ref("recharge/" + fileName);
+
+    storageRef.put(file).then(snapshot => {
+      return snapshot.ref.getDownloadURL();
+    }).then(url => {
+      db.ref("recharge/" + uid).set({
+        amount: 100,
+        screenshot: url,
+        timestamp: Date.now(),
+        status: "pending"
+      }).then(() => {
+        alert("Recharge submitted successfully!");
+      });
+    }).catch(error => {
+      console.error("Error uploading recharge:", error);
+      alert("Recharge failed.");
+    });
+  }
+</script>
+</body>
+</html>
