@@ -1,40 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix All Services Listing</title>
+<title>ZaraFix – Services</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
-  body {background: #f0f4f8;}
-  .card {transition: transform 0.3s;}
-  .card:hover {transform: scale(1.05);}
-  .unapproved {background-color: #fee2e2;}
-  .approved {background-color: #dcfce7;}
+/* 3D Card style */
+.card {
+  perspective: 1000px;
+  transition: transform 0.3s;
+}
+.card:hover {
+  transform: rotateY(10deg) rotateX(5deg) scale(1.05);
+}
+.not-approved {
+  background-color: #fde2e2; /* redish for not approved */
+}
+.approved {
+  background-color: #e2fdf2; /* greenish for approved */
+}
 </style>
 </head>
-<body class="p-4">
+<body class="bg-gray-100">
 
-<h1 class="text-3xl font-bold text-center mb-4">ZaraFix Services</h1>
-<div class="flex justify-center mb-4">
-  <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded-xl mr-2">Login with Google</button>
-  <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-xl hidden">Logout</button>
+<div class="p-4 max-w-xl mx-auto">
+  <h1 class="text-2xl font-bold text-center mb-4">ZaraFix – Services</h1>
+
+  <!-- Login Button -->
+  <div id="loginDiv" class="text-center mb-4">
+    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
+  </div>
+
+  <!-- Provider Form -->
+  <div id="providerFormDiv" class="hidden mb-4 bg-white p-4 rounded shadow">
+    <h2 class="font-bold mb-2">New Service Post</h2>
+    <input type="text" id="title" placeholder="Service Title" class="border p-2 w-full mb-2 rounded">
+    <textarea id="desc" placeholder="Description" class="border p-2 w-full mb-2 rounded"></textarea>
+    <input type="text" id="phone" placeholder="Your WhatsApp number" class="border p-2 w-full mb-2 rounded">
+    <input type="file" id="imageFile" class="mb-2">
+    <button id="submitBtn" class="bg-green-500 text-white px-4 py-2 rounded">Submit Service</button>
+  </div>
+
+  <!-- Listings -->
+  <div id="listingDiv" class="grid grid-cols-1 gap-4"></div>
+
 </div>
-
-<div id="providerForm" class="max-w-md mx-auto p-4 bg-white rounded-2xl shadow-lg mb-6 hidden">
-  <h2 class="text-xl font-semibold mb-2">Add Service</h2>
-  <input type="text" id="serviceName" placeholder="Service Name" class="w-full px-3 py-2 mb-2 rounded-xl border">
-  <input type="text" id="contactNumber" placeholder="Contact Number" class="w-full px-3 py-2 mb-2 rounded-xl border">
-  <input type="file" id="serviceImage" class="mb-2">
-  <textarea id="serviceDesc" placeholder="Description" class="w-full px-3 py-2 mb-2 rounded-xl border"></textarea>
-  <button id="submitService" class="bg-green-500 text-white px-4 py-2 rounded-xl w-full">Submit</button>
-</div>
-
-<div id="listing" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
 
 <script>
 // Firebase Config
@@ -46,14 +60,12 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
-const storage = firebase.storage();
 
-let currentUser = null;
 const adminEmail = "zarasamajiksevasanstha@gmail.com";
+const imgbbApiKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
 // Login
 document.getElementById('loginBtn').onclick = () => {
@@ -61,102 +73,115 @@ document.getElementById('loginBtn').onclick = () => {
   auth.signInWithPopup(provider);
 };
 
-document.getElementById('logoutBtn').onclick = () => {
-  auth.signOut();
-};
-
+// Auth State
 auth.onAuthStateChanged(user => {
   if(user){
-    currentUser = user;
-    document.getElementById('loginBtn').classList.add('hidden');
-    document.getElementById('logoutBtn').classList.remove('hidden');
-    if(user.email === adminEmail){
-      document.getElementById('providerForm').classList.add('hidden');
-    } else {
-      document.getElementById('providerForm').classList.remove('hidden');
-    }
+    document.getElementById('loginDiv').classList.add('hidden');
     loadListings();
+
+    if(user.email === adminEmail){
+      showAdminControls();
+    } else {
+      document.getElementById('providerFormDiv').classList.remove('hidden');
+      document.getElementById('submitBtn').onclick = submitService;
+    }
   } else {
-    currentUser = null;
-    document.getElementById('loginBtn').classList.remove('hidden');
-    document.getElementById('logoutBtn').classList.add('hidden');
-    document.getElementById('providerForm').classList.add('hidden');
+    document.getElementById('loginDiv').classList.remove('hidden');
+    document.getElementById('providerFormDiv').classList.add('hidden');
   }
 });
 
 // Submit Service
-document.getElementById('submitService').onclick = async () => {
-  const name = document.getElementById('serviceName').value;
-  const contact = document.getElementById('contactNumber').value;
-  const desc = document.getElementById('serviceDesc').value;
-  const file = document.getElementById('serviceImage').files[0];
-  if(!name || !contact || !desc || !file){alert('Fill all fields'); return;}
+function submitService(){
+  const title = document.getElementById('title').value.trim();
+  const desc = document.getElementById('desc').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const file = document.getElementById('imageFile').files[0];
 
-  const formData = new FormData();
-  formData.append('image', file);
-  formData.append('key','4dc5e5cb7654ffc308d5ca45452b014b');
+  if(!title || !desc || !phone || !file) return alert("सभी fields भरें");
 
-  const res = await fetch('https://api.imgbb.com/1/upload',{
-    method:'POST',
-    body: formData
-  });
-  const data = await res.json();
-  const imgUrl = data.data.url;
+  const reader = new FileReader();
+  reader.onload = function(){
+    const formData = new FormData();
+    formData.append('image', reader.result.split(',')[1]);
 
-  const newRef = db.ref('services').push();
-  newRef.set({
-    name, contact, desc, imgUrl, approved:false, uid: currentUser.uid, timestamp: Date.now()
-  });
-
-  alert('Service submitted for approval');
-  document.getElementById('serviceName').value='';
-  document.getElementById('contactNumber').value='';
-  document.getElementById('serviceDesc').value='';
-  document.getElementById('serviceImage').value='';
-};
+    fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      const newServiceRef = db.ref('services').push();
+      newServiceRef.set({
+        title, desc, phone, imageUrl: data.data.url,
+        userEmail: auth.currentUser.email,
+        approved: false,
+        timestamp: Date.now()
+      });
+      alert("Service submitted for approval");
+      document.getElementById('title').value = "";
+      document.getElementById('desc').value = "";
+      document.getElementById('phone').value = "";
+      document.getElementById('imageFile').value = "";
+    })
+    .catch(err => console.error(err));
+  }
+  reader.readAsDataURL(file);
+}
 
 // Load Listings
 function loadListings(){
-  db.ref('services').orderByChild('timestamp').on('value', snap => {
-    const listing = document.getElementById('listing');
-    listing.innerHTML='';
-    const services = [];
-    snap.forEach(child => services.push({key: child.key, ...child.val()}));
-    services.reverse(); // newest first
-
-    services.forEach(s => {
-      const isAdmin = currentUser.email === adminEmail;
-      const isOwner = currentUser.uid === s.uid;
+  db.ref('services').orderByChild('timestamp').on('value', snapshot => {
+    const listingDiv = document.getElementById('listingDiv');
+    listingDiv.innerHTML = '';
+    const services = snapshot.val();
+    if(!services) return;
+    const arr = Object.entries(services).sort((a,b) => b[1].timestamp - a[1].timestamp); // newest first
+    arr.forEach(([key, service]) => {
       const card = document.createElement('div');
-      card.className = 'card p-3 rounded-2xl shadow-lg ' + (s.approved?'approved':'unapproved');
+      card.className = `card p-3 rounded shadow ${service.approved ? 'approved' : 'not-approved'}`;
       card.innerHTML = `
-        <img src='${s.imgUrl}' class='rounded-xl mb-2 w-full h-40 object-cover cursor-pointer' onclick="window.open('${s.imgUrl}','_blank')">
-        <h3 class='font-semibold text-lg'>${s.name}</h3>
-        <p>${s.desc}</p>
-        <p class='font-bold'>Contact: ${s.contact}</p>
-        <div class='mt-2 flex gap-2'>
-          ${isAdmin?`<button onclick='approveService("${s.key}")' class='bg-green-500 text-white px-2 py-1 rounded'>Approve</button>
-                     <button onclick='rejectService("${s.key}")' class='bg-red-500 text-white px-2 py-1 rounded'>Reject</button>
-                     <button onclick='deleteService("${s.key}")' class='bg-gray-500 text-white px-2 py-1 rounded'>Delete</button>`:''}
-          ${isOwner && !isAdmin?`<button onclick='deleteService("${s.key}")' class='bg-gray-500 text-white px-2 py-1 rounded'>Delete</button>`:''}
-          <a href='https://wa.me/${s.contact}?text=Zara%20Fix%20ने%20आपको%20customer%20दिया%20है' target='_blank' class='bg-green-600 text-white px-2 py-1 rounded'>WhatsApp</a>
-        </div>
-        ${!s.approved?'<p class="text-red-600 font-bold mt-1">Not Approved</p>':''}
+        <h3 class="font-bold">${service.title}</h3>
+        <img src="${service.imageUrl}" class="w-full max-h-48 object-cover my-2 cursor-pointer" onclick="window.open('${service.imageUrl}','_blank')">
+        <p>${service.desc}</p>
+        <p>WhatsApp: <a href="https://wa.me/${service.phone}?text=Zara%20Fix%20ने%20आपको%20customer%20दिया%20है" target="_blank">${service.phone}</a></p>
+        <p>Status: ${service.approved ? 'Approved' : 'Not Approved'}</p>
+        ${auth.currentUser.email === adminEmail ? `
+          <button onclick="approve('${key}')" class="bg-green-500 text-white px-2 py-1 rounded mt-2">Approve</button>
+          <button onclick="reject('${key}')" class="bg-red-500 text-white px-2 py-1 rounded mt-2">Reject</button>
+          <button onclick="deletePost('${key}')" class="bg-gray-700 text-white px-2 py-1 rounded mt-2">Delete</button>
+        ` : ''}
+        ${auth.currentUser.email !== adminEmail && service.userEmail === auth.currentUser.email ? `
+          <button onclick="deletePost('${key}')" class="bg-gray-700 text-white px-2 py-1 rounded mt-2">Delete My Post</button>
+        ` : ''}
       `;
-      listing.appendChild(card);
+      listingDiv.appendChild(card);
     });
   });
 }
 
-function approveService(key){
-  db.ref('services/'+key).update({approved:true});
+// Admin Controls
+function showAdminControls(){
+  alert("Admin logged in");
 }
-function rejectService(key){
-  db.ref('services/'+key).update({approved:false});
-}
-function deleteService(key){
-  db.ref('services/'+key).remove();
-}
+
+// Admin Actions
+function approve(key){ db.ref('services/'+key+'/approved').set(true); }
+function reject(key){ db.ref('services/'+key+'/approved').set(false); }
+function deletePost(key){ db.ref('services/'+key).remove(); }
+
+// Auto reject after 30 days
+setInterval(()=>{
+  db.ref('services').once('value', snap => {
+    const now = Date.now();
+    snap.forEach(child => {
+      if(now - child.val().timestamp > 30*24*60*60*1000){
+        db.ref('services/'+child.key+'/approved').set(false);
+      }
+    });
+  });
+}, 24*60*60*1000); // daily check
+
 </script>
 </body>
 </html>
