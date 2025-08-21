@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Zara Fix</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+.card:hover { transform: rotateY(10deg) scale(1.05); transition:0.3s; }
+</style>
+</head>
+<body class="bg-gradient-to-r from-purple-200 via-pink-200 to-blue-200 min-h-screen">
+
+<div class="container mx-auto p-4">
+<h1 class="text-3xl font-bold text-center mb-4">Admin Dashboard</h1>
+<div id="postsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const admins = ["zarasamajiksevasanstha@gmail.com"];
+
+async function login() {
+  const email = prompt("Email");
+  const pass = prompt("Password");
+  await auth.signInWithEmailAndPassword(email, pass).catch(e=>alert(e.message));
+}
+
+auth.onAuthStateChanged(user => {
+  if(!user) login();
+  else if(admins.includes(user.email)) loadPosts();
+  else alert("Not authorized!");
+});
+
+async function loadPosts() {
+  const snapshot = await db.collection("posts").orderBy("createdAt", "desc").get();
+  const container = document.getElementById("postsContainer");
+  container.innerHTML = "";
+  const now = new Date();
+  snapshot.forEach(doc => {
+    const post = doc.data(); const id = doc.id;
+    if(post.expiryDate && post.expiryDate.toDate()<now && post.status!=="expired") {
+      db.collection("posts").doc(id).update({status:"expired"});
+    }
+    const card = document.createElement("div");
+    card.className = "card p-3 rounded-xl shadow-lg bg-white flex flex-col items-center border-2 border-gray-500";
+    card.innerHTML = `
+      <img src="${post.imageUrl}" class="rounded-lg cursor-pointer w-full"/>
+      <h2 class="font-bold mt-2">${post.title}</h2>
+      <p>${post.description}</p>
+      <p class="text-xs mt-1">Posted by: ${post.posterName}</p>
+      <p class="text-xs mt-1">Status: ${post.status}</p>
+      <div class="flex mt-2 gap-2">
+        <button onclick="updateStatus('${id}','approved')" class="bg-blue-500 text-white px-2 py-1 rounded">Approve</button>
+        <button onclick="updateStatus('${id}','rejected')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
+        <button onclick="deletePost('${id}')" class="bg-gray-500 text-white px-2 py-1 rounded">Delete</button>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function updateStatus(id,status){db.collection("posts").doc(id).update({status}); loadPosts();}
+function deletePost(id){if(confirm("Are you sure to delete?")) { db.collection("posts").doc(id).delete(); loadPosts(); } }
+</script>
+
+</body>
+</html>
