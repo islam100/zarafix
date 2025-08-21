@@ -9,23 +9,43 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-.card:hover { transform: rotateY(10deg) scale(1.05); transition:0.3s; }
-.fullscreen-img { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:flex; justify-content:center; align-items:center; z-index:50; }
-.fullscreen-img img { max-width:95%; max-height:95%; border-radius:10px; }
+body { background: linear-gradient(135deg, #fce4ec, #e0f7fa); min-height:100vh; font-family:Arial,sans-serif; display:flex; justify-content:center; align-items:center; padding:15px; }
+.form-container { background:white; border-radius:15px; padding:20px; max-width:400px; width:100%; box-shadow:0 8px 20px rgba(0,0,0,0.2);}
+input, textarea, select { width:100%; padding:12px; margin-bottom:12px; border-radius:10px; border:1px solid #ccc; font-size:15px; }
+textarea { resize:vertical; min-height:80px; }
+button { width:100%; padding:14px; border:none; border-radius:12px; background: linear-gradient(45deg,#6a11cb,#2575fc); color:white; font-weight:bold; font-size:16px; cursor:pointer; transition:0.3s; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
+button:hover { transform:scale(1.05); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
+button:disabled { background:gray; cursor:not-allowed; }
+h1 { text-align:center; font-size:22px; margin-bottom:20px; color:#333; }
+#statusMessage { text-align:center; margin-top:15px; font-weight:bold; color:#333; }
 </style>
 </head>
-<body class="bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 min-h-screen">
+<body>
 
-<div class="container mx-auto p-4">
-<h1 class="text-3xl font-bold text-center mb-4">Provider - Add New Service</h1>
-<div class="bg-white p-4 rounded-xl shadow-lg max-w-lg mx-auto">
-  <input type="text" id="title" placeholder="Service Title" class="w-full mb-2 p-2 border rounded">
-  <textarea id="description" placeholder="Description" class="w-full mb-2 p-2 border rounded"></textarea>
-  <input type="text" id="posterName" placeholder="Your Name" class="w-full mb-2 p-2 border rounded">
-  <input type="text" id="posterWhatsapp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
-  <input type="file" id="imageFile" class="mb-2">
-  <button onclick="addPost()" class="bg-green-500 text-white px-4 py-2 rounded w-full hover:scale-105 transition">Submit Post</button>
+<div class="form-container">
+<h1>Provider - Add Your Shop/Service</h1>
+<div id="providerForm">
+    <select id="serviceCategory">
+        <option value="">Select Service Category</option>
+        <option value="Plumbing">Plumbing</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Home Cleaning">Home Cleaning</option>
+        <option value="Grocery Delivery">Grocery Delivery</option>
+        <option value="Salon">Salon</option>
+        <option value="Courier">Courier</option>
+        <option value="Painting">Painting</option>
+        <option value="Appliance Repair">Appliance Repair</option>
+        <option value="Education/Tuition">Education/Tuition</option>
+        <option value="Other">Other</option>
+    </select>
+    <input type="text" id="shopName" placeholder="Shop Name">
+    <input type="text" id="ownerName" placeholder="Owner Name">
+    <textarea id="shopAddress" placeholder="Shop Address"></textarea>
+    <input type="text" id="whatsappNo" placeholder="WhatsApp Number">
+    <input type="file" id="shopImage">
+    <button id="submitBtn" onclick="addShop()">Submit Shop</button>
 </div>
+<div id="statusMessage" class="hidden"></div>
 </div>
 
 <script>
@@ -40,60 +60,71 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-
 const imgbbAPIKey = "4dc5e5cb7654ffc308d5ca45452b014b";
 
-// Simple login (prompt)
+// Simple login
 async function login() {
   const email = prompt("Email:");
   const pass = prompt("Password:");
-  await auth.signInWithEmailAndPassword(email, pass).catch(e => alert(e.message));
+  await auth.signInWithEmailAndPassword(email, pass).catch(e=>alert(e.message));
 }
 
-auth.onAuthStateChanged(user => {
-  if (!user) login();
+auth.onAuthStateChanged(user=>{
+    if(!user) login();
 });
 
-// Upload image to IMUGEBB
-async function uploadImage(file) {
-  const formData = new FormData();
-  formData.append("image", file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
-    method: "POST",
-    body: formData
-  });
-  const data = await res.json();
-  return data.data.url;
+async function uploadImage(file){
+    const formData = new FormData();
+    formData.append("image",file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`,{method:"POST",body:formData});
+    const data = await res.json();
+    return data.data.url;
 }
 
-// Add Post
-async function addPost() {
-  const title = document.getElementById("title").value;
-  const description = document.getElementById("description").value;
-  const posterName = document.getElementById("posterName").value;
-  const posterWhatsapp = document.getElementById("posterWhatsapp").value;
-  const file = document.getElementById("imageFile").files[0];
+async function addShop(){
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
 
-  if(!title || !description || !posterName || !posterWhatsapp || !file) { alert("Fill all fields"); return; }
+    const serviceCategory = document.getElementById("serviceCategory").value.trim();
+    const shopName = document.getElementById("shopName").value.trim();
+    const ownerName = document.getElementById("ownerName").value.trim();
+    const shopAddress = document.getElementById("shopAddress").value.trim();
+    const whatsappNo = document.getElementById("whatsappNo").value.trim();
+    const shopImage = document.getElementById("shopImage").files[0];
 
-  const imageUrl = await uploadImage(file);
-  const now = new Date();
-  const expiry = new Date(now.getTime() + 30*24*60*60*1000);
+    if(!serviceCategory || !shopName || !ownerName || !shopAddress || !whatsappNo || !shopImage){
+        alert("Please fill all fields!");
+        btn.disabled = false;
+        return;
+    }
 
-  await db.collection("posts").add({
-    title,
-    description,
-    posterName,
-    posterWhatsapp,
-    posterEmail: auth.currentUser.email,
-    imageUrl,
-    status: "pending",
-    createdAt: firebase.firestore.Timestamp.fromDate(now),
-    expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
-  });
-  alert("Post submitted for admin approval!");
+    try {
+        const imageUrl = await uploadImage(shopImage);
+        const now = new Date();
+        const expiry = new Date(now.getTime() + 30*24*60*60*1000);
+
+        await db.collection("posts").add({
+            serviceCategory,
+            shopName,
+            ownerName,
+            shopAddress,
+            whatsappNo,
+            posterEmail: auth.currentUser.email,
+            imageUrl,
+            status:"pending",
+            createdAt: firebase.firestore.Timestamp.fromDate(now),
+            expiryDate: firebase.firestore.Timestamp.fromDate(expiry)
+        });
+
+        document.getElementById("providerForm").reset();
+        document.getElementById("statusMessage").innerText = "Submitted! Waiting for admin approval.";
+        document.getElementById("statusMessage").classList.remove("hidden");
+    } catch(e){
+        alert("Error submitting post: " + e.message);
+    } finally {
+        btn.disabled = false;
+    }
 }
 </script>
-
 </body>
 </html>
