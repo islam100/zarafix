@@ -2,97 +2,145 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Zara Portal</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <title>Ambulance Portal</title>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: linear-gradient(135deg,#1e3c72,#2a5298);
-      color: white;
-    }
-    .container {
-      text-align: center;
-    }
-    h1 {
-      font-size: 3rem;
-      font-weight: bold;
-      margin-bottom: 30px;
-      text-shadow: 2px 2px 5px black;
+      margin:0; font-family:Arial, sans-serif; background:#f4f4f9;
+      display:flex; justify-content:center; align-items:center; height:100vh;
+      flex-direction:column;
     }
     .btn {
-      background: linear-gradient(145deg,#ff416c,#ff4b2b);
-      border: none;
-      color: white;
-      padding: 15px 30px;
-      margin: 10px;
-      border-radius: 15px;
-      font-size: 1.2rem;
-      cursor: pointer;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
+      padding:10px 20px; margin:10px; border:none; border-radius:10px;
+      font-size:16px; font-weight:bold; cursor:pointer;
+      background:linear-gradient(45deg, #00c6ff, #0072ff); color:white;
+      box-shadow:0px 4px 10px rgba(0,0,0,0.2); transition:0.3s;
     }
-    .btn:hover {
-      transform: scale(1.1);
-    }
+    .btn:hover { transform:scale(1.05); }
+    #logoutBtn { display:none; background:linear-gradient(45deg, #ff512f, #dd2476); }
+    #formSection { display:none; margin-top:20px; background:white; padding:20px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Zara Portal</h1>
-    <button id="loginBtn" class="btn">Login with Google</button>
-    <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
-    <button id="providerBtn" class="btn" style="display:none;">Provider</button>
-    <button id="adminBtn" class="btn" style="display:none;">Admin</button>
+
+  <h2>🚑 Ambulance Portal</h2>
+
+  <button id="loginBtn" class="btn">Login with Google</button>
+  <button id="logoutBtn" class="btn">Logout</button>
+
+  <div id="formSection">
+    <h3>Post Ambulance Service</h3>
+    <form id="ambulanceForm">
+      <label>Service Name:</label><br>
+      <input type="text" id="serviceName" required><br><br>
+
+      <label>Category:</label><br>
+      <select id="category" required>
+        <option value="">Select</option>
+        <option value="Basic Life Support">Basic Life Support</option>
+        <option value="Advanced Life Support">Advanced Life Support</option>
+        <option value="Patient Transport">Patient Transport</option>
+      </select><br><br>
+
+      <label>Charges (₹):</label><br>
+      <input type="number" id="charges" required><br><br>
+
+      <label>Upload Image:</label><br>
+      <input type="file" id="imageUpload" accept="image/*" required><br><br>
+
+      <button type="submit" class="btn">Submit</button>
+    </form>
   </div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
   <script>
-    // Firebase config
+    // ✅ Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-      authDomain: "property-20d6d.firebaseapp.com",
-      projectId: "property-20d6d",
-      storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "790594458121",
-      appId: "1:790594458121:web:0cd74519837a36b5794ce4"
+      apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
+      authDomain: "ambulence-410c0.firebaseapp.com",
+      projectId: "ambulence-410c0",
+      storageBucket: "ambulence-410c0.appspot.com",
+      messagingSenderId: "970590198679",
+      appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
     };
-    firebase.initializeApp(firebaseConfig);
+
+    const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
+    const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const providerBtn = document.getElementById("providerBtn");
-    const adminBtn = document.getElementById("adminBtn");
+    const formSection = document.getElementById("formSection");
 
-    // Login
+    // ✅ Google Login
     loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider);
     });
 
-    // Logout
+    // ✅ Logout
     logoutBtn.addEventListener("click", () => {
       auth.signOut();
     });
 
-    // Auth State
+    // ✅ Login State Change
     auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.style.display = "none";   // Login छुपा दो
+      if(user){
+        loginBtn.style.display = "none";
         logoutBtn.style.display = "inline-block";
-        providerBtn.style.display = "inline-block";
-        adminBtn.style.display = "inline-block";
+        formSection.style.display = "block";
       } else {
-        loginBtn.style.display = "inline-block"; // Logout पर Login दिखाओ
+        loginBtn.style.display = "inline-block";
         logoutBtn.style.display = "none";
-        providerBtn.style.display = "none";
-        adminBtn.style.display = "none";
+        formSection.style.display = "none";
       }
+    });
+
+    // ✅ ImgBB API Key
+    const imgbbApiKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
+
+    // ✅ Form Submit
+    document.getElementById("ambulanceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const user = auth.currentUser;
+      if(!user){ alert("Please login first."); return; }
+
+      const serviceName = document.getElementById("serviceName").value;
+      const category = document.getElementById("category").value;
+      const charges = document.getElementById("charges").value;
+      const imageFile = document.getElementById("imageUpload").files[0];
+
+      // Upload to ImgBB
+      let imageUrl = "";
+      if(imageFile){
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        imageUrl = data.data.url;
+      }
+
+      // Save to Firebase
+      const newRef = db.ref("ambulanceServices").push();
+      newRef.set({
+        uid: user.uid,
+        serviceName,
+        category,
+        charges,
+        imageUrl,
+        createdAt: new Date().toISOString()
+      });
+
+      alert("✅ Service Posted Successfully!");
+      document.getElementById("ambulanceForm").reset();
     });
   </script>
 </body>
