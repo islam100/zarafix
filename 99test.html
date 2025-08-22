@@ -2,77 +2,112 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>ZaraFix Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ambulance Portal</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-    header { background: #007BFF; color: white; padding: 15px; text-align: center; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f0f0f0;
+    }
+    header {
+      background: #333; color: #fff;
+      padding: 15px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    header button {
+      padding: 8px 12px;
+      border: none; border-radius: 5px;
+      background: #ff9800; color: #fff;
+      font-weight: bold; cursor: pointer;
+    }
     .container { padding: 20px; }
-    .card { background: white; padding: 15px; border-radius: 10px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .hidden { display: none; }
-    button { padding: 10px 20px; border: none; background: #007BFF; color: white; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #0056b3; }
+    .form-box {
+      background: #fff; padding: 20px;
+      border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+      display: none; /* default hide */
+    }
+    input, select, textarea {
+      width: 100%; margin: 8px 0;
+      padding: 10px; border: 1px solid #ccc; border-radius: 5px;
+    }
+    button.submit {
+      background: #28a745; color: #fff;
+      padding: 10px 15px; border: none; border-radius: 5px;
+      cursor: pointer; font-size: 16px;
+    }
+    .listing {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+    }
+    .card {
+      background: #fff; padding: 15px;
+      border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .admin-btn { display: none; }
   </style>
 </head>
 <body>
+
   <header>
-    <h1>🚑 Ambulance Portal</h1>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" class="hidden">Logout</button>
+    <h1>ZaraFix Portal</h1>
+    <div>
+      <button id="loginBtn">Login with Google</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+      <button id="adminBtn" class="admin-btn">Admin Panel</button>
+    </div>
   </header>
 
   <div class="container">
-    <div id="postForm" class="hidden">
-      <h2>Post Ambulance Service</h2>
-      <form id="serviceForm">
-        <label>Shop Name:</label><br>
-        <input type="text" id="shopName" required><br><br>
-
-        <label>Category:</label><br>
-        <select id="category" required>
-          <option value="Ambulance">Ambulance</option>
-          <option value="Hospital">Hospital</option>
-          <option value="Clinic">Clinic</option>
-        </select><br><br>
-
-        <label>Discount (₹):</label><br>
-        <input type="number" id="discount"><br><br>
-
-        <label>Upload Image:</label><br>
-        <input type="file" id="imageUpload" accept="image/*" required><br><br>
-
-        <button type="submit">Submit</button>
-      </form>
+    <!-- Post Form -->
+    <div id="postForm" class="form-box">
+      <h2>Post Property / Service</h2>
+      <input type="text" id="title" placeholder="Title" required>
+      <textarea id="desc" placeholder="Description"></textarea>
+      <select id="category">
+        <option value="">Select Category</option>
+        <option value="Property">Property</option>
+        <option value="Service">Service</option>
+        <option value="Ambulance">Ambulance</option>
+      </select>
+      <input type="number" id="price" placeholder="Charges ₹">
+      <button class="submit" onclick="submitPost()">Submit</button>
     </div>
 
-    <h2>Available Services</h2>
-    <div id="listing"></div>
+    <h2>Approved Listings</h2>
+    <div id="listing" class="listing"></div>
   </div>
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
   <script>
-    // Firebase Config
+    // 🔥 Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
-      authDomain: "ambulence-410c0.firebaseapp.com",
-      projectId: "ambulence-410c0",
-      storageBucket: "ambulence-410c0.appspot.com",
-      messagingSenderId: "970590198679",
-      appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "143105843162",
+      appId: "1:143105843162:web:61c1e96bb6a15bcb0f1f9b"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.firestore();
+    const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const postForm = document.getElementById("postForm");
+    const adminBtn = document.getElementById("adminBtn");
     const listingDiv = document.getElementById("listing");
+
+    const adminEmail = "admin@gmail.com"; // 🔑 Change as per your admin email
 
     // Login with Google
     loginBtn.onclick = () => {
@@ -83,66 +118,66 @@
     // Logout
     logoutBtn.onclick = () => auth.signOut();
 
-    // Auth state
+    // Auth State
     auth.onAuthStateChanged(user => {
-      if(user){
-        loginBtn.classList.add("hidden");
-        logoutBtn.classList.remove("hidden");
-        postForm.classList.remove("hidden");
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        postForm.style.display = "block";
+
+        if (user.email === adminEmail) {
+          adminBtn.style.display = "inline-block";
+        } else {
+          adminBtn.style.display = "none";
+        }
       } else {
-        loginBtn.classList.remove("hidden");
-        logoutBtn.classList.add("hidden");
-        postForm.classList.add("hidden");
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        postForm.style.display = "none";
+        adminBtn.style.display = "none";
       }
     });
 
-    // ImgBB API
-    const imgbbApiKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
-
-    document.getElementById("serviceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const shopName = document.getElementById("shopName").value;
+    // Submit Post
+    function submitPost() {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please login to post");
+        return;
+      }
+      const title = document.getElementById("title").value;
+      const desc = document.getElementById("desc").value;
       const category = document.getElementById("category").value;
-      const discount = document.getElementById("discount").value;
-      const imageFile = document.getElementById("imageUpload").files[0];
+      const price = document.getElementById("price").value;
 
-      // Upload to ImgBB
-      const formData = new FormData();
-      formData.append("image", imageFile);
-
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-        method: "POST",
-        body: formData
+      const newPostRef = db.ref("posts").push();
+      newPostRef.set({
+        title, desc, category, price,
+        userId: user.uid,
+        email: user.email,
+        approved: false // admin approval needed
+      }).then(() => {
+        alert("Post submitted for admin approval");
       });
-      const data = await res.json();
-      const imageUrl = data.data.url;
+    }
 
-      // Save to Firestore (admin will approve later)
-      await db.collection("services").add({
-        shopName, category, discount, imageUrl,
-        approved: false,
-        createdAt: new Date()
-      });
-
-      alert("Posted! Waiting for admin approval.");
-      e.target.reset();
-    });
-
-    // Load Approved Listings
-    function loadListings(){
-      db.collection("services").where("approved","==",true).onSnapshot(snapshot => {
+    // Load Approved Listings (Visible to Everyone)
+    function loadListings() {
+      db.ref("posts").on("value", snapshot => {
         listingDiv.innerHTML = "";
-        snapshot.forEach(doc => {
-          const d = doc.data();
-          listingDiv.innerHTML += `
-            <div class="card">
-              <h3>${d.shopName}</h3>
-              <p>Category: ${d.category}</p>
-              <p>Discount: ₹${d.discount}</p>
-              <img src="${d.imageUrl}" width="100%">
-            </div>
-          `;
+        snapshot.forEach(child => {
+          const data = child.val();
+          if (data.approved) { // ✅ Only approved posts visible
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+              <h3>${data.title}</h3>
+              <p>${data.desc}</p>
+              <p><b>Category:</b> ${data.category}</p>
+              <p><b>Charges:</b> ₹${data.price}</p>
+            `;
+            listingDiv.appendChild(card);
+          }
         });
       });
     }
