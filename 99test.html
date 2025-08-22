@@ -2,62 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ambulance Portal</title>
   <style>
-    body {
-      margin:0; font-family:Arial, sans-serif; background:#f4f4f9;
-      display:flex; justify-content:center; align-items:center; height:100vh;
-      flex-direction:column;
-    }
-    .btn {
-      padding:10px 20px; margin:10px; border:none; border-radius:10px;
-      font-size:16px; font-weight:bold; cursor:pointer;
-      background:linear-gradient(45deg, #00c6ff, #0072ff); color:white;
-      box-shadow:0px 4px 10px rgba(0,0,0,0.2); transition:0.3s;
-    }
-    .btn:hover { transform:scale(1.05); }
-    #logoutBtn { display:none; background:linear-gradient(45deg, #ff512f, #dd2476); }
-    #formSection { display:none; margin-top:20px; background:white; padding:20px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.2); }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    h1 { color: #333; }
+    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
+    #loginBtn { background: #007bff; color: #fff; }
+    #logoutBtn { background: red; color: #fff; display:none; }
+    #postForm { display:none; margin-bottom:20px; background:#fff; padding:15px; border-radius:8px; }
+    #listing { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:15px; }
+    .card { background:#fff; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+    .card img { width:100%; border-radius:8px; margin-bottom:10px; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🚑 Ambulance Portal</h1>
+    <div>
+      <button id="loginBtn">Login with Google</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
 
-  <h2>🚑 Ambulance Portal</h2>
-
-  <button id="loginBtn" class="btn">Login with Google</button>
-  <button id="logoutBtn" class="btn">Logout</button>
-
-  <div id="formSection">
-    <h3>Post Ambulance Service</h3>
-    <form id="ambulanceForm">
-      <label>Service Name:</label><br>
-      <input type="text" id="serviceName" required><br><br>
-
-      <label>Category:</label><br>
-      <select id="category" required>
-        <option value="">Select</option>
-        <option value="Basic Life Support">Basic Life Support</option>
-        <option value="Advanced Life Support">Advanced Life Support</option>
-        <option value="Patient Transport">Patient Transport</option>
-      </select><br><br>
-
-      <label>Charges (₹):</label><br>
-      <input type="number" id="charges" required><br><br>
-
-      <label>Upload Image:</label><br>
-      <input type="file" id="imageUpload" accept="image/*" required><br><br>
-
-      <button type="submit" class="btn">Submit</button>
-    </form>
+  <!-- Post form -->
+  <div id="postForm">
+    <h2>Post New Service</h2>
+    <input type="text" id="title" placeholder="Title"><br><br>
+    <input type="text" id="category" placeholder="Category"><br><br>
+    <input type="file" id="image"><br><br>
+    <button id="submitPost">Submit</button>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+  <!-- Listings -->
+  <h2>Available Services</h2>
+  <div id="listing"></div>
+
+  <!-- Firebase + App -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // ✅ Firebase Config
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
       authDomain: "ambulence-410c0.firebaseapp.com",
@@ -66,81 +54,82 @@
       messagingSenderId: "970590198679",
       appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
     };
-
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.database();
+    const db = firebase.firestore();
+
+    const imgbbKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const formSection = document.getElementById("formSection");
+    const postForm = document.getElementById("postForm");
+    const listing = document.getElementById("listing");
 
-    // ✅ Google Login
-    loginBtn.addEventListener("click", () => {
+    // Login
+    loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider);
-    });
+    };
 
-    // ✅ Logout
-    logoutBtn.addEventListener("click", () => {
-      auth.signOut();
-    });
+    // Logout
+    logoutBtn.onclick = () => auth.signOut();
 
-    // ✅ Login State Change
+    // Auth state
     auth.onAuthStateChanged(user => {
-      if(user){
+      if (user) {
         loginBtn.style.display = "none";
         logoutBtn.style.display = "inline-block";
-        formSection.style.display = "block";
+        postForm.style.display = "block";  // Post only if logged in
       } else {
         loginBtn.style.display = "inline-block";
         logoutBtn.style.display = "none";
-        formSection.style.display = "none";
+        postForm.style.display = "none"; // Hide form if not logged in
       }
     });
 
-    // ✅ ImgBB API Key
-    const imgbbApiKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
-
-    // ✅ Form Submit
-    document.getElementById("ambulanceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const user = auth.currentUser;
-      if(!user){ alert("Please login first."); return; }
-
-      const serviceName = document.getElementById("serviceName").value;
+    // Submit Post
+    document.getElementById("submitPost").onclick = async () => {
+      const title = document.getElementById("title").value;
       const category = document.getElementById("category").value;
-      const charges = document.getElementById("charges").value;
-      const imageFile = document.getElementById("imageUpload").files[0];
+      const file = document.getElementById("image").files[0];
 
-      // Upload to ImgBB
-      let imageUrl = "";
-      if(imageFile){
-        const formData = new FormData();
-        formData.append("image", imageFile);
-
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-        imageUrl = data.data.url;
+      if (!title || !category || !file) {
+        alert("Fill all fields");
+        return;
       }
 
-      // Save to Firebase
-      const newRef = db.ref("ambulanceServices").push();
-      newRef.set({
-        uid: user.uid,
-        serviceName,
-        category,
-        charges,
-        imageUrl,
-        createdAt: new Date().toISOString()
-      });
+      // Upload to ImgBB
+      let formData = new FormData();
+      formData.append("image", file);
 
-      alert("✅ Service Posted Successfully!");
-      document.getElementById("ambulanceForm").reset();
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      const imageUrl = data.data.url;
+
+      // Save to Firestore
+      await db.collection("posts").add({
+        title, category, imageUrl,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert("Posted successfully!");
+    };
+
+    // Show all listings (everyone can see)
+    db.collection("posts").orderBy("createdAt","desc").onSnapshot(snapshot => {
+      listing.innerHTML = "";
+      snapshot.forEach(doc => {
+        const p = doc.data();
+        listing.innerHTML += `
+          <div class="card">
+            <img src="${p.imageUrl}" alt="">
+            <h3>${p.title}</h3>
+            <p>${p.category}</p>
+          </div>
+        `;
+      });
     });
   </script>
 </body>
