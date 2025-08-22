@@ -3,171 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Property/Service</title>
+  <title>ZaraFix Marketplace</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
-    header { background: #4CAF50; color: white; padding: 15px; text-align: center; font-size: 22px; }
-    .container { padding: 20px; max-width: 600px; margin: auto; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0px 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
-    input, select, button { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ccc; border-radius: 8px; }
-    button { background: #4CAF50; color: white; cursor: pointer; font-size: 16px; }
-    button:hover { background: #45a049; }
-    .hidden { display: none; }
-    .logout-btn { background: red; margin-top: 10px; }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
+    header { background:#111; color:#fff; padding:10px; text-align:center; }
+    #loginBtn, #logoutBtn { background:#007bff; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    #logoutBtn { display:none; }
+    .container { padding:20px; }
+    form { background:#fff; padding:15px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); margin-bottom:20px; display:none; }
+    form input, form select, form textarea { width:100%; padding:8px; margin:6px 0; border:1px solid #ccc; border-radius:5px; }
+    form button { background:#28a745; color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer; width:100%; }
+    .card { background:#fff; margin:10px 0; padding:15px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    .admin-controls button { margin:5px; padding:5px 10px; border:none; border-radius:6px; cursor:pointer; }
+    .approve { background:green; color:white; }
+    .reject { background:red; color:white; }
+    .delete { background:gray; color:white; }
   </style>
 </head>
 <body>
-  <header>ZaraFix</header>
+  <header>
+    <h2>ZaraFix Marketplace</h2>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn">Logout</button>
+  </header>
+
   <div class="container">
-
-    <!-- Login Section -->
-    <div id="loginSection" class="card">
-      <h3>Login with Google</h3>
-      <button onclick="googleLogin()">Login</button>
-    </div>
-
-    <!-- Form Section -->
-    <div id="formSection" class="card hidden">
-      <h3>Post a Property/Service</h3>
+    <!-- Post Form -->
+    <form id="postForm">
+      <h3>Post Property</h3>
       <label>Title</label>
-      <input type="text" id="title">
-
-      <label>Shop Name</label>
-      <input type="text" id="shop">
-
+      <input type="text" id="title" required>
+      <label>Description</label>
+      <textarea id="desc" required></textarea>
       <label>Category</label>
-      <select id="category">
-        <option value="Repair">Repair</option>
-        <option value="Property">Property</option>
-        <option value="Service">Service</option>
-        <option value="Ambulance">Ambulance</option>
-        <option value="Other">Other</option>
+      <select id="category" required>
+        <option value="">Select</option>
+        <option value="Sell">Sell</option>
+        <option value="Rent">Rent</option>
+        <option value="Buy">Buy</option>
       </select>
-
-      <label>Discount (₹)</label>
-      <input type="number" id="discount">
-
       <label>Image</label>
-      <input type="file" id="image">
+      <input type="file" id="image" accept="image/*" required>
+      <button type="submit">Submit</button>
+    </form>
 
-      <button onclick="submitPost()">Submit Post</button>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <!-- Posts Section -->
-    <div id="postsSection" class="card">
-      <h3>All Posts</h3>
-      <div id="postsList"></div>
-    </div>
-
-    <!-- Admin Panel -->
-    <div id="adminSection" class="card hidden">
-      <h3>Admin Control</h3>
-      <div id="adminList"></div>
-    </div>
-
+    <!-- Listings -->
+    <h3>Marketplace Listings</h3>
+    <div id="listings"></div>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
   <script>
+    // 🔹 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
       authDomain: "property-20d6d.firebaseapp.com",
       databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
       projectId: "property-20d6d",
       storageBucket: "property-20d6d.appspot.com",
-      messagingSenderId: "868671000000",
-      appId: "1:868671000000:web:example"
+      messagingSenderId: "759316093063",
+      appId: "1:759316093063:web:6c6f64a7bcddc49a"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const adminEmail = "admin@gmail.com"; // 🔑 Admin का email fix
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const postForm = document.getElementById("postForm");
+    const listings = document.getElementById("listings");
 
-    // Login with Google
-    function googleLogin() {
+    let currentUser = null;
+    const adminEmail = "admin@gmail.com"; // 🔹 यहाँ अपना admin email डालें
+
+    // Login
+    loginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(res => {
-        checkLogin(res.user);
-      });
-    }
+      auth.signInWithPopup(provider);
+    };
 
-    function logout() {
-      auth.signOut().then(() => {
-        location.reload();
-      });
-    }
+    // Logout
+    logoutBtn.onclick = () => auth.signOut();
 
-    function checkLogin(user) {
-      document.getElementById("loginSection").classList.add("hidden");
-      document.getElementById("formSection").classList.remove("hidden");
-
-      if (user.email === adminEmail) {
-        document.getElementById("adminSection").classList.remove("hidden");
-      }
-    }
-
-    // Check auth state
+    // Auth State
     auth.onAuthStateChanged(user => {
-      if (user) {
-        checkLogin(user);
+      if(user){
+        currentUser = user;
+        loginBtn.style.display="none";
+        logoutBtn.style.display="inline-block";
+        postForm.style.display="block";
+        loadListings();
+      }else{
+        currentUser = null;
+        loginBtn.style.display="inline-block";
+        logoutBtn.style.display="none";
+        postForm.style.display="none";
+        loadListings();
       }
     });
 
-    // Submit post
-    function submitPost() {
+    // Post Submit
+    postForm.onsubmit = async (e) => {
+      e.preventDefault();
       const title = document.getElementById("title").value;
-      const shop = document.getElementById("shop").value;
+      const desc = document.getElementById("desc").value;
       const category = document.getElementById("category").value;
-      const discount = document.getElementById("discount").value;
+      const file = document.getElementById("image").files[0];
 
-      const postRef = db.ref("posts").push();
-      postRef.set({
-        title, shop, category, discount,
-        user: auth.currentUser.email,
-        time: new Date().toLocaleString()
+      // Upload ImgBB
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", { method:"POST", body:formData });
+      const imgData = await res.json();
+      const imageUrl = imgData.data.url;
+
+      const postId = Date.now();
+      db.ref("posts/"+postId).set({
+        title, desc, category, imageUrl,
+        uid: currentUser.uid,
+        user: currentUser.email,
+        approved: false
       });
-      alert("Post Submitted!");
-    }
 
-    // Load all posts
-    db.ref("posts").on("value", snap => {
-      const posts = snap.val();
-      const list = document.getElementById("postsList");
-      list.innerHTML = "";
-      for (let id in posts) {
-        list.innerHTML += `<div style="border:1px solid #ccc; padding:10px; margin:5px">
-          <b>${posts[id].title}</b><br>
-          Shop: ${posts[id].shop}<br>
-          Category: ${posts[id].category}<br>
-          Discount: ₹${posts[id].discount}<br>
-          Posted By: ${posts[id].user}
-        </div>`;
-      }
-    });
+      postForm.reset();
+      alert("Posted! Waiting for admin approval.");
+    };
 
-    // Admin Panel
-    db.ref("posts").on("value", snap => {
-      const posts = snap.val();
-      const adminList = document.getElementById("adminList");
-      adminList.innerHTML = "";
-      for (let id in posts) {
-        adminList.innerHTML += `<div style="border:1px solid red; padding:10px; margin:5px">
-          <b>${posts[id].title}</b> (${posts[id].category})<br>
-          Posted By: ${posts[id].user}<br>
-          <button onclick="deletePost('${id}')">Delete</button>
-        </div>`;
-      }
-    });
-
-    function deletePost(id) {
-      db.ref("posts/" + id).remove();
+    // Load Listings
+    function loadListings(){
+      listings.innerHTML="";
+      db.ref("posts").on("value", snap=>{
+        listings.innerHTML="";
+        snap.forEach(child=>{
+          const post = child.val();
+          if(post.approved || (currentUser && currentUser.email===adminEmail)){
+            let div=document.createElement("div");
+            div.className="card";
+            div.innerHTML=`
+              <h4>${post.title}</h4>
+              <p>${post.desc}</p>
+              <p><b>Category:</b> ${post.category}</p>
+              <img src="${post.imageUrl}" style="max-width:100%;border-radius:8px;">
+              <p><i>Posted by: ${post.user}</i></p>
+            `;
+            // Admin Controls
+            if(currentUser && currentUser.email===adminEmail){
+              const controls=document.createElement("div");
+              controls.className="admin-controls";
+              controls.innerHTML=`
+                <button class="approve">Approve</button>
+                <button class="reject">Reject</button>
+                <button class="delete">Delete</button>
+              `;
+              controls.querySelector(".approve").onclick=()=>db.ref("posts/"+child.key).update({approved:true});
+              controls.querySelector(".reject").onclick=()=>db.ref("posts/"+child.key).update({approved:false});
+              controls.querySelector(".delete").onclick=()=>db.ref("posts/"+child.key).remove();
+              div.appendChild(controls);
+            }
+            listings.appendChild(div);
+          }
+        });
+      });
     }
   </script>
 </body>
