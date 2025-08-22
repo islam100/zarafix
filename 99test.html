@@ -2,210 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ambulance Portal</title>
+  <title>Zara Portal</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
-    header { background:#2c3e50; color:#fff; padding:15px; text-align:center; font-size:22px; font-weight:bold; }
-    .container { max-width: 600px; margin:20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); }
-    h2 { text-align:center; }
-    label { display:block; margin-top:10px; font-weight:bold; }
-    input, select, textarea { width:100%; padding:10px; margin-top:5px; border:1px solid #ccc; border-radius:5px; }
-    button { margin-top:15px; padding:12px; background:#27ae60; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:16px; }
-    button:hover { background:#219150; }
-    .listing { margin:20px auto; max-width:800px; }
-    .card { background:#fff; padding:15px; border-radius:10px; margin:10px 0; box-shadow:0 0 6px rgba(0,0,0,0.1); }
-    img { max-width:100%; border-radius:10px; }
-    .login-btn { background:#e74c3c; }
-    .logout-btn { background:#c0392b; }
-    .admin-btn { background:#2980b9; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg,#1e3c72,#2a5298);
+      color: white;
+    }
+    .container {
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 5px black;
+    }
+    .btn {
+      background: linear-gradient(145deg,#ff416c,#ff4b2b);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      margin: 10px;
+      border-radius: 15px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .btn:hover {
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body>
-
-<header>
-  🚑 Ambulance Portal
-  <div style="float:right; margin-top:-28px;">
-    <button id="loginBtn" class="login-btn">Login with Google</button>
-    <button id="logoutBtn" class="logout-btn" style="display:none;">Logout</button>
+  <div class="container">
+    <h1>Zara Portal</h1>
+    <button id="loginBtn" class="btn">Login with Google</button>
+    <button id="logoutBtn" class="btn" style="display:none;">Logout</button>
+    <button id="providerBtn" class="btn" style="display:none;">Provider</button>
+    <button id="adminBtn" class="btn" style="display:none;">Admin</button>
   </div>
-</header>
 
-<div class="container" id="formContainer" style="display:none;">
-  <h2>Post Your Service</h2>
-  <form id="postForm">
-    <label>Title</label>
-    <input type="text" id="title" required>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+      authDomain: "property-20d6d.firebaseapp.com",
+      projectId: "property-20d6d",
+      storageBucket: "property-20d6d.appspot.com",
+      messagingSenderId: "790594458121",
+      appId: "1:790594458121:web:0cd74519837a36b5794ce4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
 
-    <label>Description</label>
-    <textarea id="description" required></textarea>
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const providerBtn = document.getElementById("providerBtn");
+    const adminBtn = document.getElementById("adminBtn");
 
-    <label>Category</label>
-    <select id="category" required>
-      <option value="">-- Select --</option>
-      <option value="Ambulance">Ambulance</option>
-      <option value="Property">Property</option>
-      <option value="Service">Service</option>
-    </select>
-
-    <label>Charges (₹)</label>
-    <input type="number" id="charges" required>
-
-    <label>Upload Image</label>
-    <input type="file" id="image" accept="image/*" required>
-
-    <button type="submit">Submit</button>
-  </form>
-</div>
-
-<div class="listing" id="listingContainer">
-  <h2 style="text-align:center;">Approved Listings</h2>
-  <div id="listing"></div>
-</div>
-
-<!-- ADMIN PANEL -->
-<div class="container" id="adminPanel" style="display:none;">
-  <h2>Admin Panel</h2>
-  <div id="adminListings"></div>
-</div>
-
-<script type="module">
-  // ✅ Firebase Config
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getDatabase, ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyC9zYbwKmB6jTxO3m-K2KHIdkhwMlQ0E98",
-    authDomain: "ambulence-410c0.firebaseapp.com",
-    databaseURL: "https://ambulence-410c0-default-rtdb.firebaseio.com",
-    projectId: "ambulence-410c0",
-    storageBucket: "ambulence-410c0.appspot.com",
-    messagingSenderId: "286985933908",
-    appId: "1:286985933908:web:92e1d2b7c92a735ae1c111"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-  const db = getDatabase(app);
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const formContainer = document.getElementById("formContainer");
-  const postForm = document.getElementById("postForm");
-  const listingDiv = document.getElementById("listing");
-  const adminPanel = document.getElementById("adminPanel");
-  const adminListings = document.getElementById("adminListings");
-
-  let currentUser = null;
-  const ADMIN_UID = "ADMIN_GOOGLE_UID_HERE"; // 👉 अपना UID डालें admin control के लिए
-
-  // Login
-  loginBtn.addEventListener("click", async () => {
-    await signInWithPopup(auth, provider);
-  });
-
-  // Logout
-  logoutBtn.addEventListener("click", async () => {
-    await signOut(auth);
-  });
-
-  // Auth State
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      currentUser = user;
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      formContainer.style.display = "block";
-
-      if (user.uid === ADMIN_UID) {
-        adminPanel.style.display = "block";
-      }
-    } else {
-      currentUser = null;
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      formContainer.style.display = "none";
-      adminPanel.style.display = "none";
-    }
-  });
-
-  // ImgBB Upload Function
-  async function uploadImage(file) {
-    const apiKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-      method: "POST",
-      body: formData
-    });
-    const data = await res.json();
-    return data.data.url;
-  }
-
-  // Form Submit
-  postForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const file = document.getElementById("image").files[0];
-    const imgUrl = await uploadImage(file);
-
-    const postRef = push(ref(db, "posts"));
-    set(postRef, {
-      title: document.getElementById("title").value,
-      description: document.getElementById("description").value,
-      category: document.getElementById("category").value,
-      charges: document.getElementById("charges").value,
-      image: imgUrl,
-      userId: currentUser.uid,
-      approved: false
+    // Login
+    loginBtn.addEventListener("click", () => {
+      auth.signInWithPopup(provider);
     });
 
-    alert("Post submitted! Wait for admin approval.");
-    postForm.reset();
-  });
+    // Logout
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut();
+    });
 
-  // Show Approved Listings
-  onValue(ref(db, "posts"), (snapshot) => {
-    listingDiv.innerHTML = "";
-    adminListings.innerHTML = "";
-    snapshot.forEach(child => {
-      const data = child.val();
-      const key = child.key;
-      if (data.approved) {
-        listingDiv.innerHTML += `
-          <div class="card">
-            <h3>${data.title}</h3>
-            <p>${data.description}</p>
-            <p><b>Category:</b> ${data.category}</p>
-            <p><b>Charges:</b> ₹${data.charges}</p>
-            <img src="${data.image}" />
-          </div>
-        `;
-      }
-
-      // Admin Control
-      if (currentUser && currentUser.uid === ADMIN_UID) {
-        adminListings.innerHTML += `
-          <div class="card">
-            <h3>${data.title}</h3>
-            <p>${data.description}</p>
-            <button onclick="approvePost('${key}')">Approve</button>
-            <button onclick="deletePost('${key}')">Delete</button>
-          </div>
-        `;
+    // Auth State
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginBtn.style.display = "none";   // Login छुपा दो
+        logoutBtn.style.display = "inline-block";
+        providerBtn.style.display = "inline-block";
+        adminBtn.style.display = "inline-block";
+      } else {
+        loginBtn.style.display = "inline-block"; // Logout पर Login दिखाओ
+        logoutBtn.style.display = "none";
+        providerBtn.style.display = "none";
+        adminBtn.style.display = "none";
       }
     });
-  });
-
-  // Admin Functions
-  window.approvePost = (id) => {
-    update(ref(db, "posts/" + id), { approved: true });
-  };
-
-  window.deletePost = (id) => {
-    remove(ref(db, "posts/" + id));
-  };
-</script>
+  </script>
 </body>
 </html>
