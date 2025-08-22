@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🚑 Ambulance Booking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    :root{
+      --brand1:#e53935; --brand2:#ff7043; --ok:#4CAF50; --bad:#E53935; --warn:#FF9800;
+      --bg:#f5f5f5; --card:#fff; --text:#222;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    header{position:sticky;top:0;z-index:1000;background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+    .topbar{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px}
+    h1{margin:0;font-size:20px;text-shadow:1px 1px 3px #000}
+    button{cursor:pointer;padding:6px 10px;border:0;border-radius:8px;box-shadow:0 3px 5px rgba(0,0,0,.2);font-weight:600;font-size:13px}
+    .btn{background:var(--ok);color:#fff}
+    .btn-warn{background:var(--warn);color:#fff}
+    .btn-bad{background:var(--bad);color:#fff}
+    .btn-wa{background:#25D366;color:#fff}
+    .btn-ghost{background:#ffffff10;color:#fff;border:1px solid #ffffff50}
+
+    /* Controls row */
+    .controls{display:grid;grid-template-columns:1fr 140px 140px auto;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid #ffffff30;border-bottom:1px solid #00000010}
+    .controls input,.controls select{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:13px}
+
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:12px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 3px 6px rgba(0,0,0,.18);padding:10px;transition:transform .15s ease,box-shadow .15s ease;cursor:pointer;overflow:hidden}
+    .card:hover{transform:scale(1.01);box-shadow:0 6px 14px rgba(0,0,0,.22)}
+    .card img{width:100%;max-height:150px;object-fit:contain;border-radius:8px;display:block;margin:0 auto}
+    .card h3{margin:6px 0 2px;font-size:16px}
+    .card p{margin:1px 0;font-size:12px}
+    .badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:11px;background:#eee;margin-right:6px}
+    .badge.pending{background:#ffe0e0;border:1px solid #f44336}
+    .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+    /* Modals */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);align-items:center;justify-content:center;z-index:2000}
+    .modal-content{background:#fff;width:95%;max-width:520px;max-height:90vh;overflow:auto;border-radius:12px;padding:14px;position:relative}
+    .modal .close{position:absolute;top:8px;right:12px;font-size:20px;font-weight:700;cursor:pointer}
+    .modal img{width:100%;height:auto;object-fit:contain;border-radius:10px;margin-bottom:10px}
+    form label{font-size:13px;font-weight:700;margin-top:6px;display:block}
+    form input, form select, form textarea{width:100%;padding:8px;margin:4px 0 8px;border:1px solid #ccc;border-radius:8px;font-size:13px}
+
+    .notice{padding:8px 10px;background:#fff;border-left:4px solid var(--warn);margin:10px 12px;border-radius:8px}
+
+    /* Mobile rule: first row 2 cards, rest full width */
+    @media (max-width:520px){
+      .controls{grid-template-columns:1fr 120px 120px auto}
+      .grid{grid-template-columns:repeat(2,1fr)}
+      .grid .card:nth-child(n+3){grid-column:1/-1}
+      .card img{max-height:130px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <h1>🚑 Ambulance Booking</h1>
+      <div class="row">
+        <button id="newPostBtn" class="btn-warn">+ New Post</button>
+        <button id="deletePostBtn" class="btn-bad">Delete Post</button>
+        <button id="loginBtn" class="btn">Admin Login</button>
+        <button id="logoutBtn" class="btn-bad" style="display:none">Logout</button>
+      </div>
+    </div>
+    <div class="controls">
+      <input id="searchBox" placeholder="Search: name / area / number" />
+      <select id="catFilter">
+        <option value="">All Categories</option>
+        <option>ICU Ambulance</option>
+        <option>Oxygen Ambulance</option>
+        <option>Normal Ambulance</option>
+        <option>Dead Body Van</option>
+      </select>
+      <select id="statusFilter">
+        <option value="approved">Live Only</option>
+        <option value="">All (admin or your posts)</option>
+      </select>
+      <button id="clearFilters" class="btn-ghost">Clear</button>
+    </div>
+  </header>
+
+  <div class="notice" id="saveTokenNotice" style="display:none"></div>
+
+  <main>
+    <div id="posts" class="grid"></div>
+  </main>
+
+  <!-- New Post Modal -->
+  <div class="modal" id="postModal">
+    <div class="modal-content">
+      <span class="close" data-close="#postModal'">&times;</span>
+      <h2>Add Ambulance</h2>
+      <form id="postForm">
+        <label>Ambulance Name / Hospital</label>
+        <input id="ambulanceName" required />
+        <label>Ambulance Number</label>
+        <input id="ambulanceNumber" required />
+        <label>Ambulance Category</label>
+        <select id="category" required>
+          <option value="">-- Select --</option>
+          <option>ICU Ambulance</option>
+          <option>Oxygen Ambulance</option>
+          <option>Normal Ambulance</option>
+          <option>Dead Body Van</option>
+        </select>
+        <label>Coverage Area</label>
+        <input id="coverage" required />
+        <label>Charges (₹)</label>
+        <input id="charges" type="number" required />
+        <label>Driver Name</label>
+        <input id="driverName" required />
+        <label>Driver Age</label>
+        <input id="driverAge" type="number" required />
+        <label>Driver Mobile</label>
+        <input id="driverMobile" type="tel" required />
+        <label>Driver Experience (years)</label>
+        <input id="driverExp" type="number" required />
+        <label>License No</label>
+        <input id="license" required />
+        <label>Whatsapp Number</label>
+        <input id="whatsapp" type="tel" required />
+        <label>Ambulance Photo</label>
+        <input id="imageFile" type="file" accept="image/*" required />
+        <button type="submit" class="btn">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Zoom Card Modal -->
+  <div class="modal" id="zoomModal">
+    <div class="modal-content" id="zoomContent"></div>
+  </div>
+
+  <!-- Delete by Token Modal -->
+  <div class="modal" id="deleteModal">
+    <div class="modal-content">
+      <span class="close" data-close="#deleteModal">&times;</span>
+      <h3>Delete My Post</h3>
+      <p>Enter your <b>Post ID</b> and <b>Delete Token</b> you received on submission.</p>
+      <form id="deleteForm">
+        <label>Post ID</label>
+        <input id="delPostId" placeholder="e.g. -NkS1Abc..." required />
+        <label>Delete Token</label>
+        <input id="delToken" placeholder="6-10 chars" required />
+        <button class="btn-bad" type="submit">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  // ===== Firebase Setup =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
+    authDomain: "ambulence-410c0.firebaseapp.com",
+    projectId: "ambulence-410c0",
+    storageBucket: "ambulence-410c0.appspot.com",
+    messagingSenderId: "970590198679",
+    appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  // ===== Elements =====
+  const postsDiv = document.getElementById('posts');
+  const newPostBtn = document.getElementById('newPostBtn');
+  const deletePostBtn = document.getElementById('deletePostBtn');
+  const postModal = document.getElementById('postModal');
+  const zoomModal = document.getElementById('zoomModal');
+  const zoomContent = document.getElementById('zoomContent');
+  const deleteModal = document.getElementById('deleteModal');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const saveTokenNotice = document.getElementById('saveTokenNotice');
+
+  const searchBox = document.getElementById('searchBox');
+  const catFilter = document.getElementById('catFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const clearFilters = document.getElementById('clearFilters');
+
+  const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+
+  let currentUser = null;
+  let allPosts = [];
+
+  // ===== Auth (Admin only) =====
+  loginBtn.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+  logoutBtn.onclick = () => auth.signOut();
+  auth.onAuthStateChanged(u => {
+    currentUser = u;
+    const isAdmin = !!(u && u.email === ADMIN_EMAIL);
+    loginBtn.style.display = isAdmin ? 'none' : 'inline-block';
+    logoutBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    loadPosts();
+  });
+
+  // ===== Modals helpers =====
+  const openModal = (el) => el.style.display = 'flex';
+  const closeModal = (el) => el.style.display = 'none';
+
+  document.querySelectorAll('.modal').forEach(mod => {
+    mod.addEventListener('click', (e) => { if (e.target === mod) closeModal(mod); }); // outside click closes (shrink)
+  });
+  document.querySelectorAll('.close').forEach(x => {
+    x.addEventListener('click', () => {
+      const id = x.getAttribute('data-close');
+      if(id){ const el = document.querySelector(id.replace("'","")); if(el) closeModal(el); }
+      else closeModal(x.closest('.modal'));
+    });
+  });
+
+  newPostBtn.onclick = () => openModal(postModal);
+  deletePostBtn.onclick = () => openModal(deleteModal);
+
+  // ===== ImgBB Upload =====
+  async function uploadImage(file){
+    const fd = new FormData();
+    fd.append('image', file);
+    const r = await fetch('https://api.imgbb.com/1/upload?key=3aaba00e9c5a3a88955c9e5aebaeb5e5', { method:'POST', body:fd });
+    const j = await r.json();
+    if(!j || !j.data || !j.data.url) throw new Error('Image upload failed');
+    return j.data.url;
+  }
+
+  // ===== Token util =====
+  function genToken(n=8){
+    const s = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let t='';
+    for(let i=0;i<n;i++) t += s[Math.floor(Math.random()*s.length)];
+    return t;
+  }
+
+  // Save token locally so poster sees management buttons
+  function saveLocalToken(postId, token){
+    const map = JSON.parse(localStorage.getItem('ambulanceTokens')||'{}');
+    map[postId] = token; localStorage.setItem('ambulanceTokens', JSON.stringify(map));
+  }
+  function getLocalToken(postId){
+    const map = JSON.parse(localStorage.getItem('ambulanceTokens')||'{}');
+    return map[postId];
+  }
+
+  // ===== Submit New Post =====
+  const postForm = document.getElementById('postForm');
+  postForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = postForm.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = '⏳ Submitting...';
+
+    try{
+      // basic validation
+      const mobile = document.getElementById('driverMobile').value.trim();
+      const wa = document.getElementById('whatsapp').value.trim();
+      if(!/^\+?\d{10,15}$/.test(mobile) || !/^\+?\d{10,15}$/.test(wa)){
+        alert('Please enter valid mobile/WhatsApp numbers (10-15 digits).');
+        btn.disabled=false; btn.textContent='Submit';
+        return;
+      }
+      const file = document.getElementById('imageFile').files[0];
+      const imgUrl = await uploadImage(file);
+      const token = genToken(8);
+
+      const post = {
+        ambulanceName: document.getElementById('ambulanceName').value.trim(),
+        ambulanceNumber: document.getElementById('ambulanceNumber').value.trim(),
+        category: document.getElementById('category').value,
+        coverage: document.getElementById('coverage').value.trim(),
+        charges: Number(document.getElementById('charges').value||0),
+        driverName: document.getElementById('driverName').value.trim(),
+        driverAge: Number(document.getElementById('driverAge').value||0),
+        driverMobile: mobile,
+        driverExp: Number(document.getElementById('driverExp').value||0),
+        license: document.getElementById('license').value.trim(),
+        whatsapp: wa,
+        image: imgUrl,
+        token: token, // delete token
+        posterUid: (currentUser && currentUser.uid) || null,
+        posterName: (currentUser && currentUser.displayName) || null,
+        status: 'pending',
+        created: Date.now()
+      };
+
+      const ref = await db.ref('ambulances').push(post);
+      const postId = ref.key;
+
+      // save token locally + show notice
+      saveLocalToken(postId, token);
+      saveTokenNotice.style.display='block';
+      saveTokenNotice.innerHTML = `✅ <b>Submitted!</b> Post ID: <code>${postId}</code> &nbsp; | &nbsp; Delete Token: <code>${token}</code><br/>\
+      Please <b>save</b> this ID & token. You can delete your post later using <i>Delete Post</i> button.`;
+
+      alert(`Submitted!\nPost ID: ${postId}\nDelete Token: ${token}\n\nPlease save these.`);
+      postForm.reset();
+      closeModal(postModal);
+    }catch(err){
+      console.error(err);
+      alert('❌ Failed: '+err.message);
+    }finally{
+      btn.disabled=false; btn.textContent='Submit';
+    }
+  };
+
+  // ===== Delete via Token =====
+  const deleteForm = document.getElementById('deleteForm');
+  deleteForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('delPostId').value.trim();
+    const token = document.getElementById('delToken').value.trim();
+    if(!id || !token) return;
+    try{
+      const snap = await db.ref('ambulances/'+id).once('value');
+      if(!snap.exists()) return alert('Post not found');
+      const data = snap.val();
+      if(data.token !== token) return alert('Invalid token');
+      if(confirm('Delete this post permanently?')){
+        await db.ref('ambulances/'+id).remove();
+        alert('Deleted');
+        closeModal(deleteModal);
+        // also remove local token entry
+        const map = JSON.parse(localStorage.getItem('ambulanceTokens')||'{}');
+        delete map[id]; localStorage.setItem('ambulanceTokens', JSON.stringify(map));
+      }
+    }catch(e2){ alert('Error: '+e2.message); }
+  };
+
+  // ===== Load & Render =====
+  function matchesFilters(p){
+    const q = (searchBox.value||'').toLowerCase();
+    const cat = catFilter.value;
+    const showStatus = statusFilter.value; // '' or 'approved'
+
+    // status logic: public sees only approved; admins see all; poster (by token) sees own too
+    const isAdmin = !!(currentUser && currentUser.email===ADMIN_EMAIL);
+    const hasLocal = !!getLocalToken(p.id);
+    const statusOK = showStatus==='approved' ? p.status==='approved' : (isAdmin || hasLocal || p.status==='approved');
+
+    if(!statusOK) return false;
+
+    if(cat && p.category!==cat) return false;
+
+    if(q){
+      const hay = [p.ambulanceName,p.coverage,p.driverName,p.ambulanceNumber].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function render(){
+    postsDiv.innerHTML='';
+    const list = allPosts.filter(matchesFilters);
+    list.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      if(p.image){ const img=document.createElement('img'); img.src=p.image; img.alt=p.ambulanceName; card.appendChild(img); }
+      const h=document.createElement('h3'); h.textContent=p.ambulanceName; card.appendChild(h);
+      const meta=document.createElement('p'); meta.innerHTML = `🚑 ${p.category} &nbsp; <span class="badge">₹${p.charges}</span>`; card.appendChild(meta);
+      card.appendChild(elP('🆔 '+p.ambulanceNumber));
+      card.appendChild(elP('📍 '+p.coverage));
+      card.appendChild(elP('👨‍✈️ '+p.driverName+` · ${p.driverExp} yrs`));
+      if(p.status!=='approved'){
+        const b=document.createElement('span'); b.className='badge pending'; b.textContent = p.status==='pending'? 'Pending' : 'Rejected';
+        card.appendChild(b);
+      }
+
+      const row=document.createElement('div'); row.className='row';
+      const waBtn = document.createElement('button'); waBtn.className='btn-wa'; waBtn.textContent='💬 WhatsApp Book';
+      waBtn.onclick=(e)=>{ e.stopPropagation(); window.open(`https://wa.me/${p.whatsapp}?text=Hello, I want to book your ambulance (${p.ambulanceName}, ${p.ambulanceNumber}).`,'_blank'); };
+      row.appendChild(waBtn);
+
+      const localTok = getLocalToken(p.id);
+      const isAdmin = !!(currentUser && currentUser.email===ADMIN_EMAIL);
+      if(localTok){
+        const del = document.createElement('button'); del.className='btn-bad'; del.textContent='🗑 Delete';
+        del.onclick = async (e)=>{ e.stopPropagation(); if(confirm('Delete this post?')) await db.ref('ambulances/'+p.id).remove(); };
+        row.appendChild(del);
+      }
+      if(isAdmin){
+        const ap=document.createElement('button'); ap.className='btn'; ap.textContent='✅ Approve'; ap.onclick=async(e)=>{ e.stopPropagation(); await db.ref('ambulances/'+p.id).update({status:'approved'}); };
+        const rj=document.createElement('button'); rj.className='btn-bad'; rj.textContent='❌ Reject'; rj.onclick=async(e)=>{ e.stopPropagation(); await db.ref('ambulances/'+p.id).update({status:'rejected'}); };
+        const del=document.createElement('button'); del.className='btn-bad'; del.textContent='🗑 Delete'; del.onclick=async(e)=>{ e.stopPropagation(); if(confirm('Delete permanently?')) await db.ref('ambulances/'+p.id).remove(); };
+        row.appendChild(ap); row.appendChild(rj); row.appendChild(del);
+      }
+
+      card.appendChild(row);
+
+      // Zoom on click
+      card.onclick = () => openZoom(p);
+
+      postsDiv.appendChild(card);
+    });
+  }
+
+  function elP(text){ const p=document.createElement('p'); p.textContent=text; return p; }
+
+  function openZoom(p){
+    zoomContent.innerHTML = `
+      <span class="close">&times;</span>
+      ${p.image? `<img src="${p.image}" alt="${p.ambulanceName}">` : ''}
+      <h2>${p.ambulanceName}</h2>
+      <p><b>Category:</b> ${p.category}</p>
+      <p><b>Ambulance No:</b> ${p.ambulanceNumber}</p>
+      <p><b>Coverage:</b> ${p.coverage}</p>
+      <p><b>Charges:</b> ₹${p.charges}</p>
+      <hr />
+      <p><b>Driver:</b> ${p.driverName} (Age ${p.driverAge}) · Exp ${p.driverExp} yrs</p>
+      <p><b>Mobile:</b> ${p.driverMobile}</p>
+      <p><b>License:</b> ${p.license}</p>
+      <div class="row">
+        <button class="btn-wa" onclick="window.open('https://wa.me/${p.whatsapp}?text=Hello, I want to book your ambulance (${p.ambulanceName})','_blank')">💬 WhatsApp Book</button>
+      </div>
+    `;
+    // close button inside zoom
+    setTimeout(()=>{
+      const x = zoomContent.querySelector('.close');
+      if(x) x.onclick = () => closeModal(zoomModal);
+    },0);
+    openModal(zoomModal);
+  }
+
+  function loadPosts(){
+    db.ref('ambulances').orderByChild('created').on('value', snap => {
+      const arr=[]; snap.forEach(ch => arr.push({ ...ch.val(), id: ch.key }));
+      arr.reverse(); // newest first
+      allPosts = arr;
+      render();
+    });
+  }
+
+  // Filters
+  [searchBox,catFilter,statusFilter].forEach(el => el.addEventListener('input', render));
+  clearFilters.onclick = () => {
+    searchBox.value=''; catFilter.value=''; statusFilter.value='approved'; render();
+  };
+
+  </script>
+</body>
+</html>
