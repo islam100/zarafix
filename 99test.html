@@ -72,9 +72,9 @@
     <form id="postForm">
     
       <label>AmbulenceName</label>
-      <input type="text" id="Ambulence Name" required>
+      <input type="text" id="AmbulenceName" required>
       <label>DriverName</label>
-      <input type="text" id="Driver Name" required>
+      <input type="text" id="DriverName" required>
       <label>Address</label>
       <input type="text" id="address" required>
       <label>Phone</label>
@@ -168,18 +168,18 @@ postForm.onsubmit=async e=>{
   const submitBtn=postForm.querySelector("button[type=submit]");
   submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
 
-  const post={
-    price:document.getElementById('price').value,
-    bhk:document.getElementById('bhk').value,
-    propertyType:document.getElementById('ptype').value,
-    address:document.getElementById('address').value,
-    posterPhone:document.getElementById('phone').value,
-    posterType:document.getElementById('posterType').value,
-    posterName:currentUser.displayName,
-    posterUid:currentUser.uid,
-    status:"pending",
-    created:Date.now()
-  };
+const post={
+  AmbulenceName:document.getElementById('AmbulenceName').value,
+  DriverName:document.getElementById('DriverName').value,
+  address:document.getElementById('address').value,
+  posterPhone:document.getElementById('phone').value,
+  AmbulenceType:document.getElementById('AmbulenceType').value,
+  PosterName:currentUser.displayName,
+  posterUid:currentUser.uid,
+  status:"pending",
+  created:Date.now()
+};
+
   const files=document.getElementById('images').files;
   if(files.length>0) post.images=await uploadImages(files);
 
@@ -213,11 +213,28 @@ function loadPosts(){
       if(p.images && p.images.length) {
         const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
       }
-      const h3=document.createElement("h3"); h3.textContent=p.propertyType+" - "+p.bhk; card.appendChild(h3);
-      const price=document.createElement("p"); price.textContent="₹"+p.price; card.appendChild(price);
-      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
-      const ph=document.createElement("p"); ph.textContent="📞 "+p.posterPhone; card.appendChild(ph);
-      const poster=document.createElement("p"); poster.textContent="👤 "+p.posterName+" ("+p.posterType+")"; card.appendChild(poster);
+     // ---- replace this ----
+// ---- replace this ----
+const h3=document.createElement("h3"); 
+h3.textContent = p.AmbulenceName + " ("+ p.AmbulenceType +")"; 
+card.appendChild(h3);
+
+const driver=document.createElement("p"); 
+driver.textContent="👨‍✈️ Driver: "+p.DriverName; 
+card.appendChild(driver);
+
+const addr=document.createElement("p"); 
+addr.textContent="📍 "+p.address; 
+card.appendChild(addr);
+
+const ph=document.createElement("p"); 
+ph.textContent="📞 "+p.posterPhone; 
+card.appendChild(ph);
+
+const poster=document.createElement("p"); 
+poster.textContent="👤 Posted by: "+p.PosterName; 
+card.appendChild(poster);
+
 
       const st=document.createElement("p");
       if(p.status==="approved") st.textContent="✅ Approved";
@@ -231,12 +248,17 @@ function loadPosts(){
       const wa=document.createElement("button");
       wa.textContent="💬 WhatsApp";
       wa.className="waBtn";
-      wa.onclick=(e)=>{
-        e.stopPropagation();
-        const msg=`send by-ZARA FIX-Hello, I am interested in your Property (मुझे आप इसकी अधिक जानकारी दे
-) ${p.propertyType} (${p.bhk}) at ${p.address}, priced at ₹${p.price}.`;
-        window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`,"_blank");
-      };
+    wa.onclick = (e) => {
+  e.stopPropagation();
+  const msg = `🚑 Ambulance Service Inquiry\n\n` +
+              `Ambulance: ${p.AmbulenceName} (${p.AmbulenceType})\n` +
+              `Driver: ${p.DriverName}\n` +
+              `Address: ${p.address}\n` +
+              `Phone: ${p.posterPhone}\n\n` +
+              `Posted by: ${p.PosterName}`;
+  window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+};
+
       btnRow.appendChild(wa);
 
       if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
@@ -264,17 +286,23 @@ function loadPosts(){
 
       card.appendChild(btnRow);
 
-      card.onclick=()=>{ 
-        cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
-        cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
-          <p><b>Price:</b> ₹${p.price}</p>
-          <p><b>Address:</b> ${p.address}</p>
-          <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
-          <p><b>Phone:</b> ${p.posterPhone}</p>`;
-        if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
-        cardModal.style.display="flex";
-        document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
-      };
+  card.onclick=()=>{ 
+  cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+  cardContent.innerHTML+=`
+    <h2>${p.AmbulenceName} (${p.AmbulenceType})</h2>
+    <p><b>Driver:</b> ${p.DriverName}</p>
+    <p><b>Address:</b> ${p.address}</p>
+    <p><b>Phone:</b> ${p.posterPhone}</p>
+    <p><b>Posted by:</b> ${p.PosterName}</p>
+  `;
+  if(p.images){ 
+    p.images.forEach(u=>{ 
+      cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; 
+    }); 
+  }
+  cardModal.style.display="flex";
+  document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
+};
 
       postsDiv.appendChild(card);
     });
