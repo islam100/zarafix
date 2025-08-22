@@ -3,194 +3,207 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ZaraFix – Services</title>
-  <style>
-    body{font-family:sans-serif;background:#f2f2f2;margin:0;padding:0}
-    header{background:#333;color:#fff;padding:10px;text-align:center}
-    .btn{padding:8px 14px;margin:4px;border:none;border-radius:6px;cursor:pointer}
-    .btn-good{background:#4CAF50;color:#fff}
-    .btn-bad{background:#f44336;color:#fff}
-    .btn-neutral{background:#2196F3;color:#fff}
-    .card{background:#fff;margin:10px;padding:15px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:10px}
-    .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
-    .modal-content{background:#fff;padding:20px;border-radius:8px;width:90%;max-width:500px;max-height:90%;overflow:auto}
-    img.preview{max-width:100%;border-radius:8px;margin:5px 0}
-  </style>
+  <title>ZaraFix – Ambulance Service</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body>
-  <header>
-    <h2>ZaraFix – All Services</h2>
-    <button id="loginBtn" class="btn btn-neutral">Login</button>
-    <button id="logoutBtn" class="btn btn-bad" style="display:none;">Logout</button>
-    <button id="newPostBtn" class="btn btn-good">➕ New Post</button>
-  </header>
+<body class="bg-gray-100 min-h-screen">
 
-  <section id="posts" class="grid"></section>
-
-  <!-- Post Modal -->
-  <div id="postModal" class="modal">
-    <div class="modal-content">
-      <h3>New Post</h3>
-      <form id="postForm">
-        <input type="text" id="price" placeholder="Price" required><br>
-        <input type="text" id="bhk" placeholder="BHK / Service Detail" required><br>
-        <select id="ptype" required>
-          <option value="">-- Select Category --</option>
-          <option>Car</option>
-          <option>Bike</option>
-          <option>AC</option>
-          <option>Electrician</option>
-          <option>Plumber</option>
-          <option>Painter</option>
-          <option>Carpenter</option>
-        </select><br>
-        <input type="text" id="address" placeholder="Address" required><br>
-        <input type="text" id="phone" placeholder="Phone" required><br>
-        <select id="posterType" required>
-          <option value="Driver">Driver</option>
-          <option value="Shopkeeper">Shopkeeper</option>
-        </select><br>
-        <input type="file" id="images" multiple><br>
-        <button type="submit" class="btn btn-good">Submit Post</button>
-        <button type="button" onclick="postModal.style.display='none'" class="btn btn-bad">Cancel</button>
-      </form>
+  <!-- Header -->
+  <div class="p-4 flex justify-between bg-blue-600 text-white">
+    <h1 class="text-xl font-bold">🚑 ZaraFix Ambulance</h1>
+    <div>
+      <button id="loginBtn" class="px-3 py-1 bg-green-500 rounded">Login with Google</button>
+      <button id="logoutBtn" class="px-3 py-1 bg-red-500 rounded hidden">Logout</button>
     </div>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  <!-- New Post -->
+  <div class="p-4 text-center">
+    <button id="newPostBtn" class="px-4 py-2 bg-blue-500 text-white rounded">+ New Post</button>
+  </div>
+
+  <!-- Posts -->
+  <div id="postsContainer" class="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+  <!-- Modal -->
+  <div id="newPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded w-96 relative">
+      <h2 class="text-lg font-bold mb-4">Create New Post</h2>
+      <input id="ambulanceName" placeholder="Ambulance Name" class="border p-2 w-full mb-2"/>
+      <input id="ambulanceNumber" placeholder="Ambulance Number" class="border p-2 w-full mb-2"/>
+      <input id="driverName" placeholder="Driver Name" class="border p-2 w-full mb-2"/>
+      <input id="driverPhone" placeholder="Driver Phone" class="border p-2 w-full mb-2"/>
+      <input id="driverWhatsApp" placeholder="Driver WhatsApp" class="border p-2 w-full mb-2"/>
+      <input id="charges" placeholder="Charges" class="border p-2 w-full mb-2"/>
+      <input id="coverageArea" placeholder="Coverage Area" class="border p-2 w-full mb-2"/>
+      <input type="file" id="image" accept="image/*" class="mb-2"/>
+      <div class="flex justify-end gap-2">
+        <button id="closeModalBtn" class="px-3 py-1 bg-gray-400 rounded">Cancel</button>
+        <button id="submitPostBtn" class="px-3 py-1 bg-blue-600 text-white rounded">Submit</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const firebaseConfig={
-      apiKey:"YOUR_API_KEY",
-      authDomain:"YOUR_PROJECT.firebaseapp.com",
-      databaseURL:"https://YOUR_PROJECT.firebaseio.com",
-      projectId:"YOUR_PROJECT",
-      storageBucket:"YOUR_PROJECT.appspot.com",
-      messagingSenderId:"SENDER_ID",
-      appId:"APP_ID"
-    };
+    // Firebase config
+  const firebaseConfig = {
+  apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
+  authDomain: "ambulence-410c0.firebaseapp.com",
+  projectId: "ambulence-410c0",
+  storageBucket: "ambulence-410c0.appspot.com",
+  messagingSenderId: "970590198679",
+  appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
+};
+
+
     firebase.initializeApp(firebaseConfig);
-    const db=firebase.database(), auth=firebase.auth(), storage=firebase.storage();
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const storage = firebase.storage();
 
-    const postsEl=document.getElementById('posts'),
-          postModal=document.getElementById('postModal'),
-          postForm=document.getElementById('postForm'),
-          newPostBtn=document.getElementById('newPostBtn'),
-          loginBtn=document.getElementById('loginBtn'),
-          logoutBtn=document.getElementById('logoutBtn');
+    const ADMIN_EMAIL = "zarasamajiksevasansth@gmail.com";
+    let currentUser = null;
 
-    let currentUser=null;
+    // Elements
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const newPostBtn = document.getElementById("newPostBtn");
+    const newPostModal = document.getElementById("newPostModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const submitPostBtn = document.getElementById("submitPostBtn");
+    const postsContainer = document.getElementById("postsContainer");
 
-    auth.onAuthStateChanged(user=>{
-      currentUser=user;
-      if(user){
-        loginBtn.style.display='none';
-        logoutBtn.style.display='inline-block';
+    // Auth
+    loginBtn.onclick = async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    };
+
+    logoutBtn.onclick = () => auth.signOut();
+
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user) {
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
       } else {
-        loginBtn.style.display='inline-block';
-        logoutBtn.style.display='none';
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
       }
     });
 
-    loginBtn.onclick=()=>{auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());};
-    logoutBtn.onclick=()=>{auth.signOut();};
-
-    // ✅ New Post Button Login Check
-    newPostBtn.onclick=()=>{
-      if(!currentUser){
-        alert("⚠️ Please login first to create a post.");
+    // Modal
+    newPostBtn.onclick = () => {
+      if (!currentUser) {
+        alert("⚠️ Please login first to create a post!");
         return;
       }
-      postModal.style.display="flex";
+      newPostModal.classList.remove("hidden");
     };
+    closeModalBtn.onclick = () => newPostModal.classList.add("hidden");
 
-    // Upload images
-    async function uploadImages(files){
-      let urls=[];
-      for(let f of files){
-        let ref=storage.ref('images/'+Date.now()+'_'+f.name);
-        await ref.put(f);
-        urls.push(await ref.getDownloadURL());
-      }
-      return urls;
-    }
-
-    // ✅ Submit Post with Login Check
-    postForm.onsubmit=async e=>{
-      e.preventDefault();
-      if(!currentUser){
+    // Submit post
+    submitPostBtn.onclick = async () => {
+      if (!currentUser) {
         alert("⚠️ You must login before submitting a post.");
         return;
       }
-      const submitBtn=postForm.querySelector("button[type=submit]");
-      submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
 
-      const post={
-        price:document.getElementById('price').value,
-        bhk:document.getElementById('bhk').value,
-        propertyType:document.getElementById('ptype').value,
-        address:document.getElementById('address').value,
-        posterPhone:document.getElementById('phone').value,
-        posterType:document.getElementById('posterType').value,
-        posterName:currentUser.displayName,
-        posterUid:currentUser.uid,
-        status:"pending",
-        created:Date.now()
+      const ambulanceName = document.getElementById("ambulanceName").value;
+      const ambulanceNumber = document.getElementById("ambulanceNumber").value;
+      const driverName = document.getElementById("driverName").value;
+      const driverPhone = document.getElementById("driverPhone").value;
+      const driverWhatsApp = document.getElementById("driverWhatsApp").value;
+      const charges = document.getElementById("charges").value;
+      const coverageArea = document.getElementById("coverageArea").value;
+      const file = document.getElementById("image").files[0];
+
+      let imgUrl = "";
+      if (file) {
+        const storageRef = storage.ref("ambulance_images/" + Date.now() + "-" + file.name);
+        await storageRef.put(file);
+        imgUrl = await storageRef.getDownloadURL();
+      }
+
+      const postId = db.ref("ambulances").push().key;
+      const newPost = {
+        ambulanceName,
+        ambulanceNumber,
+        driverName,
+        driverPhone,
+        driverWhatsApp,
+        charges,
+        coverageArea,
+        imgUrl,
+        status: "pending",
+        ownerUid: currentUser.uid,  // ✅ save owner id
+        createdAt: firebase.database.ServerValue.TIMESTAMP
       };
 
-      const files=document.getElementById('images').files;
-      if(files.length>0) post.images=await uploadImages(files);
-
-      db.ref("posts").push(post,(err)=>{
-        if(err){ alert("❌ Error"); }
-        else{ 
-          alert("✅ Post submitted! Waiting for approval."); 
-          postForm.reset(); 
-          postModal.style.display="none"; 
-        }
-        submitBtn.disabled=false; submitBtn.textContent="Submit Post";
-      });
+      await db.ref("ambulances/" + postId).set(newPost);
+      alert("✅ Post submitted! Waiting for approval.");
+      newPostModal.classList.add("hidden");
     };
 
     // Load posts
-    db.ref("posts").on("value",snap=>{
-      postsEl.innerHTML='';
-      snap.forEach(cs=>{
-        const p=cs.val(); p.id=cs.key;
-        const card=document.createElement('div'); card.className='card';
+    db.ref("ambulances").on("value", snap => {
+      postsContainer.innerHTML = "";
+      snap.forEach(child => {
+        const id = child.key;
+        const post = child.val();
 
-        if(p.images && p.images.length>0){
-          let img=document.createElement('img');
-          img.src=p.images[0]; img.className='preview';
-          card.appendChild(img);
-        }
+        const card = document.createElement("div");
+        card.className = "bg-white shadow rounded p-4";
 
-        card.innerHTML+=`
-          <h3>${p.propertyType} - ${p.bhk}</h3>
-          <p><b>₹${p.price}</b></p>
-          <p>${p.address}</p>
-          <p>📞 ${p.posterPhone}</p>
-          <p>👤 ${p.posterName} (${p.posterType})</p>
-          <p>Status: ${p.status}</p>
+        card.innerHTML = `
+          ${post.imgUrl ? `<img src="${post.imgUrl}" class="w-full h-40 object-cover rounded mb-2"/>` : ""}
+          <h3 class="font-bold text-lg">${post.ambulanceName} - ${post.ambulanceNumber}</h3>
+          <p>👤 ${post.driverName} (${post.driverPhone})</p>
+          <p>💬 WhatsApp: ${post.driverWhatsApp}</p>
+          <p>₹ ${post.charges}</p>
+          <p>📍 ${post.coverageArea}</p>
+          <p>Status: ${post.status}</p>
         `;
 
-        const row=document.createElement('div');
-
-        // ✅ Delete Button only if login
-        if(currentUser && (currentUser.uid===p.posterUid || currentUser.email==="zarasamajiksevasansth@gmail.com")){
-          const del=document.createElement('button');
-          del.className='btn btn-bad'; del.textContent='🗑 Delete';
-          del.onclick=()=>{if(confirm("Delete this post?")) db.ref("posts/"+p.id).remove();};
-          row.appendChild(del);
+        // ✅ Delete button (only owner or admin)
+        if (
+          (currentUser && post.ownerUid === currentUser.uid) || 
+          (currentUser && currentUser.email === ADMIN_EMAIL)
+        ) {
+          const delBtn = document.createElement("button");
+          delBtn.innerHTML = "🗑 Delete";
+          delBtn.className = "mt-2 px-3 py-1 bg-red-500 text-white rounded";
+          delBtn.onclick = () => {
+            if (confirm("Are you sure you want to delete this post?")) {
+              db.ref("ambulances/" + id).remove();
+            }
+          };
+          card.appendChild(delBtn);
         }
 
-        card.appendChild(row);
-        postsEl.appendChild(card);
+        // ✅ Approve/Reject buttons (only admin)
+        if (currentUser && currentUser.email === ADMIN_EMAIL) {
+          const approveBtn = document.createElement("button");
+          approveBtn.innerHTML = "✅ Approve";
+          approveBtn.className = "ml-2 px-3 py-1 bg-green-500 text-white rounded";
+          approveBtn.onclick = () => db.ref("ambulances/" + id + "/status").set("approved");
+
+          const rejectBtn = document.createElement("button");
+          rejectBtn.innerHTML = "❌ Reject";
+          rejectBtn.className = "ml-2 px-3 py-1 bg-yellow-500 text-white rounded";
+          rejectBtn.onclick = () => db.ref("ambulances/" + id + "/status").set("rejected");
+
+          card.appendChild(approveBtn);
+          card.appendChild(rejectBtn);
+        }
+
+        postsContainer.appendChild(card);
       });
     });
   </script>
