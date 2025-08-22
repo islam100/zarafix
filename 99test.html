@@ -2,135 +2,191 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>🚑 Ambulance Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ambulance Portal</title>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    h1 { color: #333; }
-    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
-    #loginBtn { background: #007bff; color: #fff; }
-    #logoutBtn { background: red; color: #fff; display:none; }
-    #postForm { display:none; margin-bottom:20px; background:#fff; padding:15px; border-radius:8px; }
-    #listing { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:15px; }
-    .card { background:#fff; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
-    .card img { width:100%; border-radius:8px; margin-bottom:10px; }
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+    header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+             display:flex; align-items:center; justify-content:space-between;
+             padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
+    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+             box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+    .btn3d { background:#4CAF50; color:#fff; }
+    .btn3d:disabled { background:#999; box-shadow:none; }
+    .logoutBtn { background:#E53935; color:#fff; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
+    .waBtn { background:#25D366; color:#fff; }
+
+    /* Grid */
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:12px; padding:12px; }
+    .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+            padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px; }
+    .card:hover { transform:scale(1.02); }
+    .card img { width:100%; height:120px; object-fit:cover; border-radius:6px; }
+    .card h3 { margin:6px 0 3px; font-size:15px; }
+    .card p { margin:1px 0; font-size:13px; }
+
+    /* Pending Highlight */
+    .pending { background:#ffcdd2; border:2px solid #f44336;
+               animation: blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+
+    /* Modal */
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+             background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                     max-height:90%; overflow:auto; position:relative; font-size:14px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+
+    form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+    form input { width:100%; padding:5px; margin:3px 0 8px;
+                 border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🚑 Ambulance Portal</h1>
-    <div>
-      <button id="loginBtn">Login with Google</button>
-      <button id="logoutBtn">Logout</button>
-    </div>
-  </header>
-
-  <!-- Post form -->
-  <div id="postForm">
-    <h2>Post New Service</h2>
-    <input type="text" id="title" placeholder="Title"><br><br>
-    <input type="text" id="category" placeholder="Category"><br><br>
-    <input type="file" id="image"><br><br>
-    <button id="submitPost">Submit</button>
+<header>
+  <h1>🚑 Ambulance Portal</h1>
+  <div>
+    <button id="loginBtn" class="btn3d">Login</button>
+    <button id="logoutBtn" class="logoutBtn" style="display:none;">Logout</button>
+    <button id="newPostBtn" class="newPostBtn" style="display:none;">+ New Post</button>
   </div>
+</header>
 
-  <!-- Listings -->
-  <h2>Available Services</h2>
-  <div id="listing"></div>
+<main>
+  <div class="grid" id="posts"></div>
+</main>
 
-  <!-- Firebase + App -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Post Ambulance Service</h2>
+    <form id="postForm">
+      <label>Driver Name</label>
+      <input type="text" id="driver" required>
+      <label>Vehicle No</label>
+      <input type="text" id="vehicle" required>
+      <label>Location</label>
+      <input type="text" id="location" required>
+      <label>Phone</label>
+      <input type="tel" id="phone" required>
+      <label>Upload Image</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit</button>
+    </form>
+  </div>
+</div>
 
-  <script>
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
-      authDomain: "ambulence-410c0.firebaseapp.com",
-      projectId: "ambulence-410c0",
-      storageBucket: "ambulence-410c0.appspot.com",
-      messagingSenderId: "970590198679",
-      appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
+  authDomain: "ambulence-410c0.firebaseapp.com",
+  databaseURL: "https://ambulence-410c0-default-rtdb.firebaseio.com",
+  projectId: "ambulence-410c0",
+  storageBucket: "ambulence-410c0.appspot.com",
+  messagingSenderId: "970590198679",
+  appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+const imgbbKey="3aaba00e9c5a3a88955c9e5aebaeb5e5";
 
-    const imgbbKey = "3aaba00e9c5a3a88955c9e5aebaeb5e5";
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const postForm = document.getElementById("postForm");
-    const listing = document.getElementById("listing");
+let currentUser=null;
 
-    // Login
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    };
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
 
-    // Logout
-    logoutBtn.onclick = () => auth.signOut();
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
+  loadPosts();
+});
 
-    // Auth state
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        postForm.style.display = "block";  // Post only if logged in
-      } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        postForm.style.display = "none"; // Hide form if not logged in
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+
+// Upload Images to ImgBB
+async function uploadImages(files){
+  const urls=[];
+  for(let i=0;i<Math.min(5,files.length);i++){
+    const fd=new FormData();
+    fd.append("image",files[i]);
+    const r=await fetch("https://api.imgbb.com/1/upload?key="+imgbbKey,{method:"POST",body:fd});
+    const j=await r.json();
+    urls.push(j.data.url);
+  }
+  return urls;
+}
+
+// Submit Post
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Login first");
+
+  const post={
+    driver:document.getElementById('driver').value,
+    vehicle:document.getElementById('vehicle').value,
+    location:document.getElementById('location').value,
+    phone:document.getElementById('phone').value,
+    posterName:currentUser.displayName,
+    uid:currentUser.uid,
+    created:Date.now()
+  };
+
+  const files=document.getElementById('images').files;
+  if(files.length>0) post.images=await uploadImages(files);
+
+  db.ref("ambulances").push(post,(err)=>{
+    if(err) alert("Error saving post");
+    else { alert("✅ Post submitted!"); postForm.reset(); postModal.style.display="none"; }
+  });
+};
+
+// Load posts
+function loadPosts(){
+  db.ref("ambulances").orderByChild("created").on("value",snap=>{
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>arr.push({...ch.val(), id:ch.key}));
+    arr.reverse();
+    arr.forEach(p=>{
+      const card=document.createElement("div");
+      card.className="card";
+      if(p.images && p.images.length){
+        const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
       }
+      const h3=document.createElement("h3"); h3.textContent=p.driver+" - "+p.vehicle; card.appendChild(h3);
+      const loc=document.createElement("p"); loc.textContent="📍 "+p.location; card.appendChild(loc);
+      const ph=document.createElement("p"); ph.textContent="📞 "+p.phone; card.appendChild(ph);
+      postsDiv.appendChild(card);
     });
-
-    // Submit Post
-    document.getElementById("submitPost").onclick = async () => {
-      const title = document.getElementById("title").value;
-      const category = document.getElementById("category").value;
-      const file = document.getElementById("image").files[0];
-
-      if (!title || !category || !file) {
-        alert("Fill all fields");
-        return;
-      }
-
-      // Upload to ImgBB
-      let formData = new FormData();
-      formData.append("image", file);
-
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
-        method: "POST",
-        body: formData
-      });
-      const data = await res.json();
-      const imageUrl = data.data.url;
-
-      // Save to Firestore
-      await db.collection("posts").add({
-        title, category, imageUrl,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      alert("Posted successfully!");
-    };
-
-    // Show all listings (everyone can see)
-    db.collection("posts").orderBy("createdAt","desc").onSnapshot(snapshot => {
-      listing.innerHTML = "";
-      snapshot.forEach(doc => {
-        const p = doc.data();
-        listing.innerHTML += `
-          <div class="card">
-            <img src="${p.imageUrl}" alt="">
-            <h3>${p.title}</h3>
-            <p>${p.category}</p>
-          </div>
-        `;
-      });
-    });
-  </script>
+  });
+}
+</script>
 </body>
 </html>
