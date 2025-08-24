@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,21 +12,20 @@
   body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
   header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
            display:flex; align-items:center; justify-content:space-between;
-           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; }
-  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; text-align:center; flex:1; }
+  header .buttons { display:flex; gap:8px; align-items:center; }
   button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
            box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
   .btn3d { background:#4CAF50; color:#fff; }
   .btn3d:disabled { background:#999; box-shadow:none; }
   .logoutBtn { background:#E53935; color:#fff; }
-  .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
-  .waBtn { background:#25D366; color:#fff; }
-  main { padding:80px 12px 12px; } /* shift down for fixed header */
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-          gap:12px; }
+  .newPostBtn { background:#2563eb; color:#fff; }
+  main { padding:130px 12px 12px; } /* shift down for fixed header */
+  #categoryFilter { padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; margin:20px auto; display:block; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
   .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
-          padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px;
-          border:2px solid red; }
+          padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px; border:2px solid red; }
   .card:hover { transform:scale(1.02); }
   .card img { width:100%; max-height:150px; object-fit:contain; border-radius:6px; display:block; margin:0 auto; }
   .card h3 { margin:6px 0 3px; font-size:15px; }
@@ -46,38 +44,28 @@
 </head>
 <body>
 
-<header style="display:flex; align-items:center; padding:10px 20px; background-color:#f3f4f6; flex-wrap:wrap; justify-content:space-between;">
-  
-  <!-- Left Buttons -->
-  <div style="display:flex; gap:8px; align-items:center;">
-    <a href="index.html">
-      <button style="background-color:blue; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-        Home
-      </button>
-    </a>
-    <button id="loginBtn" style="background-color:#4ade80; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      🔑 Login
-    </button>
+<header>
+  <div class="buttons">
+    <a href="index.html"><button class="btn3d" style="background:blue;">Home</button></a>
+    <button id="loginBtn" class="btn3d" style="background:#4ade80;">🔑 Login</button>
   </div>
-
-  <!-- Center Heading -->
-  <h1 style="font-size:20px; font-weight:bold; margin:0; text-align:center; flex:1;">
-    All Service
-  </h1>
-
-  <!-- Right Buttons -->
-  <div style="display:flex; gap:8px; align-items:center;">
-    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      + New Post
-    </button>
-    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      Logout
-    </button>
+  <h1>All Service</h1>
+  <div class="buttons">
+    <button id="newPostBtn" class="newPostBtn" style="display:none;">+ New Post</button>
+    <button id="logoutBtn" class="logoutBtn" style="display:none;">Logout</button>
   </div>
-
 </header>
 
-
+<!-- Category Dropdown -->
+<select id="categoryFilter">
+  <option value="">All Categories</option>
+  <option value="Car">Car</option>
+  <option value="Bike">Bike</option>
+  <option value="AC">AC / Refrigerator</option>
+  <option value="Electrician">Electrician</option>
+  <option value="Plumber">Plumber</option>
+  <option value="Others">Others</option>
+</select>
 
 <main>
   <div class="grid" id="posts"></div>
@@ -158,11 +146,13 @@ function loadPosts(){
     snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
     arr.reverse();
     arr.forEach(p=>{
-      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} else {
-        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
-      }
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} 
+      else { if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return; }
+
       const card=document.createElement("div"); 
       card.className="card";
+      card.setAttribute("data-category", p.posterType || "Others"); // category for filter
+
       if(p.status==="pending") card.classList.add("pending");
       if(p.status==="rejected") card.style.background="#ffe0b2";
       if(p.images && p.images.length) { const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
@@ -175,7 +165,19 @@ function loadPosts(){
     });
   });
 }
-</script>
 
+// Category filter
+const categoryFilter = document.getElementById('categoryFilter');
+categoryFilter.addEventListener('change', filterPosts);
+
+function filterPosts() {
+  const selectedCategory = categoryFilter.value;
+  const cards = postsDiv.querySelectorAll('.card');
+  cards.forEach(card => {
+    const category = card.getAttribute('data-category');
+    card.style.display = (selectedCategory === '' || category === selectedCategory) ? 'block' : 'none';
+  });
+}
+</script>
 </body>
 </html>
