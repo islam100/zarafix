@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,18 +12,16 @@
   body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
   header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
            display:flex; align-items:center; justify-content:space-between;
-           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; }
-  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; flex:1; text-align:center; }
   button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
            box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
   .btn3d { background:#4CAF50; color:#fff; }
   .btn3d:disabled { background:#999; box-shadow:none; }
   .logoutBtn { background:#E53935; color:#fff; }
   .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
-  .waBtn { background:#25D366; color:#fff; }
-  main { padding:80px 12px 12px; } /* shift down for fixed header */
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-          gap:12px; }
+  main { padding:140px 12px 12px; } /* header + filter bar */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
   .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
           padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px;
           border:2px solid red; }
@@ -42,43 +38,42 @@
   .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
   form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
   form input, form select { width:100%; padding:5px; margin:3px 0 8px; border:1px solid #ccc; border-radius:6px; font-size:13px; }
-  .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
+  .filter-bar { position:fixed; top:60px; width:100%; background:#fff; padding:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); z-index:900; display:flex; gap:10px; flex-wrap:wrap; }
+  .filter-bar select, .filter-bar input { padding:6px; border:1px solid #ccc; border-radius:5px; font-size:13px; }
 </style>
 </head>
 <body>
 
-<header style="display:flex; align-items:center; padding:10px 20px; background-color:#f3f4f6; flex-wrap:wrap; justify-content:space-between;">
-  
-  <!-- Left Buttons -->
+<header>
+  <!-- Left -->
   <div style="display:flex; gap:8px; align-items:center;">
     <a href="index.html">
-      <button style="background-color:blue; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-        Home
-      </button>
+      <button style="background-color:blue; color:white;">Home</button>
     </a>
-    <button id="loginBtn" style="background-color:#4ade80; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      🔑 Login
-    </button>
+    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
   </div>
-
-  <!-- Center Heading -->
-  <h1 style="font-size:20px; font-weight:bold; margin:0; text-align:center; flex:1;">
-    All Service
-  </h1>
-
-  <!-- Right Buttons -->
+  <!-- Center -->
+  <h1>All Service</h1>
+  <!-- Right -->
   <div style="display:flex; gap:8px; align-items:center;">
-    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      + New Post
-    </button>
-    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
-      Logout
-    </button>
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
   </div>
-
 </header>
 
-
+<!-- Filter bar -->
+<div class="filter-bar">
+  <select id="categoryFilter">
+    <option value="">All Categories</option>
+  <option value="Mobile">Mobile</option>   <option value="Car">Car</option>
+    <option value="Bike">Bike</option>
+    <option value="AC">AC / Refrigerator</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Others">Others</option>
+  </select>
+  <input type="text" id="searchBox" placeholder="🔍 Search by name, address, phone...">
+</div>
 
 <main>
   <div class="grid" id="posts"></div>
@@ -108,15 +103,13 @@
         <option value="Plumber">Plumber</option>
         <option value="Others">Others</option>
       </select>
-      <label>Images (max 5)</label>
-      <input type="file" id="images" accept="image/*" multiple>
       <button type="submit" class="btn3d">Submit Post</button>
     </form>
   </div>
 </div>
 
 <script>
-// Firebase initialization
+// Firebase init
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -134,10 +127,12 @@ const logoutBtn=document.getElementById('logoutBtn');
 const newPostBtn=document.getElementById('newPostBtn');
 const postModal=document.getElementById('postModal');
 const closeForm=document.getElementById('closeForm');
-const postForm=document.getElementById('postForm');
 const postsDiv=document.getElementById('posts');
+const categoryFilter=document.getElementById('categoryFilter');
+const searchBox=document.getElementById('searchBox');
 
 let currentUser=null;
+let allPosts=[];
 
 loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
 logoutBtn.onclick=()=>auth.signOut();
@@ -154,29 +149,40 @@ auth.onAuthStateChanged(u=>{
 
 function loadPosts(){
   db.ref("services").orderByChild("created").on("value",snap=>{
-    postsDiv.innerHTML="";
-    const arr=[];
-    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
-    arr.reverse();
-    arr.forEach(p=>{
-      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} else {
-        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
-      }
-      const card=document.createElement("div"); 
-      card.className="card";
-      if(p.status==="pending") card.classList.add("pending");
-      if(p.status==="rejected") card.style.background="#ffe0b2";
-      if(p.images && p.images.length) { const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
-      const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
-      const owner=document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
-      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
-      const ph=document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
-      const cat=document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
-      postsDiv.appendChild(card);
-    });
+    allPosts=[];
+    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
+    allPosts.reverse();
+    renderPosts();
   });
 }
-</script>
 
+function renderPosts(){
+  const selected=categoryFilter.value.toLowerCase();
+  const search=searchBox.value.toLowerCase();
+  postsDiv.innerHTML="";
+  allPosts.forEach(p=>{
+    if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){
+      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+    }
+    if(selected && p.posterType.toLowerCase()!==selected) return;
+    const text=(p.shopName+" "+p.ownerName+" "+p.address+" "+p.whatsapp).toLowerCase();
+    if(search && !text.includes(search)) return;
+
+    const card=document.createElement("div");
+    card.className="card";
+    if(p.status==="pending") card.classList.add("pending");
+    if(p.images && p.images.length){ const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
+    const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+    card.appendChild(document.createElement("p")).textContent="👤 "+p.ownerName;
+    card.appendChild(document.createElement("p")).textContent=p.address;
+    card.appendChild(document.createElement("p")).textContent="📞 "+p.whatsapp;
+    card.appendChild(document.createElement("p")).textContent="📌 "+p.posterType;
+    postsDiv.appendChild(card);
+  });
+}
+
+categoryFilter.addEventListener("change",renderPosts);
+searchBox.addEventListener("input",renderPosts);
+</script>
 </body>
 </html>
