@@ -1,176 +1,163 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>All Service Provider</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Fix - All Services</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<style>
+  body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+  header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+           display:flex; align-items:center; justify-content:space-between;
+           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; flex:1; text-align:center; }
+  button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+           box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+  .btn3d { background:#4CAF50; color:#fff; }
+  .btn3d:disabled { background:#999; box-shadow:none; }
+  .logoutBtn { background:#E53935; color:#fff; }
+  .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
+  main { padding:120px 12px 12px; } /* header + filter */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+          gap:12px; }
+  .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+          padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px;
+          border:2px solid red; }
+  .card:hover { transform:scale(1.02); }
+  .card img { width:100%; max-height:150px; object-fit:contain; border-radius:6px; display:block; margin:0 auto; }
+  .card h3 { margin:6px 0 3px; font-size:15px; }
+  .card p { margin:1px 0; font-size:13px; }
+  .pending { background:#ffcdd2; border:2px solid #f44336; animation: blinkBorder 1s infinite; }
+  @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+  .filter-bar { margin-top:70px; padding:10px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1); position:fixed; top:50px; width:100%; z-index:999; display:flex; gap:10px; flex-wrap:wrap; }
+  .filter-bar select, .filter-bar input { padding:6px; border:1px solid #ccc; border-radius:5px; font-size:14px; }
+</style>
 </head>
-<body class="bg-gray-100">
+<body>
 
-<div class="container mx-auto p-4">
-
-  <!-- Header / Login -->
-  <div id="login-section" class="flex justify-end mb-4">
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
-    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Logout</button>
+<header>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <a href="index.html">
+      <button style="background-color:blue; color:white;">Home</button>
+    </a>
+    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
   </div>
 
-  <!-- Admin / New Post Button -->
-  <div id="admin-section" class="mb-4 hidden">
-    <button id="newPostBtn" class="bg-green-500 text-white px-4 py-2 rounded">New Post</button>
+  <h1>All Service</h1>
+
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
   </div>
+</header>
 
-  <!-- Search & Category -->
-  <div class="flex flex-wrap gap-2 mb-4">
-    <input type="text" id="searchBox" placeholder="Search..." class="border rounded-md px-2 py-1 text-sm w-40">
-    <select id="categoryFilter" class="border rounded-md px-2 py-1 text-sm w-28">
-      <option value="">All</option>
-      <option value="news">News</option>
-      <option value="sports">Sports</option>
-      <option value="tech">Tech</option>
-    </select>
-  </div>
+<!-- Filter & Search -->
+<div class="filter-bar">
+  <select id="categoryFilter">
+    <option value="">All Categories</option>
+    <option value="Car">Car</option>
+    <option value="Bike">Bike</option>
+    <option value="AC">AC / Refrigerator</option>
+    <option value="Electrician">Electrician</option>
+    <option value="Plumber">Plumber</option>
+    <option value="Others">Others</option>
+  </select>
 
-  <!-- Posts List -->
-  <div id="postsList" class="grid md:grid-cols-3 gap-4"></div>
-
-  <!-- New Post Modal -->
-  <div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white p-6 rounded shadow w-full max-w-md">
-      <h2 class="text-lg font-bold mb-4">New Post</h2>
-      <input type="text" id="postShop" placeholder="Shop Name" class="border p-2 mb-2 w-full">
-      <input type="text" id="postOwner" placeholder="Owner Name" class="border p-2 mb-2 w-full">
-      <input type="text" id="postCategory" placeholder="Category (news/sports/tech)" class="border p-2 mb-2 w-full">
-      <input type="text" id="postWhatsApp" placeholder="WhatsApp" class="border p-2 mb-2 w-full">
-      <input type="text" id="postAddress" placeholder="Address" class="border p-2 mb-2 w-full">
-      <input type="text" id="postImage" placeholder="Image URL" class="border p-2 mb-2 w-full">
-      <div class="flex justify-end gap-2">
-        <button id="closeModal" class="bg-gray-400 px-4 py-2 rounded">Close</button>
-        <button id="savePost" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
-      </div>
-    </div>
-  </div>
-
+  <input type="text" id="searchBox" placeholder="🔍 Search by name, address, phone..." />
 </div>
 
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
 <script>
-// Firebase config
+// Firebase initialization
 const firebaseConfig = {
-  apiKey: "AIzaSyCH17_8W_UPmPt4KqpCaV7BpN6KsA4a67E",
-  authDomain: "zara-fix.firebaseapp.com",
-  databaseURL: "https://zara-fix-default-rtdb.firebaseio.com",
-  projectId: "zara-fix",
-  storageBucket: "zara-fix.appspot.com",
-  messagingSenderId: "476473209200",
-  appId: "1:476473209200:web:9f6efe6c32fd4248949fb5"
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+const auth=firebase.auth();
+const db=firebase.database();
 
-// Elements
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const adminSection = document.getElementById('admin-section');
-const newPostBtn = document.getElementById('newPostBtn');
-const postModal = document.getElementById('postModal');
-const closeModal = document.getElementById('closeModal');
-const savePost = document.getElementById('savePost');
-const postsList = document.getElementById('postsList');
-const searchBox = document.getElementById('searchBox');
-const categoryFilter = document.getElementById('categoryFilter');
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postsDiv=document.getElementById('posts');
+const categoryFilter=document.getElementById('categoryFilter');
+const searchBox=document.getElementById('searchBox');
 
-// Auth
-loginBtn.addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
+let currentUser=null;
+let allPosts=[];
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+newPostBtn.onclick=()=>alert("New Post Modal Open (आपका code यहाँ आएगा)"); // modal आप पहले से लगा चुके हैं
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  loginBtn.style.display = u ? "none" : "inline-block";
+  logoutBtn.style.display = u ? "inline-block" : "none";
+  newPostBtn.style.display = u ? "inline-block" : "none";
+  loadPosts();
 });
 
-logoutBtn.addEventListener('click', () => auth.signOut());
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    loginBtn.classList.add('hidden');
-    logoutBtn.classList.remove('hidden');
-    if(user.email === 'zarasamajiksevasanstha@gmail.com') adminSection.classList.remove('hidden');
-  }else{
-    loginBtn.classList.remove('hidden');
-    logoutBtn.classList.add('hidden');
-    adminSection.classList.add('hidden');
-  }
-  renderPosts();
-});
-
-// Modal
-newPostBtn.addEventListener('click', () => postModal.classList.remove('hidden'));
-closeModal.addEventListener('click', () => postModal.classList.add('hidden'));
-
-// Save Post
-savePost.addEventListener('click', () => {
-  const shopName = document.getElementById('postShop').value;
-  const ownerName = document.getElementById('postOwner').value;
-  const category = document.getElementById('postCategory').value;
-  const whatsapp = document.getElementById('postWhatsApp').value;
-  const address = document.getElementById('postAddress').value;
-  const image = document.getElementById('postImage').value;
-  const uid = auth.currentUser.uid;
-
-  if(!shopName || !ownerName) return alert('Enter required fields');
-
-  db.ref('services').push({
-    shopName, ownerName, category, whatsapp, address,
-    images: [image],
-    posterUid: uid,
-    status: 'pending',
-    created: Date.now()
-  }).then(() => {
-    alert('Post saved!');
-    postModal.classList.add('hidden');
+function loadPosts(){
+  db.ref("services").orderByChild("created").on("value",snap=>{
+    allPosts=[];
+    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
+    allPosts.reverse();
     renderPosts();
-  });
-});
-
-// Render Posts
-function renderPosts(){
-  db.ref('services').once('value', snapshot => {
-    const data = snapshot.val() || {};
-    const postsArr = Object.keys(data).map(key => ({ id:key, ...data[key] }));
-    const search = searchBox.value.toLowerCase();
-    const cat = categoryFilter.value;
-
-    postsList.innerHTML = '';
-    postsArr.forEach(p=>{
-      if(search && !p.shopName.toLowerCase().includes(search) && !p.ownerName.toLowerCase().includes(search)) return;
-      if(cat && p.category !== cat) return;
-      // show approved posts or admin's own posts
-      if(auth.currentUser?.email!=='zarasamajiksevasanstha@gmail.com'){
-        if(p.status!=='approved' && p.posterUid !== auth.currentUser.uid) return;
-      }
-
-      const card = document.createElement('div');
-      card.className = 'bg-white p-4 rounded shadow';
-      card.innerHTML = `
-        <h3 class="font-bold text-lg">${p.shopName}</h3>
-        <p>${p.ownerName}</p>
-        <p>${p.category}</p>
-        <p>${p.address}</p>
-        <p>${p.whatsapp}</p>
-        ${p.images ? `<img src="${p.images[0]}" class="w-full mt-2">` : ''}
-        <p>Status: ${p.status}</p>
-      `;
-      postsList.appendChild(card);
-    });
   });
 }
 
-// Search / Category
-searchBox.addEventListener('input', renderPosts);
-categoryFilter.addEventListener('change', renderPosts);
-</script>
+function renderPosts(){
+  const selected = categoryFilter.value.toLowerCase();
+  const searchText = searchBox.value.toLowerCase();
+  postsDiv.innerHTML="";
 
+  allPosts.forEach(p=>{
+    // Permission check
+    if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){
+      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+    }
+
+    // Category filter
+    if(selected && p.posterType.toLowerCase()!==selected) return;
+
+    // Search filter
+    const text = (p.shopName+" "+p.ownerName+" "+p.address+" "+p.whatsapp).toLowerCase();
+    if(searchText && !text.includes(searchText)) return;
+
+    // Card create
+    const card=document.createElement("div"); 
+    card.className="card";
+    if(p.status==="pending") card.classList.add("pending");
+    if(p.status==="rejected") card.style.background="#ffe0b2";
+
+    if(p.images && p.images.length){
+      const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
+    }
+    const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+    card.appendChild(document.createElement("p")).textContent="👤 "+p.ownerName;
+    card.appendChild(document.createElement("p")).textContent=p.address;
+    card.appendChild(document.createElement("p")).textContent="📞 "+p.whatsapp;
+    card.appendChild(document.createElement("p")).textContent="📌 "+p.posterType;
+    postsDiv.appendChild(card);
+  });
+}
+
+// Event listeners
+categoryFilter.addEventListener("change", renderPosts);
+searchBox.addEventListener("input", renderPosts);
+</script>
 </body>
 </html>
