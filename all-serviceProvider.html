@@ -201,18 +201,19 @@ postForm.onsubmit=async e=>{
   const submitBtn=postForm.querySelector("button[type=submit]");
   submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
 
-  const post={
-    price:document.getElementById('price').value,
-   
-    productType:document.getElementById('ptype').value,
-    address:document.getElementById('address').value,
-    posterPhone:document.getElementById('phone').value,
-    posterType:document.getElementById('posterType').value,
-    posterName:currentUser.displayName,
-    posterUid:currentUser.uid,
-    status:"pending",
-    created:Date.now()
-  };
+const post={
+  price:document.getElementById('price').value,
+  discount:document.getElementById('Discount').value,   // ✅ Add this line
+  productType:document.getElementById('ptype').value,
+  address:document.getElementById('address').value,
+  posterPhone:document.getElementById('phone').value,
+  posterType:document.getElementById('posterType').value,
+  posterName:currentUser.displayName,
+  posterUid:currentUser.uid,
+  status:"pending",
+  created:Date.now()
+};
+
   const files=document.getElementById('images').files;
   if(files.length>0) post.images=await uploadImages(files);
 
@@ -247,7 +248,7 @@ function renderPosts(){
     }
 
     if(category && p.posterType!==category) return;
-    if(keyword && !(p.propertyType?.toLowerCase().includes(keyword) ||
+    if(keyword && !(p.productType?.toLowerCase().includes(keyword) ||
                   
                     p.address?.toLowerCase().includes(keyword) ||
                     p.posterName?.toLowerCase().includes(keyword))) return;
@@ -260,14 +261,14 @@ function renderPosts(){
     if(p.images && p.images.length){
       const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
     }
-    card.innerHTML+=`
+   card.innerHTML+=`
+  <p>₹${p.price} <span style="color:green;">(Discount: ${p.discount})</span></p>
+  <p>${p.address}</p>
+  <p>📞 ${p.posterPhone}</p>
+  <p>👤 ${p.posterName} (${p.posterType})</p>
+  <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending Approval"}</p>
+`;
 
-      <p>₹${p.price}</p>
-      <p>${p.address}</p>
-      <p>📞 ${p.posterPhone}</p>
-      <p>👤 ${p.posterName} (${p.posterType})</p>
-      <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending Approval"}</p>
-    `;
 
     const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
@@ -276,7 +277,8 @@ function renderPosts(){
     wa.className="waBtn";
     wa.onclick=(e)=>{
       e.stopPropagation();
-      const msg=`send by-ZARA FIX-Hello, I am interested in your Property ${p.propertyType} (${p.bhk}) at ${p.address}, priced at ₹${p.price}.`;
+    const msg=`send by-ZARA FIX - Hello, I am interested in your Product ${p.productType} at ${p.address}, priced at ₹${p.price}.`;
+
       window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`,"_blank");
     };
     btnRow.appendChild(wa);
@@ -302,21 +304,27 @@ function renderPosts(){
     }
 
     card.appendChild(btnRow);
-    card.onclick=()=>{ 
-      cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
-      cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
-        <p><b>Price:</b> ₹${p.price}</p>
-        <p><b>Address:</b> ${p.address}</p>
-        <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
-        <p><b>Phone:</b> ${p.posterPhone}</p>`;
-      if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
-      cardModal.style.display="flex";
-      document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
-    };
+card.onclick=()=>{ 
+  cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+  cardContent.innerHTML+=`
+    <h2>${p.productType}</h2>
+    <p><b>Price:</b> ₹${p.price} <span style="color:green;">(Discount: ${p.discount})</span></p>
+    <p><b>Address:</b> ${p.address}</p>
+    <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
+    <p><b>Phone:</b> ${p.posterPhone}</p>
+  `;
 
-    postsDiv.appendChild(card);
-  });
-}
+  // ✅ agar images hain to modal me show karo
+  if(p.images){
+    p.images.forEach(u=>{
+      cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;border-radius:8px;">`;
+    });
+  }
+
+  cardModal.style.display="flex";
+  document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
+};
+
 
 // search events
 searchInput.addEventListener("input",renderPosts);
