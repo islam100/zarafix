@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,15 +14,16 @@
   body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
   header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
            display:flex; align-items:center; justify-content:space-between;
-           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; flex-wrap:wrap; }
-  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; flex:1; text-align:center; }
+           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; }
+  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
   button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
            box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
   .btn3d { background:#4CAF50; color:#fff; }
   .btn3d:disabled { background:#999; box-shadow:none; }
   .logoutBtn { background:#E53935; color:#fff; }
   .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
-  main { padding:120px 12px 12px; } /* header + filter */
+  .waBtn { background:#25D366; color:#fff; }
+  main { padding:80px 12px 12px; } /* shift down for fixed header */
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
           gap:12px; }
   .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
@@ -33,46 +35,85 @@
   .card p { margin:1px 0; font-size:13px; }
   .pending { background:#ffcdd2; border:2px solid #f44336; animation: blinkBorder 1s infinite; }
   @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
-  .filter-bar { margin-top:70px; padding:10px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,0.1); position:fixed; top:50px; width:100%; z-index:999; display:flex; gap:10px; flex-wrap:wrap; }
-  .filter-bar select, .filter-bar input { padding:6px; border:1px solid #ccc; border-radius:5px; font-size:14px; }
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+           background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+  .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                   max-height:90%; overflow:auto; position:relative; font-size:14px; }
+  .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+  form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+  form input, form select { width:100%; padding:5px; margin:3px 0 8px; border:1px solid #ccc; border-radius:6px; font-size:13px; }
+  .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
 </style>
 </head>
 <body>
 
-<header>
+<header style="display:flex; align-items:center; padding:10px 20px; background-color:#f3f4f6; flex-wrap:wrap; justify-content:space-between;">
+  
+  <!-- Left Buttons -->
   <div style="display:flex; gap:8px; align-items:center;">
     <a href="index.html">
-      <button style="background-color:blue; color:white;">Home</button>
+      <button style="background-color:blue; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+        Home
+      </button>
     </a>
-    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
+    <button id="loginBtn" style="background-color:#4ade80; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      🔑 Login
+    </button>
   </div>
 
-  <h1>All Service</h1>
+  <!-- Center Heading -->
+  <h1 style="font-size:20px; font-weight:bold; margin:0; text-align:center; flex:1;">
+    All Service
+  </h1>
 
+  <!-- Right Buttons -->
   <div style="display:flex; gap:8px; align-items:center;">
-    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
-    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      + New Post
+    </button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      Logout
+    </button>
   </div>
+
 </header>
 
-<!-- Filter & Search -->
-<div class="filter-bar">
-  <select id="categoryFilter">
-    <option value="">All Categories</option>
-    <option value="Car">Car</option>
-    <option value="Bike">Bike</option>
-    <option value="AC">AC / Refrigerator</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Others">Others</option>
-  </select>
 
-  <input type="text" id="searchBox" placeholder="🔍 Search by name, address, phone..." />
-</div>
 
 <main>
   <div class="grid" id="posts"></div>
 </main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Add New Service</h2>
+    <form id="postForm">
+      <label>Shop Name</label>
+      <input type="text" id="shopName" required>
+      <label>Owner Name</label>
+      <input type="text" id="ownerName" required>
+      <label>Address</label>
+      <input type="text" id="address" required>
+      <label>Whatsapp</label>
+      <input type="tel" id="whatsapp" required>
+      <label>Category</label>
+      <select id="posterType" required>
+        <option value="">-- Select Category --</option>
+        <option value="Car">Car</option>
+        <option value="Bike">Bike</option>
+        <option value="AC">AC / Refrigerator</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+        <option value="Others">Others</option>
+      </select>
+      <label>Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit Post</button>
+    </form>
+  </div>
+</div>
 
 <script>
 // Firebase initialization
@@ -91,67 +132,17 @@ const db=firebase.database();
 const loginBtn=document.getElementById('loginBtn');
 const logoutBtn=document.getElementById('logoutBtn');
 const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
 const postsDiv=document.getElementById('posts');
-const categoryFilter=document.getElementById('categoryFilter');
-const searchBox=document.getElementById('searchBox');
 
 let currentUser=null;
-let allPosts=[];
 
 loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
 logoutBtn.onclick=()=>auth.signOut();
-newPostBtn.onclick=()=>alert("<!-- New Post Button -->
-<button id="openPostModal" class="bg-blue-600 text-white px-4 py-2 rounded-md">New Post</button>
-
-<!-- Modal -->
-<div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-  <div class="bg-white rounded-lg shadow-lg p-6 w-96">
-    <h2 class="text-xl font-semibold mb-4">नई पोस्ट बनाएँ</h2>
-    
-    <form id="postForm" class="space-y-3">
-      <input type="text" id="postTitle" placeholder="शीर्षक" class="w-full border px-3 py-2 rounded-md" required>
-      <textarea id="postContent" placeholder="पोस्ट का विवरण" class="w-full border px-3 py-2 rounded-md" required></textarea>
-      
-      <div class="flex justify-end space-x-2">
-        <button type="button" id="closePostModal" class="px-3 py-2 bg-gray-400 text-white rounded-md">Cancel</button>
-        <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded-md">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-  const openBtn = document.getElementById("openPostModal");
-  const closeBtn = document.getElementById("closePostModal");
-  const postModal = document.getElementById("postModal");
-
-  // Open Modal
-  openBtn.addEventListener("click", () => {
-    postModal.classList.remove("hidden");
-    postModal.classList.add("flex");
-  });
-
-  // Close Modal
-  closeBtn.addEventListener("click", () => {
-    postModal.classList.add("hidden");
-  });
-
-  // Save Post
-  document.getElementById("postForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const title = document.getElementById("postTitle").value;
-    const content = document.getElementById("postContent").value;
-
-    alert("नई पोस्ट सेव हुई:\n" + title + "\n" + content);
-
-    // 🔹 यहाँ Firebase API लगानी है ताकि पोस्ट database में save हो
-    // firebase.database().ref("posts").push({title, content});
-
-    postModal.classList.add("hidden");
-    e.target.reset();
-  });
-</script>
-"); // modal आप पहले से लगा चुके हैं
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
 
 auth.onAuthStateChanged(u=>{
   currentUser=u;
@@ -163,52 +154,29 @@ auth.onAuthStateChanged(u=>{
 
 function loadPosts(){
   db.ref("services").orderByChild("created").on("value",snap=>{
-    allPosts=[];
-    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
-    allPosts.reverse();
-    renderPosts();
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse();
+    arr.forEach(p=>{
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status==="pending") card.classList.add("pending");
+      if(p.status==="rejected") card.style.background="#ffe0b2";
+      if(p.images && p.images.length) { const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
+      const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+      const owner=document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
+      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
+      const ph=document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
+      const cat=document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
+      postsDiv.appendChild(card);
+    });
   });
 }
-
-function renderPosts(){
-  const selected = categoryFilter.value.toLowerCase();
-  const searchText = searchBox.value.toLowerCase();
-  postsDiv.innerHTML="";
-
-  allPosts.forEach(p=>{
-    // Permission check
-    if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){
-      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
-    }
-
-    // Category filter
-    if(selected && p.posterType.toLowerCase()!==selected) return;
-
-    // Search filter
-    const text = (p.shopName+" "+p.ownerName+" "+p.address+" "+p.whatsapp).toLowerCase();
-    if(searchText && !text.includes(searchText)) return;
-
-    // Card create
-    const card=document.createElement("div"); 
-    card.className="card";
-    if(p.status==="pending") card.classList.add("pending");
-    if(p.status==="rejected") card.style.background="#ffe0b2";
-
-    if(p.images && p.images.length){
-      const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
-    }
-    const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
-    card.appendChild(document.createElement("p")).textContent="👤 "+p.ownerName;
-    card.appendChild(document.createElement("p")).textContent=p.address;
-    card.appendChild(document.createElement("p")).textContent="📞 "+p.whatsapp;
-    card.appendChild(document.createElement("p")).textContent="📌 "+p.posterType;
-    postsDiv.appendChild(card);
-  });
-}
-
-// Event listeners
-categoryFilter.addEventListener("change", renderPosts);
-searchBox.addEventListener("input", renderPosts);
 </script>
+
 </body>
 </html>
