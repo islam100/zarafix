@@ -1,115 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
-<title>All Service Provider</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<title>ZaraFix All Services</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
-  header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
-           display:flex; align-items:center; justify-content:space-between;
-           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; flex-wrap:wrap; }
-  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; flex:1; text-align:center; }
-  button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
-           box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
-  .btn3d { background:#4CAF50; color:#fff; }
-  .btn3d:disabled { background:#999; box-shadow:none; }
-  .logoutBtn { background:#E53935; color:#fff; }
-  .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
-  main { padding:140px 12px 12px; } /* header + filter bar */
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-  .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
-          padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px;
-          border:2px solid red; }
-  .card:hover { transform:scale(1.02); }
-  .card img { width:100%; max-height:150px; object-fit:contain; border-radius:6px; display:block; margin:0 auto; }
-  .card h3 { margin:6px 0 3px; font-size:15px; }
-  .card p { margin:1px 0; font-size:13px; }
-  .pending { background:#ffcdd2; border:2px solid #f44336; animation: blinkBorder 1s infinite; }
-  @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
-  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-           background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
-  .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
-                   max-height:90%; overflow:auto; position:relative; font-size:14px; }
-  .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
-  form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
-  form input, form select { width:100%; padding:5px; margin:3px 0 8px; border:1px solid #ccc; border-radius:6px; font-size:13px; }
-  .filter-bar { position:fixed; top:60px; width:100%; background:#fff; padding:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); z-index:900; display:flex; gap:10px; flex-wrap:wrap; }
-  .filter-bar select, .filter-bar input { padding:6px; border:1px solid #ccc; border-radius:5px; font-size:13px; }
+/* 3D button effect */
+.btn-3d { 
+  transition: transform 0.2s; 
+  box-shadow: 0 5px #666; 
+}
+.btn-3d:active { 
+  transform: translateY(4px); 
+  box-shadow: 0 2px #666; 
+}
+.card-3d {
+  transition: transform 0.2s;
+}
+.card-3d:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+.unapproved { background-color: #fee2e2; } /* Redish for unapproved */
+.approved { background-color: #dcfce7; } /* Greenish for approved */
 </style>
 </head>
-<body>
+<body class="bg-gradient-to-b from-blue-100 to-purple-100 min-h-screen">
 
-<header>
-  <!-- Left -->
-  <div style="display:flex; gap:8px; align-items:center;">
-    <a href="index.html">
-      <button style="background-color:blue; color:white;">Home</button>
-    </a>
-    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
-  </div>
-  <!-- Center -->
-  <h1>All Service</h1>
-  <!-- Right -->
-  <div style="display:flex; gap:8px; align-items:center;">
-    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
-    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
-  </div>
-</header>
+<div class="container mx-auto p-4">
 
-<!-- Filter bar -->
-<div class="filter-bar">
-  <select id="categoryFilter">
-    <option value="">All Categories</option>
-  <option value="Mobile">Mobile</option>   <option value="Car">Car</option>
-    <option value="Bike">Bike</option>
-    <option value="AC">AC / Refrigerator</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Others">Others</option>
-  </select>
-  <input type="text" id="searchBox" placeholder="🔍 Search by name, address, phone...">
+<h1 class="text-2xl font-bold text-center mb-4">ZaraFix All Services</h1>
+
+<!-- Provider Form -->
+<div id="providerForm" class="bg-white p-4 rounded-xl shadow-lg mb-6">
+<h2 class="font-semibold mb-2">Submit Your Service</h2>
+<input type="text" id="serviceName" placeholder="Service Name" class="border p-2 rounded w-full mb-2">
+<input type="text" id="providerName" placeholder="Your Name" class="border p-2 rounded w-full mb-2">
+<input type="text" id="whatsapp" placeholder="WhatsApp Number" class="border p-2 rounded w-full mb-2">
+<input type="file" id="serviceImage" class="mb-2">
+<button id="submitService" class="bg-blue-500 text-white px-4 py-2 rounded btn-3d">Submit</button>
 </div>
 
-<main>
-  <div class="grid" id="posts"></div>
-</main>
+<!-- Listing -->
+<div id="listing" class="grid sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
 
-<!-- Post Form Modal -->
-<div class="modal" id="postModal">
-  <div class="modal-content">
-    <span class="close" id="closeForm">&times;</span>
-    <h2>Add New Service</h2>
-    <form id="postForm">
-      <label>Shop Name</label>
-      <input type="text" id="shopName" required>
-      <label>Owner Name</label>
-      <input type="text" id="ownerName" required>
-      <label>Address</label>
-      <input type="text" id="address" required>
-      <label>Whatsapp</label>
-      <input type="tel" id="whatsapp" required>
-      <label>Category</label>
-      <select id="posterType" required>
-        <option value="">-- Select Category --</option>
-        <option value="Car">Car</option>
-        <option value="Bike">Bike</option>
-        <option value="AC">AC / Refrigerator</option>
-        <option value="Electrician">Electrician</option>
-        <option value="Plumber">Plumber</option>
-        <option value="Others">Others</option>
-      </select>
-      <button type="submit" class="btn3d">Submit Post</button>
-    </form>
-  </div>
 </div>
 
 <script>
-// Firebase init
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -118,71 +58,107 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
+
 firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth();
-const db=firebase.database();
+const db = firebase.database();
 
-const loginBtn=document.getElementById('loginBtn');
-const logoutBtn=document.getElementById('logoutBtn');
-const newPostBtn=document.getElementById('newPostBtn');
-const postModal=document.getElementById('postModal');
-const closeForm=document.getElementById('closeForm');
-const postsDiv=document.getElementById('posts');
-const categoryFilter=document.getElementById('categoryFilter');
-const searchBox=document.getElementById('searchBox');
+const adminEmail = "zarasamajiksevasanstha@gmail.com";
+let currentUserEmail = "";
 
-let currentUser=null;
-let allPosts=[];
+// Submit service
+document.getElementById("submitService").addEventListener("click", async ()=>{
+    const name = document.getElementById("serviceName").value;
+    const provider = document.getElementById("providerName").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const file = document.getElementById("serviceImage").files[0];
 
-loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
-logoutBtn.onclick=()=>auth.signOut();
-newPostBtn.onclick=()=>postModal.style.display="flex";
-closeForm.onclick=()=>postModal.style.display="none";
+    if(!name || !provider || !whatsapp || !file){
+        alert("सभी फील्ड भरें और image select करें");
+        return;
+    }
 
-auth.onAuthStateChanged(u=>{
-  currentUser=u;
-  loginBtn.style.display = u ? "none" : "inline-block";
-  logoutBtn.style.display = u ? "inline-block" : "none";
-  newPostBtn.style.display = u ? "inline-block" : "none";
-  loadPosts();
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("key", "4dc5e5cb7654ffc308d5ca45452b014b"); // ImgBB API Key
+
+    const res = await fetch("https://api.imgbb.com/1/upload?key=4dc5e5cb7654ffc308d5ca45452b014b", {
+        method: "POST",
+        body: formData
+    });
+    const data = await res.json();
+    const imageUrl = data.data.display_url;
+
+    const newPostRef = db.ref("services").push();
+    newPostRef.set({
+        name, provider, whatsapp, imageUrl, approved: false, timestamp: Date.now()
+    });
+
+    alert("Service submitted. Admin approval required!");
+    document.getElementById("serviceName").value = "";
+    document.getElementById("providerName").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("serviceImage").value = "";
 });
 
-function loadPosts(){
-  db.ref("services").orderByChild("created").on("value",snap=>{
-    allPosts=[];
-    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
-    allPosts.reverse();
-    renderPosts();
-  });
+// Display services
+function renderServices(snapshot){
+    const container = document.getElementById("listing");
+    container.innerHTML = "";
+    let servicesArray = [];
+    snapshot.forEach(snap=>{
+        servicesArray.push({id: snap.key, ...snap.val()});
+    });
+    // Sort: newest first
+    servicesArray.sort((a,b)=> b.timestamp - a.timestamp);
+    servicesArray.forEach(service=>{
+        const div = document.createElement("div");
+        div.className = `p-3 rounded-xl shadow card-3d ${service.approved ? "approved" : "unapproved"}`;
+
+        div.innerHTML = `
+        <h3 class="font-semibold">${service.name}</h3>
+        <p>Provider: ${service.provider}</p>
+        <img src="${service.imageUrl}" class="w-full h-40 object-cover rounded mb-2 cursor-pointer" onclick="window.open('${service.imageUrl}','_blank')">
+        <p>WhatsApp: <a href="https://wa.me/${service.whatsapp}?text=Zara%20Fix%20ne%20apko%20customer%20diya%20hai" target="_blank" class="text-green-600 font-semibold">${service.whatsapp}</a></p>
+        <p>Status: ${service.approved ? "Approved" : "Not Approved"}</p>
+        `;
+
+        // Admin controls
+        const userEmail = currentUserEmail;
+        if(userEmail === adminEmail){
+            const approveBtn = document.createElement("button");
+            approveBtn.innerText = service.approved ? "Reject" : "Approve";
+            approveBtn.className = "bg-blue-500 text-white px-2 py-1 rounded btn-3d mr-2 mt-2";
+            approveBtn.onclick = ()=> {
+                db.ref("services/"+service.id+"/approved").set(!service.approved);
+            };
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "Delete";
+            deleteBtn.className = "bg-red-500 text-white px-2 py-1 rounded btn-3d mt-2";
+            deleteBtn.onclick = ()=> db.ref("services/"+service.id).remove();
+
+            div.appendChild(approveBtn);
+            div.appendChild(deleteBtn);
+        }
+
+        // Provider delete own post
+        if(userEmail && userEmail !== adminEmail){
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "Delete My Post";
+            deleteBtn.className = "bg-red-500 text-white px-2 py-1 rounded btn-3d mt-2";
+            deleteBtn.onclick = ()=> db.ref("services/"+service.id).remove();
+            div.appendChild(deleteBtn);
+        }
+
+        container.appendChild(div);
+    });
 }
 
-function renderPosts(){
-  const selected=categoryFilter.value.toLowerCase();
-  const search=searchBox.value.toLowerCase();
-  postsDiv.innerHTML="";
-  allPosts.forEach(p=>{
-    if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){
-      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
-    }
-    if(selected && p.posterType.toLowerCase()!==selected) return;
-    const text=(p.shopName+" "+p.ownerName+" "+p.address+" "+p.whatsapp).toLowerCase();
-    if(search && !text.includes(search)) return;
+// Listen to DB
+db.ref("services").on("value", renderServices);
 
-    const card=document.createElement("div");
-    card.className="card";
-    if(p.status==="pending") card.classList.add("pending");
-    if(p.images && p.images.length){ const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
-    const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
-    card.appendChild(document.createElement("p")).textContent="👤 "+p.ownerName;
-    card.appendChild(document.createElement("p")).textContent=p.address;
-    card.appendChild(document.createElement("p")).textContent="📞 "+p.whatsapp;
-    card.appendChild(document.createElement("p")).textContent="📌 "+p.posterType;
-    postsDiv.appendChild(card);
-  });
-}
-
-categoryFilter.addEventListener("change",renderPosts);
-searchBox.addEventListener("input",renderPosts);
+// Authentication (email prompt)
+currentUserEmail = prompt("अपना Email डालें (Admin: zarasamajiksevasanstha@gmail.com)");
 </script>
+
 </body>
 </html>
