@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ambulance Service</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+
+
+    
+    header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+             display:flex; align-items:center; justify-content:space-between;
+             padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
+    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+             box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+    .btn3d { background:#4CAF50; color:#fff; }
+    .btn3d:disabled { background:#999; box-shadow:none; }
+    .logoutBtn { background:#E53935; color:#fff; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
+    .waBtn { background:#25D366; color:#fff; }
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.card {
+  width: 100%;
+  max-width: 280px;
+  margin: auto;
+  box-sizing: border-box;
+  border: 2px solid red;   /* ये line जोड़ें */
+  border-radius: 8px;       /* optional, corners smooth करने के लिए */
+  padding: 8px;             /* optional, content के लिए space */
+}
+
+/* Card image */
+.card img {
+  width: 100%;
+  height: auto;           /* fixed height हटाई, responsive रहे */
+  max-height: 120px;      /* desktop me max height */
+  object-fit: contain;    /* proportion maintain रहे */
+  background: #fff;
+  display: block;
+  margin: auto;
+}
+
+/* Card heading */
+.card h3 {
+  margin: 4px 0 2px;
+  font-size: 14px;
+  text-align: center;     /* better look */
+}
+
+/* Card paragraph */
+.card p {
+  margin: 1px 0;
+  font-size: 12px;
+  text-align: center;     /* consistent */
+}
+
+/* Button row */
+.btnRow {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center; /* center buttons */
+}
+
+/* Mobile tweaks */
+@media screen and (max-width: 600px) {
+  .card {
+    max-width: 100%;       /* mobile full width */
+  }
+  .card img {
+    max-height: 100px;     /* mobile me thoda chhota */
+  }
+}
+
+
+    
+
+    /* Pending Highlight (Red blinking) */
+    .pending { background:#ffcdd2; border:2px solid #f44336;
+               animation: blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+
+    /* Modal */
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+             background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                     max-height:90%; overflow:auto; position:relative; font-size:14px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+
+    form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+    form input, form select { width:100%; padding:5px; margin:3px 0 8px;
+                              border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+
+
+
+<header style="display:flex; align-items:center; padding:10px 20px; background-color:#f3f4f6; flex-wrap:wrap; justify-content:space-between;">
+  
+  <!-- Left Buttons -->
+  <div style="display:flex; gap:8px; align-items:center;">
+    <a href="index.html">
+      <button style="background-color:blue; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+        Home
+      </button>
+    </a>
+    <button id="loginBtn" style="background-color:#4ade80; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      🔑 Login
+    </button>
+  </div>
+
+  <!-- Center Heading -->
+  <h1 style="font-size:20px; font-weight:bold; margin:0; text-align:center; flex:1;">
+  Ambulance Service
+  </h1>
+
+  <!-- Right Buttons -->
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      + New Post
+    </button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      Logout
+    </button>
+  </div>
+
+</header>
+
+
+
+  
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Post and WhatsApp to go live (7378342192)</h2>
+    <form id="postForm">
+    
+      <label>AmbulenceName</label>
+      <input type="text" id="AmbulenceName" required>
+      <label>DriverName</label>
+      <input type="text" id="DriverName" required>
+      <label>Address</label>
+      <input type="text" id="address" required>
+      <label>Phone</label>
+      <input type="tel" id="phone" required>
+      <label>AmbulenceType</label>
+      <select id="AmbulenceType" required>
+        <option value="Normal patient transport">Normal patient transport</option>
+        <option value="Oxygen cylinder, basic first aid">Oxygen cylinder, basic first aid</option>
+        <option value="Dead body transport">Dead body transport</option>
+      </select>
+      <label>Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit Post</button>
+    </form>
+  </div>
+</div>
+
+<!-- Card View Modal -->
+<div class="modal" id="cardModal">
+  <div class="modal-content" id="cardContent">
+    <span class="close" id="closeCard">&times;</span>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDuWPxtnSumumis8PJsrwo8BXZl8W_q7w0",
+  authDomain: "ambulence-410c0.firebaseapp.com",
+  databaseURL: "https://ambulence-410c0-default-rtdb.firebaseio.com",
+  projectId: "ambulence-410c0",
+  storageBucket: "ambulence-410c0.appspot.com",
+  messagingSenderId: "970590198679",
+  appId: "1:970590198679:web:21b1acb30d2a7c09dec2d2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
+const cardModal=document.getElementById('cardModal');
+const cardContent=document.getElementById('cardContent');
+const closeCard=document.getElementById('closeCard');
+
+let currentUser=null;
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
+  loadPosts();
+});
+
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+closeCard.onclick=()=>cardModal.style.display="none";
+
+// Upload images
+async function uploadImages(files){
+  const urls=[];
+  for(let i=0;i<Math.min(5,files.length);i++){
+    const f=files[i];
+    const fd=new FormData();
+    fd.append("image",f);
+    const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
+    const j=await r.json();
+    urls.push(j.data.url);
+  }
+  return urls;
+}
+
+// Post submit
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Login first");
+  const submitBtn=postForm.querySelector("button[type=submit]");
+  submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
+
+const post={
+  AmbulenceName:document.getElementById('AmbulenceName').value,
+  DriverName:document.getElementById('DriverName').value,
+  address:document.getElementById('address').value,
+  posterPhone:document.getElementById('phone').value,
+  AmbulenceType:document.getElementById('AmbulenceType').value,
+  PosterName:currentUser.displayName,
+  posterUid:currentUser.uid,
+  status:"pending",
+  created:Date.now()
+};
+
+  const files=document.getElementById('images').files;
+  if(files.length>0) post.images=await uploadImages(files);
+
+  db.ref("posts").push(post,(err)=>{
+    if(err){ alert("❌ Error"); }
+    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
+  });
+};
+
+// Load posts (latest first)
+function loadPosts(){
+  db.ref("posts").orderByChild("created").on("value",snap=>{
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse(); // latest first
+
+    arr.forEach(p=>{
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){
+        // admin sees all
+      } else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status==="pending") card.classList.add("pending");
+      if(p.status==="rejected") card.style.background="#ffe0b2";
+
+      if(p.images && p.images.length) {
+        const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
+      }
+     // ---- replace this ----
+// ---- replace this ----
+const h3=document.createElement("h3"); 
+h3.textContent = p.AmbulenceName + " ("+ p.AmbulenceType +")"; 
+card.appendChild(h3);
+
+const driver=document.createElement("p"); 
+driver.textContent="👨‍✈️ Driver: "+p.DriverName; 
+card.appendChild(driver);
+
+const addr=document.createElement("p"); 
+addr.textContent="📍 "+p.address; 
+card.appendChild(addr);
+
+const ph=document.createElement("p"); 
+ph.textContent="📞 "+p.posterPhone; 
+card.appendChild(ph);
+
+const poster=document.createElement("p"); 
+poster.textContent="👤 Posted by: "+p.PosterName; 
+card.appendChild(poster);
+      const st=document.createElement("p");
+      if(p.status==="approved") st.textContent="✅ Approved";
+      else if(p.status==="rejected") st.textContent="❌ Rejected";
+      else st.textContent="⏳ Pending Approval";
+      card.appendChild(st);
+
+      const btnRow=document.createElement("div"); btnRow.className="btnRow";
+
+      // WhatsApp button
+      const wa=document.createElement("button");
+      wa.textContent="💬 WhatsApp";
+      wa.className="waBtn";
+    wa.onclick = (e) => {
+  e.stopPropagation();
+  const msg = `  🚑 Ambulance Service Inquiry\n\n` +
+              `Ambulance: ${p.AmbulenceName} (${p.AmbulenceType})\n` +
+              `Driver: ${p.DriverName}\n` +
+              `Address: ${p.address}\n` +
+              `Phone: ${p.posterPhone}\n\n` +
+              `Posted by: ${p.PosterName}`;
+  window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+};
+
+      btnRow.appendChild(wa);
+
+      if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
+        const del=document.createElement("button");
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
+        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); };
+        btnRow.appendChild(del);
+      }
+
+      if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+        const ap=document.createElement("button");
+        ap.textContent="✅ Approve"; ap.className="btn3d";
+        ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
+
+        const rj=document.createElement("button");
+        rj.textContent="❌ Reject"; rj.className="logoutBtn";
+        rj.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"rejected"}); };
+
+        const del=document.createElement("button");
+        del.textContent="🗑 Delete"; del.className="logoutBtn";
+        del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+
+        btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
+      }
+
+      card.appendChild(btnRow);
+
+  card.onclick=()=>{ 
+  cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+  cardContent.innerHTML+=`
+    <h2>${p.AmbulenceName} (${p.AmbulenceType})</h2>
+    <p><b>Driver:</b> ${p.DriverName}</p>
+    <p><b>Address:</b> ${p.address}</p>
+    <p><b>Phone:</b> ${p.posterPhone}</p>
+    <p><b>Posted by:</b> ${p.PosterName}</p>
+  `;
+  if(p.images){ 
+    p.images.forEach(u=>{ 
+      cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; 
+    }); 
+  }
+  cardModal.style.display="flex";
+  document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
+};
+
+      postsDiv.appendChild(card);
+    });
+  });
+}
+</script>
+</body>
+</html>
