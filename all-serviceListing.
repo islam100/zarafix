@@ -1,26 +1,122 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>All Services - Zara Fix</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>All Service Provider</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <style>
-.card:hover{transform:rotateY(10deg) scale(1.05); transition:0.3s;}
-.fullscreen-img{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;justify-content:center;align-items:center;z-index:50;}
-.fullscreen-img img{max-width:95%;max-height:95%;border-radius:10px;}
+  body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+  header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+           display:flex; align-items:center; justify-content:space-between;
+           padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); position:fixed; width:100%; top:0; z-index:1000; }
+  header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+  button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+           box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+  .btn3d { background:#4CAF50; color:#fff; }
+  .btn3d:disabled { background:#999; box-shadow:none; }
+  .logoutBtn { background:#E53935; color:#fff; }
+  .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
+  .waBtn { background:#25D366; color:#fff; }
+  main { padding:80px 12px 12px; } /* shift down for fixed header */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+          gap:12px; }
+  .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+          padding:10px; position:relative; transition:transform .2s; cursor:pointer; font-size:13px;
+          border:2px solid red; }
+  .card:hover { transform:scale(1.02); }
+  .card img { width:100%; max-height:150px; object-fit:contain; border-radius:6px; display:block; margin:0 auto; }
+  .card h3 { margin:6px 0 3px; font-size:15px; }
+  .card p { margin:1px 0; font-size:13px; }
+  .pending { background:#ffcdd2; border:2px solid #f44336; animation: blinkBorder 1s infinite; }
+  @keyframes blinkBorder { 50% { border-color: #b71c1c; } }
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+           background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+  .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                   max-height:90%; overflow:auto; position:relative; font-size:14px; }
+  .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+  form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+  form input, form select { width:100%; padding:5px; margin:3px 0 8px; border:1px solid #ccc; border-radius:6px; font-size:13px; }
+  .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; }
 </style>
 </head>
-<body class="bg-gradient-to-r from-purple-200 via-pink-200 to-blue-200 min-h-screen">
+<body>
 
-<div class="container mx-auto p-4">
-<h1 class="text-3xl font-bold text-center mb-4">All Services</h1>
-<div id="postsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+<header style="display:flex; align-items:center; padding:10px 20px; background-color:#f3f4f6; flex-wrap:wrap; justify-content:space-between;">
+  
+  <!-- Left Buttons -->
+  <div style="display:flex; gap:8px; align-items:center;">
+    <a href="index.html">
+      <button style="background-color:blue; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+        Home
+      </button>
+    </a>
+    <button id="loginBtn" style="background-color:#4ade80; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      🔑 Login
+    </button>
+  </div>
+
+  <!-- Center Heading -->
+  <h1 style="font-size:20px; font-weight:bold; margin:0; text-align:center; flex:1;">
+    All Service
+  </h1>
+
+  <!-- Right Buttons -->
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      + New Post
+    </button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white; padding:8px 12px; border-radius:5px; border:none; cursor:pointer;">
+      Logout
+    </button>
+  </div>
+
+</header>
+
+
+
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Add New Service</h2>
+    <form id="postForm">
+      <label>Shop Name</label>
+      <input type="text" id="shopName" required>
+      <label>Owner Name</label>
+      <input type="text" id="ownerName" required>
+      <label>Address</label>
+      <input type="text" id="address" required>
+      <label>Whatsapp</label>
+      <input type="tel" id="whatsapp" required>
+      <label>Category</label>
+      <select id="posterType" required>
+        <option value="">-- Select Category --</option>
+        <option value="Car">Car</option>
+        <option value="Bike">Bike</option>
+        <option value="AC">AC / Refrigerator</option>
+        <option value="Electrician">Electrician</option>
+        <option value="Plumber">Plumber</option>
+        <option value="Others">Others</option>
+      </select>
+      <label>Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit Post</button>
+    </form>
+  </div>
 </div>
 
 <script>
+// Firebase initialization
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -30,28 +126,56 @@ const firebaseConfig = {
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const auth=firebase.auth();
+const db=firebase.database();
 
-async function loadPosts(){
-  const snapshot = await db.collection("posts").orderBy("createdAt","desc").get();
-  const container = document.getElementById("postsContainer");
-  container.innerHTML="";
-  snapshot.forEach(doc => {
-    const post = doc.data();
-    if(post.status !== "approved") return;
-    const card = document.createElement("div");
-    card.className="card p-3 rounded-xl shadow-lg flex flex-col items-center bg-white border-2 border-green-500";
-    card.innerHTML = `
-      <img src="${post.imageUrl}" class="rounded-lg cursor-pointer w-full" onclick="openFullScreen('${post.imageUrl}')"/>
-      <h2 class="text-lg font-bold mt-2">${post.title}</h2>
-      <p class="text-sm">${post.description}</p>
-      <p class="text-xs mt-1">Posted by: ${post.posterName}</p>
-      <a href="https://wa.me/${post.posterWhatsapp}?text=Zara%20Fix%20ne%20apko%20customer%20diya%20hai" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded mt-2 inline-block hover:scale-105 transition">WhatsApp</a>`;
-    container.appendChild(card);
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
+
+let currentUser=null;
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  loginBtn.style.display = u ? "none" : "inline-block";
+  logoutBtn.style.display = u ? "inline-block" : "none";
+  newPostBtn.style.display = u ? "inline-block" : "none";
+  loadPosts();
+});
+
+function loadPosts(){
+  db.ref("services").orderByChild("created").on("value",snap=>{
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse();
+    arr.forEach(p=>{
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status==="pending") card.classList.add("pending");
+      if(p.status==="rejected") card.style.background="#ffe0b2";
+      if(p.images && p.images.length) { const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
+      const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+      const owner=document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
+      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
+      const ph=document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
+      const cat=document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
+      postsDiv.appendChild(card);
+    });
   });
 }
-loadPosts();
-function openFullScreen(url){const modal=document.createElement("div");modal.className="fullscreen-img";modal.innerHTML=`<img src="${url}"/>`;modal.onclick=()=>modal.remove();document.body.appendChild(modal);}
 </script>
 
 </body>
