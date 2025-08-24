@@ -1,270 +1,316 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zara Property - Home</title>
-<style>
-  body { font-family: Arial, sans-serif; margin:0; padding:0; background: #f0f2f5;}
-  .button-container {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    padding: 20px 10px;
-    flex-wrap: wrap;
-  }
-  .btn-3d {
-    position: relative;
-    padding: 12px 25px;
-    border-radius: 15px;
-    font-weight: bold;
-    font-size: 1em;
-    color: white;
-    border: none;
-    cursor: pointer;
-    box-shadow:
-      0 6px 0 #999,
-      0 10px 20px rgba(0,0,0,0.3);
-    transition: all 0.15s ease;
-    width: 140px;
-    text-align: center;
-    user-select: none;
-  }
-  .btn-3d:active {
-    box-shadow: none;
-    transform: translateY(6px);
-  }
-  #homeBtn { background: linear-gradient(145deg, #4caf50, #388e3c); }
-  #addPropertyBtn { background: linear-gradient(145deg, #2196f3, #1565c0); }
-  #contactBtn { background: linear-gradient(145deg, #ff9800, #e67e22); }
+  <meta charset="UTF-8">
+  <title>Real Estate Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+    header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+             display:flex; align-items:center; justify-content:space-between;
+             padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); flex-wrap:wrap; }
+    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+             box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+    .btn3d { background:#4CAF50; color:#fff; }
+    .btn3d:disabled { background:#999; box-shadow:none; }
+    .logoutBtn { background:#E53935; color:#fff; }
+    .waBtn { background:#25D366; color:#fff; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
 
-  /* Responsive */
-  @media(max-width: 480px) {
-    .button-container {
-      flex-direction: column;
-      gap: 15px;
-      align-items: center;
-    }
-    .btn-3d {
-      width: 90%;
-      max-width: 250px;
-      font-size: 1.2em;
-      padding: 15px 20px;
-    }
-  }
+    /* Search Bar */
+  .searchBar {
+  margin:12px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
 
-  /* Modal styles for Add Property form */
-  #addPropertyModal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0; top: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    justify-content: center;
-    align-items: center;
-  }
-  #addPropertyModal .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 400px;
-  }
-  #addPropertyModal .close-btn {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    float: right;
-  }
-  #addPropertyModal label {
-    display: block;
-    margin-top: 10px;
-  }
-  #addPropertyModal input, #addPropertyModal textarea {
-    width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    box-sizing: border-box;
-  }
-  #formMsg {
-    color: red;
-    margin-top: 10px;
-    text-align: center;
-  }
-  #submitProperty {
-    margin-top: 15px;
-    background: #2196f3;
-    color: white;
-    border: none;
-    padding: 10px;
-    width: 100%;
-    font-weight: bold;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-</style>
+    .searchBar input, .searchBar select {
+      padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; min-width:180px;
+    }
+
+    /* Grid */
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:12px; padding:12px; }
+    .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+            padding:10px; position:relative; transition:transform .2s; cursor:pointer;
+            font-size:13px; border:2px solid red; }
+    .card:hover { transform:scale(1.02); }
+    .card img { width:100%; height:150px; object-fit:cover; border-radius:6px; }
+    .card h3 { margin:6px 0 3px; font-size:15px; }
+    .card p { margin:1px 0; font-size:13px; }
+
+    .pending { background:#ffcdd2; border:2px solid #f44336; animation:blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color:#b71c1c; } }
+
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+             background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                     max-height:90%; overflow:auto; position:relative; font-size:14px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+    form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+    form input, form select { width:100%; padding:5px; margin:3px 0 8px;
+                              border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
+  </style>
 </head>
 <body>
+<header>
+  <h1>🏠 Real Estate Portal</h1>
+  <div>
+    <a href="index.html">
+      <button style="background-color:blue; color:white;">🏡 Home</button>
+    </a>
+    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
+  </div>
+</header>
 
-<div class="button-container">
-  <button id="homeBtn" class="btn-3d">Home</button>
-  <button id="addPropertyBtn" class="btn-3d">Add Property</button>
-  <button id="contactBtn" class="btn-3d">Contact</button>
+<!-- 🔍 Search Bar -->
+<div class="searchBar">
+  <input type="text" id="searchInput" placeholder="Search by type, BHK, address, name...">
+  <select id="categoryFilter">
+    <option value="">All Posters</option>
+    <option value="Builder">Builder</option>
+    <option value="Owner">Owner</option>
+    <option value="Agent">Agent</option>
+  </select>
 </div>
 
-<!-- Add Property Modal -->
-<div id="addPropertyModal">
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
   <div class="modal-content">
-    <button class="close-btn" id="closeModalBtn">X</button>
-    <h3>Add Your Property</h3>
-    <form id="propertyForm">
-      <label for="title">Title</label>
-      <input type="text" id="title" required />
-      <label for="description">Description</label>
-      <textarea id="description" rows="4" required></textarea>
-      <label for="price">Price</label>
-      <input type="number" id="price" required />
-      <button type="submit" id="submitProperty">Submit</button>
-      <div id="formMsg"></div>
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Post and WhatsApp to go live (7378342192)</h2>
+    <form id="postForm">
+      <label>Price</label><input type="number" id="price" required>
+      <label>BHK</label><input type="text" id="bhk" required>
+      <label>Property Type</label><input type="text" id="ptype" required>
+      <label>Address</label><input type="text" id="address" required>
+      <label>Phone</label><input type="tel" id="phone" required>
+      <label>Poster Type</label>
+      <select id="posterType" required>
+        <option value="Builder">Builder</option>
+        <option value="Owner">Owner</option>
+        <option value="Agent">Agent</option>
+      </select>
+      <label>Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      <button type="submit" class="btn3d">Submit Post</button>
     </form>
   </div>
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<!-- Card View Modal -->
+<div class="modal" id="cardModal">
+  <div class="modal-content" id="cardContent">
+    <span class="close" id="closeCard">&times;</span>
+  </div>
+</div>
 
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.firebasestorage.app",
-    messagingSenderId: "916859697394",
-    appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+const firebaseConfig = {
+  apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
+  authDomain: "property-20d6d.firebaseapp.com",
+  databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
+  projectId: "property-20d6d",
+  storageBucket: "property-20d6d.appspot.com",
+  messagingSenderId: "916859697394",
+  appId: "1:916859697394:web:2a8f9ad2d62f8306dcb86b"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
+const cardModal=document.getElementById('cardModal');
+const cardContent=document.getElementById('cardContent');
+const closeCard=document.getElementById('closeCard');
+const searchInput=document.getElementById('searchInput');
+const categoryFilter=document.getElementById('categoryFilter');
+
+let currentUser=null;
+let allPosts=[];
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
+  loadPosts();
+});
+
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+closeCard.onclick=()=>cardModal.style.display="none";
+
+// Upload images via imgbb
+async function uploadImages(files){
+  const urls=[];
+  for(let i=0;i<Math.min(5,files.length);i++){
+    const f=files[i];
+    const fd=new FormData();
+    fd.append("image",f);
+    const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
+    const j=await r.json();
+    urls.push(j.data.url);
+  }
+  return urls;
+}
+
+// Post submit
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Login first");
+  const submitBtn=postForm.querySelector("button[type=submit]");
+  submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
+
+  const post={
+    price:document.getElementById('price').value,
+    bhk:document.getElementById('bhk').value,
+    propertyType:document.getElementById('ptype').value,
+    address:document.getElementById('address').value,
+    posterPhone:document.getElementById('phone').value,
+    posterType:document.getElementById('posterType').value,
+    posterName:currentUser.displayName,
+    posterUid:currentUser.uid,
+    status:"pending",
+    created:Date.now()
   };
+  const files=document.getElementById('images').files;
+  if(files.length>0) post.images=await uploadImages(files);
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+  db.ref("posts").push(post,(err)=>{
+    if(err){ alert("❌ Error"); }
+    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
+  });
+};
 
-  const homeBtn = document.getElementById('homeBtn');
-  const addPropertyBtn = document.getElementById('addPropertyBtn');
-  const contactBtn = document.getElementById('contactBtn');
-  const addPropertyModal = document.getElementById('addPropertyModal');
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  const propertyForm = document.getElementById('propertyForm');
-  const formMsg = document.getElementById('formMsg');
+// Load posts
+function loadPosts(){
+  db.ref("posts").orderByChild("created").on("value",snap=>{
+    allPosts=[];
+    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
+    allPosts.reverse();
+    renderPosts();
+  });
+}
 
-  // Button links
-  homeBtn.onclick = () => window.location.href = 'index.html';
-  contactBtn.onclick = () => window.location.href = 'contact.html';
+// Render posts with search + filter
+function renderPosts(){
+  postsDiv.innerHTML="";
+  const keyword=searchInput.value.toLowerCase();
+  const category=categoryFilter.value;
 
-  addPropertyBtn.onclick = () => {
-    if (!auth.currentUser) {
-      alert('Please login to add property.');
-      return;
+  allPosts.forEach(p=>{
+    if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){
+      // admin sees all
+    } else {
+      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
     }
-    formMsg.textContent = '';
-    propertyForm.reset();
-    addPropertyModal.style.display = 'flex';
-  };
 
-  closeModalBtn.onclick = () => {
-    addPropertyModal.style.display = 'none';
-  };
+    if(category && p.posterType!==category) return;
+    if(keyword && !(p.propertyType?.toLowerCase().includes(keyword) ||
+                    p.bhk?.toLowerCase().includes(keyword) ||
+                    p.address?.toLowerCase().includes(keyword) ||
+                    p.posterName?.toLowerCase().includes(keyword))) return;
 
-  // Submit Property form
-  propertyForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const title = document.getElementById('title').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const price = Number(document.getElementById('price').value);
+    const card=document.createElement("div"); 
+    card.className="card";
+    if(p.status==="pending") card.classList.add("pending");
+    if(p.status==="rejected") card.style.background="#ffe0b2";
 
-    if (!title || !description || !price) {
-      formMsg.textContent = 'Please fill all fields correctly.';
-      return;
+    if(p.images && p.images.length){
+      const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
+    }
+    card.innerHTML+=`
+      <h3>${p.propertyType} - ${p.bhk}</h3>
+      <p>₹${p.price}</p>
+      <p>${p.address}</p>
+      <p>📞 ${p.posterPhone}</p>
+      <p>👤 ${p.posterName} (${p.posterType})</p>
+      <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending Approval"}</p>
+    `;
+
+    const btnRow=document.createElement("div"); btnRow.className="btnRow";
+
+    const wa=document.createElement("button");
+    wa.textContent="💬 WhatsApp";
+    wa.className="waBtn";
+    wa.onclick=(e)=>{
+      e.stopPropagation();
+      const msg=`send by-ZARA FIX-Hello, I am interested in your Property ${p.propertyType} (${p.bhk}) at ${p.address}, priced at ₹${p.price}.`;
+      window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`,"_blank");
+    };
+    btnRow.appendChild(wa);
+
+    if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
+      const del=document.createElement("button");
+      del.textContent="🗑 Delete"; del.className="logoutBtn";
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); };
+      btnRow.appendChild(del);
     }
 
-    const userId = auth.currentUser.uid;
-    const propertyData = {
-      userId,
-      title,
-      description,
-      price,
-      createdAt: Date.now()
+    if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+      const ap=document.createElement("button");
+      ap.textContent="✅ Approve"; ap.className="btn3d";
+      ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
+      const rj=document.createElement("button");
+      rj.textContent="❌ Reject"; rj.className="logoutBtn";
+      rj.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"rejected"}); };
+      const del=document.createElement("button");
+      del.textContent="🗑 Delete"; del.className="logoutBtn";
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+      btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
+    }
+
+    card.appendChild(btnRow);
+    card.onclick=()=>{ 
+      cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
+      cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
+        <p><b>Price:</b> ₹${p.price}</p>
+        <p><b>Address:</b> ${p.address}</p>
+        <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
+        <p><b>Phone:</b> ${p.posterPhone}</p>`;
+      if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
+      cardModal.style.display="flex";
+      document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
     };
 
-    db.ref('properties').push(propertyData)
-      .then(() => {
-        formMsg.style.color = 'green';
-        formMsg.textContent = 'Property added successfully!';
-        setTimeout(() => {
-          addPropertyModal.style.display = 'none';
-        }, 1500);
-      })
-      .catch(err => {
-        formMsg.style.color = 'red';
-        formMsg.textContent = 'Error adding property: ' + err.message;
-      });
+    postsDiv.appendChild(card);
   });
+}
 
-  // Google Login UI in corner
-  const userDiv = document.createElement('div');
-  userDiv.style.position = 'fixed';
-  userDiv.style.top = '10px';
-  userDiv.style.right = '10px';
-  userDiv.style.zIndex = '1001';
-  userDiv.style.background = '#eee';
-  userDiv.style.padding = '5px 10px';
-  userDiv.style.borderRadius = '10px';
-  userDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
-  document.body.appendChild(userDiv);
-
-  const loginBtn = document.createElement('button');
-  loginBtn.textContent = 'Login with Google';
-  loginBtn.style.cursor = 'pointer';
-
-  const logoutBtn = document.createElement('button');
-  logoutBtn.textContent = 'Logout';
-  logoutBtn.style.cursor = 'pointer';
-  logoutBtn.style.display = 'none';
-
-  userDiv.appendChild(loginBtn);
-  userDiv.appendChild(logoutBtn);
-
-  const provider = new firebase.auth.GoogleAuthProvider();
-
-  loginBtn.onclick = () => {
-    auth.signInWithPopup(provider).catch(err => alert(err.message));
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      userDiv.textContent = `Hi, ${user.displayName}`;
-      userDiv.appendChild(logoutBtn);
-      userDiv.appendChild(loginBtn);
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      userDiv.textContent = '';
-      userDiv.appendChild(loginBtn);
-      userDiv.appendChild(logoutBtn);
-    }
-  });
+// search events
+searchInput.addEventListener("input",renderPosts);
+categoryFilter.addEventListener("change",renderPosts);
 </script>
-
 </body>
 </html>
