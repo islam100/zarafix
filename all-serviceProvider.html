@@ -78,18 +78,6 @@
 
 </header>
 
-<div style="margin:12px;">
-  <label for="categoryFilter"><strong>Filter by Category:</strong></label>
-  <select id="categoryFilter">
-    <option value="">All</option>
-    <option value="Car">Car</option>
-    <option value="Bike">Bike</option>
-    <option value="AC">AC / Refrigerator</option>
-    <option value="Electrician">Electrician</option>
-    <option value="Plumber">Plumber</option>
-    <option value="Others">Others</option>
-  </select>
-</div>
 
 
 <main>
@@ -128,69 +116,67 @@
 </div>
 
 <script>
-const postsDiv = document.getElementById("posts");
-const categoryFilter = document.getElementById('categoryFilter');
+// Firebase initialization
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
 
-let allPosts = []; // सभी fetched posts को यहाँ store करेंगे
-let currentUser = null;
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
 
-// Firebase Auth
-auth.onAuthStateChanged(u => {
-  currentUser = u;
+let currentUser=null;
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
   loginBtn.style.display = u ? "none" : "inline-block";
   logoutBtn.style.display = u ? "inline-block" : "none";
   newPostBtn.style.display = u ? "inline-block" : "none";
   loadPosts();
 });
 
-function loadPosts() {
-  db.ref("services").orderByChild("created").on("value", snap => {
-    allPosts = [];
-    snap.forEach(ch => { allPosts.push({...ch.val(), id: ch.key}); });
-    allPosts.reverse();
-    renderPosts(); // Firebase से fetch होते ही render करो
+function loadPosts(){
+  db.ref("services").orderByChild("created").on("value",snap=>{
+    postsDiv.innerHTML="";
+    const arr=[];
+    snap.forEach(ch=>{ arr.push({...ch.val(), id:ch.key}); });
+    arr.reverse();
+    arr.forEach(p=>{
+      if(currentUser?.email==="zarasamajiksevasanstha@gmail.com"){} else {
+        if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
+      }
+      const card=document.createElement("div"); 
+      card.className="card";
+      if(p.status==="pending") card.classList.add("pending");
+      if(p.status==="rejected") card.style.background="#ffe0b2";
+      if(p.images && p.images.length) { const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);}
+      const h3=document.createElement("h3"); h3.textContent=p.shopName; card.appendChild(h3);
+      const owner=document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
+      const addr=document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
+      const ph=document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
+      const cat=document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
+      postsDiv.appendChild(card);
+    });
   });
 }
-
-// Filtered render
-function renderPosts() {
-  const selected = categoryFilter.value;
-  postsDiv.innerHTML = "";
-
-  allPosts.forEach(p => {
-    // Approve/pending check
-    if(currentUser?.email !== "zarasamajiksevasanstha@gmail.com") {
-      if(p.status !== "approved" && (!currentUser || p.posterUid !== currentUser.uid)) return;
-    }
-
-    // Category filter
-    if(selected !== "" && p.posterType !== selected) return;
-
-    const card = document.createElement("div");
-    card.className = "card";
-    if(p.status==="pending") card.classList.add("pending");
-    if(p.status==="rejected") card.style.background="#ffe0b2";
-
-    if(p.images && p.images.length) {
-      const img = document.createElement("img");
-      img.src = p.images[0];
-      card.appendChild(img);
-    }
-
-    const h3 = document.createElement("h3"); h3.textContent = p.shopName; card.appendChild(h3);
-    const owner = document.createElement("p"); owner.textContent="👤 "+p.ownerName; card.appendChild(owner);
-    const addr = document.createElement("p"); addr.textContent=p.address; card.appendChild(addr);
-    const ph = document.createElement("p"); ph.textContent="📞 "+p.whatsapp; card.appendChild(ph);
-    const cat = document.createElement("p"); cat.textContent="📌 "+p.posterType; card.appendChild(cat);
-
-    postsDiv.appendChild(card);
-  });
-}
-
-// Category filter change
-categoryFilter.addEventListener('change', renderPosts);
 </script>
-
 
 </body>
 </html>
