@@ -30,7 +30,7 @@ button:hover{transform:translateY(-2px);box-shadow:0 6px 10px rgba(0,0,0,0.4);}
 form input, form select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:8px;font-size:14px;}
 form button{width:100%;padding:12px;background:#3498db;color:white;font-weight:bold;border-radius:12px;margin-top:10px;}
 form button:hover{background:#2980b9;}
-img.hosp-img{width:100%;height:auto;max-height:250px;object-fit:cover;border-radius:12px;margin-top:6px;}
+img.hosp-img{width:100%;height:auto;object-fit:contain;border-radius:12px;margin-top:6px;}
 @media(max-width:500px){.btnRow button{flex:1 1 48%;}}
 </style>
 </head>
@@ -157,17 +157,13 @@ function loadListings(){
     snap.forEach(ch=>items.push({...ch.val(), key:ch.key}));
     items.sort((a,b)=>b.created-a.created);
 
+    // Highlighted first
     let highlighted=items.filter(i=>i.highlighted);
     let normal=items.filter(i=>!i.highlighted);
     items=[...highlighted,...normal];
 
     listingsDiv.innerHTML="";
     items.forEach(item=>{
-      // Non-logged users see only approved
-      if(!currentUser && item.status!=="approved") return;
-      // Poster sees his own even if rejected
-      if(currentUser && currentUser.uid!==item.posterUid && currentUser.email!==adminEmail && item.status==="pending") return;
-
       const card=document.createElement("div");
       card.className="card "+(item.status==="approved"?"approved":item.status==="pending"?"waiting":"rejected");
       if(item.highlighted) card.classList.add("highlight");
@@ -187,12 +183,14 @@ function loadListings(){
 
       const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
+      // Poster sees own delete button
       if(currentUser && currentUser.uid===item.posterUid){
         const delBtn=document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
         delBtn.onclick=()=>{ if(confirm("Delete?")) db.ref("hospitals/"+item.key).remove(); };
         btnRow.appendChild(delBtn);
       }
 
+      // Admin controls
       if(currentUser && currentUser.email===adminEmail){
         const approveBtn=document.createElement("button"); approveBtn.className="btn-new"; approveBtn.textContent="Approve";
         approveBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"approved"});
