@@ -235,13 +235,16 @@ function renderPosts(){
     });
 
     sortedPosts.forEach(p => {
-        if(currentUser?.email !== "zarasamajiksevasanstha@gmail.com"){
-            if(p.status !== "approved" && (!currentUser || p.posterUid !== currentUser.uid)) return;
+        // === Access control ===
+        if(currentUser?.email === "zarasamajiksevasanstha@gmail.com"){
+            // Admin sees all
+        } else {
+            if(p.status !== "approved" && p.posterUid !== currentUser?.uid) return;
         }
-        if(currentUser?.email !== "zarasamajiksevasanstha@gmail.com"){
-            if(category && !p.departments.includes(category) && p.hospitalType !== category) return;
-            if(keyword && !(p.hospitalName.toLowerCase().includes(keyword) || p.address.toLowerCase().includes(keyword) || p.city.toLowerCase().includes(keyword))) return;
-        }
+
+        // === Filter by category or keyword ===
+        if(category && !p.departments.includes(category) && p.hospitalType !== category) return;
+        if(keyword && !(p.hospitalName.toLowerCase().includes(keyword) || p.address.toLowerCase().includes(keyword) || p.city.toLowerCase().includes(keyword))) return;
 
         const card = document.createElement("div");
         card.className = "card";
@@ -269,7 +272,10 @@ function renderPosts(){
         const wa = document.createElement("button");
         wa.textContent = "💬 WhatsApp";
         wa.className = "waBtn";
-        wa.onclick = e => { e.stopPropagation(); window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(`Hello, I am interested in your Hospital ${p.hospitalName} (${p.hospitalType}) at ${p.address}, ${p.city}.`)}`,"_blank"); };
+        wa.onclick = e => { 
+            e.stopPropagation(); 
+            window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(`Hello, I am interested in your Hospital ${p.hospitalName} (${p.hospitalType}) at ${p.address}, ${p.city}.`)}`,"_blank"); 
+        };
         btnRow.appendChild(wa);
 
         if(currentUser && currentUser.uid === p.posterUid && currentUser.email !== "zarasamajiksevasanstha@gmail.com"){
@@ -291,10 +297,7 @@ function renderPosts(){
             const hl = document.createElement("button");
             hl.textContent = p.highlightedByAdmin ? "⭐ Normal" : "🌟 Highlight";
             hl.className = "btn3d";
-            hl.onclick = async e => {
-                e.stopPropagation();
-                await db.ref("posts/"+p.id).update({highlightedByAdmin: !p.highlightedByAdmin});
-            };
+            hl.onclick = async e => { e.stopPropagation(); await db.ref("posts/"+p.id).update({highlightedByAdmin: !p.highlightedByAdmin}); };
 
             btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del); btnRow.appendChild(hl);
         }
