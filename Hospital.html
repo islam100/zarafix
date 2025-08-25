@@ -118,137 +118,166 @@ loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); au
 logoutBtn.onclick=()=>auth.signOut();
 
 auth.onAuthStateChanged(u=>{
-currentUser=u;
-if(u){
-loginBtn.style.display="none";
-logoutBtn.style.display="inline-block";
-newPostBtn.style.display="inline-block";
-} else{
-loginBtn.style.display="inline-block";
-logoutBtn.style.display="none";
-newPostBtn.style.display="none";
-}
-loadHospitals();
+    currentUser=u;
+    if(u){
+        loginBtn.style.display="none";
+        logoutBtn.style.display="inline-block";
+        newPostBtn.style.display="inline-block";
+    } else{
+        loginBtn.style.display="inline-block";
+        logoutBtn.style.display="none";
+        newPostBtn.style.display="none";
+    }
+    loadHospitals();
 });
 
 newPostBtn.onclick=()=>postModal.style.display="flex";
 closeForm.onclick=()=>postModal.style.display="none";
 
 async function uploadImage(file){
-const fd=new FormData();
-fd.append("image",file);
-const res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:fd});
-const data=await res.json();
-return data.data.url;
+    const fd=new FormData();
+    fd.append("image",file);
+    const res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:fd});
+    const data=await res.json();
+    return data.data.url;
 }
 
 hospitalForm.onsubmit=async e=>{
-e.preventDefault();
-if(!currentUser) return alert("Login first!");
+    e.preventDefault();
+    if(!currentUser) return alert("Login first!");
 
-const submitBtn=hospitalForm.querySelector("button[type=submit]");
-submitBtn.disabled=true; submitBtn.textContent="⏳ Uploading...";
+    const submitBtn=hospitalForm.querySelector("button[type=submit]");
+    submitBtn.disabled=true; submitBtn.textContent="⏳ Uploading...";
 
-const file=document.getElementById("image").files[0];
-const imageUrl=await uploadImage(file);
+    const file=document.getElementById("image").files[0];
+    const imageUrl=await uploadImage(file);
 
-const hospital={
-name:document.getElementById("name").value,
-department:document.getElementById("department").value,
-doctor:document.getElementById("doctor").value,
-city:document.getElementById("city").value,
-beds:document.getElementById("beds").value,
-icu:document.getElementById("icu").value,
-fees:document.getElementById("fees").value,
-phone:document.getElementById("phone").value,
-address:document.getElementById("address").value,
-image:imageUrl,
-status:"pending",
-posterUid:currentUser.uid,
-posterName:currentUser.displayName,
-created:Date.now()
-};
+    const hospital={
+        name:document.getElementById("name").value,
+        department:document.getElementById("department").value,
+        doctor:document.getElementById("doctor").value,
+        city:document.getElementById("city").value,
+        beds:document.getElementById("beds").value,
+        icu:document.getElementById("icu").value,
+        fees:document.getElementById("fees").value,
+        phone:document.getElementById("phone").value,
+        address:document.getElementById("address").value,
+        image:imageUrl,
+        status:"pending",
+        posterUid:currentUser.uid,
+        posterName:currentUser.displayName,
+        created:Date.now()
+    };
 
-db.ref("hospitals").push(hospital,err=>{
-if(err) alert("❌ Error");
-else alert("✅ Hospital submitted! Waiting for approval.");
-hospitalForm.reset(); postModal.style.display="none";
-submitBtn.disabled=false; submitBtn.textContent="Submit";
-});
+    db.ref("hospitals").push(hospital,err=>{
+        if(err) alert("❌ Error");
+        else alert("✅ Hospital submitted! Waiting for approval.");
+        hospitalForm.reset(); postModal.style.display="none";
+        submitBtn.disabled=false; submitBtn.textContent="Submit";
+    });
 };
 
 function loadHospitals(){
-db.ref("hospitals").orderByChild("created").on("value",snap=>{
-allHospitals=[];
-snap.forEach(ch=>allHospitals.push({...ch.val(),id:ch.key}));
-allHospitals.reverse();
-populateFilters();
-renderHospitals();
-});
+    db.ref("hospitals").orderByChild("created").on("value",snap=>{
+        allHospitals=[];
+        snap.forEach(ch=>allHospitals.push({...ch.val(),id:ch.key}));
+        allHospitals.reverse();
+        populateFilters();
+        renderHospitals();
+    });
 }
 
 function populateFilters(){
-const cities=new Set();
-const depts=new Set();
-allHospitals.forEach(h=>{ cities.add(h.city); depts.add(h.department); });
-cityFilter.innerHTML='<option value="">All Cities</option>'; deptsFilter.innerHTML='<option value="">All Departments</option>';
-cities.forEach(c=>cityFilter.innerHTML+=`<option value="${c}">${c}</option>`);
-depts.forEach(d=>deptFilter.innerHTML+=`<option value="${d}">${d}</option>`);
+    const cities=new Set();
+    const depts=new Set();
+    allHospitals.forEach(h=>{ cities.add(h.city); depts.add(h.department); });
+    cityFilter.innerHTML='<option value="">All Cities</option>'; deptFilter.innerHTML='<option value="">All Departments</option>';
+    cities.forEach(c=>cityFilter.innerHTML+=`<option value="${c}">${c}</option>`);
+    depts.forEach(d=>deptFilter.innerHTML+=`<option value="${d}">${d}</option>`);
 }
 
 function renderHospitals(){
-postsDiv.innerHTML="";
-const keyword=searchInput.value.toLowerCase();
-const cityVal=cityFilter.value;
-const deptVal=deptFilter.value;
+    postsDiv.innerHTML="";
+    const keyword=searchInput.value.toLowerCase();
+    const cityVal=cityFilter.value;
+    const deptVal=deptFilter.value;
 
-allHospitals.forEach(h=>{
-if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com" && h.status!=="approved" && h.posterUid!==currentUser?.uid) return;
-if(cityVal && h.city!==cityVal) return;
-if(deptVal && h.department!==deptVal) return;
-if(keyword && !(h.name.toLowerCase().includes(keyword)||h.department.toLowerCase().includes(keyword)||h.doctor.toLowerCase().includes(keyword)||h.city.toLowerCase().includes(keyword))) return;
+    allHospitals.forEach(h=>{
+        // Admin को सभी hospitals दिखाएं
+        if(currentUser?.email !== "zarasamajiksevasanstha@gmail.com") {
+            if(h.status !== "approved" && h.posterUid !== currentUser?.uid) return;
+        }
 
-const card=document.createElement("div"); card.className="card";
-if(h.status==="pending") card.classList.add("pending");
-card.innerHTML=`
-<img src="${h.image}">
-<h3>${h.name}</h3>
-<p><b>Department:</b> ${h.department}</p>
-<p><b>Doctor:</b> ${h.doctor}</p>
-<p><b>City:</b> ${h.city}</p>
-<p><b>Beds:</b> ${h.beds} | ICU: ${h.icu}</p>
-<p><b>Fees:</b> ₹${h.fees}</p>
-<p>📞 ${h.phone}</p>
-<p>${h.address}</p>
-<p>Status: ${h.status==="approved"?"✅ Approved":h.status==="rejected"?"❌ Rejected":"⏳ Pending"}</p>
-`;
+        // Filters
+        if(cityVal && h.city!==cityVal) return;
+        if(deptVal && h.department!==deptVal) return;
+        if(keyword && !(h.name.toLowerCase().includes(keyword)
+            || h.department.toLowerCase().includes(keyword)
+            || h.doctor.toLowerCase().includes(keyword)
+            || h.city.toLowerCase().includes(keyword))) return;
 
-const btnRow=document.createElement("div"); btnRow.className="btnRow";
-const wa=document.createElement("button"); wa.textContent="💬 WhatsApp"; wa.onclick=e=>{
-e.stopPropagation();
-const msg=`Hi, I am interested in ${h.name}, Dept: ${h.department}, Doctor: ${h.doctor}, City: ${h.city}`;
-window.open(`https://wa.me/${h.phone}?text=${encodeURIComponent(msg)}`,"_blank");
-}; btnRow.appendChild(wa);
+        const card=document.createElement("div"); 
+        card.className="card";
+        if(h.status==="pending") card.classList.add("pending");
+        card.innerHTML=`
+            <img src="${h.image}">
+            <h3>${h.name}</h3>
+            <p><b>Department:</b> ${h.department}</p>
+            <p><b>Doctor:</b> ${h.doctor}</p>
+            <p><b>City:</b> ${h.city}</p>
+            <p><b>Beds:</b> ${h.beds} | ICU: ${h.icu}</p>
+            <p><b>Fees:</b> ₹${h.fees}</p>
+            <p>📞 ${h.phone}</p>
+            <p>${h.address}</p>
+            <p>Status: ${h.status==="approved"?"✅ Approved":h.status==="rejected"?"❌ Rejected":"⏳ Pending"}</p>
+        `;
 
-if(currentUser && currentUser.uid===h.posterUid && currentUser.email!=="admin@example.com"){
-const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="btn-logout";
-del.onclick=async e=>{e.stopPropagation(); if(confirm("Delete this hospital?")) await db.ref("hospitals/"+h.id).remove(); };
-btnRow.appendChild(del);
-}
+        const btnRow=document.createElement("div"); 
+        btnRow.className="btnRow";
 
-if(currentUser && currentUser.email==="admin@example.com"){
-const ap=document.createElement("button"); ap.textContent="✅ Approve"; ap.className="btn-new";
-ap.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+h.id).update({status:"approved"}); };
-const rj=document.createElement("button"); rj.textContent="❌ Reject"; rj.className="btn-logout";
-rj.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+h.id).update({status:"rejected"}); };
-const del=document.createElement("button"); del.textContent="🗑 Delete"; del.className="btn-logout";
-del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("hospitals/"+h.id).remove(); };
-btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
-}
+        const wa=document.createElement("button"); 
+        wa.textContent="💬 WhatsApp"; 
+        wa.onclick=e=>{
+            e.stopPropagation();
+            const msg=`Hi, I am interested in ${h.name}, Dept: ${h.department}, Doctor: ${h.doctor}, City: ${h.city}`;
+            window.open(`https://wa.me/${h.phone}?text=${encodeURIComponent(msg)}`,"_blank");
+        }; 
+        btnRow.appendChild(wa);
 
-card.appendChild(btnRow);
-postsDiv.appendChild(card);
-});
+        // Poster buttons
+        if(currentUser && currentUser.uid===h.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
+            const del=document.createElement("button"); 
+            del.textContent="🗑 Delete"; 
+            del.className="btn-logout";
+            del.onclick=async e=>{e.stopPropagation(); if(confirm("Delete this hospital?")) await db.ref("hospitals/"+h.id).remove(); };
+            btnRow.appendChild(del);
+        }
+
+        // Admin buttons
+        if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
+            const ap=document.createElement("button"); 
+            ap.textContent="✅ Approve"; 
+            ap.className="btn-new";
+            ap.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+h.id).update({status:"approved"}); };
+            
+            const rj=document.createElement("button"); 
+            rj.textContent="❌ Reject"; 
+            rj.className="btn-logout";
+            rj.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+h.id).update({status:"rejected"}); };
+            
+            const del=document.createElement("button"); 
+            del.textContent="🗑 Delete"; 
+            del.className="btn-logout";
+            del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("hospitals/"+h.id).remove(); };
+            
+            btnRow.appendChild(ap); 
+            btnRow.appendChild(rj); 
+            btnRow.appendChild(del);
+        }
+
+        card.appendChild(btnRow);
+        postsDiv.appendChild(card);
+    });
 }
 
 searchInput.addEventListener("input",renderHospitals);
