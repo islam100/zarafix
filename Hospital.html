@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Hospital Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -94,11 +93,9 @@ const imgbbKey="636b058a892ade35848bc77878ebf217";
 const adminEmail="zarasamajiksevasanstha@gmail.com";
 let currentUser=null;
 
-// Login / Logout
 loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
 logoutBtn.onclick=()=>auth.signOut();
 
-// Auth state
 auth.onAuthStateChanged(user=>{
   currentUser=user;
   if(user){
@@ -110,15 +107,13 @@ auth.onAuthStateChanged(user=>{
     loginBtn.style.display="inline-block";
     logoutBtn.style.display="none";
     newPostBtn.style.display="none";
-    listingsDiv.innerHTML="";
+    loadListings();
   }
 });
 
-// Modal
 newPostBtn.onclick=()=>postModal.style.display="flex";
 closeForm.onclick=()=>postModal.style.display="none";
 
-// Upload Image
 async function uploadImage(file){
   const fd=new FormData();
   fd.append("image",file);
@@ -127,7 +122,6 @@ async function uploadImage(file){
   return data.data.url;
 }
 
-// Submit Hospital
 hospitalForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first!");
@@ -156,20 +150,22 @@ hospitalForm.onsubmit=async e=>{
   hospitalForm.reset(); postModal.style.display="none";
 };
 
-// Load Listings
 function loadListings(){
   db.ref("hospitals").orderByChild("created").on("value",snap=>{
     let items=[];
     snap.forEach(ch=>items.push({...ch.val(), key:ch.key}));
-    items.sort((a,b)=>b.created-a.created); // newest first
+    items.sort((a,b)=>b.created-a.created);
+
     let highlighted=items.filter(i=>i.highlighted);
     let normal=items.filter(i=>!i.highlighted);
     items=[...highlighted,...normal];
 
     listingsDiv.innerHTML="";
     items.forEach(item=>{
-      // Poster sees own + all approved/rejected
-      if(currentUser.email!==adminEmail && currentUser.uid!==item.posterUid && item.status==="pending") return;
+      // Non-logged users see only approved
+      if(!currentUser && item.status!=="approved") return;
+      // Poster sees his own
+      if(currentUser && currentUser.uid!==item.posterUid && currentUser.email!==adminEmail && item.status==="pending") return;
 
       const card=document.createElement("div");
       card.className="card "+(item.status==="approved"?"approved":item.status==="pending"?"waiting":"rejected");
@@ -190,15 +186,13 @@ function loadListings(){
 
       const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
-      // Poster delete
-      if(currentUser.uid===item.posterUid){
+      if(currentUser && currentUser.uid===item.posterUid){
         const delBtn=document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
         delBtn.onclick=()=>{ if(confirm("Delete?")) db.ref("hospitals/"+item.key).remove(); };
         btnRow.appendChild(delBtn);
       }
 
-      // Admin buttons
-      if(currentUser.email===adminEmail){
+      if(currentUser && currentUser.email===adminEmail){
         const approveBtn=document.createElement("button"); approveBtn.className="btn-new"; approveBtn.textContent="Approve";
         approveBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"approved"});
         const rejectBtn=document.createElement("button"); rejectBtn.className="btn-logout"; rejectBtn.textContent="Reject";
