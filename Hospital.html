@@ -2,165 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hospital Portal</title>
+  <title>Property Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; }
-    header { background: linear-gradient(135deg,#4e54c8,#8f94fb); padding: 15px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-    .btn { padding: 10px 20px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; background: linear-gradient(145deg,#6a11cb,#2575fc); color: #fff; box-shadow: 5px 5px 15px rgba(0,0,0,0.3); transition: 0.2s; }
-    .btn:hover { transform: translateY(-3px); }
-    .container { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap: 20px; }
-    .card { background:#fff; border-radius:20px; padding:20px; box-shadow:0 10px 20px rgba(0,0,0,0.2); transform-style:preserve-3d; transition:0.3s; }
-    .card:hover { transform: rotateY(8deg) rotateX(8deg) scale(1.03); }
-    form { display: flex; flex-direction: column; max-width: 400px; margin: 20px auto; gap: 10px; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-    input, select { padding:10px; border:1px solid #ccc; border-radius:10px; }
-    .hidden { display:none; }
+    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f0f2f5; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 10px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: all 0.3s;
+    }
+    .approved { border-left: 6px solid green; background:#e6ffe6; }
+    .waiting { border-left: 6px solid orange; background:#fff5e6; }
+    .highlight { border: 2px solid red; background: #ffe6e6; }
+    button { margin-top:10px; padding:6px 12px; border:none; border-radius:6px; cursor:pointer; }
+    .delete-btn { background:#ff4d4d; color:white; }
+    .admin-btn { background:#3399ff; color:white; margin-left:10px; }
   </style>
 </head>
 <body>
-  <header>
-    <h2>🏥 Hospital Portal</h2>
-    <div>
-      <button id="loginBtn" class="btn">Login with Google</button>
-      <button id="logoutBtn" class="btn hidden">Logout</button>
-    </div>
-  </header>
 
-  <!-- Post Form -->
-  <form id="postForm" class="hidden">
-    <h3>Post Hospital</h3>
-    <input type="text" id="name" placeholder="Hospital Name" required>
-    <input type="text" id="address" placeholder="Address" required>
-    <select id="category">
-      <option value="General">General</option>
-      <option value="Emergency">Emergency</option>
-      <option value="Specialized">Specialized</option>
-    </select>
-    <button type="submit" class="btn">Submit</button>
-    <p id="statusMsg"></p>
-  </form>
+  <h2>Property Listings</h2>
+  <div id="listings"></div>
 
-  <div class="container" id="listings"></div>
-
-<script>
-  // Firebase Config
+  <script>
+    // 🔥 Firebase config
   const firebaseConfig = {
-    apiKey: "AIzaSyDTj2n1yhr1sFmuyBZ-jUwOmx1YqAN5QjA",
-    authDomain: "property-20d6d.firebaseapp.com",
-    databaseURL: "https://property-20d6d-default-rtdb.firebaseio.com",
-    projectId: "property-20d6d",
-    storageBucket: "property-20d6d.appspot.com",
-    messagingSenderId: "742878118556",
-    appId: "1:742878118556:web:aa1c7c35ec779da366fccc"
-  };
-  firebase.initializeApp(firebaseConfig);
+  apiKey: "AIzaSyDT-D80OSwDetRfDEKHTKNvdRTPJnG8Cs4",
+  authDomain: "hospital-dc40b.firebaseapp.com",
+  databaseURL: "https://hospital-dc40b-default-rtdb.firebaseio.com",
+  projectId: "hospital-dc40b",
+  storageBucket: "hospital-dc40b.appspot.com",   // ✅ सही
+  messagingSenderId: "445806713376",
+  appId: "1:445806713376:web:77dab96b91f7fc71c07a45"
+};
+  
+    firebase.initializeApp(firebaseConfig);
 
-  const auth = firebase.auth();
-  const db = firebase.database();
+    const db = firebase.database();
+    let currentUser = null;
+    const adminEmail = "admin@example.com"; // 🔴 अपना admin email डालें
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postForm = document.getElementById("postForm");
-  const listings = document.getElementById("listings");
-  const statusMsg = document.getElementById("statusMsg");
-
-  let currentUser = null;
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-
-  // Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => auth.signOut();
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      postForm.classList.remove("hidden");
-      loadListings();
-    } else {
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      postForm.classList.add("hidden");
-      listings.innerHTML = "";
-    }
-  });
-
-  // Submit Post
-  postForm.onsubmit = e => {
-    e.preventDefault();
-    const name = document.getElementById("name").value;
-    const address = document.getElementById("address").value;
-    const category = document.getElementById("category").value;
-
-    const postId = db.ref("hospitals").push().key;
-    db.ref("hospitals/"+postId).set({
-      id: postId,
-      name, address, category,
-      status:"pending",
-      posterUid: currentUser.uid,
-      posterEmail: currentUser.email,
-      createdAt: Date.now()
+    // ✅ Auth check
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loadListings();
+      } else {
+        alert("Please login first!");
+      }
     });
 
-    statusMsg.textContent = "✅ Waiting for Admin Approval";
-    postForm.reset();
-  };
+    // ✅ Load Listings
+    function loadListings() {
+      db.ref("listings").on("value", snapshot => {
+        const listingsDiv = document.getElementById("listings");
+        listingsDiv.innerHTML = "";
+        let listings = [];
 
-  // Load Listings
-  function loadListings(){
-    db.ref("hospitals").on("value", snap => {
-      listings.innerHTML = "";
-      snap.forEach(child => {
-        const h = child.val();
-        // अगर admin नहीं है → सिर्फ approved वाले दिखें (या अपनी pending वाली)
-        if(currentUser?.email !== adminEmail){
-          if(h.status !== "approved" && h.posterUid !== currentUser.uid) return;
-        }
+        snapshot.forEach(child => {
+          let item = child.val();
+          item.key = child.key;
+          listings.push(item);
+        });
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>${h.name}</h3>
-          <p><b>Address:</b> ${h.address}</p>
-          <p><b>Category:</b> ${h.category}</p>
-          <p><b>Status:</b> ${h.status}</p>
-        `;
+        // 🔹 Newest first (timestamp descending)
+        listings.sort((a, b) => b.timestamp - a.timestamp);
 
-        // Admin Controls
-        if(currentUser?.email === adminEmail){
-          if(h.status === "pending"){
-            let approveBtn = document.createElement("button");
-            approveBtn.className = "btn";
-            approveBtn.textContent = "Approve";
-            approveBtn.onclick = ()=> db.ref("hospitals/"+h.id).update({status:"approved"});
-            card.appendChild(approveBtn);
+        // 🔹 Admin highlight always on top
+        let highlighted = listings.filter(l => l.highlighted);
+        let normal = listings.filter(l => !l.highlighted);
 
-            let rejectBtn = document.createElement("button");
-            rejectBtn.className = "btn";
-            rejectBtn.textContent = "Reject";
-            rejectBtn.onclick = ()=> db.ref("hospitals/"+h.id).remove();
-            card.appendChild(rejectBtn);
+        listings = [...highlighted, ...normal];
+
+        listings.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "card " + (item.approved ? "approved" : "waiting");
+          if (item.highlighted) card.classList.add("highlight");
+
+          card.innerHTML = `
+            <h3>${item.title || "No Title"}</h3>
+            <p>${item.description || ""}</p>
+            <p>Status: <b>${item.approved ? "Approved" : "Waiting Approval"}</b></p>
+          `;
+
+          // ✅ Poster delete button
+          if (currentUser.email === item.userEmail) {
+            const delBtn = document.createElement("button");
+            delBtn.className = "delete-btn";
+            delBtn.textContent = "Delete";
+            delBtn.onclick = () => deleteListing(item.key);
+            card.appendChild(delBtn);
           }
-          let delBtn = document.createElement("button");
-          delBtn.className = "btn";
-          delBtn.textContent = "Delete";
-          delBtn.onclick = ()=> db.ref("hospitals/"+h.id).remove();
-          card.appendChild(delBtn);
-        }
 
-        listings.appendChild(card);
+          // ✅ Admin "Toggle Top" button
+          if (currentUser.email === adminEmail) {
+            const adminBtn = document.createElement("button");
+            adminBtn.className = "admin-btn";
+            adminBtn.textContent = item.highlighted ? "Unpin" : "Pin to Top";
+            adminBtn.onclick = () => toggleHighlight(item.key, item.highlighted);
+            card.appendChild(adminBtn);
+          }
+
+          listingsDiv.appendChild(card);
+        });
       });
-    });
-  }
-</script>
+    }
+
+    // ✅ Delete Listing
+    function deleteListing(key) {
+      if (confirm("Delete this post?")) {
+        db.ref("listings/" + key).remove();
+      }
+    }
+
+    // ✅ Admin Toggle Highlight
+    function toggleHighlight(key, isHighlighted) {
+      db.ref("listings/" + key).update({ highlighted: !isHighlighted });
+    }
+  </script>
 </body>
 </html>
