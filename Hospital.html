@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Hospital Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -17,7 +16,7 @@ button:hover{transform:translateY(-2px);box-shadow:0 6px 8px rgba(0,0,0,0.4);}
 .btn-login{background:#2ecc71;color:white;}
 .btn-logout{background:#e74c3c;color:white;}
 .btn-new{background:#f39c12;color:white;}
-.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 10px 20px rgba(0,0,0,0.2);transition:transform .3s;overflow:hidden; border:4px solid;}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 10px 20px rgba(0,0,0,0.2);transition:transform .3s;overflow:hidden; border:4px solid; display:flex; flex-direction:column;}
 .card:hover{transform:scale(1.02);}
 .approved{border-color:green;background:#e6ffe6;}
 .waiting{border-color:orange;background:#fff5e6;}
@@ -30,7 +29,7 @@ button:hover{transform:translateY(-2px);box-shadow:0 6px 8px rgba(0,0,0,0.4);}
 form input, form select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:8px;font-size:14px;}
 form button{width:100%;padding:12px;background:#3498db;color:white;font-weight:bold;border-radius:12px;margin-top:10px;}
 form button:hover{background:#2980b9;}
-img.hosp-img{width:100%;height:auto;max-height:250px;object-fit:cover;border-radius:12px;margin-top:6px;}
+img.hosp-img{width:100%;height:auto;max-height:300px;object-fit:contain;border-radius:12px;margin-top:6px;}
 @media(max-width:500px){.btnRow button{flex:1 1 48%;}}
 </style>
 </head>
@@ -80,30 +79,30 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
-const auth = firebase.auth();
-const db = firebase.database();
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const newPostBtn = document.getElementById("newPostBtn");
-const postModal = document.getElementById("postModal");
-const closeForm = document.getElementById("closeForm");
-const hospitalForm = document.getElementById("hospitalForm");
-const listingsDiv = document.getElementById("listings");
+const auth=firebase.auth();
+const db=firebase.database();
+const loginBtn=document.getElementById("loginBtn");
+const logoutBtn=document.getElementById("logoutBtn");
+const newPostBtn=document.getElementById("newPostBtn");
+const postModal=document.getElementById("postModal");
+const closeForm=document.getElementById("closeForm");
+const hospitalForm=document.getElementById("hospitalForm");
+const listingsDiv=document.getElementById("listings");
 
 const imgbbKey="636b058a892ade35848bc77878ebf217";
 const adminEmail="zarasamajiksevasanstha@gmail.com";
-let currentUser = null;
+let currentUser=null;
 
-loginBtn.onclick = () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
-logoutBtn.onclick = () => auth.signOut();
+loginBtn.onclick=()=>{const provider=new firebase.auth.GoogleAuthProvider();auth.signInWithPopup(provider);};
+logoutBtn.onclick=()=>auth.signOut();
 
-auth.onAuthStateChanged(user => {
-  currentUser = user;
+auth.onAuthStateChanged(user=>{
+  currentUser=user;
   if(user){
     loginBtn.style.display="none";
     logoutBtn.style.display="inline-block";
     newPostBtn.style.display="inline-block";
-  } else{
+  }else{
     loginBtn.style.display="inline-block";
     logoutBtn.style.display="none";
     newPostBtn.style.display="none";
@@ -111,24 +110,24 @@ auth.onAuthStateChanged(user => {
   loadListings();
 });
 
-newPostBtn.onclick = () => postModal.style.display="flex";
-closeForm.onclick = () => postModal.style.display="none";
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
 
 async function uploadImage(file){
-  const fd = new FormData();
-  fd.append("image", file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {method:"POST", body:fd});
-  const data = await res.json();
+  const fd=new FormData();
+  fd.append("image",file);
+  const res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:fd});
+  const data=await res.json();
   return data.data.url;
 }
 
-hospitalForm.onsubmit = async e => {
+hospitalForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first!");
-  const file = document.getElementById("image").files[0];
-  const imgUrl = await uploadImage(file);
+  const file=document.getElementById("image").files[0];
+  const imgUrl=await uploadImage(file);
 
-  const hospital = {
+  const hospital={
     name:document.getElementById("name").value,
     department:document.getElementById("department").value,
     doctor:document.getElementById("doctor").value,
@@ -151,26 +150,29 @@ hospitalForm.onsubmit = async e => {
 };
 
 function loadListings(){
-  db.ref("hospitals").orderByChild("created").on("value", snap => {
-    let items = [];
-    snap.forEach(ch => items.push({...ch.val(), key:ch.key}));
-    items.sort((a,b) => b.created - a.created);
+  db.ref("hospitals").orderByChild("created").on("value",snap=>{
+    let items=[];
+    snap.forEach(ch=>items.push({...ch.val(),key:ch.key}));
+    items.sort((a,b)=>b.created-a.created);
 
-    let highlighted = items.filter(i => i.highlighted);
-    let normal = items.filter(i => !i.highlighted);
-    items = [...highlighted, ...normal];
+    let highlighted=items.filter(i=>i.highlighted);
+    let normal=items.filter(i=>!i.highlighted);
+    items=[...highlighted,...normal];
 
-    listingsDiv.innerHTML = "";
-    items.forEach(item => {
+    listingsDiv.innerHTML="";
+    items.forEach(item=>{
 
       // Non-logged users see only approved
       if(!currentUser && item.status!=="approved") return;
 
-      const card = document.createElement("div");
-      card.className = "card " + (item.status==="approved"?"approved":item.status==="pending"?"waiting":"rejected");
+      // Poster sees his own posts
+      if(currentUser && currentUser.uid!==item.posterUid && currentUser.email!==adminEmail && item.status==="pending") return;
+
+      const card=document.createElement("div");
+      card.className="card "+(item.status==="approved"?"approved":item.status==="pending"?"waiting":"rejected");
       if(item.highlighted) card.classList.add("highlight");
 
-      card.innerHTML = `
+      card.innerHTML=`
         <h3>${item.name}</h3>
         <p><b>Department:</b> ${item.department}</p>
         <p><b>Doctor:</b> ${item.doctor}</p>
@@ -183,24 +185,24 @@ function loadListings(){
         <p>Status: <b>${item.status==="approved"?"✅ Approved":item.status==="pending"?"⏳ Waiting":"❌ Rejected"}</b></p>
       `;
 
-      const btnRow = document.createElement("div"); btnRow.className="btnRow";
+      const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
       if(currentUser){
-        if(currentUser.uid === item.posterUid){
-          const delBtn = document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
-          delBtn.onclick = () => { if(confirm("Delete?")) db.ref("hospitals/"+item.key).remove(); };
+        if(currentUser.uid===item.posterUid){
+          const delBtn=document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
+          delBtn.onclick=()=>{if(confirm("Delete?")) db.ref("hospitals/"+item.key).remove();};
           btnRow.appendChild(delBtn);
         }
 
-        if(currentUser.email === adminEmail){
-          const approveBtn = document.createElement("button"); approveBtn.className="btn-new"; approveBtn.textContent="Approve";
-          approveBtn.onclick = () => db.ref("hospitals/"+item.key).update({status:"approved"});
-          const rejectBtn = document.createElement("button"); rejectBtn.className="btn-logout"; rejectBtn.textContent="Reject";
-          rejectBtn.onclick = () => db.ref("hospitals/"+item.key).update({status:"rejected"});
-          const highlightBtn = document.createElement("button"); highlightBtn.className="btn-new"; highlightBtn.textContent=item.highlighted?"Unpin":"Pin Top";
-          highlightBtn.onclick = () => db.ref("hospitals/"+item.key).update({highlighted:!item.highlighted});
-          const delBtn = document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
-          delBtn.onclick = () => { if(confirm("Delete permanently?")) db.ref("hospitals/"+item.key).remove(); };
+        if(currentUser.email===adminEmail){
+          const approveBtn=document.createElement("button"); approveBtn.className="btn-new"; approveBtn.textContent="Approve";
+          approveBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"approved"});
+          const rejectBtn=document.createElement("button"); rejectBtn.className="btn-logout"; rejectBtn.textContent="Reject";
+          rejectBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"rejected"});
+          const highlightBtn=document.createElement("button"); highlightBtn.className="btn-new"; highlightBtn.textContent=item.highlighted?"Unpin":"Pin Top";
+          highlightBtn.onclick=()=>db.ref("hospitals/"+item.key).update({highlighted:!item.highlighted});
+          const delBtn=document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
+          delBtn.onclick=()=>{if(confirm("Delete permanently?")) db.ref("hospitals/"+item.key).remove();};
           btnRow.appendChild(approveBtn); btnRow.appendChild(rejectBtn); btnRow.appendChild(highlightBtn); btnRow.appendChild(delBtn);
         }
       }
