@@ -17,11 +17,11 @@ button:hover{transform:translateY(-2px);box-shadow:0 6px 8px rgba(0,0,0,0.4);}
 .btn-logout{background:#e74c3c;color:white;}
 .btn-new{background:#f39c12;color:white;}
 .card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 8px 15px rgba(0,0,0,0.2);transition:transform .3s;}
-.card:hover{transform:scale(1.02);box-shadow:0 12px 24px rgba(0,0,0,0.25);}
+.card:hover{transform:scale(1.02);}
 .approved{border-left:6px solid green;background:#e6ffe6;}
 .waiting{border-left:6px solid orange;background:#fff5e6;}
 .rejected{border-left:6px solid red;background:#ffe6e6;}
-.highlight{border:2px solid purple;background:#ffe6ff;}
+.highlight{border:2px solid #ff00ff;background:#ffe6ff;}
 .btnRow{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;}
 .modal-content{background:white;padding:15px;border-radius:16px;width:95%;max-width:500px;position:relative;overflow:auto;}
@@ -29,7 +29,7 @@ button:hover{transform:translateY(-2px);box-shadow:0 6px 8px rgba(0,0,0,0.4);}
 form input, form select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:8px;font-size:14px;}
 form button{width:100%;padding:12px;background:#3498db;color:white;font-weight:bold;border-radius:12px;margin-top:10px;}
 form button:hover{background:#2980b9;}
-img.hosp-img{width:100%;height:auto;max-height:250px;object-fit:contain;border-radius:12px;margin-top:6px;}
+img.hosp-img{width:100%;height:auto;object-fit:cover;border-radius:12px;margin-top:6px;}
 @media(max-width:500px){.btnRow button{flex:1 1 48%;}}
 </style>
 </head>
@@ -126,6 +126,7 @@ hospitalForm.onsubmit=async e=>{
   if(!currentUser) return alert("Login first!");
   const file=document.getElementById("image").files[0];
   const imgUrl=await uploadImage(file);
+
   const hospital={
     name:document.getElementById("name").value,
     department:document.getElementById("department").value,
@@ -143,25 +144,27 @@ hospitalForm.onsubmit=async e=>{
     created:Date.now(),
     highlighted:false
   };
-  db.ref("hospitals").push(hospital);
+
+  db.ref("hospitals").push(hospital,()=>{ alert("✅ Hospital submitted! Waiting for approval."); });
   hospitalForm.reset(); postModal.style.display="none";
 };
 
 function loadListings(){
   db.ref("hospitals").orderByChild("created").on("value",snap=>{
-    let items=[];
-    snap.forEach(ch=>items.push({...ch.val(), key:ch.key}));
+    let items=[]; snap.forEach(ch=>items.push({...ch.val(), key:ch.key}));
     items.sort((a,b)=>b.created-a.created);
+
+    // Highlight first
     let highlighted=items.filter(i=>i.highlighted);
     let normal=items.filter(i=>!i.highlighted);
     items=[...highlighted,...normal];
+
     listingsDiv.innerHTML="";
     items.forEach(item=>{
+      // Non-logged users see only approved
       if(!currentUser && item.status!=="approved") return;
-      if(currentUser && currentUser.uid===item.posterUid){} 
-      else if(currentUser && currentUser.email===adminEmail){} 
-      else if(item.status==="approved"){} 
-      else return;
+      // Poster sees own + approved/rejected
+      if(currentUser && currentUser.uid!==item.posterUid && currentUser.email!==adminEmail && item.status==="pending") return;
 
       const card=document.createElement("div");
       card.className="card "+(item.status==="approved"?"approved":item.status==="pending"?"waiting":"rejected");
@@ -179,6 +182,7 @@ function loadListings(){
         <img src="${item.image}" class="hosp-img">
         <p>Status: <b>${item.status==="approved"?"✅ Approved":item.status==="pending"?"⏳ Waiting":"❌ Rejected"}</b></p>
       `;
+
       const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
       if(currentUser && currentUser.uid===item.posterUid){
