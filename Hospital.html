@@ -22,12 +22,18 @@ button{padding:8px 12px;margin:0 5px;border:none;border-radius:8px;cursor:pointe
 .highlight{border:2px solid red;background:#ffe6e6;}
 .btnRow{margin-top:10px;}
 .btnRow button{margin-right:6px;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;}
+.modal-content{background:white;padding:15px;border-radius:12px;width:90%;max-width:500px;position:relative;overflow:auto;}
+.close{position:absolute;top:8px;right:12px;cursor:pointer;font-weight:bold;font-size:18px;}
+form input, form select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:8px;font-size:14px;}
+form button{width:100%;padding:10px;background:#3498db;color:white;font-weight:bold;border-radius:10px;margin-top:10px;}
+form button:hover{background:#2980b9;}
 </style>
 </head>
 <body>
 
 <header>
-<h2>Hospital Listings</h2>
+<h2>Hospital Portal</h2>
 <div>
 <button id="loginBtn" class="btn-login">Login with Google</button>
 <button id="logoutBtn" class="btn-logout" style="display:none;">Logout</button>
@@ -38,20 +44,28 @@ button{padding:8px 12px;margin:0 5px;border:none;border-radius:8px;cursor:pointe
 <div id="listings"></div>
 
 <!-- New Hospital Modal -->
-<div id="postModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
-<div style="background:white;padding:15px;border-radius:12px;width:90%;max-width:500px;position:relative;">
-<span id="closeForm" style="position:absolute;top:8px;right:12px;cursor:pointer;font-weight:bold;font-size:18px;">&times;</span>
+<div id="postModal" class="modal">
+<div class="modal-content">
+<span id="closeForm" class="close">&times;</span>
 <h3>Add Hospital</h3>
 <form id="hospitalForm">
-<input type="text" id="title" placeholder="Hospital Name" required><br>
-<input type="text" id="description" placeholder="Description" required><br>
+<input type="text" id="name" placeholder="Hospital Name" required>
+<input type="text" id="department" placeholder="Department" required>
+<input type="text" id="doctor" placeholder="Doctor Name" required>
+<input type="text" id="city" placeholder="City" required>
+<input type="number" id="beds" placeholder="Number of Beds" required>
+<input type="number" id="icu" placeholder="ICU Beds" required>
+<input type="number" id="fees" placeholder="Fees" required>
+<input type="tel" id="phone" placeholder="Phone Number" required>
+<input type="text" id="address" placeholder="Address" required>
+<input type="file" id="image" accept="image/*" required>
 <button type="submit">Submit</button>
 </form>
 </div>
 </div>
 
 <script>
-// Firebase Config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDT-D80OSwDetRfDEKHTKNvdRTPJnG8Cs4",
   authDomain: "hospital-dc40b.firebaseapp.com",
@@ -73,6 +87,7 @@ const closeForm=document.getElementById("closeForm");
 const hospitalForm=document.getElementById("hospitalForm");
 const listingsDiv=document.getElementById("listings");
 
+const imgbbKey="636b058a892ade35848bc77878ebf217";
 const adminEmail="zarasamajiksevasanstha@gmail.com";
 let currentUser=null;
 
@@ -80,7 +95,7 @@ let currentUser=null;
 loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
 logoutBtn.onclick=()=>auth.signOut();
 
-// Auth State
+// Auth state
 auth.onAuthStateChanged(user=>{
   currentUser=user;
   if(user){
@@ -96,77 +111,102 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// New Post Modal
+// Modal
 newPostBtn.onclick=()=>postModal.style.display="flex";
 closeForm.onclick=()=>postModal.style.display="none";
 
-// Submit New Hospital
-hospitalForm.onsubmit=e=>{
+// Upload Image to ImgBB
+async function uploadImage(file){
+  const fd=new FormData();
+  fd.append("image",file);
+  const res=await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`,{method:"POST",body:fd});
+  const data=await res.json();
+  return data.data.url;
+}
+
+// Submit Hospital
+hospitalForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first!");
-  const title=document.getElementById("title").value;
-  const description=document.getElementById("description").value;
-  const post={
-    title, description,
-    userEmail: currentUser.email,
-    timestamp: Date.now(),
-    approved:false,
+  const file=document.getElementById("image").files[0];
+  const imgUrl=await uploadImage(file);
+
+  const hospital={
+    name:document.getElementById("name").value,
+    department:document.getElementById("department").value,
+    doctor:document.getElementById("doctor").value,
+    city:document.getElementById("city").value,
+    beds:document.getElementById("beds").value,
+    icu:document.getElementById("icu").value,
+    fees:document.getElementById("fees").value,
+    phone:document.getElementById("phone").value,
+    address:document.getElementById("address").value,
+    image:imgUrl,
+    status:"pending",
+    posterUid:currentUser.uid,
+    posterEmail:currentUser.email,
+    created:Date.now(),
     highlighted:false
   };
-  db.ref("listings").push(post);
+
+  db.ref("hospitals").push(hospital);
   hospitalForm.reset(); postModal.style.display="none";
 };
 
 // Load Listings
 function loadListings(){
-  db.ref("listings").on("value",snap=>{
+  db.ref("hospitals").orderByChild("created").on("value",snap=>{
     let items=[];
     snap.forEach(ch=>items.push({...ch.val(), key:ch.key}));
     // Newest first
-    items.sort((a,b)=>b.timestamp-a.timestamp);
-    // Admin highlight top
+    items.sort((a,b)=>b.created-a.created);
+    // Highlighted first
     let highlighted=items.filter(i=>i.highlighted);
     let normal=items.filter(i=>!i.highlighted);
     items=[...highlighted,...normal];
 
     listingsDiv.innerHTML="";
     items.forEach(item=>{
-      // Filter view
-      if(currentUser.email!==adminEmail && currentUser.email!==item.userEmail && !item.approved) return;
+      // Poster sees only own posts or approved
+      if(currentUser.email!==adminEmail && currentUser.uid!==item.posterUid && item.status!=="approved") return;
 
       const card=document.createElement("div");
-      card.className="card " + (item.approved?"approved":"waiting");
+      card.className="card "+(item.status==="approved"?"approved":"waiting");
       if(item.highlighted) card.classList.add("highlight");
 
-      card.innerHTML=`<h3>${item.title}</h3>
-      <p>${item.description}</p>
-      <p>Status: <b>${item.approved?"Approved":"Waiting Approval"}</b></p>`;
+      card.innerHTML=`
+        <h3>${item.name}</h3>
+        <p><b>Department:</b> ${item.department}</p>
+        <p><b>Doctor:</b> ${item.doctor}</p>
+        <p><b>City:</b> ${item.city}</p>
+        <p><b>Beds:</b> ${item.beds} | ICU: ${item.icu}</p>
+        <p><b>Fees:</b> ₹${item.fees}</p>
+        <p>📞 ${item.phone}</p>
+        <p>${item.address}</p>
+        <img src="${item.image}" style="width:100%;height:180px;object-fit:cover;border-radius:8px;margin-top:6px;">
+        <p>Status: <b>${item.status==="approved"?"✅ Approved":"⏳ Waiting"}</b></p>
+      `;
 
       const btnRow=document.createElement("div"); btnRow.className="btnRow";
 
-      // Poster Delete
-      if(currentUser.email===item.userEmail){
+      // Poster delete
+      if(currentUser.uid===item.posterUid){
         const delBtn=document.createElement("button");
-        delBtn.className="btn-logout";
-        delBtn.textContent="Delete";
-        delBtn.onclick=()=>{ if(confirm("Delete?")) db.ref("listings/"+item.key).remove(); };
+        delBtn.className="btn-logout"; delBtn.textContent="Delete";
+        delBtn.onclick=()=>{ if(confirm("Delete?")) db.ref("hospitals/"+item.key).remove(); };
         btnRow.appendChild(delBtn);
       }
 
       // Admin buttons
       if(currentUser.email===adminEmail){
-        const approveBtn=document.createElement("button");
-        approveBtn.className="btn-new"; approveBtn.textContent="Approve";
-        approveBtn.onclick=()=>db.ref("listings/"+item.key).update({approved:true});
-        const rejectBtn=document.createElement("button");
-        rejectBtn.className="btn-logout"; rejectBtn.textContent="Reject";
-        rejectBtn.onclick=()=>db.ref("listings/"+item.key).update({approved:false});
-        const highlightBtn=document.createElement("button");
-        highlightBtn.className="btn-new"; highlightBtn.textContent=item.highlighted?"Unpin":"Pin to Top";
-        highlightBtn.onclick=()=>db.ref("listings/"+item.key).update({highlighted:!item.highlighted});
-        const delBtn=document.createElement("button");
-        delBtn.className="btn-logout"; delBtn.textContent="Delete";
-        delBtn.onclick=()=>{ if(confirm("Delete permanently?")) db.ref("listings/"+item.key).remove(); };
+        const approveBtn=document.createElement("button"); approveBtn.className="btn-new"; approveBtn.textContent="Approve";
+        approveBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"approved"});
+        const rejectBtn=document.createElement("button"); rejectBtn.className="btn-logout"; rejectBtn.textContent="Reject";
+        rejectBtn.onclick=()=>db.ref("hospitals/"+item.key).update({status:"pending"});
+        const highlightBtn=document.createElement("button"); highlightBtn.className="btn-new"; highlightBtn.textContent=item.highlighted?"Unpin":"Pin to Top";
+        highlightBtn.onclick=()=>db.ref("hospitals/"+item.key).update({highlighted:!item.highlighted});
+        const delBtn=document.createElement("button"); delBtn.className="btn-logout"; delBtn.textContent="Delete";
+        delBtn.onclick=()=>{ if(confirm("Delete permanently?")) db.ref("hospitals/"+item.key).remove(); };
         btnRow.appendChild(approveBtn); btnRow.appendChild(rejectBtn); btnRow.appendChild(highlightBtn); btnRow.appendChild(delBtn);
       }
 
