@@ -1,135 +1,646 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zara Fix - All Service Booking</title>
-<style>
-body {
-  margin:0; padding:0; font-family:'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #e0f7fa, #ffffff);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:100vh;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix – Public | Shopkeeper | Admin</title>
 
-/* Logo 3D style */
-h1 {
-  font-size:3rem;
-  font-weight:bold;
-  background: linear-gradient(45deg,#ff4081,#00bcd4,#ffeb3b,#8bc34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  margin:10px;
-  text-align:center;
-}
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-h2 {
-  font-size:1.5rem;
-  font-weight:600;
-  margin:5px;
-  color:#555;
-  text-align:center;
-}
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-/* All-Service Booking text */
-#allServiceText {
-  font-size:1.8rem;
-  font-weight:600;
-  margin:20px 0;
-  color:#ff4081;
-  text-align:center;
-  text-shadow:1px 1px 4px rgba(0,0,0,0.2);
-}
-
-.button-container {
-  display:flex; flex-direction:column; gap:20px; width:90%; max-width:400px; margin-top:20px;
-}
-.button3d {
-  padding:15px 25px; font-size:20px; font-weight:bold; color:white;
-  border:none; border-radius:15px; box-shadow:0 8px 0 rgba(0,0,0,0.2);
-  cursor:pointer; transition:all 0.2s ease-in-out; width:100%;
-}
-.button3d:active { box-shadow:0 3px 0 rgba(0,0,0,0.3); transform:translateY(5px); }
-
-.btn1 { background: linear-gradient(45deg,#00bcd4,#009688); }
-.btn2 { background: linear-gradient(45deg,#ff4081,#e91e63); }
-
-#loginBtn, #logoutBtn { padding:10px 20px; font-size:16px; border:none; border-radius:8px; cursor:pointer; margin-top:15px; }
-#logoutBtn { display:none; background:#dc3545; color:white; }
-#loginBtn { background:#4285F4; color:white; }
-
-.hidden { display:none; }
-
-@media(max-width:480px){
-  .button3d { font-size:18px; }
-  h1 { font-size:2.2rem; }
-  h2 { font-size:1.2rem; }
-  #allServiceText { font-size:1.5rem; }
-}
-</style>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0e1524; --line:rgba(255,255,255,.1); --soft:rgba(255,255,255,.05);
+    }
+    body{ background:var(--bg); color:#e5e7eb; }
+    /* 3D buttons */
+    .btn-3d{ box-shadow:0 6px 0 rgba(0,0,0,.6); transform:translateY(0); transition:transform .08s, box-shadow .08s, filter .2s; }
+    .btn-3d:hover{ filter:brightness(1.05); }
+    .btn-3d:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.6); }
+    /* 3D cards */
+    .card-3d{ background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:18px; overflow:hidden;
+      box-shadow:0 14px 36px rgba(0,0,0,.45); user-select:none; }
+    .card-3d.colourful{ border-image:linear-gradient(45deg,#8b5cf6,#06b6d4,#22c55e,#f59e0b) 1; border-width:1px; }
+    /* Gallery */
+    .gal-img{ width:100%; height:190px; object-fit:contain; background:#07101d; }
+    @media(min-width:640px){ .gal-img{ height:210px } }
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:70; }
+    .modal.show{ display:flex }
+    .modal-card{ width:min(95vw,900px); background:var(--panel); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+    /* Dropdown open helper */
+    .open .dd-list{ display:block }
+    .badge{ position:absolute; top:10px; left:10px; background:7fff00; border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; }
+    .badge-sold{ background:#3b1d1d; border-color:#4444ef; }
+    /* Big 3D LOGO text */
+    .logo-3d{
+      font-weight:900; letter-spacing:.08em;
+      background:conic-gradient(from 210deg, #ff4ecd, #8b5cf6, #06b6d4, #22c55e, #f59e0b, #ff4ecd);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 2px 0 rgba(0,0,0,.7), 0 10px 30px rgba(0,0,0,.5);
+      filter:drop-shadow(0 8px 18px rgba(16,185,129,.35));
+    }
+    /* Header pill buttons */
+    .hdr-btn{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); }
+    /* Input small look */
+    .inpt{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12) }
+  </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-[#0b1220]/90 backdrop-blur border-b border-white/10">
+  <div class="max-w-7xl mx-auto flex items-center justify-between p-4">
 
-<h1>Zara Fix</h1>
-<h2>All Service</h2>
+    
+    
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-[#0b1220]/95 backdrop-blur border-b border-white/10">
+  <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
 
-<div id="allServiceText">All-Service Booking</div>
+    <!-- Left: Logo -->
+    <div class="text-xl font-bold text-white">ZARA FIX</div>
 
-<div id="loginSection">
-  <button id="loginBtn">Google Login</button>
-</div>
+    <!-- Right: Two Dropdown Menus -->
+    <div class="flex items-center space-x-4 relative z-50">
 
-<div id="content" class="hidden">
-  <div class="button-container">
-    <button class="button3d btn1" onclick="location.href='r-form.html'">Service Request</button>
-    <button class="button3d btn2" onclick="location.href='userDashboard.html'">🛠️ Service Request Dashboard</button>
-    <button id="logoutBtn">Logout</button>
+      <!-- Menu 1 -->
+      <div class="relative">
+        <button id="btn-menu1" 
+                class="bg-gray-800 text-white text-sm px-2 py-1 rounded-md hover:bg-gray-700">
+          Menu 1 ▼
+        </button>
+        <div id="menu1" class="absolute left-0 mt-1 min-w-[150px] bg-white rounded-md shadow-md hidden z-50">
+          <a href="https://resonant-meringue-c47e9a.netlify.app/all-serviceProvider.html" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">All Services</a>
+          <a href="https://resonant-meringue-c47e9a.netlify.app/realestate" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">Property</a>
+          <a href="https://resonant-meringue-c47e9a.netlify.app/ambulancebooking" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">Ambulance</a>
+                
+          
+          
+          <a href="/home" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">Home</a>
+        </div>
+      </div>
+
+      <!-- Menu 2 -->
+      <div class="relative">
+        <button id="btn-menu2" 
+                class="bg-gray-800 text-white text-sm px-2 py-1 rounded-md hover:bg-gray-700">
+          Menu 2 ▼
+        </button>
+        <div id="menu2" class="absolute left-0 mt-1 min-w-[150px] bg-white rounded-md shadow-md hidden z-50">
+      
+          <a href="/about" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">About</a>
+          <a href="/contact" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">Contact</a>
+          <a href="/privacy" class="block px-3 py-1 text-sm text-black hover:bg-gray-200 active:bg-gray-300">Privacy</a>
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
+</header>
 
+<!-- Script -->
 <script>
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
+  // Toggle function only for buttons
+  document.getElementById('btn-menu1').addEventListener('click', function(e){
+    e.stopPropagation(); // parent click block na ho
+    document.getElementById('menu1').classList.toggle('hidden');
+    document.getElementById('menu2').classList.add('hidden'); // other menu close
+  });
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+  document.getElementById('btn-menu2').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('menu2').classList.toggle('hidden');
+    document.getElementById('menu1').classList.add('hidden');
+  });
 
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const contentDiv = document.getElementById('content');
-const loginSection = document.getElementById('loginSection');
+  // Close menus when clicking outside
+  window.addEventListener('click', function(){
+    document.getElementById('menu1').classList.add('hidden');
+    document.getElementById('menu2').classList.add('hidden');
+  });
 
-loginBtn.onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(e=>alert(e.message));
-};
-
-logoutBtn.onclick = () => { auth.signOut(); };
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    loginSection.classList.add('hidden');
-    contentDiv.classList.remove('hidden');
-    logoutBtn.style.display='inline-block';
-  } else {
-    loginSection.classList.remove('hidden');
-    contentDiv.classList.add('hidden');
-    logoutBtn.style.display='none';
-  }
-});
+  // Links will navigate normally, no JS needed
 </script>
 
+
+
+
+        <button id="editLinksBtn" class="hidden text-xs px-2 py-1 rounded-lg border border-white/15 bg-white/5">⚙ Edit Links</button>
+      </nav>
+
+      <!-- Right: Auth + Tabs -->
+      <div class="flex items-center gap-2">
+        <button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="max-w-6xl mx-auto px-3 pb-3">
+      <div class="flex gap-2 justify-end sm:justify-start">
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/10 font-semibold" data-tab="public">Public</button>
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold" data-tab="shop">Shopkeeper</button>
+        <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold hidden" id="adminTab" data-tab="admin">Admin</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="w-full max-w-6xl mx-auto flex-1 p-3">
+    <!-- PUBLIC -->
+    <section id="public" class="space-y-3">
+
+       <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mb-2">
+        <select id="filterCategory" class="inpt px-3 py-2 rounded-xl">
+          <option value="">All Categories</option>
+        <select>
+
+ </select>
+        <input id="searchInput" class="inpt px-3 py-2 rounded-xl flex-1 min-w-[200px]" placeholder="Search product..." />
+      </div>
+
+      <!-- Grid (mobile: 2 cards per row) -->
+      <div id="publicGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    </section>
+
+    <!-- SHOPKEEPER -->
+    <section id="shop" class="hidden">
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5 max-w-3xl">
+        <h3 class="text-lg font-bold mb-2">Sale Offer Add Karein</h3>
+        <p class="text-sm text-slate-300 mb-3">1–5 images • * required</p>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-xs">Product Name *</label>
+            <input id="pName" class="inpt w-full px-3 py-2 rounded-xl" placeholder="eg. iPhone 13">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs">Category *</label>
+            <select id="pCategory" class="inpt w-full px-3 py-2 rounded-xl">
+              <option value="">Select...</option>
+              <option>bike</option><option>car</option><option>cloth</option><option>watch</option><option>mobile</option><option>pc</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="text-slate-400 text-xs">Price (₹) *</label>
+            <input id="pPrice" type="number" min="1" class="inpt w-full px-3 py-2 rounded-xl" placeholder="999">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs">Discount </label>
+            <input id="pDiscount" type="number" min="0" max="95" class="inpt w-full px-3 py-2 rounded-xl" placeholder="10">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs">Shop WhatsApp Number *</label>
+            <input id="pWhats" class="inpt w-full px-3 py-2 rounded-xl" placeholder="91xxxxxxxxxx">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="text-slate-400 text-xs">Description</label>
+          <textarea id="pDesc" rows="2" class="inpt w-full px-3 py-2 rounded-xl" placeholder="Short details..."></textarea>
+        </div>
+
+        <div class="mt-3">
+          <label class="text-slate-400 text-xs">Images (1–5) via ImgBB *</label>
+          <input id="pImages" type="file" accept="image/*" multiple class="inpt w-full px-3 py-2 rounded-xl">
+          <p class="text-xs text-slate-400 mt-1">We will upload to ImgBB automatically. Max 5 images.</p>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+          <button id="submitProduct" class="btn-3d px-4 py-2 rounded-xl bg-emerald-500 font-bold">Submit Offer</button>
+          <span id="formMsg" class="text-sm text-slate-300"></span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5 mt-4">
+        <h3 class="text-lg font-bold mb-2">Your Offers</h3>
+        <div id="myGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="admin" class="hidden">
+      <div class="rounded-2xl border border-white/10 p-4 bg-white/5">
+        <h3 class="text-lg font-bold mb-3">Admin Dashboard</h3>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Total: <span id="aTotal">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Approved: <span id="aApproved">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Pending: <span id="aPending">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Rejected: <span id="aRejected">0</span></div>
+          <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/10">Sold: <span id="aSold">0</span></div>
+        </div>
+        <div id="adminGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for zoom -->
+  <div id="modal" class="modal">
+    <div id="modalCard" class="modal-card"></div>
+  </div>
+
+  <!-- Edit Links Modal -->
+  <div id="linksModal" class="modal">
+    <div class="modal-card p-4">
+      <h3 class="text-lg font-bold mb-2">Edit Header Links (Admin)</h3>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div><label class="text-xs">All Services</label><input id="m_all" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Property</label><input id="m_property" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Ambulance</label><input id="m_ambulance" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Home</label><input id="m_home" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Provider</label><input id="m_provider" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://resonant-meringue-c47e9a.netlify.app/z.html"/></div>
+        <div><label class="text-xs">About</label><input id="m_about" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Contact</label><input id="m_contact" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+        <div><label class="text-xs">Privacy Policy</label><input id="m_privacy" class="inpt w-full px-3 py-2 rounded-xl" placeholder="https://"/></div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button id="saveLinks" class="btn-3d px-4 py-2 rounded-xl bg-emerald-500 font-bold">Save</button>
+        <button id="closeLinks" class="btn-3d px-4 py-2 rounded-xl bg-rose-500 font-bold">Close</button>
+        <span id="linksMsg" class="text-sm text-slate-300"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+  /***** CONFIG *****/
+    const firebaseConfig = {
+      apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+      authDomain: "loot-lo-15328.firebaseapp.com",
+      databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+      projectId: "loot-lo-15328",
+      storageBucket: "loot-lo-15328.appspot.com",
+      messagingSenderId: "677769861892",
+      appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+    };
+    const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+    const IMGBB_KEY = "ff05d1b5c3b3e139253856f0ad1123df";
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    /***** Helpers *****/
+    const $ = s => document.querySelector(s);
+    const byId = id => document.getElementById(id);
+    const rupees = n => '₹' + Number(n||0).toLocaleString('en-IN');
+    const toast = (el, msg) => { el.textContent = msg; setTimeout(()=> el.textContent='', 4000); };
+    const clean = s => (s||'').replace(/</g,'&lt;');
+    const linkRef = db.ref('settings/links');
+
+    // Dropdown open/close
+    document.querySelectorAll('header .group').forEach(g=>{
+      const btn = g.querySelector('button');
+      btn.addEventListener('click', (e)=>{ e.stopPropagation(); g.classList.toggle('open'); });
+      document.addEventListener('click', e=>{ if(!g.contains(e.target)) g.classList.remove('open'); });
+    });
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(x=>{
+          x.classList.remove('bg-white/10'); x.classList.add('bg-white/5');
+        });
+        t.classList.add('bg-white/10'); t.classList.remove('bg-white/5');
+        ['public','shop','admin'].forEach(id=> byId(id).classList.add('hidden'));
+        byId(t.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    /***** AUTH *****/
+    byId('loginBtn').onclick = async () => {
+      if(auth.currentUser){ return auth.signOut(); }
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    };
+
+    auth.onAuthStateChanged(user=>{
+      const logged = !!user;
+      byId('loginBtn').textContent = logged ? 'Logout' : 'Login with Google';
+      if(logged){
+        // Show email + logout
+        byId('loginBtn').insertAdjacentHTML('beforebegin',
+          `<span class="hidden sm:inline text-sm opacity-80 mr-1">${user.email}</span>`);
+      }
+      // Admin tab show/hide + Edit links button
+      const isAdmin = user && user.email===ADMIN_EMAIL;
+      byId('adminTab').classList.toggle('hidden', !isAdmin);
+      byId('editLinksBtn').classList.toggle('hidden', !isAdmin);
+
+      renderAll(); loadMine(); renderAdmin();
+    });
+
+    /***** HEADER LINKS (editable by Admin) *****/
+    const defaultLinks = {
+      all:'#', property:'#', ambulance:'#', home:'#',
+       provider:'#',about:'#', contact:'#', privacy:'#'
+    };
+    linkRef.on('value', snap=>{
+      const L = Object.assign({}, defaultLinks, snap.val()||{});
+      // set hrefs
+      byId('lnk_all').href = L.all;
+      byId('lnk_property').href = L.property;
+      byId('lnk_ambulance').href = L.ambulance;
+      byId('lnk_home').href = L.home;
+      byId('lnk_provider').href = L.provider;
+      byId('lnk_about').href = L.about;
+      byId('lnk_contact').href = L.contact;
+      byId('lnk_privacy').href = L.privacy;
+      // modal fields (if open later)
+      ['all','property','ambulance','home','provider','about','contact','privacy'].forEach(k=>{
+        const el = byId('m_'+k); if(el) el.value = L[k]||'#';
+      });
+    });
+
+    byId('editLinksBtn').addEventListener('click', ()=>{
+      const u = auth.currentUser;
+      if(!(u && u.email===ADMIN_EMAIL)) return;
+      byId('linksModal').classList.add('show');
+    });
+    byId('closeLinks').addEventListener('click', ()=> byId('linksModal').classList.remove('show'));
+    byId('linksModal').addEventListener('click', (e)=>{ if(e.target.id==='linksModal') byId('linksModal').classList.remove('show'); });
+    byId('saveLinks').addEventListener('click', async ()=>{
+      const u = auth.currentUser;
+      if(!(u && u.email===ADMIN_EMAIL)) return;
+      const L={
+        all:byId('m_all').value.trim()||'#',
+        property:byId('m_property').value.trim()||'#',
+        ambulance:byId('m_ambulance').value.trim()||'#',
+        home:byId('m_home').value.trim()||'#',
+        provider:byId('m_provider').value.trim()||'#',
+        about:byId('m_about').value.trim()||'#',
+        contact:byId('m_contact').value.trim()||'#',
+        privacy:byId('m_privacy').value.trim()||'#',
+      };
+      await linkRef.set(L);
+      toast(byId('linksMsg'),'Saved!');
+      setTimeout(()=> byId('linksModal').classList.remove('show'), 600);
+    });
+
+    /***** DB + LIVE LISTENER *****/
+    // products/{id}: { id, name, category, price, discount, desc, images[], whats, owner, status, sold, createdAt }
+    const productsRef = db.ref('products');
+
+    let ALL = [];
+    productsRef.on('value', snap=>{
+      const obj = snap.val()||{};
+      ALL = Object.values(obj).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)); // newest first
+      updateStats(); renderAll(); loadMine(); renderAdmin();
+    });
+
+    function updateStats(){
+      const t = ALL.length,
+            a = ALL.filter(p=>p.status==='approved').length,
+            p = ALL.filter(p=>p.status==='pending').length,
+            r = ALL.filter(p=>p.status==='rejected').length,
+            s = ALL.filter(p=>p.sold===true).length;
+      byId('aTotal').textContent = t;
+      byId('aApproved').textContent = a;
+      byId('aPending').textContent = p;
+      byId('aRejected').textContent = r;
+      byId('aSold').textContent = s;
+    }
+
+    /***** FILTERS (Public) *****/
+    byId('filterCategory').addEventListener('change', renderAll);
+    byId('searchInput').addEventListener('input', ()=>{ clearTimeout(window.__t); window.__t=setTimeout(renderAll,150); });
+
+    function applyFilters(list){
+      const cat = byId('filterCategory').value;
+      const q = byId('searchInput').value.trim().toLowerCase();
+      return list.filter(p=>{
+        if(cat && p.category!==cat) return false;
+        if(q && !(p.name||'').toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+
+    /***** ImgBB Upload (display_url) *****/
+    async function uploadToImgBB(file){
+      const body = new FormData();
+      body.append('key', IMGBB_KEY);
+      body.append('image', file);
+      const res = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body });
+      const data = await res.json();
+      if(!data || !data.data || !data.data.display_url) throw new Error('ImgBB upload failed');
+      return data.data.display_url;
+    }
+    async function uploadMultiple(files){
+      const list = Array.from(files).slice(0,5);
+      const out=[];
+      for(const f of list){ out.push(await uploadToImgBB(f)); }
+      return out;
+    }
+
+    /***** SUBMIT OFFER (Shopkeeper) *****/
+    let submitting=false;
+    byId('submitProduct').onclick = async()=>{
+      if(submitting) return;
+      const u = auth.currentUser; if(!u){ alert('Please login first'); return; }
+
+      const name = byId('pName').value.trim();
+      const category = byId('pCategory').value.trim();
+      const price = Number(byId('pPrice').value);
+      const discount = Number(byId('pDiscount').value||0);
+      const whats = byId('pWhats').value.trim();
+      const desc = byId('pDesc').value.trim();
+      const files = byId('pImages').files;
+
+      if(!name || !category || !price || !whats || !files.length){
+        toast(byId('formMsg'),'Please fill all required fields*');
+        return;
+      }
+      submitting=true; byId('submitProduct').disabled=true;
+      byId('formMsg').textContent = 'Uploading images…';
+      try{
+        const images = await uploadMultiple(files);
+        byId('formMsg').textContent = 'Saving…';
+        const id = productsRef.push().key;
+        const item = { id, name, category, price, discount, desc, images, whats,
+          owner: u.email, status:'pending', sold:false, createdAt: Date.now()
+        };
+        await productsRef.child(id).set(item);
+        byId('formMsg').textContent = 'Submitted! WAIT FOR APPROVAL';
+        ['pName','pCategory','pPrice','pDiscount','pWhats','pDesc'].forEach(i=> byId(i).value='');
+        byId('pImages').value='';
+      }catch(e){
+        console.error(e);
+        toast(byId('formMsg'), 'Error: '+e.message);
+      }finally{
+        submitting=false; byId('submitProduct').disabled=false;
+      }
+    };
+
+    /***** HELPERS *****/
+    function normaPhone(raw){
+      let d = (raw||'').replace(/\D/g,'');
+      if(d.length===10) d = '91' + d;
+      return d;
+    }
+    function waLink(p){
+      const msg = `sender- ZARA FIX - हमें आपका product पसंद आया है: ${p.name} (${rupees(p.price)}). कृपया पूरी जानकारी दें।`;
+      const phone = normaPhone(p.whats||'');
+      return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    }
+    function galleryHTML(p){
+      const first = (p.images&&p.images[0])||'';
+      const cnt = (p.images||[]).length;
+      return `
+        <div class="relative">
+          <img class="gal-img" src="${first}" alt="${clean(p.name)}"/>
+          ${cnt>1?`
+            <div class="absolute inset-0 flex items-center justify-between px-2">
+              <button class="px-3 py-1 rounded-full bg-black/40 border border-white/30 font-bold prev">‹</button>
+              <button class="px-3 py-1 rounded-full bg-black/40 border border-white/30 font-bold next">›</button>
+            </div>`:''}
+        </div>`;
+    }
+    function attachGalleryHandlers(cardEl, p){
+      const img = cardEl.querySelector('.gal-img');
+      const total = (p.images||[]).length;
+      if(!img || total<2) return;
+      let i = 0;
+      cardEl.querySelector('.prev')?.addEventListener('click', (e)=>{ e.stopPropagation(); i=(i-1+total)%total; img.src=p.images[i]; });
+      cardEl.querySelector('.next')?.addEventListener('click', (e)=>{ e.stopPropagation(); i=(i+1)%total; img.src=p.images[i]; });
+    }
+
+    function statusBorder(p){
+      if(p.status==='approved') return 'border border-white/10';
+      if(p.status==='rejected') return 'border-2 border-red-600';
+      return 'border-2 border-yellow-500';
+    }
+    function statusBadge(p){
+      if(p.sold) return '<span class="badge badge-sold">SOLD</span>';
+      if(p.status==='approved') return '';
+      if(p.status==='rejected') return '<span class="badge">REJECTED</span>';
+      return '<span class="badge">PENDING</span>';
+    }
+
+    /***** CARD MAKER *****/
+    function makeCard(p, ctx){
+      const el = document.createElement('div');
+      el.className = `card-3d colourful ${statusBorder(p)}`;
+      const discountTxt = p.discount ? `<span class="text-amber-300 font-bold">-${p.discount}Rs.</span>` : '';
+
+      // Admin buttons
+      let adminBtns = '';
+      const isAdmin = auth.currentUser && auth.currentUser.email===ADMIN_EMAIL;
+      if(isAdmin){
+        if(p.status==='approved'){
+          adminBtns = `
+            <button class="btn-3d px-3 py-2 rounded-xl bg-yellow-500 font-bold admin-reject">Reject</button>
+            <button class="btn-3d px-3 py-2 rounded-xl bg-rose-600 font-bold admin-del">Delete</button>
+          `;
+        }else{
+          adminBtns = `<button class="btn-3d px-3 py-2 rounded-xl bg-emerald-600 font-bold admin-approve">Approve</button>`;
+        }
+        adminBtns += `
+          <button class="btn-3d px-3 py-2 rounded-xl ${p.sold?'bg-slate-500':'bg-fuchsia-600'} font-bold admin-sold">${p.sold?'UnSold':'Mark Sold'}</button>
+        `;
+      }
+
+      // Owner buttons
+      let shopBtns = '';
+      if(auth.currentUser && auth.currentUser.email===p.owner){
+        shopBtns = `<button class="btn-3d px-3 py-2 rounded-xl bg-rose-600 font-bold mine-del">Delete</button>`;
+      }
+
+      const pendingNote = (ctx!=='public' && p.status!=='approved')
+        ? `<div class="text-red-400 font-bold text-sm mt-1">WAIT FOR APPROVAL</div>` : '';
+
+      el.innerHTML = `
+        <div class="relative">${statusBadge(p)}</div>
+        ${galleryHTML(p)}
+        <div class="p-3">
+          <div class="font-extrabold text-[15px] leading-tight">${clean(p.name||'')}</div>
+          <div class="text-sm opacity-80 mt-1">${(p.category||'').toUpperCase()} • <span class="font-bold">${rupees(p.price||0)}</span> ${discountTxt}</div>
+          ${p.desc? `<div class="text-xs opacity-70 mt-1">${clean(p.desc)}</div>`:''}
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <a class="btn-3d px-3 py-2 rounded-xl ${p.sold?'bg-slate-600 pointer-events-none opacity-70':'bg-emerald-500'} font-bold"
+               target="_blank" href="${p.sold?'#':waLink(p)}">${p.sold?'Sold':'WhatsApp'}</a>
+            ${adminBtns}
+            ${shopBtns}
+          </div>
+          ${pendingNote}
+        </div>
+      `;
+
+      // enlarge on card click (ignore button/gallery controls)
+      el.addEventListener('click', (e)=>{ if(e.target.closest('button,a') || e.target.classList.contains('prev') || e.target.classList.contains('next')) return; openModal(p); });
+      // handlers
+      el.querySelector('.admin-approve')?.addEventListener('click', async e=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'approved'}); });
+      el.querySelector('.admin-reject')?.addEventListener('click', async e=>{ e.stopPropagation(); await productsRef.child(p.id).update({status:'rejected'}); });
+      el.querySelector('.admin-del')?.addEventListener('click', async e=>{ e.stopPropagation(); if(confirm('Delete this product?')) await productsRef.child(p.id).remove(); });
+      el.querySelector('.admin-sold')?.addEventListener('click', async e=>{ e.stopPropagation(); await productsRef.child(p.id).update({sold: !p.sold}); });
+      el.querySelector('.mine-del')?.addEventListener('click', async e=>{ e.stopPropagation(); if(confirm('Delete your product?')) await productsRef.child(p.id).remove(); });
+
+      attachGalleryHandlers(el,p);
+      return el;
+    }
+
+    /***** RENDERERS *****/
+    function renderPublic(){
+      const grid = byId('publicGrid');
+      grid.innerHTML = '';
+      // Only APPROVED products are visible to public (rejected/pending hidden)
+      const approved = ALL.filter(p=>p.status==='approved');
+      const list = applyFilters(approved);
+      for(const p of list){ grid.appendChild(makeCard(p,'public')); }
+      if(!list.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-4 col-span-full">No approved offers found.</div>'; }
+    }
+
+    function loadMine(){
+      const grid = byId('myGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      const u = auth.currentUser;
+      if(!u){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">Login to manage your offers.</div>'; return; }
+      const mine = ALL.filter(p=>p.owner===u.email);
+      for(const p of mine){ grid.appendChild(makeCard(p,'mine')); }
+      if(!mine.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">No offers yet. Add your first one!</div>'; }
+    }
+
+    function renderAdmin(){
+      const grid = byId('adminGrid'); if(!grid) return;
+      grid.innerHTML = '';
+      const u = auth.currentUser;
+      const isAdmin = u && u.email===ADMIN_EMAIL;
+      if(!isAdmin){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">Admin only.</div>'; return; }
+      for(const p of ALL){ grid.appendChild(makeCard(p,'admin')); }
+      if(!ALL.length){ grid.innerHTML = '<div class="text-slate-400 text-sm p-2 col-span-full">No products in database.</div>'; }
+    }
+
+    function renderAll(){ renderPublic(); }
+
+    /***** Modal *****/
+    const modal = byId('modal'); const modalCard = byId('modalCard');
+    function openModal(p){
+      modalCard.innerHTML = `
+        ${galleryHTML(p)}
+        <div class="p-4">
+          <div class="text-xl font-extrabold">${clean(p.name)}</div>
+          <div class="opacity-80 mt-1">${(p.category||'').toUpperCase()} • <span class="font-bold">${rupees(p.price)}</span> ${p.discount?`<span class="text-amber-300 font-bold">-${p.discount}%</span>`:''}</div>
+          ${p.desc? `<div class="text-sm opacity-80 mt-2">${clean(p.desc)}</div>`:''}
+          <div class="mt-3 flex gap-2">
+            <a class="btn-3d px-4 py-2 rounded-xl ${p.sold?'bg-slate-600 pointer-events-none opacity-70':'bg-emerald-500'} font-bold" target="_blank" href="${p.sold?'#':waLink(p)}">${p.sold?'Sold':'WhatsApp Shop'}</a>
+          </div>
+        </div>`;
+      modal.classList.add('show');
+      attachGalleryHandlers(modalCard,p);
+    }
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('show'); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') modal.classList.remove('show'); });
+
+    // Initial render (empty before first DB load)
+    renderAll(); loadMine(); renderAdmin();
+  </script>
 </body>
 </html>
