@@ -2,70 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>New Bike & Car Sale</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bike & Car Sale</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
 
-<!-- 🔥 Post Form Modal -->
-<div id="postModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-    <h2 class="text-xl font-bold mb-4">🚘 Post Your Vehicle</h2>
-    <form id="postForm" class="space-y-4">
-
-      <label class="block">Category</label>
-      <select id="category" class="w-full border p-2 rounded" required>
-        <option value="Bike">Bike</option>
-        <option value="Car">Car</option>
-      </select>
-
-      <label class="block">Sub-Category</label>
-      <select id="subCategory" class="w-full border p-2 rounded" required>
-        <option value="New">New</option>
-        <option value="Used">Used</option>
-        <option value="Electric">Electric</option>
-      </select>
-
-      <label class="block">Brand</label>
-      <input type="text" id="brand" class="w-full border p-2 rounded" placeholder="e.g. Hero, Honda, Maruti" required>
-
-      <label class="block">Model</label>
-      <input type="text" id="model" class="w-full border p-2 rounded" placeholder="e.g. Splendor+, Swift" required>
-
-      <label class="block">Year</label>
-      <input type="number" id="year" class="w-full border p-2 rounded" placeholder="e.g. 2020" required>
-
-      <label class="block">Condition</label>
-      <select id="condition" class="w-full border p-2 rounded" required>
-        <option value="Excellent">Excellent</option>
-        <option value="Good">Good</option>
-        <option value="Average">Average</option>
-        <option value="Needs Repair">Needs Repair</option>
-      </select>
-
-      <label class="block">Price (₹)</label>
-      <input type="number" id="price" class="w-full border p-2 rounded" placeholder="Enter price" required>
-
-      <label class="block">Location</label>
-      <input type="text" id="location" class="w-full border p-2 rounded" placeholder="City / Area" required>
-
-      <label class="block">Contact Number</label>
-      <input type="tel" id="contact" class="w-full border p-2 rounded" placeholder="Mobile Number" required>
-
-      <label class="block">Upload Images (Max 5)</label>
-      <input type="file" id="images" class="w-full border p-2 rounded" accept="image/*" multiple required>
-
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Submit</button>
-    </form>
+  <!-- Header -->
+  <div class="p-4 bg-blue-600 text-white flex justify-between">
+    <h1 class="text-xl font-bold">🚗 Bike & Car Sale</h1>
+    <div>
+      <button id="loginBtn" class="bg-white text-blue-600 px-3 py-1 rounded">Login with Google</button>
+      <button id="postBtn" class="hidden bg-yellow-400 text-black px-3 py-1 rounded">+ Post Ad</button>
+    </div>
   </div>
-</div>
+
+  <!-- Posts List -->
+  <div id="postsList" class="p-4 grid md:grid-cols-3 gap-4"></div>
+
+  <!-- Modal Form -->
+  <div id="postModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-scroll">
+      <h2 class="text-lg font-bold mb-2">Post Your Vehicle</h2>
+      <form id="postForm" class="space-y-3">
+        
+        <label>Category</label>
+        <select id="category" class="w-full border p-2">
+          <option value="Bike">Bike</option>
+          <option value="Car">Car</option>
+          <option value="Scooter">Scooter</option>
+          <option value="Electric">Electric</option>
+        </select>
+
+        <label>Brand</label>
+        <input id="brand" class="w-full border p-2" placeholder="e.g. Hero, Honda, Maruti">
+
+        <label>Model</label>
+        <input id="model" class="w-full border p-2" placeholder="e.g. Splendor+, Swift">
+
+        <label>Year</label>
+        <input id="year" type="number" class="w-full border p-2">
+
+        <label>Condition</label>
+        <select id="condition" class="w-full border p-2">
+          <option>Excellent</option>
+          <option>Good</option>
+          <option>Average</option>
+          <option>Needs Repair</option>
+        </select>
+
+        <label>Price (₹)</label>
+        <input id="price" type="number" class="w-full border p-2">
+
+        <label>City / Location</label>
+        <input id="location" class="w-full border p-2">
+
+        <label>Contact Number</label>
+        <input id="contact" type="tel" class="w-full border p-2">
+
+        <label>Upload Images (Max 5)</label>
+        <input id="images" type="file" multiple accept="image/*" class="w-full">
+
+        <button class="w-full bg-blue-600 text-white p-2 rounded" type="submit">Submit</button>
+        <button type="button" id="closeModal" class="w-full bg-gray-400 text-white p-2 rounded">Cancel</button>
+      </form>
+    </div>
+  </div>
 
 <script>
-  // 🔑 Firebase Config
+  // 🔥 Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
     authDomain: "new-bike-59133.firebaseapp.com",
@@ -75,15 +83,48 @@
     appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
   };
   firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const form = document.getElementById("postForm");
+  const loginBtn = document.getElementById("loginBtn");
+  const postBtn = document.getElementById("postBtn");
+  const postModal = document.getElementById("postModal");
+  const closeModal = document.getElementById("closeModal");
+  const postForm = document.getElementById("postForm");
+  const postsList = document.getElementById("postsList");
 
-  form.addEventListener("submit", async (e) => {
+  let currentUser = null;
+  const imgbbAPI = "4dc5e5cb7654ffc308d5ca45452b014b";
+
+  // ✅ Google Login
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  };
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      loginBtn.classList.add("hidden");
+      postBtn.classList.remove("hidden");
+      loadPosts();
+    } else {
+      currentUser = null;
+      loginBtn.classList.remove("hidden");
+      postBtn.classList.add("hidden");
+      loadPosts();
+    }
+  });
+
+  // ✅ Modal toggle
+  postBtn.onclick = () => postModal.classList.remove("hidden");
+  closeModal.onclick = () => postModal.classList.add("hidden");
+
+  // ✅ Submit form
+  postForm.onsubmit = async (e) => {
     e.preventDefault();
 
     const category = document.getElementById("category").value;
-    const subCategory = document.getElementById("subCategory").value;
     const brand = document.getElementById("brand").value;
     const model = document.getElementById("model").value;
     const year = document.getElementById("year").value;
@@ -93,38 +134,70 @@
     const contact = document.getElementById("contact").value;
     const files = document.getElementById("images").files;
 
-    if (files.length > 5) {
-      alert("You can upload max 5 images");
-      return;
-    }
+    if (files.length === 0) return alert("Please upload at least 1 image");
 
-    // 🖼 Upload to ImgBB
-    const uploadedUrls = [];
-    for (let file of files) {
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const res = await fetch("https://api.imgbb.com/1/upload?key=4dc5e5cb7654ffc308d5ca45452b014b", {
+    // Upload images to ImgBB
+    let imageUrls = [];
+    for (let i = 0; i < Math.min(files.length, 5); i++) {
+      let formData = new FormData();
+      formData.append("image", files[i]);
+      let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPI}`, {
         method: "POST",
         body: formData
       });
-      const data = await res.json();
-      if (data.success) uploadedUrls.push(data.data.url);
+      let data = await res.json();
+      imageUrls.push(data.data.url);
     }
 
-    // 🔥 Save to Firestore
+    // Save to Firestore
     await db.collection("posts").add({
-      category, subCategory, brand, model, year,
-      condition, price, location, contact,
-      images: uploadedUrls,
+      category, brand, model, year, condition, price, location, contact,
+      images: imageUrls,
       status: "pending",
+      user: currentUser.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    alert("✅ Vehicle posted successfully (waiting for admin approval)");
-    form.reset();
-  });
-</script>
+    alert("Your post submitted. Waiting for Admin approval.");
+    postModal.classList.add("hidden");
+    postForm.reset();
+  };
 
+  // ✅ Load posts
+  function loadPosts() {
+    db.collection("posts").orderBy("createdAt","desc").onSnapshot(snapshot => {
+      postsList.innerHTML = "";
+      snapshot.forEach(doc => {
+        let p = doc.data();
+        if (p.status !== "approved" && currentUser?.email !== "zarasamajiksevasanstha@gmail.com") return;
+
+        let card = `
+          <div class="bg-white p-3 rounded shadow">
+            <img src="${p.images[0]}" class="h-40 w-full object-cover rounded">
+            <h3 class="font-bold mt-2">${p.brand} ${p.model}</h3>
+            <p>${p.year} • ${p.condition}</p>
+            <p class="text-green-600 font-bold">₹${p.price}</p>
+            <p>${p.location}</p>
+            <p>📞 ${p.contact}</p>
+            ${currentUser?.email === "zarasamajiksevasanstha@gmail.com" ? `
+              <button onclick="updatePost('${doc.id}','approved')" class="bg-green-500 text-white px-2 py-1 m-1 rounded">Approve</button>
+              <button onclick="updatePost('${doc.id}','rejected')" class="bg-red-500 text-white px-2 py-1 m-1 rounded">Reject</button>
+              <button onclick="updatePost('${doc.id}','sold')" class="bg-yellow-500 text-white px-2 py-1 m-1 rounded">Sold</button>
+              <button onclick="deletePost('${doc.id}')" class="bg-gray-700 text-white px-2 py-1 m-1 rounded">Delete</button>
+            ` : ""}
+          </div>`;
+        postsList.innerHTML += card;
+      });
+    });
+  }
+
+  // ✅ Admin actions
+  window.updatePost = (id, status) => {
+    db.collection("posts").doc(id).update({ status });
+  }
+  window.deletePost = (id) => {
+    db.collection("posts").doc(id).delete();
+  }
+</script>
 </body>
 </html>
