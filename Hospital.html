@@ -163,7 +163,7 @@ const logoutBtn=document.getElementById('logoutBtn');
 const newPostBtn=document.getElementById('newPostBtn');
 const postModal=document.getElementById('postModal');
 const closeForm=document.getElementById('closeForm');
-const postForm=document.getElementById('postForm');
+const hospitalForm=document.getElementById('hospitalForm');
 const postsDiv=document.getElementById('posts');
 const cardModal=document.getElementById('cardModal');
 const cardContent=document.getElementById('cardContent');
@@ -209,38 +209,39 @@ async function uploadImages(files){
   return urls;
 }
 
-// Post submit
-postForm.onsubmit=async e=>{
+// Submit Hospital Form
+hospitalForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first");
-  const submitBtn=postForm.querySelector("button[type=submit]");
+  const submitBtn=hospitalForm.querySelector("button[type=submit]");
   submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
 
   const post={
-    price:document.getElementById('price').value,
-    bhk:document.getElementById('bhk').value,
-    propertyType:document.getElementById('ptype').value,
+    hospitalName:document.getElementById('hospitalName').value,
+    hospitalCategory:document.getElementById('hospitalCategory').value,
+    hospitalType:document.getElementById('hospitalType').value,
     address:document.getElementById('address').value,
-    posterPhone:document.getElementById('phone').value,
-    posterType:document.getElementById('posterType').value,
+    phone:document.getElementById('phone').value,
+    emergencyNumber:document.getElementById('emergencyNumber').value,
     posterName:currentUser.displayName,
     posterUid:currentUser.uid,
     status:"pending",
     created:Date.now()
   };
+
   const files=document.getElementById('images').files;
   if(files.length>0) post.images=await uploadImages(files);
 
-  db.ref("posts").push(post,(err)=>{
+  db.ref("hospitals").push(post,(err)=>{
     if(err){ alert("❌ Error"); }
-    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
-    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
+    else{ alert("✅ Hospital submitted! Waiting for approval."); hospitalForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Hospital";
   });
 };
 
-// Load posts
+// Load hospitals
 function loadPosts(){
-  db.ref("posts").orderByChild("created").on("value",snap=>{
+  db.ref("hospitals").orderByChild("created").on("value",snap=>{
     allPosts=[];
     snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
     allPosts.reverse();
@@ -248,7 +249,7 @@ function loadPosts(){
   });
 }
 
-// Render posts with search + filter
+// Render hospitals
 function renderPosts(){
   postsDiv.innerHTML="";
   const keyword=searchInput.value.toLowerCase();
@@ -261,11 +262,11 @@ function renderPosts(){
       if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
     }
 
-    if(category && p.posterType!==category) return;
-    if(keyword && !(p.propertyType?.toLowerCase().includes(keyword) ||
-                    p.bhk?.toLowerCase().includes(keyword) ||
-                    p.address?.toLowerCase().includes(keyword) ||
-                    p.posterName?.toLowerCase().includes(keyword))) return;
+    if(category && p.hospitalCategory!==category) return;
+    if(keyword && !(p.hospitalName?.toLowerCase().includes(keyword) ||
+                    p.hospitalCategory?.toLowerCase().includes(keyword) ||
+                    p.hospitalType?.toLowerCase().includes(keyword) ||
+                    p.address?.toLowerCase().includes(keyword))) return;
 
     const card=document.createElement("div"); 
     card.className="card";
@@ -276,11 +277,12 @@ function renderPosts(){
       const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
     }
     card.innerHTML+=`
-      <h3>${p.propertyType} - ${p.bhk}</h3>
-      <p>₹${p.price}</p>
-      <p>${p.address}</p>
-      <p>📞 ${p.posterPhone}</p>
-      <p>👤 ${p.posterName} (${p.posterType})</p>
+      <h3>${p.hospitalName}</h3>
+      <p>🏥 ${p.hospitalCategory} - ${p.hospitalType}</p>
+      <p>📍 ${p.address}</p>
+      <p>📞 ${p.phone}</p>
+      <p>🚨 Emergency: ${p.emergencyNumber || "N/A"}</p>
+      <p>👤 Posted by: ${p.posterName}</p>
       <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending Approval"}</p>
     `;
 
@@ -291,39 +293,42 @@ function renderPosts(){
     wa.className="waBtn";
     wa.onclick=(e)=>{
       e.stopPropagation();
-      const msg=`send by-ZARA FIX-Hello, I am interested in your Property ${p.propertyType} (${p.bhk}) at ${p.address}, priced at ₹${p.price}.`;
-      window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`,"_blank");
+      const msg=`Hello, I am interested in your hospital: ${p.hospitalName}, ${p.hospitalCategory}, located at ${p.address}.`;
+      window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}`,"_blank");
     };
     btnRow.appendChild(wa);
 
+    // Delete for poster
     if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
       const del=document.createElement("button");
       del.textContent="🗑 Delete"; del.className="logoutBtn";
-      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); };
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this hospital?")) await db.ref("hospitals/"+p.id).remove(); };
       btnRow.appendChild(del);
     }
 
+    // Admin controls
     if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
       const ap=document.createElement("button");
       ap.textContent="✅ Approve"; ap.className="btn3d";
-      ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
+      ap.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+p.id).update({status:"approved"}); };
       const rj=document.createElement("button");
       rj.textContent="❌ Reject"; rj.className="logoutBtn";
-      rj.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"rejected"}); };
+      rj.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+p.id).update({status:"rejected"}); };
       const del=document.createElement("button");
       del.textContent="🗑 Delete"; del.className="logoutBtn";
-      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("hospitals/"+p.id).remove(); };
       btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
     }
 
     card.appendChild(btnRow);
     card.onclick=()=>{ 
       cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
-      cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
-        <p><b>Price:</b> ₹${p.price}</p>
+      cardContent.innerHTML+=`<h2>${p.hospitalName}</h2>
+        <p><b>Category:</b> ${p.hospitalCategory}</p>
+        <p><b>Type:</b> ${p.hospitalType}</p>
         <p><b>Address:</b> ${p.address}</p>
-        <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
-        <p><b>Phone:</b> ${p.posterPhone}</p>`;
+        <p><b>Phone:</b> ${p.phone}</p>
+        <p><b>Emergency:</b> ${p.emergencyNumber || "N/A"}</p>`;
       if(p.images){ p.images.forEach(u=>{ cardContent.innerHTML+=`<img src="${u}" style="width:100%;margin:5px 0;">`; }); }
       cardModal.style.display="flex";
       document.getElementById("closeCard").onclick=()=>cardModal.style.display="none";
@@ -337,5 +342,6 @@ function renderPosts(){
 searchInput.addEventListener("input",renderPosts);
 categoryFilter.addEventListener("change",renderPosts);
 </script>
+
 </body>
 </html>
