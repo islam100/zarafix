@@ -23,14 +23,7 @@
     .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
 
     /* Search Bar */
-  .searchBar {
-  margin:12px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:10px;
-}
-
+    .searchBar { margin:12px; display:flex; justify-content:center; align-items:center; gap:10px; }
     .searchBar input, .searchBar select {
       padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; min-width:180px;
     }
@@ -40,7 +33,7 @@
             gap:12px; padding:12px; }
     .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
             padding:10px; position:relative; transition:transform .2s; cursor:pointer;
-            font-size:13px; border:2px solid red; }
+            font-size:13px; }
     .card:hover { transform:scale(1.02); }
     .card img { width:100%; height:150px; object-fit:cover; border-radius:6px; }
     .card h3 { margin:6px 0 3px; font-size:15px; }
@@ -64,23 +57,20 @@
 <header>
   <h1>Hospital Portal</h1>
   <div>
-    <a href="index.html">
-      <button style="background-color:blue; color:white;">🏡 Home</button>
-    </a>
+    <a href="index.html"><button style="background-color:blue; color:white;">🏡 Home</button></a>
     <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
     <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
-    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Hospital</button>
   </div>
 </header>
 
 <!-- 🔍 Search Bar -->
 <div class="searchBar">
-  <input type="text" id="searchInput" placeholder="Search by type, BHK, address, name...">
+  <input type="text" id="searchInput" placeholder="Search by name, type, city, address...">
   <select id="categoryFilter">
     <option value="">All Posters</option>
-    <option value="Builder">Builder</option>
     <option value="Owner">Owner</option>
-    <option value="Agent">Agent</option>
+    <option value="Admin">Admin</option>
   </select>
 </div>
 
@@ -92,22 +82,21 @@
 <div class="modal" id="postModal">
   <div class="modal-content">
     <span class="close" id="closeForm">&times;</span>
-    <h2>Post and WhatsApp to go live (7378342192)</h2>
+    <h2>Submit Hospital (and WhatsApp to go live)</h2>
     <form id="postForm">
-      <label>Price</label><input type="number" id="price" required>
-      <label>BHK</label><input type="text" id="bhk" required>
-      <label>Property Type</label><input type="text" id="ptype" required>
+      <label>Hospital Name</label><input type="text" id="hospitalName" required>
+      <label>Hospital Type</label><input type="text" id="hospitalType" required placeholder="e.g. Multi-speciality, Clinic">
+      <label>City</label><input type="text" id="city" required>
       <label>Address</label><input type="text" id="address" required>
       <label>Phone</label><input type="tel" id="phone" required>
       <label>Poster Type</label>
       <select id="posterType" required>
-        <option value="Builder">Builder</option>
         <option value="Owner">Owner</option>
-        <option value="Agent">Agent</option>
+        <option value="Admin">Admin</option>
       </select>
       <label>Images (max 5)</label>
       <input type="file" id="images" accept="image/*" multiple>
-      <button type="submit" class="btn3d">Submit Post</button>
+      <button type="submit" class="btn3d">Submit Hospital</button>
     </form>
   </div>
 </div>
@@ -192,9 +181,9 @@ postForm.onsubmit=async e=>{
   submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
 
   const post={
-    price:document.getElementById('price').value,
-    bhk:document.getElementById('bhk').value,
-    propertyType:document.getElementById('ptype').value,
+    hospitalName:document.getElementById('hospitalName').value,
+    hospitalType:document.getElementById('hospitalType').value,
+    city:document.getElementById('city').value,
     address:document.getElementById('address').value,
     posterPhone:document.getElementById('phone').value,
     posterType:document.getElementById('posterType').value,
@@ -206,16 +195,16 @@ postForm.onsubmit=async e=>{
   const files=document.getElementById('images').files;
   if(files.length>0) post.images=await uploadImages(files);
 
-  db.ref("posts").push(post,(err)=>{
+  db.ref("hospitals").push(post,(err)=>{
     if(err){ alert("❌ Error"); }
-    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
-    submitBtn.disabled=false; submitBtn.textContent="Submit Post";
+    else{ alert("✅ Hospital submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Hospital";
   });
 };
 
 // Load posts
 function loadPosts(){
-  db.ref("posts").orderByChild("created").on("value",snap=>{
+  db.ref("hospitals").orderByChild("created").on("value",snap=>{
     allPosts=[];
     snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
     allPosts.reverse();
@@ -223,7 +212,7 @@ function loadPosts(){
   });
 }
 
-// Render posts with search + filter
+// Render hospitals
 function renderPosts(){
   postsDiv.innerHTML="";
   const keyword=searchInput.value.toLowerCase();
@@ -237,8 +226,9 @@ function renderPosts(){
     }
 
     if(category && p.posterType!==category) return;
-    if(keyword && !(p.propertyType?.toLowerCase().includes(keyword) ||
-                    p.bhk?.toLowerCase().includes(keyword) ||
+    if(keyword && !(p.hospitalName?.toLowerCase().includes(keyword) ||
+                    p.hospitalType?.toLowerCase().includes(keyword) ||
+                    p.city?.toLowerCase().includes(keyword) ||
                     p.address?.toLowerCase().includes(keyword) ||
                     p.posterName?.toLowerCase().includes(keyword))) return;
 
@@ -251,9 +241,9 @@ function renderPosts(){
       const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img);
     }
     card.innerHTML+=`
-      <h3>${p.propertyType} - ${p.bhk}</h3>
-      <p>₹${p.price}</p>
-      <p>${p.address}</p>
+      <h3>${p.hospitalName} (${p.hospitalType})</h3>
+      <p>🏙 ${p.city}</p>
+      <p>📍 ${p.address}</p>
       <p>📞 ${p.posterPhone}</p>
       <p>👤 ${p.posterName} (${p.posterType})</p>
       <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending Approval"}</p>
@@ -266,7 +256,7 @@ function renderPosts(){
     wa.className="waBtn";
     wa.onclick=(e)=>{
       e.stopPropagation();
-      const msg=`send by-ZARA FIX-Hello, I am interested in your Property ${p.propertyType} (${p.bhk}) at ${p.address}, priced at ₹${p.price}.`;
+      const msg=`Hello, I am interested in your Hospital ${p.hospitalName} (${p.hospitalType}) at ${p.address}, ${p.city}.`;
       window.open(`https://wa.me/${p.posterPhone}?text=${encodeURIComponent(msg)}`,"_blank");
     };
     btnRow.appendChild(wa);
@@ -274,28 +264,28 @@ function renderPosts(){
     if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
       const del=document.createElement("button");
       del.textContent="🗑 Delete"; del.className="logoutBtn";
-      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this post?")) await db.ref("posts/"+p.id).remove(); };
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete this hospital?")) await db.ref("hospitals/"+p.id).remove(); };
       btnRow.appendChild(del);
     }
 
     if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
       const ap=document.createElement("button");
       ap.textContent="✅ Approve"; ap.className="btn3d";
-      ap.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
+      ap.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+p.id).update({status:"approved"}); };
       const rj=document.createElement("button");
       rj.textContent="❌ Reject"; rj.className="logoutBtn";
-      rj.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"rejected"}); };
+      rj.onclick=async e=>{ e.stopPropagation(); await db.ref("hospitals/"+p.id).update({status:"rejected"}); };
       const del=document.createElement("button");
       del.textContent="🗑 Delete"; del.className="logoutBtn";
-      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+      del.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("hospitals/"+p.id).remove(); };
       btnRow.appendChild(ap); btnRow.appendChild(rj); btnRow.appendChild(del);
     }
 
     card.appendChild(btnRow);
     card.onclick=()=>{ 
       cardContent.innerHTML='<span class="close" id="closeCard">&times;</span>';
-      cardContent.innerHTML+=`<h2>${p.propertyType} - ${p.bhk}</h2>
-        <p><b>Price:</b> ₹${p.price}</p>
+      cardContent.innerHTML+=`<h2>${p.hospitalName} (${p.hospitalType})</h2>
+        <p><b>City:</b> ${p.city}</p>
         <p><b>Address:</b> ${p.address}</p>
         <p><b>Poster:</b> ${p.posterName} (${p.posterType})</p>
         <p><b>Phone:</b> ${p.posterPhone}</p>`;
