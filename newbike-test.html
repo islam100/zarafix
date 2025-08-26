@@ -1,37 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Post Bike/Car for Sale</title>
-<style>
-  label { display:block; margin-top:10px; }
-  input, select, button { width:100%; padding:8px; margin-top:4px; }
-</style>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  <meta charset="UTF-8">
+  <title>Sell Bike & Car</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    input, select, button { padding: 6px; width: 100%; }
+    .modal-content { max-width: 500px; margin: auto; }
+  </style>
 </head>
 <body>
 
 <h2>Post Your Bike or Car for Sale</h2>
 
-<form id="vehicleForm">
+<form id="postForm">
 
+  <!-- Main Category -->
   <label>Category</label>
   <select id="category" required>
+    <option value="">-- Select --</option>
     <option value="Bike">Bike</option>
     <option value="Car">Car</option>
   </select>
 
+  <!-- Sub Category / Brand -->
   <label>Brand</label>
-  <select id="brand" required></select>
+  <select id="brand" required>
+    <!-- JS से change होगा -->
+  </select>
 
   <label>Model Name</label>
   <input type="text" id="model" required>
 
-  <label>Year</label>
+  <label>Year of Purchase</label>
   <input type="number" id="year" required>
 
   <label>Condition</label>
@@ -51,15 +53,19 @@
   <label>Contact Number</label>
   <input type="tel" id="contact" required>
 
-  <label>Upload Images (max 5)</label>
+  <label>Upload Images (Multiple)</label>
   <input type="file" id="images" accept="image/*" multiple required>
 
-  <button type="submit">Post</button>
-
+  <button type="submit">Post Now</button>
 </form>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
 <script>
-  // Firebase Config
+  // 🔥 Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
     authDomain: "new-bike-59133.firebaseapp.com",
@@ -68,68 +74,74 @@
     messagingSenderId: "966945954091",
     appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
   };
-
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
   const storage = firebase.storage();
 
-  // Brand list
-  const brands = {
-    Bike: ["Hero", "Honda", "Bajaj", "TVS", "Yamaha", "Royal Enfield", "Suzuki", "KTM", "Electric", "Scooter"],
-    Car: ["Maruti", "Hyundai", "Tata", "Mahindra", "Honda", "Toyota", "Kia", "MG", "Ford", "BMW"]
-  };
+  // 🔁 Brand options based on category
+  const bikeBrands = ["Hero", "Honda", "Bajaj", "TVS", "Yamaha", "Royal Enfield", "Suzuki", "KTM", "Electric Bike", "Scooter"];
+  const carBrands = ["Maruti", "Hyundai", "Tata", "Honda", "Mahindra", "Toyota", "Kia", "Ford", "Skoda", "Renault", "BMW", "Mercedes"];
 
-  const categorySelect = document.getElementById('category');
-  const brandSelect = document.getElementById('brand');
+  const categorySelect = document.getElementById("category");
+  const brandSelect = document.getElementById("brand");
 
-  function updateBrandOptions() {
-    brandSelect.innerHTML = '';
-    brands[categorySelect.value].forEach(b => {
-      const opt = document.createElement('option');
+  categorySelect.addEventListener("change", function () {
+    brandSelect.innerHTML = "";
+    let arr = categorySelect.value === "Bike" ? bikeBrands : carBrands;
+    arr.forEach(b => {
+      let opt = document.createElement("option");
       opt.value = b;
       opt.textContent = b;
       brandSelect.appendChild(opt);
     });
-  }
+  });
 
-  categorySelect.addEventListener('change', updateBrandOptions);
-  updateBrandOptions(); // initialize
-
-  // Form submit
-  document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+  // 📤 Form submit
+  document.getElementById("postForm").addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const formData = {
-      category: document.getElementById('category').value,
-      brand: document.getElementById('brand').value,
-      model: document.getElementById('model').value,
-      year: document.getElementById('year').value,
-      condition: document.getElementById('condition').value,
-      price: document.getElementById('price').value,
-      location: document.getElementById('location').value,
-      contact: document.getElementById('contact').value,
-      images: []
-    };
+    const category = document.getElementById("category").value;
+    const brand = document.getElementById("brand").value;
+    const model = document.getElementById("model").value;
+    const year = document.getElementById("year").value;
+    const condition = document.getElementById("condition").value;
+    const price = document.getElementById("price").value;
+    const location = document.getElementById("location").value;
+    const contact = document.getElementById("contact").value;
+    const files = document.getElementById("images").files;
 
-    const files = document.getElementById('images').files;
-    if (files.length > 5) {
-      alert("You can upload maximum 5 images.");
+    if (files.length === 0) {
+      alert("Please upload at least one image.");
       return;
     }
 
-    // Upload images
-    for (let file of files) {
-      const storageRef = storage.ref(`vehicles/${Date.now()}-${file.name}`);
+    // 🖼 Upload all images
+    let imageUrls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const storageRef = storage.ref().child(`imgb/${Date.now()}_${file.name}`);
       await storageRef.put(file);
       const url = await storageRef.getDownloadURL();
-      formData.images.push(url);
+      imageUrls.push(url);
     }
 
-    // Save to Firestore
-    await db.collection('vehicles').add(formData);
-    alert("Vehicle posted successfully!");
-    document.getElementById('vehicleForm').reset();
-    updateBrandOptions();
+    // 💾 Save to Firestore
+    await db.collection("vehiclePosts").add({
+      category,
+      brand,
+      model,
+      year,
+      condition,
+      price,
+      location,
+      contact,
+      images: imageUrls,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("Post uploaded successfully!");
+    document.getElementById("postForm").reset();
+    brandSelect.innerHTML = "";
   });
 </script>
 
