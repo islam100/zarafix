@@ -1,635 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>All Vehicles Marketplace</title>
-
-  <!-- Tailwind for quick responsive UI -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix – Vehicle Sale</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase (compat for simplicity) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <style>
-    /* small helpers */
-    .card-img { height: 180px; object-fit: cover; width:100%; }
-  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100">
 
-  <!-- NAVBAR -->
-  <nav class="bg-white shadow p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-    <div class="flex items-center gap-4">
-      <h1 class="text-2xl font-bold">VahanBazaar</h1>
-
-      <input id="searchInput" class="border rounded px-3 py-1" placeholder="Search brand, model, city..." />
-
-      <select id="categoryFilter" class="border rounded px-2 py-1">
-        <option value="">All Categories</option>
-        <option value="Bike">Bike</option>
-        <option value="Car">Car</option>
-        <option value="Scooter">Scooter</option>
-        <option value="Electric">Electric</option>
-      </select>
-
-      <select id="subFilter" class="border rounded px-2 py-1">
-        <option value="">All Subcategories</option>
-      </select>
+  <!-- Header -->
+  <div class="flex justify-between p-4 bg-blue-600 text-white">
+    <h1 class="text-xl font-bold">🚗 ZaraFix Vehicle Sale</h1>
+    <div>
+      <button id="loginBtn" class="bg-white text-blue-600 px-3 py-1 rounded">Login with Google</button>
+      <button id="logoutBtn" class="hidden bg-red-500 px-3 py-1 rounded">Logout</button>
     </div>
+  </div>
 
-    <div class="flex items-center gap-3">
-      <div id="userArea" class="text-sm"></div>
-      <button id="openPostBtn" class="bg-green-600 text-white px-3 py-1 rounded">Post Ad</button>
-      <button id="adminPanelBtn" class="bg-gray-800 text-white px-3 py-1 rounded">Admin Panel</button>
-    </div>
-  </nav>
+  <!-- Post Button (only visible after login) -->
+  <div class="p-4 text-center">
+    <button id="postBtn" class="hidden bg-green-600 text-white px-4 py-2 rounded">+ Post Your Vehicle</button>
+  </div>
 
-  <!-- MAIN -->
-  <main class="max-w-6xl mx-auto p-4">
-    <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+  <!-- Posts List -->
+  <div id="postList" class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4"></div>
 
-    <div class="text-center mt-6">
-      <button id="loadMore" class="px-4 py-2 bg-gray-800 text-white rounded">Load more</button>
-    </div>
-  </main>
-
-  <!-- POST MODAL -->
-  <div id="postModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden items-center justify-center p-4">
-    <div class="bg-white p-4 rounded max-w-xl w-full overflow-auto max-h-[90vh]">
-      <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold">Post Vehicle Ad</h2>
-        <button id="closePost" class="text-xl">&times;</button>
-      </div>
-
-      <div id="authBlock" class="mt-4 space-y-2">
-        <p class="text-sm text-gray-600">You must login/signup to post. (Poster will be verified by admin before publish)</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input id="postEmail" placeholder="Email" class="border p-2" />
-          <input id="postPass" placeholder="Password" type="password" class="border p-2" />
-        </div>
-        <div class="flex gap-2 mt-2">
-          <button id="signupBtn" class="bg-blue-600 text-white px-3 py-1 rounded">Sign Up</button>
-          <button id="loginBtn" class="bg-gray-600 text-white px-3 py-1 rounded">Login</button>
-          <button id="logoutBtn" class="bg-red-500 text-white px-3 py-1 rounded hidden">Logout</button>
-        </div>
-      </div>
-
-      <form id="postForm" class="mt-4 hidden space-y-3">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <select id="category" required class="border p-2">
-            <option value="">Select Category</option>
-            <option value="Bike">Bike</option>
-            <option value="Car">Car</option>
-            <option value="Scooter">Scooter</option>
-            <option value="Electric">Electric</option>
-          </select>
-
-          <select id="subCategory" required class="border p-2">
-            <option value="">Select Subcategory</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <select id="brand" class="border p-2" required></select>
-          <input id="model" class="border p-2" placeholder="Model name (e.g. Pulsar 150)" required />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input id="year" type="number" class="border p-2" placeholder="Year (e.g. 2019)" required />
-          <select id="condition" class="border p-2" required>
-            <option value="Excellent">Excellent</option>
-            <option value="Good">Good</option>
-            <option value="Average">Average</option>
-            <option value="Needs Repair">Needs Repair</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input id="price" type="number" class="border p-2" placeholder="Price (₹)" required />
-          <input id="location" class="border p-2" placeholder="City / Location" required />
-        </div>
-
-        <input id="contact" class="border p-2" placeholder="Contact Number" required />
-        <textarea id="description" class="border p-2" placeholder="Description (optional)"></textarea>
-
-        <label>Upload Images (max 5) — images will be uploaded to imgbb</label>
-        <input id="images" type="file" accept="image/*" multiple class="border p-2" />
-
-        <div>
-          <button id="submitPost" class="bg-green-600 text-white px-4 py-2 rounded">Submit for Approval</button>
-        </div>
+  <!-- Post Modal -->
+  <div id="postModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div class="bg-white p-6 rounded-lg w-96">
+      <h2 class="text-xl mb-4">Post Your Vehicle</h2>
+      <form id="postForm" class="space-y-2">
+        <input type="text" id="title" placeholder="Vehicle Title (e.g. Honda Activa 2019)" class="border p-2 w-full" required>
+        <select id="category" class="border p-2 w-full" required>
+          <option value="">Select Category</option>
+          <option value="Bike">Bike</option>
+          <option value="Scooter">Scooter</option>
+          <option value="Car">Car</option>
+          <option value="E-Vehicle">Electric Vehicle</option>
+        </select>
+        <input type="number" id="price" placeholder="Price (₹)" class="border p-2 w-full" required>
+        <input type="text" id="location" placeholder="Location" class="border p-2 w-full" required>
+        <input type="file" id="images" multiple accept="image/*" class="border p-2 w-full" required>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Submit</button>
       </form>
+      <button id="closeModal" class="mt-2 text-red-500">Close</button>
     </div>
   </div>
 
-  <!-- ADMIN PANEL MODAL -->
-  <div id="adminModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden items-center justify-center p-4">
-    <div class="bg-white p-4 rounded max-w-4xl w-full max-h-[90vh] overflow-auto">
-      <div class="flex justify-between items-center">
-        <h2 class="text-lg font-bold">Admin Panel</h2>
-        <div class="flex gap-2 items-center">
-          <span id="adminInfo" class="text-sm text-gray-700"></span>
-          <button id="closeAdmin" class="text-xl">&times;</button>
-        </div>
-      </div>
-
-      <div class="mt-3">
-        <p class="text-sm">Only admin (<b>zarasamajiksevasanstha@gmail.com</b>) can approve/reject/delete/mark sold.</p>
-      </div>
-
-      <div class="mt-4">
-        <h3 class="font-semibold">Pending Posts</h3>
-        <div id="pendingList" class="space-y-3 mt-2"></div>
-      </div>
-
-      <div class="mt-4">
-        <h3 class="font-semibold">All Posts (for admin)</h3>
-        <div id="allList" class="space-y-3 mt-2"></div>
-      </div>
-    </div>
-  </div>
-
-<script>
-  /*******************************
-   * CONFIG: Firebase & imgbb key
-   *******************************/
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-    authDomain: "new-bike-59133.firebaseapp.com",
-    projectId: "new-bike-59133",
-    storageBucket: "new-bike-59133.appspot.com",
-    messagingSenderId: "966945954091",
-    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-  };
-  const IMGBB_KEY = "4dc5e5cb7654ffc308d5ca45452b014b"; // your imgbb api key
-
-  // init firebase
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  /*******************************
-   * UI refs
-   *******************************/
-  const productsGrid = document.getElementById('productsGrid');
-  const loadMoreBtn = document.getElementById('loadMore');
-  const searchInput = document.getElementById('searchInput');
-  const categoryFilter = document.getElementById('categoryFilter');
-  const subFilter = document.getElementById('subFilter');
-
-  const openPostBtn = document.getElementById('openPostBtn');
-  const postModal = document.getElementById('postModal');
-  const closePost = document.getElementById('closePost');
-  const postForm = document.getElementById('postForm');
-  const signupBtn = document.getElementById('signupBtn');
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postEmail = document.getElementById('postEmail');
-  const postPass = document.getElementById('postPass');
-
-  const adminPanelBtn = document.getElementById('adminPanelBtn');
-  const adminModal = document.getElementById('adminModal');
-  const closeAdmin = document.getElementById('closeAdmin');
-  const pendingList = document.getElementById('pendingList');
-  const allList = document.getElementById('allList');
-  const adminInfo = document.getElementById('adminInfo');
-  const userArea = document.getElementById('userArea');
-
-  // form fields
-  const category = document.getElementById('category');
-  const subCategory = document.getElementById('subCategory');
-  const brand = document.getElementById('brand');
-  const model = document.getElementById('model');
-  const year = document.getElementById('year');
-  const condition = document.getElementById('condition');
-  const price = document.getElementById('price');
-  const locationInput = document.getElementById('location');
-  const contact = document.getElementById('contact');
-  const description = document.getElementById('description');
-  const imagesInput = document.getElementById('images');
-  const submitPost = document.getElementById('submitPost');
-
-  /*******************************
-   * Constants & state
-   *******************************/
-  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-  let lastDoc = null;
-  const PAGE_SIZE = 12;
-  let currentProducts = []; // local cache of loaded products
-
-  // brand lists per category
-  const brands = {
-    Bike: ["Hero","Honda","Bajaj","TVS","Yamaha","Royal Enfield","Suzuki","KTM"],
-    Car: ["Maruti","Hyundai","Tata","Mahindra","Honda","Toyota","Kia"],
-    Scooter: ["Honda","TVS","Bajaj","Vespa","Yamaha"],
-    Electric: ["Ola","Ather","TVS iQube","Hero Electric","Bajaj Chetak"]
-  };
-
-  const subCategoriesMap = {
-    Bike: ["Commuter","Sports","Cruiser","Adventure","Off-Road"],
-    Car: ["Hatchback","Sedan","SUV","MPV"],
-    Scooter: ["Gearless","Geared","Maxi-Scooter"],
-    Electric: ["E-Bike","E-Scooter","EV Car"]
-  };
-
-  /*******************************
-   * Helpers
-   *******************************/
-  function resetAndLoad() {
-    productsGrid.innerHTML = "";
-    currentProducts = [];
-    lastDoc = null;
-    loadProducts(true);
-  }
-
-  function createCard(p) {
-    // p: doc data
-    const div = document.createElement('div');
-    div.className = 'bg-white p-3 rounded-lg shadow';
-
-    const img = (p.imageUrls && p.imageUrls.length) ? p.imageUrls[0] : '';
-
-    let statusBadge = '';
-    if (p.status === 'pending') statusBadge = '<span class="text-sm px-2 py-1 bg-yellow-200 rounded">Pending</span>';
-    if (p.status === 'approved') statusBadge = '<span class="text-sm px-2 py-1 bg-green-200 rounded">Available</span>';
-    if (p.status === 'sold') statusBadge = '<span class="text-sm px-2 py-1 bg-gray-300 rounded">Sold</span>';
-    if (p.status === 'rejected') statusBadge = '<span class="text-sm px-2 py-1 bg-red-200 rounded">Rejected</span>';
-
-    div.innerHTML = `
-      <div class="relative">
-        <img src="${img}" class="card-img rounded-md" alt="${p.model||''}" />
-        <div class="absolute top-2 left-2">${statusBadge}</div>
-      </div>
-      <h3 class="mt-2 font-semibold">${p.brand} ${p.model}</h3>
-      <p class="text-sm text-gray-600">${p.category} • ${p.subCategory||''}</p>
-      <p class="mt-1 text-lg font-bold">₹${p.price}</p>
-      <p class="text-sm text-gray-500">${p.location || ''}</p>
-      <div class="flex gap-2 mt-3">
-        <button class="viewBtn bg-blue-600 text-white px-3 py-1 rounded" data-id="${p.id}">View</button>
-        ${ (auth.currentUser && (auth.currentUser.email === ADMIN_EMAIL)) ? `<button class="adminEditBtn bg-gray-600 text-white px-3 py-1 rounded" data-id="${p.id}">Manage</button>` : '' }
-      </div>
-    `;
-    return div;
-  }
-
-  async function loadProducts(reset=false) {
-    if (reset) {
-      productsGrid.innerHTML = '';
-      lastDoc = null;
-    }
-
-    // For listing to public: only show approved
-    let query = db.collection('ads').where('status','==','approved').orderBy('createdAt','desc').limit(PAGE_SIZE);
-    if (lastDoc) query = query.startAfter(lastDoc);
-
-    const snapshot = await query.get();
-    if (snapshot.empty) {
-      loadMoreBtn.disabled = true;
-      loadMoreBtn.textContent = 'No more items';
-      return;
-    }
-    lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-    snapshot.forEach(doc => {
-      const data = { id: doc.id, ...doc.data() };
-      currentProducts.push(data);
-      const card = createCard(data);
-      productsGrid.appendChild(card);
-    });
-  }
-
-  /*******************************
-   * Search / Filter (client-side)
-   *******************************/
-  function applyFilterAndRender() {
-    const q = searchInput.value.trim().toLowerCase();
-    const cat = categoryFilter.value;
-    const sub = subFilter.value;
-
-    productsGrid.innerHTML = '';
-    const filtered = currentProducts.filter(p => {
-      if (cat && p.category !== cat) return false;
-      if (sub && p.subCategory !== sub) return false;
-      const hay = [p.brand, p.model, p.category, p.subCategory, p.location, p.description].join(' ').toLowerCase();
-      return hay.includes(q);
-    });
-    if (filtered.length === 0) {
-      productsGrid.innerHTML = '<div class="text-center col-span-full text-gray-600">No results</div>';
-      return;
-    }
-    filtered.forEach(p => productsGrid.appendChild(createCard(p)));
-  }
-
-  searchInput.addEventListener('input', applyFilterAndRender);
-  categoryFilter.addEventListener('change', () => {
-    const cat = categoryFilter.value;
-    // update subFilter options
-    subFilter.innerHTML = '<option value="">All Subcategories</option>';
-    if (cat && subCategoriesMap[cat]) {
-      subCategoriesMap[cat].forEach(s => {
-        const o = document.createElement('option'); o.value = s; o.textContent = s; subFilter.appendChild(o);
-      });
-    }
-    applyFilterAndRender();
-  });
-  subFilter.addEventListener('change', applyFilterAndRender);
-
-  loadMoreBtn.addEventListener('click', () => loadProducts());
-
-  /*******************************
-   * Post Modal & Auth for posters
-   *******************************/
-  openPostBtn.addEventListener('click', () => {
-    postModal.classList.remove('hidden');
-    postModal.style.display = 'flex';
-  });
-  closePost.addEventListener('click', () => {
-    postModal.classList.add('hidden');
-  });
-
-  // signup/login
-  signupBtn.addEventListener('click', async () => {
-    const email = postEmail.value.trim();
-    const pw = postPass.value.trim();
-    if (!email || !pw) return alert('Enter email & password');
-    try {
-      await auth.createUserWithEmailAndPassword(email, pw);
-      alert('Signed up & logged in');
-    } catch (e) { alert(e.message); }
-  });
-  loginBtn.addEventListener('click', async () => {
-    const email = postEmail.value.trim();
-    const pw = postPass.value.trim();
-    if (!email || !pw) return alert('Enter email & password');
-    try {
-      await auth.signInWithEmailAndPassword(email, pw);
-      alert('Logged in');
-    } catch (e) { alert(e.message); }
-  });
-  logoutBtn.addEventListener('click', async ()=> {
-    await auth.signOut();
-    alert('Logged out');
-  });
-
-  // show/hide post form based on auth
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      // show form
-      postForm.classList.remove('hidden');
-      signupBtn.classList.add('hidden');
-      loginBtn.classList.add('hidden');
-      logoutBtn.classList.remove('hidden');
-      postEmail.value = user.email;
-      adminInfo.textContent = (user.email === ADMIN_EMAIL) ? 'Admin mode' : '';
-      userArea.innerHTML = `<span class="text-sm">Hi, ${user.email}</span>`;
-    } else {
-      postForm.classList.add('hidden');
-      signupBtn.classList.remove('hidden');
-      loginBtn.classList.remove('hidden');
-      logoutBtn.classList.add('hidden');
-      userArea.innerHTML = `<span class="text-sm">Guest</span>`;
-    }
-  });
-
-  /*******************************
-   * Populate brand & subcategory on post form
-   *******************************/
-  category.addEventListener('change', ()=> {
-    const c = category.value;
-    // subCategory options
-    subCategory.innerHTML = '<option value="">Select Subcategory</option>';
-    if (subCategoriesMap[c]) subCategoriesMap[c].forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subCategory.appendChild(o); });
-
-    // brand options
-    brand.innerHTML = '<option value="">Select Brand</option>';
-    if (brands[c]) brands[c].forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; brand.appendChild(o); });
-  });
-
-  /*******************************
-   * Upload images to imgbb (max 5) and create post
-   *******************************/
-  async function uploadImageToImgbb(file) {
-    // returns image url
-    const fd = new FormData();
-    fd.append('image', file);
-    // imgbb expects key in query param
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data && data.data && data.data.url) return data.data.url;
-    throw new Error('imgbb upload failed');
-  }
-
-  postForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) return alert('Please login to post');
-
-    // gather
-    const payload = {
-      category: category.value,
-      subCategory: subCategory.value,
-      brand: brand.value,
-      model: model.value,
-      year: year.value,
-      condition: condition.value,
-      price: Number(price.value) || 0,
-      location: locationInput.value,
-      contact: contact.value,
-      description: description.value || '',
-      createdBy: user.uid,
-      createdByEmail: user.email,
-      status: 'pending', // admin must approve
-      imageUrls: [],
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  <script>
+    // 🔹 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+      authDomain: "new-bike-59133.firebaseapp.com",
+      projectId: "new-bike-59133",
+      storageBucket: "new-bike-59133.appspot.com",
+      messagingSenderId: "966945954091",
+      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
     };
 
-    const files = imagesInput.files || [];
-    if (files.length === 0) return alert('Please select at least 1 image');
-    if (files.length > 5) return alert('Maximum 5 images allowed');
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    try {
-      // upload images sequentially (could be parallel)
-      for (let f of files) {
-        const url = await uploadImageToImgbb(f);
-        payload.imageUrls.push(url);
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const postBtn = document.getElementById("postBtn");
+    const postModal = document.getElementById("postModal");
+    const closeModal = document.getElementById("closeModal");
+    const postForm = document.getElementById("postForm");
+    const postList = document.getElementById("postList");
+
+    let currentUser = null;
+    const adminEmail = "zarasamajiksevasanstha@gmail.com";
+    const imgbbApiKey = "4dc5e5cb7654ffc308d5ca45452b014b"; // ImgBB API Key
+
+    // 🔹 Login with Google
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    // 🔹 Logout
+    logoutBtn.onclick = () => auth.signOut();
+
+    // 🔹 Auth State
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        postBtn.classList.remove("hidden");
+        loadPosts();
+      } else {
+        currentUser = null;
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        postBtn.classList.add("hidden");
+        loadPosts();
+      }
+    });
+
+    // 🔹 Open/Close Modal
+    postBtn.onclick = () => postModal.classList.remove("hidden");
+    closeModal.onclick = () => postModal.classList.add("hidden");
+
+    // 🔹 Post Submit
+    postForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("title").value;
+      const category = document.getElementById("category").value;
+      const price = document.getElementById("price").value;
+      const location = document.getElementById("location").value;
+      const files = document.getElementById("images").files;
+
+      // Upload images to ImgBB
+      let imageUrls = [];
+      for (let i = 0; i < Math.min(files.length, 5); i++) {
+        let formData = new FormData();
+        formData.append("image", files[i]);
+        let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+          method: "POST",
+          body: formData
+        });
+        let data = await res.json();
+        imageUrls.push(data.data.url);
       }
 
-      // save to firestore
-      await db.collection('ads').add(payload);
-      alert('Ad submitted for approval (Admin will review).');
+      await db.collection("vehicles").add({
+        title, category, price, location, imageUrls,
+        user: currentUser.email,
+        status: "pending", // admin approval required
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert("Post submitted! Waiting for admin approval.");
+      postModal.classList.add("hidden");
       postForm.reset();
-      postModal.classList.add('hidden');
-    } catch (err) {
-      console.error(err);
-      alert('Error uploading images or saving post: ' + err.message);
-    }
-  });
+    };
 
-  /*******************************
-   * Admin Panel: show pending list & all posts (admin only)
-   *******************************/
-  adminPanelBtn.addEventListener('click', async ()=> {
-    // show modal if logged in as admin
-    const user = auth.currentUser;
-    if (!user) {
-      const email = prompt('Admin email:');
-      const pw = prompt('Admin password:');
-      if (!email || !pw) return;
-      try {
-        await auth.signInWithEmailAndPassword(email, pw);
-      } catch(e) {
-        alert('Admin login failed: ' + e.message); return;
-      }
-    }
-    if (auth.currentUser.email !== ADMIN_EMAIL) { alert('You are not admin'); return; }
-
-    adminModal.classList.remove('hidden');
-    adminModal.style.display = 'flex';
-    adminInfo.textContent = auth.currentUser.email;
-
-    // load pending posts
-    loadPendingPosts();
-    loadAllPostsForAdmin();
-  });
-  closeAdmin.addEventListener('click', ()=> adminModal.classList.add('hidden'));
-
-  async function loadPendingPosts() {
-    pendingList.innerHTML = 'Loading...';
-    const snap = await db.collection('ads').where('status','==','pending').orderBy('createdAt','desc').get();
-    pendingList.innerHTML = '';
-    if (snap.empty) pendingList.innerHTML = '<div class="text-sm text-gray-600">No pending posts</div>';
-    snap.forEach(doc => {
-      const p = { id: doc.id, ...doc.data() };
-      pendingList.appendChild(adminCard(p, true));
-    });
-  }
-  async function loadAllPostsForAdmin() {
-    allList.innerHTML = 'Loading...';
-    const snap = await db.collection('ads').orderBy('createdAt','desc').limit(200).get();
-    allList.innerHTML = '';
-    if (snap.empty) allList.innerHTML = '<div class="text-sm text-gray-600">No posts</div>';
-    snap.forEach(doc => {
-      const p = { id: doc.id, ...doc.data() };
-      allList.appendChild(adminCard(p, false));
-    });
-  }
-
-  function adminCard(p, isPending) {
-    const div = document.createElement('div');
-    div.className = 'border p-3 rounded flex gap-3 items-start';
-    const img = (p.imageUrls && p.imageUrls[0]) ? p.imageUrls[0] : '';
-    div.innerHTML = `
-      <img src="${img}" class="w-28 h-20 object-cover rounded" />
-      <div class="flex-1">
-        <div class="flex justify-between">
-          <div>
-            <div class="font-semibold">${p.brand} ${p.model} <span class="text-sm text-gray-500">(${p.category})</span></div>
-            <div class="text-sm text-gray-600">${p.location} • ₹${p.price}</div>
-            <div class="text-xs text-gray-500">Posted by: ${p.createdByEmail || 'Unknown'}</div>
-            <div class="mt-1 text-sm">${p.description || ''}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm mb-2">Status: <b>${p.status}</b></div>
-            <div class="flex flex-col gap-2">
-              ${ isPending ? `<button class="approveBtn bg-green-600 text-white px-2 py-1 rounded" data-id="${p.id}">Approve</button>` : '' }
-              <button class="rejectBtn bg-red-500 text-white px-2 py-1 rounded" data-id="${p.id}">Reject</button>
-              <button class="soldBtn bg-gray-600 text-white px-2 py-1 rounded" data-id="${p.id}">Mark Sold</button>
-              <button class="deleteBtn bg-black text-white px-2 py-1 rounded" data-id="${p.id}">Delete</button>
+    // 🔹 Load Posts
+    async function loadPosts() {
+      postList.innerHTML = "";
+      const snapshot = await db.collection("vehicles").orderBy("createdAt","desc").get();
+      snapshot.forEach(doc => {
+        const post = doc.data();
+        if (post.status === "approved" || (currentUser && currentUser.email === adminEmail)) {
+          let card = document.createElement("div");
+          card.className = "bg-white p-4 rounded shadow";
+          card.innerHTML = `
+            <h3 class="font-bold text-lg">${post.title}</h3>
+            <p>Category: ${post.category}</p>
+            <p>Price: ₹${post.price}</p>
+            <p>Location: ${post.location}</p>
+            <div class="flex space-x-2 overflow-x-auto">
+              ${post.imageUrls.map(url => `<img src="${url}" class="w-24 h-24 object-cover">`).join("")}
             </div>
-          </div>
-        </div>
-      </div>
-    `;
+            <p>Status: ${post.status}</p>
+          `;
 
-    // attach handlers
-    setTimeout(()=> {
-      const approveBtn = div.querySelector('.approveBtn');
-      const rejectBtn = div.querySelector('.rejectBtn');
-      const deleteBtn = div.querySelector('.deleteBtn');
-      const soldBtn = div.querySelector('.soldBtn');
-
-      if (approveBtn) approveBtn.addEventListener('click', async ()=> {
-        await db.collection('ads').doc(p.id).update({ status: 'approved' });
-        loadPendingPosts(); loadAllPostsForAdmin(); resetAndLoad();
+          // 🔹 Admin Controls
+          if (currentUser && currentUser.email === adminEmail) {
+            card.innerHTML += `
+              <div class="mt-2 space-x-2">
+                <button onclick="updatePost('${doc.id}','approved')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
+                <button onclick="updatePost('${doc.id}','rejected')" class="bg-yellow-500 text-white px-2 py-1 rounded">Reject</button>
+                <button onclick="updatePost('${doc.id}','sold')" class="bg-blue-500 text-white px-2 py-1 rounded">Mark Sold</button>
+                <button onclick="deletePost('${doc.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+              </div>
+            `;
+          }
+          postList.appendChild(card);
+        }
       });
-      if (rejectBtn) rejectBtn.addEventListener('click', async ()=> {
-        await db.collection('ads').doc(p.id).update({ status: 'rejected' });
-        loadPendingPosts(); loadAllPostsForAdmin(); resetAndLoad();
-      });
-      if (soldBtn) soldBtn.addEventListener('click', async ()=> {
-        await db.collection('ads').doc(p.id).update({ status: 'sold' });
-        loadPendingPosts(); loadAllPostsForAdmin(); resetAndLoad();
-      });
-      if (deleteBtn) deleteBtn.addEventListener('click', async ()=> {
-        if (!confirm('Delete this post permanently?')) return;
-        await db.collection('ads').doc(p.id).delete();
-        loadPendingPosts(); loadAllPostsForAdmin(); resetAndLoad();
-      });
-    }, 50);
-
-    return div;
-  }
-
-  /*******************************
-   * Event: view product (open simple modal)
-   *******************************/
-  productsGrid.addEventListener('click', (e) => {
-    if (e.target.classList.contains('viewBtn')) {
-      // fetch doc and show (simple alert or modal)
-      const id = e.target.dataset.id;
-      showProductDetails(id);
-    } else if (e.target.classList.contains('adminEditBtn')) {
-      const id = e.target.dataset.id;
-      // open admin modal and focus on that post
-      adminPanelBtn.click();
-      setTimeout(()=> {
-        const el = Array.from(allList.querySelectorAll('.deleteBtn')).find(b => b.dataset.id === id);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
-      }, 300);
     }
-  });
 
-  async function showProductDetails(id) {
-    const doc = await db.collection('ads').doc(id).get();
-    if (!doc.exists) return alert('Item not found');
-    const p = { id: doc.id, ...doc.data() };
-    // build small modal (browser alert for simplicity)
-    const imgs = (p.imageUrls || []).map(u => u).join('\n');
-    const msg = `${p.brand} ${p.model}\nCategory: ${p.category} • ${p.subCategory}\nPrice: ₹${p.price}\nLocation: ${p.location}\nContact: ${p.contact}\n\nDescription:\n${p.description || '-'}\n\nImages:\n${imgs}`;
-    alert(msg);
-  }
-
-  /*******************************
-   * Init
-   *******************************/
-  // initial load
-  resetAndLoad();
-
-  // re-load when auth changed (for admin UI)
-  auth.onAuthStateChanged(user => {
-    if (user && user.email === ADMIN_EMAIL) {
-      // show admin controls on cards (we will re-render)
-      resetAndLoad();
-    } else {
-      resetAndLoad();
+    // 🔹 Admin Actions
+    async function updatePost(id, status) {
+      await db.collection("vehicles").doc(id).update({ status });
+      loadPosts();
     }
-  });
+    async function deletePost(id) {
+      await db.collection("vehicles").doc(id).delete();
+      loadPosts();
+    }
 
-  // On page load populate brand filter for default category
-  // (we will fill brand filter (top nav) from category selection)
-  categoryFilter.addEventListener('change', ()=> {
-    // update top subFilter options
-    const c = categoryFilter.value;
-    subFilter.innerHTML = '<option value="">All Subcategories</option>';
-    if (c && subCategoriesMap[c]) subCategoriesMap[c].forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; subFilter.appendChild(o); });
-  });
-
-</script>
+    window.updatePost = updatePost;
+    window.deletePost = deletePost;
+  </script>
 </body>
 </html>
