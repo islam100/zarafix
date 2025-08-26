@@ -1,148 +1,277 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Sell Bike & Car</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyShop - Bike & Car Marketplace</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase libs (compat for simplicity) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <!-- firebase config -->
+  <script src="firebase-config.js"></script>
+
   <style>
-    body { font-family: Arial; padding: 20px; }
-    label { display: block; margin-top: 10px; }
-    input, select, button { padding: 6px; width: 100%; }
-    .modal-content { max-width: 500px; margin: auto; }
+    /* small override for image ratio */
+    .card-img { height: 180px; object-fit: cover; width:100%; }
   </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen">
 
-<h2>Post Your Bike or Car for Sale</h2>
+  <!-- NAV -->
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <div class="flex items-center gap-4">
+      <h1 class="text-xl font-bold">MyShop</h1>
+      <input id="searchInput" class="border rounded px-3 py-1" placeholder="Search products, brand, model..." />
+      <select id="categoryFilter" class="border rounded px-2 py-1">
+        <option value="">All Categories</option>
+        <option value="Bike">Bike</option>
+        <option value="Car">Car</option>
+        <option value="Scooter">Scooter</option>
+        <option value="Electric">Electric</option>
+      </select>
+    </div>
 
-<form id="postForm">
+    <div class="flex items-center gap-4">
+      <button id="adminBtn" class="text-sm">Admin</button>
+      <div class="relative">
+        <button id="cartBtn" class="bg-blue-600 text-white px-3 py-1 rounded">Cart (<span id="cartCount">0</span>)</button>
+      </div>
+    </div>
+  </nav>
 
-  <!-- Main Category -->
-  <label>Category</label>
-  <select id="category" required>
-    <option value="">-- Select --</option>
-    <option value="Bike">Bike</option>
-    <option value="Car">Car</option>
-  </select>
+  <!-- CONTENT -->
+  <main class="max-w-6xl mx-auto p-6">
+    <!-- product grid -->
+    <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
 
-  <!-- Sub Category / Brand -->
-  <label>Brand</label>
-  <select id="brand" required>
-    <!-- JS से change होगा -->
-  </select>
+    <!-- load more -->
+    <div class="text-center mt-6">
+      <button id="loadMore" class="px-4 py-2 bg-gray-800 text-white rounded">Load more</button>
+    </div>
+  </main>
 
-  <label>Model Name</label>
-  <input type="text" id="model" required>
+  <!-- PRODUCT MODAL -->
+  <div id="productModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden items-center justify-center">
+    <div class="bg-white rounded-lg max-w-3xl w-full p-4">
+      <div class="flex justify-between items-start">
+        <h2 id="modalTitle" class="text-xl font-bold"></h2>
+        <button id="closeModal" class="text-xl">&times;</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div id="modalImages" class="space-y-2"></div>
+        <div>
+          <p id="modalDesc" class="text-sm text-gray-700"></p>
+          <p class="mt-3"><b>Price:</b> ₹<span id="modalPrice"></span></p>
+          <p><b>Category:</b> <span id="modalCategory"></span></p>
+          <p><b>Location:</b> <span id="modalLocation"></span></p>
+          <div class="mt-4">
+            <button id="addToCart" class="bg-green-600 text-white px-4 py-2 rounded">Add to Cart</button>
+            <button id="buyNow" class="bg-yellow-500 text-black px-4 py-2 rounded ml-2">Buy Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <label>Year of Purchase</label>
-  <input type="number" id="year" required>
-
-  <label>Condition</label>
-  <select id="condition" required>
-    <option value="Excellent">Excellent</option>
-    <option value="Good">Good</option>
-    <option value="Average">Average</option>
-    <option value="Needs Repair">Needs Repair</option>
-  </select>
-
-  <label>Price (₹)</label>
-  <input type="number" id="price" required>
-
-  <label>City / Location</label>
-  <input type="text" id="location" required>
-
-  <label>Contact Number</label>
-  <input type="tel" id="contact" required>
-
-  <label>Upload Images (Multiple)</label>
-  <input type="file" id="images" accept="image/*" multiple required>
-
-  <button type="submit">Post Now</button>
-</form>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <!-- CART SIDEBAR (simple) -->
+  <div id="cartSidebar" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg p-4 transform translate-x-full transition-transform">
+    <div class="flex justify-between items-center">
+      <h3 class="text-lg font-bold">Your Cart</h3>
+      <button id="closeCart">&times;</button>
+    </div>
+    <div id="cartItems" class="mt-4 space-y-3"></div>
+    <div class="mt-4">
+      <p>Total: ₹<span id="cartTotal">0</span></p>
+      <button id="checkoutBtn" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded w-full">Checkout</button>
+    </div>
+  </div>
 
 <script>
-  // 🔥 Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-    authDomain: "new-bike-59133.firebaseapp.com",
-    projectId: "new-bike-59133",
-    storageBucket: "new-bike-59133.appspot.com",
-    messagingSenderId: "966945954091",
-    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const storage = firebase.storage();
+/* ---------- CONFIG ---------- */
+/* firebaseConfig.js must initialize firebase and expose db, storage, auth */
+if (!window.db) {
+  console.error("firebase-config.js missing or not loaded!");
+}
 
-  // 🔁 Brand options based on category
-  const bikeBrands = ["Hero", "Honda", "Bajaj", "TVS", "Yamaha", "Royal Enfield", "Suzuki", "KTM", "Electric Bike", "Scooter"];
-  const carBrands = ["Maruti", "Hyundai", "Tata", "Honda", "Mahindra", "Toyota", "Kia", "Ford", "Skoda", "Renault", "BMW", "Mercedes"];
+/* ---------- STATE ---------- */
+let lastDoc = null;
+const pageSize = 8;
+let currentProducts = [];
+let cart = JSON.parse(localStorage.getItem('cart_v1') || '[]');
 
-  const categorySelect = document.getElementById("category");
-  const brandSelect = document.getElementById("brand");
+/* ---------- UI HELPERS ---------- */
+const productsGrid = document.getElementById('productsGrid');
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const loadMoreBtn = document.getElementById('loadMore');
+const cartCount = document.getElementById('cartCount');
+const cartSidebar = document.getElementById('cartSidebar');
+const cartItemsDiv = document.getElementById('cartItems');
+const cartTotalEl = document.getElementById('cartTotal');
+const productModal = document.getElementById('productModal');
 
-  categorySelect.addEventListener("change", function () {
-    brandSelect.innerHTML = "";
-    let arr = categorySelect.value === "Bike" ? bikeBrands : carBrands;
-    arr.forEach(b => {
-      let opt = document.createElement("option");
-      opt.value = b;
-      opt.textContent = b;
-      brandSelect.appendChild(opt);
-    });
+function updateCartUI() {
+  cartCount.textContent = cart.length;
+  cartItemsDiv.innerHTML = '';
+  let total = 0;
+  cart.forEach((item, idx) => {
+    total += Number(item.price || 0);
+    cartItemsDiv.innerHTML += `
+      <div class="flex items-center gap-3 border-b pb-2">
+        <img src="${item.image || ''}" class="w-16 h-12 object-cover"/>
+        <div class="flex-1">
+          <div class="font-semibold">${item.title}</div>
+          <div class="text-sm text-gray-600">₹${item.price}</div>
+        </div>
+        <button data-idx="${idx}" class="removeBtn text-red-600">Remove</button>
+      </div>
+    `;
   });
+  cartTotalEl.textContent = total;
+  localStorage.setItem('cart_v1', JSON.stringify(cart));
+}
 
-  // 📤 Form submit
-  document.getElementById("postForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-
-    const category = document.getElementById("category").value;
-    const brand = document.getElementById("brand").value;
-    const model = document.getElementById("model").value;
-    const year = document.getElementById("year").value;
-    const condition = document.getElementById("condition").value;
-    const price = document.getElementById("price").value;
-    const location = document.getElementById("location").value;
-    const contact = document.getElementById("contact").value;
-    const files = document.getElementById("images").files;
-
-    if (files.length === 0) {
-      alert("Please upload at least one image.");
-      return;
-    }
-
-    // 🖼 Upload all images
-    let imageUrls = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const storageRef = storage.ref().child(`imgb/${Date.now()}_${file.name}`);
-      await storageRef.put(file);
-      const url = await storageRef.getDownloadURL();
-      imageUrls.push(url);
-    }
-
-    // 💾 Save to Firestore
-    await db.collection("vehiclePosts").add({
-      category,
-      brand,
-      model,
-      year,
-      condition,
-      price,
-      location,
-      contact,
-      images: imageUrls,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    alert("Post uploaded successfully!");
-    document.getElementById("postForm").reset();
-    brandSelect.innerHTML = "";
+/* ---------- FETCH PRODUCTS (paged) ---------- */
+async function loadProducts(reset=false) {
+  if (reset) {
+    productsGrid.innerHTML = '';
+    lastDoc = null;
+  }
+  let query = db.collection('ads').orderBy('createdAt', 'desc').limit(pageSize);
+  if (lastDoc) query = query.startAfter(lastDoc);
+  // apply search & category client-side for simplicity (or apply where clauses)
+  const snapshot = await query.get();
+  if (snapshot.empty) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'No more products';
+    return;
+  }
+  lastDoc = snapshot.docs[snapshot.docs.length-1];
+  snapshot.forEach(doc => {
+    const data = { id: doc.id, ...doc.data() };
+    currentProducts.push(data);
+    renderProductCard(data);
   });
+}
+
+/* ---------- RENDER PRODUCT CARD ---------- */
+function renderProductCard(p) {
+  const div = document.createElement('div');
+  div.className = 'bg-white p-3 rounded-lg shadow';
+  const img = (p.imageUrl && p.imageUrl.length) ? p.imageUrl[0] : (p.imageUrl || '');
+  div.innerHTML = `
+    <img src="${img}" class="card-img rounded-md" alt="${p.model || ''}" />
+    <h3 class="mt-2 font-semibold">${p.brand} ${p.model}</h3>
+    <p class="text-sm text-gray-600">${p.category} • ${p.subCategory || ''}</p>
+    <div class="flex items-center justify-between mt-2">
+      <div class="font-bold">₹${p.price}</div>
+      <div>
+        <button class="viewBtn bg-blue-600 text-white px-2 py-1 rounded" data-id="${p.id}">View</button>
+        <button class="addBtn bg-green-600 text-white px-2 py-1 rounded ml-1" data-id="${p.id}">Add</button>
+      </div>
+    </div>
+  `;
+  productsGrid.appendChild(div);
+}
+
+/* ---------- EVENTS ---------- */
+loadMoreBtn.addEventListener('click', () => loadProducts());
+document.getElementById('adminBtn').addEventListener('click', () => {
+  window.location.href = 'admin.html';
+});
+
+productsGrid.addEventListener('click', (e) => {
+  if (e.target.classList.contains('viewBtn')) {
+    const id = e.target.dataset.id;
+    openProductModal(id);
+  } else if (e.target.classList.contains('addBtn')) {
+    const id = e.target.dataset.id;
+    const p = currentProducts.find(x => x.id === id);
+    if (p) { cart.push({ id: p.id, title: p.brand + ' ' + p.model, price: p.price, image: (p.imageUrl && p.imageUrl[0]) || '' }); updateCartUI(); }
+  }
+});
+
+document.getElementById('cartBtn').addEventListener('click', () => {
+  cartSidebar.style.transform = 'translateX(0)';
+  updateCartUI();
+});
+document.getElementById('closeCart').addEventListener('click', () => cartSidebar.style.transform = 'translateX(100%)');
+cartItemsDiv.addEventListener('click', (e) => {
+  if (e.target.classList.contains('removeBtn')) {
+    const idx = Number(e.target.dataset.idx);
+    cart.splice(idx,1);
+    updateCartUI();
+  }
+});
+document.getElementById('checkoutBtn').addEventListener('click', async () => {
+  if (!auth.currentUser) {
+    const email = prompt("Please enter email to login/signup for checkout:");
+    if (!email) return;
+    const pw = prompt("Choose a password (for demo):");
+    await auth.signInWithEmailAndPassword(email, pw).catch(async (err) => {
+      await auth.createUserWithEmailAndPassword(email, pw);
+    });
+  }
+  // simple order mock — save order to Firestore
+  await db.collection('orders').add({
+    user: auth.currentUser.uid,
+    items: cart,
+    total: cart.reduce((s,i)=>s+Number(i.price||0),0),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  alert('Order placed! (demo)');
+  cart = []; updateCartUI();
+});
+
+/* ---------- PRODUCT MODAL ---------- */
+async function openProductModal(id) {
+  const doc = await db.collection('ads').doc(id).get();
+  if (!doc.exists) return;
+  const p = { id: doc.id, ...doc.data() };
+  document.getElementById('modalTitle').textContent = `${p.brand} ${p.model}`;
+  document.getElementById('modalDesc').textContent = p.description || '';
+  document.getElementById('modalPrice').textContent = p.price || '';
+  document.getElementById('modalCategory').textContent = p.category || '';
+  document.getElementById('modalLocation').textContent = p.location || '';
+  const imagesDiv = document.getElementById('modalImages');
+  imagesDiv.innerHTML = '';
+  (p.imageUrl || []).forEach(url => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'w-full h-48 object-cover rounded';
+    imagesDiv.appendChild(img);
+  });
+  // attach add to cart for this product
+  document.getElementById('addToCart').onclick = () => { cart.push({ id: p.id, title: p.brand + ' ' + p.model, price: p.price, image: (p.imageUrl && p.imageUrl[0]) || '' }); updateCartUI(); alert('Added to cart'); };
+  productModal.style.display = 'flex';
+  productModal.classList.remove('hidden');
+}
+document.getElementById('closeModal').addEventListener('click', () => productModal.style.display = 'none');
+
+/* ---------- SEARCH & FILTER ---------- */
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  productsGrid.innerHTML = '';
+  const filtered = currentProducts.filter(p => {
+    if (categoryFilter.value && p.category !== categoryFilter.value) return false;
+    return [p.brand, p.model, p.category, p.subCategory, (p.description||'')].join(' ').toLowerCase().includes(q);
+  });
+  filtered.forEach(renderProductCard);
+});
+
+/* also re-filter on category change */
+categoryFilter.addEventListener('change', () => searchInput.dispatchEvent(new Event('input')));
+
+/* ---------- INIT ---------- */
+updateCartUI();
+loadProducts(true);
 </script>
 
 </body>
