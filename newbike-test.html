@@ -1,144 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Bike Sale Post</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post Bike/Car for Sale</title>
+<style>
+  label { display:block; margin-top:10px; }
+  input, select, button { width:100%; padding:8px; margin-top:4px; }
+</style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 </head>
-<body class="bg-gray-100 p-6">
+<body>
 
-  <!-- Post Form Modal -->
-  <div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg">
-    <h2 class="text-xl font-bold mb-4">Post Your Bike for Sale</h2>
-    <form id="postForm" class="space-y-3">
-      
-      <label>Bike Category</label>
-      <select id="bikeCategory" class="w-full border p-2 rounded" required>
-        <option value="">-- Select Category --</option>
-        <option value="Bike">Bike</option>
-        <option value="Scooter">Scooter</option>
-        <option value="Electric">Electric</option>
-        <option value="Sports">Sports Bike</option>
-      </select>
+<h2>Post Your Bike or Car for Sale</h2>
 
-      <label>Bike Brand</label>
-      <select id="bikeBrand" class="w-full border p-2 rounded" required>
-        <option value="">-- Select Brand --</option>
-        <option value="Hero">Hero</option>
-        <option value="Honda">Honda</option>
-        <option value="Bajaj">Bajaj</option>
-        <option value="TVS">TVS</option>
-        <option value="Yamaha">Yamaha</option>
-        <option value="Suzuki">Suzuki</option>
-        <option value="RoyalEnfield">Royal Enfield</option>
-        <option value="KTM">KTM</option>
-      </select>
+<form id="vehicleForm">
 
-      <label>Subcategory / Model Type</label>
-      <select id="bikeSubCategory" class="w-full border p-2 rounded" required>
-        <option value="">-- Select Subcategory --</option>
-        <option value="Commuter">Commuter</option>
-        <option value="Cruiser">Cruiser</option>
-        <option value="Sports">Sports</option>
-        <option value="Adventure">Adventure</option>
-        <option value="Scooter">Scooter</option>
-        <option value="Electric">Electric</option>
-      </select>
+  <label>Category</label>
+  <select id="category" required>
+    <option value="Bike">Bike</option>
+    <option value="Car">Car</option>
+  </select>
 
-      <label>Model Name</label>
-      <input type="text" id="bikeModel" class="w-full border p-2 rounded" placeholder="e.g. Splendor+, Pulsar 150" required>
+  <label>Brand</label>
+  <select id="brand" required></select>
 
-      <label>Year of Purchase</label>
-      <input type="number" id="bikeYear" class="w-full border p-2 rounded" placeholder="e.g. 2019" required>
+  <label>Model Name</label>
+  <input type="text" id="model" required>
 
-      <label>Bike Condition</label>
-      <select id="bikeCondition" class="w-full border p-2 rounded" required>
-        <option value="Excellent">Excellent</option>
-        <option value="Good">Good</option>
-        <option value="Average">Average</option>
-        <option value="Needs Repair">Needs Repair</option>
-      </select>
+  <label>Year</label>
+  <input type="number" id="year" required>
 
-      <label>Price (₹)</label>
-      <input type="number" id="bikePrice" class="w-full border p-2 rounded" placeholder="Enter price" required>
+  <label>Condition</label>
+  <select id="condition" required>
+    <option value="Excellent">Excellent</option>
+    <option value="Good">Good</option>
+    <option value="Average">Average</option>
+    <option value="Needs Repair">Needs Repair</option>
+  </select>
 
-      <label>City / Location</label>
-      <input type="text" id="bikeLocation" class="w-full border p-2 rounded" placeholder="Enter city/location" required>
+  <label>Price (₹)</label>
+  <input type="number" id="price" required>
 
-      <label>Contact Number</label>
-      <input type="tel" id="bikeContact" class="w-full border p-2 rounded" placeholder="Enter your phone number" required>
+  <label>City / Location</label>
+  <input type="text" id="location" required>
 
-      <label>Upload Image</label>
-      <input type="file" id="bikeImage" accept="image/*" class="w-full" required>
+  <label>Contact Number</label>
+  <input type="tel" id="contact" required>
 
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Post Bike</button>
-    </form>
-  </div>
+  <label>Upload Images (max 5)</label>
+  <input type="file" id="images" accept="image/*" multiple required>
 
-  <script>
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-      authDomain: "new-bike-59133.firebaseapp.com",
-      projectId: "new-bike-59133",
-      storageBucket: "new-bike-59133.appspot.com",
-      messagingSenderId: "966945954091",
-      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+  <button type="submit">Post</button>
+
+</form>
+
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+    authDomain: "new-bike-59133.firebaseapp.com",
+    projectId: "new-bike-59133",
+    storageBucket: "new-bike-59133.appspot.com",
+    messagingSenderId: "966945954091",
+    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  // Brand list
+  const brands = {
+    Bike: ["Hero", "Honda", "Bajaj", "TVS", "Yamaha", "Royal Enfield", "Suzuki", "KTM", "Electric", "Scooter"],
+    Car: ["Maruti", "Hyundai", "Tata", "Mahindra", "Honda", "Toyota", "Kia", "MG", "Ford", "BMW"]
+  };
+
+  const categorySelect = document.getElementById('category');
+  const brandSelect = document.getElementById('brand');
+
+  function updateBrandOptions() {
+    brandSelect.innerHTML = '';
+    brands[categorySelect.value].forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b;
+      opt.textContent = b;
+      brandSelect.appendChild(opt);
+    });
+  }
+
+  categorySelect.addEventListener('change', updateBrandOptions);
+  updateBrandOptions(); // initialize
+
+  // Form submit
+  document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+      category: document.getElementById('category').value,
+      brand: document.getElementById('brand').value,
+      model: document.getElementById('model').value,
+      year: document.getElementById('year').value,
+      condition: document.getElementById('condition').value,
+      price: document.getElementById('price').value,
+      location: document.getElementById('location').value,
+      contact: document.getElementById('contact').value,
+      images: []
     };
 
-    // Init Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const storage = firebase.storage();
+    const files = document.getElementById('images').files;
+    if (files.length > 5) {
+      alert("You can upload maximum 5 images.");
+      return;
+    }
 
-    // Form Submit
-    document.getElementById("postForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const category = document.getElementById("bikeCategory").value;
-      const brand = document.getElementById("bikeBrand").value;
-      const subCategory = document.getElementById("bikeSubCategory").value;
-      const model = document.getElementById("bikeModel").value;
-      const year = document.getElementById("bikeYear").value;
-      const condition = document.getElementById("bikeCondition").value;
-      const price = document.getElementById("bikePrice").value;
-      const location = document.getElementById("bikeLocation").value;
-      const contact = document.getElementById("bikeContact").value;
-      const file = document.getElementById("bikeImage").files[0];
-
-      if (!file) {
-        alert("Please upload an image!");
-        return;
-      }
-
-      // Upload Image
-      const storageRef = storage.ref("bikeImages/" + Date.now() + "_" + file.name);
+    // Upload images
+    for (let file of files) {
+      const storageRef = storage.ref(`vehicles/${Date.now()}-${file.name}`);
       await storageRef.put(file);
-      const imageUrl = await storageRef.getDownloadURL();
+      const url = await storageRef.getDownloadURL();
+      formData.images.push(url);
+    }
 
-      // Save to Firestore
-      await db.collection("bikePosts").add({
-        category,
-        brand,
-        subCategory,
-        model,
-        year,
-        condition,
-        price,
-        location,
-        contact,
-        imageUrl,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      alert("Bike Posted Successfully!");
-      document.getElementById("postForm").reset();
-    });
-  </script>
+    // Save to Firestore
+    await db.collection('vehicles').add(formData);
+    alert("Vehicle posted successfully!");
+    document.getElementById('vehicleForm').reset();
+    updateBrandOptions();
+  });
+</script>
 
 </body>
 </html>
