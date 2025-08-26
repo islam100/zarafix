@@ -2,91 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>New Bike & Car Sale</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bike & Car Sale</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <style>
-    .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; 
-      overflow:auto; background-color:rgba(0,0,0,0.6);}
-    .modal-content { background:#fff; margin:30px auto; padding:20px; border-radius:12px; 
-      max-width:500px; max-height:90vh; overflow-y:auto; }
-    .close { float:right; font-size:24px; cursor:pointer; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
 
-  <!-- Navbar -->
-  <div class="flex justify-between items-center p-4 bg-blue-600 text-white">
-    <h1 class="text-xl font-bold">🚗 Bike & Car Sale</h1>
-    <div>
-      <button id="loginBtn" class="bg-white text-blue-600 px-4 py-1 rounded">Login with Google</button>
-      <button id="logoutBtn" class="hidden bg-red-500 px-4 py-1 rounded">Logout</button>
-      <button id="postBtn" class="hidden bg-green-500 px-4 py-1 rounded">+ Post Vehicle</button>
-    </div>
+<!-- 🔥 Post Form Modal -->
+<div id="postModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+    <h2 class="text-xl font-bold mb-4">🚘 Post Your Vehicle</h2>
+    <form id="postForm" class="space-y-4">
+
+      <label class="block">Category</label>
+      <select id="category" class="w-full border p-2 rounded" required>
+        <option value="Bike">Bike</option>
+        <option value="Car">Car</option>
+      </select>
+
+      <label class="block">Sub-Category</label>
+      <select id="subCategory" class="w-full border p-2 rounded" required>
+        <option value="New">New</option>
+        <option value="Used">Used</option>
+        <option value="Electric">Electric</option>
+      </select>
+
+      <label class="block">Brand</label>
+      <input type="text" id="brand" class="w-full border p-2 rounded" placeholder="e.g. Hero, Honda, Maruti" required>
+
+      <label class="block">Model</label>
+      <input type="text" id="model" class="w-full border p-2 rounded" placeholder="e.g. Splendor+, Swift" required>
+
+      <label class="block">Year</label>
+      <input type="number" id="year" class="w-full border p-2 rounded" placeholder="e.g. 2020" required>
+
+      <label class="block">Condition</label>
+      <select id="condition" class="w-full border p-2 rounded" required>
+        <option value="Excellent">Excellent</option>
+        <option value="Good">Good</option>
+        <option value="Average">Average</option>
+        <option value="Needs Repair">Needs Repair</option>
+      </select>
+
+      <label class="block">Price (₹)</label>
+      <input type="number" id="price" class="w-full border p-2 rounded" placeholder="Enter price" required>
+
+      <label class="block">Location</label>
+      <input type="text" id="location" class="w-full border p-2 rounded" placeholder="City / Area" required>
+
+      <label class="block">Contact Number</label>
+      <input type="tel" id="contact" class="w-full border p-2 rounded" placeholder="Mobile Number" required>
+
+      <label class="block">Upload Images (Max 5)</label>
+      <input type="file" id="images" class="w-full border p-2 rounded" accept="image/*" multiple required>
+
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Submit</button>
+    </form>
   </div>
-
-  <!-- Posts Container -->
-  <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4"></div>
-
-  <!-- Post Form Modal -->
-  <div class="modal" id="postModal">
-    <div class="modal-content">
-      <span class="close" id="closeForm">&times;</span>
-      <h2 class="text-lg font-bold mb-2">Post Your Vehicle</h2>
-      <form id="postForm" class="space-y-2">
-
-        <label>Category</label>
-        <select id="category" class="w-full border p-2 rounded" required>
-          <option value="Bike">Bike</option>
-          <option value="Car">Car</option>
-        </select>
-
-        <label>Sub Category</label>
-        <select id="subcategory" class="w-full border p-2 rounded" required>
-          <option value="New">New</option>
-          <option value="Used">Used</option>
-        </select>
-
-        <label>Brand</label>
-        <input type="text" id="brand" class="w-full border p-2 rounded" required>
-
-        <label>Model</label>
-        <input type="text" id="model" class="w-full border p-2 rounded" required>
-
-        <label>Year</label>
-        <input type="number" id="year" class="w-full border p-2 rounded" required>
-
-        <label>Price (₹)</label>
-        <input type="number" id="price" class="w-full border p-2 rounded" required>
-
-        <label>Description</label>
-        <textarea id="description" class="w-full border p-2 rounded" required></textarea>
-
-        <label>Location</label>
-        <input type="text" id="location" class="w-full border p-2 rounded" required>
-
-        <label>Contact Number</label>
-        <input type="text" id="contact" class="w-full border p-2 rounded" required>
-
-        <label>WhatsApp Number</label>
-        <input type="text" id="whatsapp" class="w-full border p-2 rounded">
-
-        <label>Upload Images (max 5)</label>
-        <input type="file" id="images" class="w-full" multiple accept="image/*" required>
-
-        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Submit</button>
-      </form>
-    </div>
-  </div>
+</div>
 
 <script>
-  // ✅ Firebase Config
+  // 🔑 Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
     authDomain: "new-bike-59133.firebaseapp.com",
@@ -96,126 +75,56 @@
     appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
   };
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const imgbbAPI = "4dc5e5cb7654ffc308d5ca45452b014b";
+  const form = document.getElementById("postForm");
 
-  // Elements
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postBtn = document.getElementById("postBtn");
-  const postModal = document.getElementById("postModal");
-  const closeForm = document.getElementById("closeForm");
-  const postForm = document.getElementById("postForm");
-  const postsContainer = document.getElementById("postsContainer");
-
-  let currentUser = null;
-
-  // Google Login
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-  logoutBtn.onclick = () => auth.signOut();
-  postBtn.onclick = () => postModal.style.display = "block";
-  closeForm.onclick = () => postModal.style.display = "none";
-
-  auth.onAuthStateChanged(user => {
-    if(user){
-      currentUser = user;
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      postBtn.classList.remove("hidden");
-    } else {
-      currentUser = null;
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      postBtn.classList.add("hidden");
-    }
-  });
-
-  // Upload images to imgbb
-  async function uploadImages(files){
-    const urls = [];
-    for(let i=0; i<Math.min(files.length,5); i++){
-      let formData = new FormData();
-      formData.append("image", files[i]);
-      let res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPI}`, {
-        method: "POST", body: formData
-      });
-      let data = await res.json();
-      urls.push(data.data.url);
-    }
-    return urls;
-  }
-
-  // Submit Form
-  postForm.onsubmit = async(e)=>{
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if(!currentUser) return alert("Login first!");
+
+    const category = document.getElementById("category").value;
+    const subCategory = document.getElementById("subCategory").value;
+    const brand = document.getElementById("brand").value;
+    const model = document.getElementById("model").value;
+    const year = document.getElementById("year").value;
+    const condition = document.getElementById("condition").value;
+    const price = document.getElementById("price").value;
+    const location = document.getElementById("location").value;
+    const contact = document.getElementById("contact").value;
     const files = document.getElementById("images").files;
-    const urls = await uploadImages(files);
 
-    const postData = {
-      category: document.getElementById("category").value,
-      subcategory: document.getElementById("subcategory").value,
-      brand: document.getElementById("brand").value,
-      model: document.getElementById("model").value,
-      year: document.getElementById("year").value,
-      price: document.getElementById("price").value,
-      description: document.getElementById("description").value,
-      location: document.getElementById("location").value,
-      contact: document.getElementById("contact").value,
-      whatsapp: document.getElementById("whatsapp").value,
-      images: urls,
-      status: "pending",
-      user: currentUser.email,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await db.collection("vehicles").add(postData);
-    alert("Submitted for admin approval");
-    postForm.reset();
-    postModal.style.display="none";
-  };
-
-  // Render Posts
-  function renderPost(doc){
-    const d = doc.data();
-    if(d.status!=="approved") return; // only approved show
-    let card = document.createElement("div");
-    card.className="bg-white p-4 rounded shadow";
-    card.innerHTML=`
-      <img src="${d.images[0]||''}" class="w-full h-40 object-cover rounded">
-      <h3 class="text-lg font-bold mt-2">${d.brand} ${d.model} (${d.year})</h3>
-      <p class="text-green-600 font-bold">₹${d.price}</p>
-      <p>${d.location}</p>
-      <p class="text-sm">${d.description}</p>
-    `;
-    if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-      card.innerHTML+=`
-        <div class="mt-2 flex gap-2">
-          <button onclick="updateStatus('${doc.id}','approved')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
-          <button onclick="updateStatus('${doc.id}','rejected')" class="bg-yellow-500 text-white px-2 py-1 rounded">Reject</button>
-          <button onclick="updateStatus('${doc.id}','sold')" class="bg-blue-500 text-white px-2 py-1 rounded">Sold</button>
-          <button onclick="deletePost('${doc.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-        </div>
-      `;
+    if (files.length > 5) {
+      alert("You can upload max 5 images");
+      return;
     }
-    postsContainer.appendChild(card);
-  }
 
-  async function updateStatus(id,status){
-    await db.collection("vehicles").doc(id).update({status});
-  }
-  async function deletePost(id){
-    await db.collection("vehicles").doc(id).delete();
-  }
+    // 🖼 Upload to ImgBB
+    const uploadedUrls = [];
+    for (let file of files) {
+      const formData = new FormData();
+      formData.append("image", file);
 
-  db.collection("vehicles").orderBy("createdAt","desc").onSnapshot(snap=>{
-    postsContainer.innerHTML="";
-    snap.forEach(doc=>renderPost(doc));
+      const res = await fetch("https://api.imgbb.com/1/upload?key=4dc5e5cb7654ffc308d5ca45452b014b", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) uploadedUrls.push(data.data.url);
+    }
+
+    // 🔥 Save to Firestore
+    await db.collection("posts").add({
+      category, subCategory, brand, model, year,
+      condition, price, location, contact,
+      images: uploadedUrls,
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("✅ Vehicle posted successfully (waiting for admin approval)");
+    form.reset();
   });
 </script>
+
 </body>
 </html>
