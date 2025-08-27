@@ -3,184 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZaraFix – Public | Shopkeeper | Admin</title>
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase compat -->
+  <title>Amazon Post Form</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-  <style>
-    :root{
-      --bg:#0b1220; --panel:#0e1524; --line:rgba(255,255,255,.1); --soft:rgba(255,255,255,.05);
-    }
-    body{ background:var(--bg); color:#e5e7eb; }
-    .btn-3d{ box-shadow:0 6px 0 rgba(0,0,0,.6); transform:translateY(0); transition:transform .08s, box-shadow .08s, filter .2s; }
-    .btn-3d:hover{ filter:brightness(1.05); }
-    .btn-3d:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.6); }
-    .card-3d{ background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); border-radius:18px; overflow:hidden; box-shadow:0 14px 36px rgba(0,0,0,.45); user-select:none; }
-    .card-3d.colourful{ border-image:linear-gradient(45deg,#8b5cf6,#06b6d4,#22c55e,#f59e0b) 1; border-width:1px; }
-    .gal-img{ width:100%; height:190px; object-fit:contain; background:#07101d; }
-    @media(min-width:640px){ .gal-img{ height:210px } }
-    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:70; }
-    .modal.show{ display:flex }
-    .modal-card{ width:min(95vw,900px); background:var(--panel); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
-    .badge{ position:absolute; top:10px; left:10px; background:7fff00; border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; }
-    .badge-sold{ background:#3b1d1d; border-color:#4444ef; }
-    .logo-3d{ font-weight:900; letter-spacing:.08em; background:conic-gradient(from 210deg, #ff4ecd, #8b5cf6, #06b6d4, #22c55e, #f59e0b, #ff4ecd); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 2px 0 rgba(0,0,0,.7),0 10px 30px rgba(0,0,0,.5); filter:drop-shadow(0 8px 18px rgba(16,185,129,.35)); }
-    .hdr-btn{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); }
-    .inpt{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12) }
-  </style>
 </head>
-<body class="min-h-screen flex flex-col">
-<header class="sticky top-0 z-50 bg-[#0b1220]/95 backdrop-blur border-b border-white/10">
-  <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
-    <div class="text-xl font-bold text-white">ZARA FIX</div>
-    <div class="flex items-center gap-2">
-      <button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>
-    </div>
+<body>
+  <h2>Amazon Product Add</h2>
+  <div>
+    <label>Product Name *</label>
+    <input id="aName" placeholder="Product Name">
+    <label>Category *</label>
+    <input id="aCategory" placeholder="Category">
+    <label>Price *</label>
+    <input id="aPrice" type="number" placeholder="Price">
+    <label>Description</label>
+    <textarea id="aDesc"></textarea>
+    <label>Images (URL) *</label>
+    <input id="aImages" placeholder="Comma separated image URLs">
+    <button id="submitAmazon">Submit</button>
+    <span id="msg"></span>
   </div>
-  <div class="max-w-6xl mx-auto px-3 pb-3">
-    <div class="flex gap-2 justify-end sm:justify-start">
-      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/10 font-semibold" data-tab="public">Public</button>
-      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold" data-tab="shop">Shopkeeper</button>
-      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 hidden" id="adminTab" data-tab="admin">Admin</button>
-    </div>
-  </div>
-</header>
-
-<main class="w-full max-w-6xl mx-auto flex-1 p-3">
-  <section id="public" class="space-y-3">
-    <div class="flex flex-wrap gap-2 mb-2">
-      <select id="filterCategory" class="inpt px-3 py-2 rounded-xl">
-        <option value="">All Categories</option>
-      </select>
-      <input id="searchInput" class="inpt px-3 py-2 rounded-xl flex-1 min-w-[200px]" placeholder="Search product..." />
-    </div>
-    <div id="publicGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
-  </section>
-</main>
-
-<div id="modal" class="modal">
-  <div id="modalCard" class="modal-card"></div>
-</div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-  authDomain: "loot-lo-15328.firebaseapp.com",
-  databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
-  projectId: "loot-lo-15328",
-  storageBucket: "loot-lo-15328.appspot.com",
-  messagingSenderId: "677769861892",
-  appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
-};
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+  const firebaseConfig = { 
+    apiKey: "...",
+    authDomain: "...",
+    databaseURL: "...",
+    projectId: "...",
+    storageBucket: "...",
+    messagingSenderId: "...",
+    appId: "..."
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const byId = id=>document.getElementById(id);
+  document.getElementById('submitAmazon').onclick = async ()=>{
+    const name = document.getElementById('aName').value.trim();
+    const category = document.getElementById('aCategory').value.trim();
+    const price = Number(document.getElementById('aPrice').value);
+    const desc = document.getElementById('aDesc').value.trim();
+    const images = (document.getElementById('aImages').value || '').split(',').map(x=>x.trim()).filter(x=>x);
 
-const productsRef = db.ref('products');
-let ALL = [];
-productsRef.on('value', snap=>{
-  const obj = snap.val()||{};
-  ALL = Object.values(obj).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  renderAll();
-});
+    if(!name || !category || !price || !images.length){
+      document.getElementById('msg').textContent = 'Fill required fields';
+      return;
+    }
 
-byId('filterCategory').addEventListener('change', renderAll);
-byId('searchInput').addEventListener('input', ()=>{ clearTimeout(window.__t); window.__t=setTimeout(renderAll,150); });
+    const id = db.ref('products').push().key;
+    const item = {
+      id, name, category, price, desc, images, owner:'admin@amazon.com',
+      status:'approved', sold:false, source:'amazon', createdAt: Date.now()
+    };
 
-function applyFilters(list){
-  const cat = byId('filterCategory').value;
-  const q = byId('searchInput').value.trim().toLowerCase();
-  return list.filter(p=>{
-    if(cat && p.category!==cat) return false;
-    if(q && !(p.name||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
-}
-
-// Amazon ads array
-const AMAZON_ADS = [
-  { name:"Echo Dot", price:"4,499", category:"Electronics", img:"https://images-eu.ssl-images-amazon.com/images/I/41k5g5ZbG-L._AC_UL600_SR600,400_.jpg", link:"https://www.amazon.in/dp/B08N5WRWNW" },
-  { name:"Fire TV Stick", price:"3,999", category:"Electronics", img:"https://images-na.ssl-images-amazon.com/images/I/51Q7mCr8-AL._AC_UL600_SR600,400_.jpg", link:"https://www.amazon.in/dp/B079QHML21" },
-  { name:"Kindle Paperwhite", price:"9,999", category:"Electronics", img:"https://images-na.ssl-images-amazon.com/images/I/61q2aXxRbpL._AC_UL600_SR600,400_.jpg", link:"https://www.amazon.in/dp/B07CXG6C9W" }
-];
-
-function makeAmazonAdCard(){
-  const ad = AMAZON_ADS[Math.floor(Math.random()*AMAZON_ADS.length)];
-  const el = document.createElement('div');
-  el.className = "card-3d colourful border border-white/10";
-  el.innerHTML = `
-    <div class="relative">
-      <img class="gal-img" src="${ad.img}" alt="${ad.name}"/>
-    </div>
-    <div class="p-3">
-      <div class="font-extrabold text-[15px] leading-tight">${ad.name}</div>
-      <div class="text-sm opacity-80 mt-1">${ad.category} • <span class="font-bold">₹${ad.price}</span></div>
-      <div class="flex gap-2 mt-2">
-        <a class="btn-3d px-3 py-2 rounded-xl bg-yellow-500 font-bold" target="_blank" href="${ad.link}">Buy on Amazon</a>
-      </div>
-    </div>
-  `;
-  return el;
-}
-
-function makeCard(p){
-  const el = document.createElement('div');
-  el.className = "card-3d colourful border border-white/10";
-  el.innerHTML = `
-    <div class="relative">
-      <img class="gal-img" src="${p.img||'https://via.placeholder.com/200'}" alt="${p.name}" />
-      ${p.sold?'<div class="badge badge-sold">SOLD</div>':''}
-    </div>
-    <div class="p-3">
-      <div class="font-extrabold text-[15px] leading-tight">${p.name}</div>
-      <div class="text-sm opacity-80 mt-1">${p.category} • <span class="font-bold">₹${p.price||0}</span></div>
-    </div>
-  `;
-  return el;
-}
-
-function renderPublic(){
-  const grid = byId('publicGrid');
-  grid.innerHTML = '';
-  const approved = ALL.filter(p=>p.status==='approved');
-  const list = applyFilters(approved);
-
-  // Random Amazon ad at top
-  grid.appendChild(makeAmazonAdCard());
-
-  for(const p of list){ grid.appendChild(makeCard(p)); }
-  if(!list.length){ grid.innerHTML += '<div class="text-slate-400 text-sm p-4 col-span-full">No approved offers found.</div>'; }
-}
-
-function renderAll(){ renderPublic(); }
-
-byId('loginBtn').addEventListener('click',()=>{
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).then(result=>{
-    const user = result.user;
-    if(user.email===ADMIN_EMAIL){ byId('adminTab').classList.remove('hidden'); }
-    alert('Welcome '+user.displayName);
-  });
-});
-
-document.querySelectorAll('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('bg-white/10')); 
-    btn.classList.add('bg-white/10');
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('main section').forEach(s=>s.style.display='none');
-    byId(tab).style.display='block';
-  });
-});
+    await db.ref('products/'+id).set(item);
+    document.getElementById('msg').textContent = 'Amazon product submitted!';
+    ['aName','aCategory','aPrice','aDesc','aImages'].forEach(id=>document.getElementById(id).value='');
+  }
 </script>
 </body>
 </html>
