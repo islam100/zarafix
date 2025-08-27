@@ -1,379 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Vehicle Marketplace</title>
-
-<!-- Tailwind -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Firebase compat SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post Your Vehicle</title>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
+  <h2>🚗 Post Your Vehicle for Sale</h2>
 
-  <!-- NAVBAR -->
-  <header class="bg-blue-600 text-white">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl font-semibold">🚗 Vehicle Marketplace</h1>
-      <div class="flex items-center gap-2">
-        <span id="whoami" class="hidden text-sm opacity-90"></span>
-        <button id="loginBtn" class="bg-white text-blue-700 px-3 py-1 rounded">Login with Google</button>
-        <button id="logoutBtn" class="hidden bg-red-500 px-3 py-1 rounded">Logout</button>
-        <button id="postBtn" class="hidden bg-yellow-400 text-black px-3 py-1 rounded">+ Post Vehicle</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- FILTER (simple) -->
-  <section class="max-w-6xl mx-auto px-4 py-3">
-    <div class="flex flex-col md:flex-row gap-2">
-      <input id="searchBox" class="w-full md:w-1/2 border rounded px-3 py-2" placeholder="Search brand, model, city..." />
-      <select id="statusFilter" class="border rounded px-3 py-2">
-        <option value="public">Public view (Approved only)</option>
-        <option value="all">All (admin only)</option>
-        <option value="pending">Pending (admin only)</option>
-        <option value="sold">Sold</option>
-      </select>
-      <button id="refreshBtn" class="bg-blue-600 text-white px-3 py-2 rounded">Refresh</button>
-    </div>
-  </section>
-
-  <!-- LIST -->
-  <main class="max-w-6xl mx-auto px-4 pb-16">
-    <div id="postsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-  </main>
-
-  <!-- NOTIFY -->
-  <div id="notify" class="fixed bottom-5 right-5 hidden bg-green-600 text-white px-4 py-2 rounded shadow">Success</div>
-
-  <!-- MODAL -->
-  <div id="postModal" class="fixed inset-0 hidden bg-black/60 z-50">
-    <div class="absolute inset-0 flex items-center justify-center p-3">
-      <div class="bg-white w-full max-w-lg rounded-2xl shadow-lg overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3 border-b">
-          <h2 class="text-lg font-semibold">Post Your Vehicle</h2>
-          <button id="closeModal" class="text-2xl leading-none">&times;</button>
-        </div>
-
-        <form id="postForm" class="px-5 py-4 space-y-3 max-h-[75vh] overflow-y-auto">
-          <div>
-            <label class="block text-sm mb-1">Category</label>
-            <select id="category" class="w-full border rounded px-3 py-2" required>
-              <option value="">Select</option>
-              <option>Car</option>
-              <option>Bike</option>
-              <option>Scooter</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1">Sub Category</label>
-            <select id="subCategory" class="w-full border rounded px-3 py-2" required>
-              <option value="">Select</option>
-              <option>New</option>
-              <option>Used</option>
-              <option>Electric</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1">Brand</label>
-            <input id="brand" class="w-full border rounded px-3 py-2" placeholder="Honda, Maruti, Hero..." required />
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1">Model</label>
-            <input id="model" class="w-full border rounded px-3 py-2" placeholder="City, Swift, Splendor+" required />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm mb-1">Fuel Type</label>
-              <select id="fuel" class="w-full border rounded px-3 py-2" required>
-                <option value="">Select</option>
-                <option>Petrol</option>
-                <option>Diesel</option>
-                <option>CNG</option>
-                <option>Electric</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm mb-1">Year</label>
-              <input id="year" type="number" class="w-full border rounded px-3 py-2" placeholder="2021" required />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm mb-1">Condition</label>
-              <select id="condition" class="w-full border rounded px-3 py-2" required>
-                <option>Excellent</option>
-                <option>Good</option>
-                <option>Average</option>
-                <option>Needs Repair</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm mb-1">Price (₹)</label>
-              <input id="price" type="number" class="w-full border rounded px-3 py-2" required />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm mb-1">City / Location</label>
-              <input id="location" class="w-full border rounded px-3 py-2" required />
-            </div>
-            <div>
-              <label class="block text-sm mb-1">Contact Number</label>
-              <input id="contact" type="tel" class="w-full border rounded px-3 py-2" required />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1">Upload Images (max 5)</label>
-            <input id="images" type="file" accept="image/*" multiple class="w-full" required />
-          </div>
-
-          <button id="submitBtn" type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Submit</button>
-        </form>
-      </div>
-    </div>
+  <!-- Google Login Section -->
+  <div id="authSection">
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <p id="userInfo"></p>
   </div>
+  <hr>
 
-<script>
-/* ====== CONFIG ====== */
-const firebaseConfig = {
-  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-  authDomain: "new-bike-59133.firebaseapp.com",
-  projectId: "new-bike-59133",
-  storageBucket: "new-bike-59133.appspot.com",
-  messagingSenderId: "966945954091",
-  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-};
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-const IMGBB_KEY = "ff05d1b5c3b3e139253856f0ad1123df";
+  <!-- Vehicle Form -->
+  <form id="vehicleForm" style="display:none;">
+    <input type="text" id="brand" placeholder="Brand" required><br>
+    <input type="text" id="model" placeholder="Model" required><br>
+    <input type="number" id="year" placeholder="Year of Purchase" required><br>
+    <input type="text" id="condition" placeholder="Condition" required><br>
+    <select id="fuelType" required>
+      <option value="">-- Select Fuel Type --</option>
+      <option value="Petrol">Petrol</option>
+      <option value="Diesel">Diesel</option>
+      <option value="CNG">CNG</option>
+      <option value="Electric">Electric</option>
+    </select><br>
+    <input type="number" id="price" placeholder="Price (₹)" required><br>
+    <input type="text" id="city" placeholder="City" required><br>
+    <input type="tel" id="contact" placeholder="Contact Number" required><br>
+    <input type="file" id="images" multiple accept="image/*"><br>
+    <button type="submit">Submit</button>
+  </form>
 
-/* ====== INIT ====== */
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* ====== DOM ====== */
-const whoami = document.getElementById("whoami");
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const postBtn = document.getElementById("postBtn");
-const postModal = document.getElementById("postModal");
-const closeModal = document.getElementById("closeModal");
-const postForm = document.getElementById("postForm");
-const submitBtn = document.getElementById("submitBtn");
-const postsGrid = document.getElementById("postsGrid");
-const notify = document.getElementById("notify");
-const searchBox = document.getElementById("searchBox");
-const statusFilter = document.getElementById("statusFilter");
-const refreshBtn = document.getElementById("refreshBtn");
+    // 🔥 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+      authDomain: "new-bike-59133.firebaseapp.com",
+      databaseURL: "https://new-bike-59133-default-rtdb.firebaseio.com",
+      projectId: "new-bike-59133",
+      storageBucket: "new-bike-59133.appspot.com",
+      messagingSenderId: "966945954091",
+      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+    };
 
-let isAdmin = false;
-let unsubscribe = null;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-/* ====== AUTH ====== */
-loginBtn.onclick = async () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  await auth.signInWithPopup(provider);
-};
-logoutBtn.onclick = () => auth.signOut();
-postBtn.onclick = () => postModal.classList.remove("hidden");
-closeModal.onclick = () => postModal.classList.add("hidden");
+    const provider = new GoogleAuthProvider();
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    isAdmin = (user.email === ADMIN_EMAIL);
-    loginBtn.classList.add("hidden");
-    logoutBtn.classList.remove("hidden");
-    postBtn.classList.remove("hidden");
-    whoami.classList.remove("hidden");
-    whoami.textContent = `${user.displayName || user.email}${isAdmin ? " (Admin)" : ""}`;
-  } else {
-    isAdmin = false;
-    loginBtn.classList.remove("hidden");
-    logoutBtn.classList.add("hidden");
-    postBtn.classList.add("hidden");
-    whoami.classList.add("hidden");
-    whoami.textContent = "";
-  }
-  bindLiveQuery(); // re-bind on auth change
-});
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
+    const form = document.getElementById("vehicleForm");
 
-/* ====== QUERY / LISTEN ====== */
-function bindLiveQuery() {
-  // Unsubscribe previous listener
-  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-
-  // Build base query
-  let q = db.collection("vehicles").orderBy("createdAt","desc");
-
-  // Non-admin public view: approved only
-  const mode = statusFilter.value || "public";
-  if (!isAdmin || mode === "public") {
-    q = q.where("status","==","approved");
-  } else if (mode === "pending") {
-    q = q.where("status","==","pending");
-  } else if (mode === "sold") {
-    q = q.where("status","==","sold");
-  }
-
-  unsubscribe = q.onSnapshot(renderList, (err)=>console.error(err));
-}
-
-refreshBtn.onclick = bindLiveQuery;
-statusFilter.onchange = bindLiveQuery;
-searchBox.oninput = () => renderList(lastSnap); // client-side filter
-
-let lastSnap = null;
-function renderList(snapshot) {
-  lastSnap = snapshot;
-  postsGrid.innerHTML = "";
-  const term = (searchBox.value || "").toLowerCase();
-
-  snapshot.forEach(doc => {
-    const p = doc.data();
-
-    // Client-side text filter
-    const text = [
-      p.brand, p.model, p.category, p.subCategory,
-      p.location, p.fuel, p.condition
-    ].filter(Boolean).join(" ").toLowerCase();
-    if (term && !text.includes(term)) return;
-
-    // Public users only see approved (already constrained in query), admin sees all + controls
-    const badgeColor = p.status === "approved" ? "bg-green-600" :
-                       p.status === "pending" ? "bg-yellow-500" :
-                       p.status === "sold" ? "bg-gray-800" : "bg-red-600";
-
-    const firstImg = (p.images && p.images[0]) ? p.images[0] : "https://via.placeholder.com/600x400?text=No+Image";
-
-    const adminControls = isAdmin ? `
-      <div class="mt-2 flex flex-wrap gap-2">
-        <button class="px-2 py-1 rounded text-white bg-green-600" onclick="updateStatus('${doc.id}','approved')">Approve</button>
-        <button class="px-2 py-1 rounded text-white bg-yellow-600" onclick="updateStatus('${doc.id}','pending')">Pending</button>
-        <button class="px-2 py-1 rounded text-white bg-gray-700" onclick="updateStatus('${doc.id}','sold')">Sold</button>
-        <button class="px-2 py-1 rounded text-white bg-red-600" onclick="updateStatus('${doc.id}','rejected')">Reject</button>
-        <button class="px-2 py-1 rounded text-white bg-black" onclick="deletePost('${doc.id}')">Delete</button>
-      </div>
-    ` : "";
-
-    const imgStrip = (p.images || []).slice(0,4).map(
-      (u,i)=>`<img src="${u}" alt="img${i}" class="w-16 h-16 object-cover rounded border" />`
-    ).join("");
-
-    const card = `
-      <div class="bg-white rounded-xl shadow overflow-hidden">
-        <div class="relative">
-          <img src="${firstImg}" class="w-full h-48 object-cover" alt="vehicle" />
-          <span class="absolute top-2 left-2 ${badgeColor} text-white text-xs px-2 py-1 rounded">${p.status || "pending"}</span>
-        </div>
-        <div class="p-3">
-          <div class="font-semibold text-lg">${p.brand || ""} ${p.model || ""}</div>
-          <div class="text-sm text-gray-600">${p.category || ""} • ${p.subCategory || ""} • ${p.fuel || ""} • ${p.year || ""}</div>
-          <div class="mt-1 font-bold text-green-700">₹${p.price || ""}</div>
-          <div class="text-sm text-gray-700">${p.location || ""}</div>
-          <div class="text-sm mt-1">📞 ${p.contact || ""}</div>
-          ${imgStrip ? `<div class="mt-2 flex gap-2">${imgStrip}</div>` : ""}
-          ${adminControls}
-        </div>
-      </div>
-    `;
-    postsGrid.insertAdjacentHTML("beforeend", card);
-  });
-
-  if (!snapshot.size) {
-    postsGrid.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10">No posts found.</div>`;
-  }
-}
-
-/* ====== FORM SUBMIT ====== */
-postForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!auth.currentUser) { toast("Please login first"); return; }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Posting...";
-
-  try {
-    const files = document.getElementById("images").files;
-    if (!files || files.length === 0) { alert("Upload at least 1 image"); return; }
-    if (files.length > 5) { alert("Max 5 images allowed"); return; }
-
-    // Upload images to ImgBB v1
-    const urls = [];
-    for (let i=0; i<files.length && i<5; i++) {
-      const fd = new FormData();
-      fd.append("image", files[i]);
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: "POST", body: fd });
-      const data = await res.json();
-      if (!data.success) throw new Error("Image upload failed");
-      urls.push(data.data.url);
-    }
-
-    // Save Firestore
-    await db.collection("vehicles").add({
-      category: document.getElementById("category").value,
-      subCategory: document.getElementById("subCategory").value,
-      brand: document.getElementById("brand").value,
-      model: document.getElementById("model").value,
-      fuel: document.getElementById("fuel").value,
-      year: Number(document.getElementById("year").value),
-      condition: document.getElementById("condition").value,
-      price: Number(document.getElementById("price").value),
-      location: document.getElementById("location").value,
-      contact: document.getElementById("contact").value,
-      images: urls,
-      status: "pending",
-      user: auth.currentUser.email,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    // Login
+    loginBtn.addEventListener("click", () => {
+      signInWithPopup(auth, provider).catch(err => alert(err.message));
     });
 
-    postForm.reset();
-    postModal.classList.add("hidden");
-    toast("✅ Post submitted. Waiting for admin approval.");
+    // Logout
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth);
+    });
 
-  } catch (err) {
-    console.error(err);
-    alert("Error: " + (err.message || err));
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit";
-  }
-});
+    // Auth State Change
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userInfo.innerText = "👤 " + user.displayName + " (" + user.email + ")";
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        form.style.display = "block";
+      } else {
+        userInfo.innerText = "";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        form.style.display = "none";
+      }
+    });
 
-/* ====== ADMIN ACTIONS ====== */
-window.updateStatus = async (id, status) => {
-  if (!isAdmin) return alert("Admin only");
-  await db.collection("vehicles").doc(id).update({ status });
-  toast(`Status: ${status}`);
-};
-window.deletePost = async (id) => {
-  if (!isAdmin) return alert("Admin only");
-  if (!confirm("Delete this post?")) return;
-  await db.collection("vehicles").doc(id).delete();
-  toast("Deleted");
-};
+    // Form Submit
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-/* ====== TOAST ====== */
-function toast(msg) {
-  notify.textContent = msg;
-  notify.classList.remove("hidden");
-  setTimeout(()=>notify.classList.add("hidden"), 2500);
-}
+      const brand = document.getElementById("brand").value;
+      const model = document.getElementById("model").value;
+      const year = document.getElementById("year").value;
+      const condition = document.getElementById("condition").value;
+      const fuelType = document.getElementById("fuelType").value;
+      const price = document.getElementById("price").value;
+      const city = document.getElementById("city").value;
+      const contact = document.getElementById("contact").value;
+      const images = document.getElementById("images").files;
 
-// Initial bind for public view before auth callback returns
-bindLiveQuery();
-</script>
+      let imageUrls = [];
+
+      // ImgBB upload
+      for (let i = 0; i < images.length; i++) {
+        let formData = new FormData();
+        formData.append("image", images[i]);
+
+        try {
+          let res = await fetch("https://api.imgbb.com/1/upload?key=ff05d1b5c3b3e139253856f0ad1123df", {
+            method: "POST",
+            body: formData
+          });
+          let data = await res.json();
+          if (data.success) {
+            imageUrls.push(data.data.url);
+          }
+        } catch (err) {
+          console.error("Image upload failed:", err);
+        }
+      }
+
+      // Firebase Database Save
+      const newPostRef = push(ref(db, "vehicles"));
+      await set(newPostRef, {
+        brand, model, year, condition, fuelType, price, city, contact,
+        images: imageUrls,
+        user: auth.currentUser ? auth.currentUser.email : "guest",
+        status: "pending",
+        timestamp: Date.now()
+      });
+
+      alert("✅ Vehicle Posted Successfully!");
+      form.reset();
+    });
+  </script>
 </body>
 </html>
