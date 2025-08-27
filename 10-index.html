@@ -1,117 +1,206 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ZaraFix Marketplace</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix – Public | Shopkeeper | Admin</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 p-4">
 
-  <h2 class="text-2xl font-bold mb-4">🔥 Amazon Deals & ZaraFix Posts</h2>
-
-  <!-- Post Grid -->
-  <div id="postGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
-
-  <script>
-    // ✅ Mixed Posts List (Amazon + Normal)
-    const posts = [
-      {
-        type: "amazon",
-        name: "Wireless Bluetooth Earbuds",
-        images: [
-          "https://m.media-amazon.com/images/I/61CGHv6kmWL._SL1500_.jpg",
-          "https://m.media-amazon.com/images/I/51I2XGkOQwL._SL1000_.jpg"
-        ],
-        price: "₹1,299",
-        link: "https://www.amazon.in/dp/B0XXXXX/?tag=YOURAFFILIATEID-21"
-      },
-      {
-        type: "amazon",
-        name: "Smartwatch with Fitness Tracker",
-        images: [
-          "https://m.media-amazon.com/images/I/71WJFffuR-L._SL1500_.jpg",
-          "https://m.media-amazon.com/images/I/61F5WoFH3kL._SL1500_.jpg"
-        ],
-        price: "₹2,499",
-        link: "https://www.amazon.in/dp/B0YYYYY/?tag=YOURAFFILIATEID-21"
-      },
-      {
-        type: "normal",
-        name: "🚗 Car for Sale – Maruti Swift",
-        images: [
-          "https://via.placeholder.com/400x250?text=Car+Front",
-          "https://via.placeholder.com/400x250?text=Car+Back",
-          "https://via.placeholder.com/400x250?text=Car+Interior"
-        ],
-        price: "₹3,50,000",
-        desc: "2019 Model | Good Condition | Single Owner",
-        contact: "📞 9876543210"
-      }
-    ];
-
-    const grid = document.getElementById("postGrid");
-
-    posts.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "bg-white shadow-md rounded-2xl overflow-hidden hover:shadow-xl transition flex flex-col";
-
-      // ✅ Images Carousel (multiple images support)
-      let imagesHtml = "";
-      p.images.forEach((img, i) => {
-        imagesHtml += `
-          <div class="w-full flex-shrink-0">
-            <img src="${img}" alt="${p.name}" class="w-full h-48 object-cover">
-          </div>
-        `;
-      });
-
-      // ✅ Wrapper for image scrolling
-      const imageWrapper = `
-        <div class="flex overflow-x-auto no-scrollbar snap-x">
-          ${imagesHtml}
-        </div>
-      `;
-
-      // ✅ Common Card Content
-      let content = "";
-      if (p.type === "amazon") {
-        content = `
-          <div class="p-3 flex flex-col flex-grow">
-            <h3 class="font-bold text-lg">${p.name}</h3>
-            <p class="text-gray-700 font-semibold">${p.price}</p>
-            <a href="${p.link}" target="_blank" 
-              class="mt-auto bg-yellow-500 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 text-center">
-              🛒 Buy on Amazon
-            </a>
-          </div>
-        `;
-      } else if (p.type === "normal") {
-        content = `
-          <div class="p-3 flex flex-col flex-grow">
-            <h3 class="font-bold text-lg">${p.name}</h3>
-            <p class="text-gray-600">${p.desc}</p>
-            <p class="text-gray-700 font-semibold mt-1">Price: ${p.price}</p>
-            <p class="text-blue-600 mt-1">${p.contact}</p>
-          </div>
-        `;
-      }
-
-      card.innerHTML = imageWrapper + content;
-      grid.appendChild(card);
-    });
-  </script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
-    /* Horizontal scroll में scrollbar छिपाने के लिए */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
+    :root{
+      --bg:#0b1220; --panel:#0e1524; --line:rgba(255,255,255,.1); --soft:rgba(255,255,255,.05);
     }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+    body{ background:var(--bg); color:#e5e7eb; }
+    /* 3D buttons */
+    .btn-3d{ box-shadow:0 6px 0 rgba(0,0,0,.6); transform:translateY(0); transition:transform .08s, box-shadow .08s, filter .2s; }
+    .btn-3d:hover{ filter:brightness(1.05); }
+    .btn-3d:active{ transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.6); }
+    /* 3D cards */
+    .card-3d{ background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:18px; overflow:hidden;
+      box-shadow:0 14px 36px rgba(0,0,0,.45); user-select:none; }
+    .card-3d.colourful{ border-image:linear-gradient(45deg,#8b5cf6,#06b6d4,#22c55e,#f59e0b) 1; border-width:1px; }
+    /* Gallery */
+    .gal-img{ width:100%; height:190px; object-fit:contain; background:#07101d; }
+    @media(min-width:640px){ .gal-img{ height:210px } }
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.75); z-index:70; }
+    .modal.show{ display:flex }
+    .modal-card{ width:min(95vw,900px); background:var(--panel); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+    .badge{ position:absolute; top:10px; left:10px; background:7fff00; border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; }
+    .badge-sold{ background:#3b1d1d; border-color:#4444ef; }
+    .logo-3d{
+      font-weight:900; letter-spacing:.08em;
+      background:conic-gradient(from 210deg, #ff4ecd, #8b5cf6, #06b6d4, #22c55e, #f59e0b, #ff4ecd);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 2px 0 rgba(0,0,0,.7), 0 10px 30px rgba(0,0,0,.5);
+      filter:drop-shadow(0 8px 18px rgba(16,185,129,.35));
     }
+    .hdr-btn{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); }
+    .inpt{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12) }
   </style>
+</head>
+<body class="min-h-screen flex flex-col">
+<header class="sticky top-0 z-50 bg-[#0b1220]/95 backdrop-blur border-b border-white/10">
+  <div class="max-w-7xl mx-auto flex items-center justify-between p-3">
+    <div class="text-xl font-bold text-white">ZARA FIX</div>
+    <div class="flex items-center space-x-4 relative z-50">
+      <!-- Menus skipped for brevity -->
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="loginBtn" class="btn-3d px-4 py-2 rounded-xl bg-white/10 border border-white/15">Login with Google</button>
+    </div>
+  </div>
 
+  <div class="max-w-6xl mx-auto px-3 pb-3">
+    <div class="flex gap-2 justify-end sm:justify-start">
+      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/10 font-semibold" data-tab="public">Public</button>
+      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 font-semibold" data-tab="shop">Shopkeeper</button>
+      <button class="tab px-3 py-2 rounded-2xl border border-white/10 bg-white/5 hidden" id="adminTab" data-tab="admin">Admin</button>
+    </div>
+  </div>
+</header>
+
+<main class="w-full max-w-6xl mx-auto flex-1 p-3">
+  <!-- PUBLIC -->
+  <section id="public" class="space-y-3">
+    <div class="flex flex-wrap gap-2 mb-2">
+      <select id="filterCategory" class="inpt px-3 py-2 rounded-xl">
+        <option value="">All Categories</option>
+      </select>
+      <input id="searchInput" class="inpt px-3 py-2 rounded-xl flex-1 min-w-[200px]" placeholder="Search product..." />
+    </div>
+    <div id="publicGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+  </section>
+
+  <!-- SHOPKEEPER & ADMIN sections skipped for brevity -->
+</main>
+
+<div id="modal" class="modal">
+  <div id="modalCard" class="modal-card"></div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+    authDomain: "loot-lo-15328.firebaseapp.com",
+    databaseURL: "https://loot-lo-15328-default-rtdb.firebaseio.com",
+    projectId: "loot-lo-15328",
+    storageBucket: "loot-lo-15328.appspot.com",
+    messagingSenderId: "677769861892",
+    appId: "1:677769861892:web:bb235cb8479aeee9b58e51"
+  };
+  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+  const IMGBB_KEY = "ff05d1b5c3b3e139253856f0ad1123df";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const byId = id => document.getElementById(id);
+
+  /***** Products DB *****/
+  const productsRef = db.ref('products');
+  let ALL = [];
+  productsRef.on('value', snap=>{
+    const obj = snap.val()||{};
+    ALL = Object.values(obj).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    renderAll();
+  });
+
+  /***** Filters *****/
+  byId('filterCategory').addEventListener('change', renderAll);
+  byId('searchInput').addEventListener('input', ()=>{ clearTimeout(window.__t); window.__t=setTimeout(renderAll,150); });
+
+  function applyFilters(list){
+    const cat = byId('filterCategory').value;
+    const q = byId('searchInput').value.trim().toLowerCase();
+    return list.filter(p=>{
+      if(cat && p.category!==cat) return false;
+      if(q && !(p.name||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+
+  /***** Amazon Card *****/
+  function makeAmazonAdCard(){
+    const el = document.createElement('div');
+    el.className = `card-3d colourful border border-white/10`;
+    const amazonLink = "https://www.amazon.in/dp/B08N5WRWNW";
+    const amazonImg = "https://images-eu.ssl-images-amazon.com/images/I/41k5g5ZbG-L._AC_UL600_SR600,400_.jpg";
+    el.innerHTML = `
+      <div class="relative">
+        <img class="gal-img" src="${amazonImg}" alt="Amazon Product"/>
+      </div>
+      <div class="p-3">
+        <div class="font-extrabold text-[15px] leading-tight">Amazon Echo Dot</div>
+        <div class="text-sm opacity-80 mt-1">Electronics • <span class="font-bold">₹4,499</span></div>
+        <div class="flex gap-2 mt-2">
+          <a class="btn-3d px-3 py-2 rounded-xl bg-yellow-500 font-bold" target="_blank" href="${amazonLink}">Buy on Amazon</a>
+        </div>
+      </div>
+    `;
+    return el;
+  }
+
+  /***** Card Renderer *****/
+  function makeCard(p,type='public'){
+    const el = document.createElement('div');
+    el.className = "card-3d colourful border border-white/10";
+    el.innerHTML = `
+      <div class="relative">
+        <img class="gal-img" src="${p.img||'https://via.placeholder.com/200'}" alt="${p.name}" />
+        ${p.sold?'<div class="badge badge-sold">SOLD</div>':''}
+      </div>
+      <div class="p-3">
+        <div class="font-extrabold text-[15px] leading-tight">${p.name}</div>
+        <div class="text-sm opacity-80 mt-1">${p.category} • <span class="font-bold">₹${p.price||0}</span></div>
+      </div>
+    `;
+    return el;
+  }
+
+  function renderPublic(){
+    const grid = byId('publicGrid');
+    grid.innerHTML = '';
+    const approved = ALL.filter(p=>p.status==='approved');
+    const list = applyFilters(approved);
+
+    // Amazon ad card first
+    grid.appendChild(makeAmazonAdCard());
+
+    for(const p of list){ grid.appendChild(makeCard(p,'public')); }
+    if(!list.length){ grid.innerHTML += '<div class="text-slate-400 text-sm p-4 col-span-full">No approved offers found.</div>'; }
+  }
+
+  function renderAll(){ renderPublic(); }
+
+  /***** Auth Button *****/
+  byId('loginBtn').addEventListener('click',()=>{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result=>{
+      const user = result.user;
+      if(user.email===ADMIN_EMAIL){ byId('adminTab').classList.remove('hidden'); }
+      alert('Welcome '+user.displayName);
+    });
+  });
+
+  /***** Tabs *****/
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('bg-white/10')); 
+      btn.classList.add('bg-white/10');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('main section').forEach(s=>s.style.display='none');
+      byId(tab).style.display='block';
+    });
+  });
+</script>
 </body>
 </html>
