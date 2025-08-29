@@ -1,29 +1,32 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. सभी pages की list
-const pages = [
-  '/',
-  '/hospital',
-  '/ambulancebooking',
-  '/realestate',
-  '/all-serviceprovider'
-];
+// urls.txt aur sitemap.xml ka path (public folder ke andar)
+const urlsFile = path.join(__dirname, 'urls.txt');
+const sitemapFile = path.join(__dirname, 'sitemap.xml');
 
-// 2. Sitemap XML बनाना
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${pages.map(page => `
-  <url>
-    <loc>https://www.zarafix.online${page}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>${page === '/' ? '1.0' : '0.8'}</priority>
-  </url>`).join('')}
-</urlset>
-`;
+// urls.txt पढ़ो
+if (!fs.existsSync(urlsFile)) {
+  console.error("Error: urls.txt file public folder me nahi mili!");
+  process.exit(1);
+}
 
-// 3. Sitemap को public folder में write करना
-fs.writeFileSync(path.join(__dirname, 'public', 'sitemap.xml'), sitemap);
+const urls = fs.readFileSync(urlsFile, 'utf-8')
+  .split('\n')
+  .map(line => line.trim())
+  .filter(line => line !== '');
 
-console.log('✅ sitemap.xml generated successfully!');
+// sitemap.xml content बनाओ
+let sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+sitemapContent += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+urls.forEach(url => {
+  sitemapContent += `  <url>\n    <loc>${url}</loc>\n  </url>\n`;
+});
+
+sitemapContent += `</urlset>`;
+
+// sitemap.xml save करो
+fs.writeFileSync(sitemapFile, sitemapContent);
+
+console.log('✅ Sitemap generated successfully at public/sitemap.xml');
