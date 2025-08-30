@@ -3,32 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Upload Firebase</title>
+  <title>Image Upload with Notification</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+<body class="bg-gray-100 flex items-center justify-center h-screen">
 
-  <div class="bg-white p-6 rounded-xl shadow-lg w-96 text-center">
-    <h2 class="text-xl font-bold mb-4">Upload Image</h2>
-
-    <input type="file" id="fileInput" class="mb-4">
-    <button onclick="uploadImage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Upload</button>
-
-    <div id="progressBox" class="hidden mt-4">
-      <div class="w-full bg-gray-200 rounded-full">
-        <div id="progressBar" class="bg-green-500 text-xs leading-none py-1 text-center text-white rounded-full" style="width:0%">0%</div>
-      </div>
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <h1 class="text-xl font-bold mb-4 text-center">Image Upload</h1>
+    <input type="file" id="fileInput" class="mb-4 w-full border p-2 rounded">
+    <button id="uploadBtn" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Upload</button>
+    
+    <!-- Progress bar -->
+    <div class="w-full bg-gray-200 h-3 rounded mt-4">
+      <div id="progressBar" class="bg-green-500 h-3 rounded w-0"></div>
     </div>
 
-    <p id="message" class="mt-4 text-sm"></p>
+    <!-- Notification -->
+    <p id="notification" class="mt-4 text-center font-semibold"></p>
   </div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
   <script>
-    // 🔹 अपनी Firebase config यहाँ डालें
-  const firebaseConfig = {
+    // 🔑 अपनी Firebase config डालें
+   const firebaseConfig = {
   apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
   authDomain: "new-bike-59133.firebaseapp.com",
   projectId: "new-bike-59133",
@@ -40,41 +40,36 @@
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
 
-    function uploadImage() {
-      const fileInput = document.getElementById("fileInput");
-      const file = fileInput.files[0];
+    const fileInput = document.getElementById("fileInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const progressBar = document.getElementById("progressBar");
+    const notification = document.getElementById("notification");
 
+    uploadBtn.addEventListener("click", () => {
+      const file = fileInput.files[0];
       if (!file) {
-        alert("कृपया एक फ़ाइल चुनें!");
+        alert("कृपया पहले कोई image चुनें!");
         return;
       }
 
-      const storageRef = storage.ref("uploads/" + Date.now() + "_" + file.name);
+      const storageRef = storage.ref("uploads/" + file.name);
       const uploadTask = storageRef.put(file);
 
-      document.getElementById("progressBox").classList.remove("hidden");
-
-      uploadTask.on(
-        "state_changed",
+      uploadTask.on("state_changed",
         (snapshot) => {
-          let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          document.getElementById("progressBar").style.width = progress + "%";
-          document.getElementById("progressBar").innerText = Math.floor(progress) + "%";
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          progressBar.style.width = progress + "%";
         },
         (error) => {
-          document.getElementById("message").innerText = "❌ Upload Failed: " + error.message;
-          document.getElementById("message").className = "mt-4 text-red-600 text-sm";
+          notification.textContent = "❌ Upload Failed!";
+          notification.className = "mt-4 text-center font-semibold text-red-500";
         },
         () => {
-          uploadTask.snapshot.ref.getDownloadURL().then((url) => {
-            document.getElementById("message").innerHTML = "✅ Upload Success!<br><a href='" + url + "' target='_blank' class='text-blue-600 underline'>View Image</a>";
-            document.getElementById("message").className = "mt-4 text-green-600 text-sm";
-            console.log("Image URL:", url);
-          });
+          notification.textContent = "✅ Upload Successful!";
+          notification.className = "mt-4 text-center font-semibold text-green-600";
         }
       );
-    }
+    });
   </script>
-
 </body>
 </html>
