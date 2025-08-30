@@ -1,135 +1,171 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix – Poster & Admin</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix – Poster + Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-gray-100 p-5">
+<body class="bg-gray-100 p-6">
+  <div class="max-w-3xl mx-auto">
+    <!-- Login Section -->
+    <div id="loginSection" class="text-center">
+      <h1 class="text-2xl font-bold mb-4">Google Login</h1>
+      <button id="loginBtn" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+        Google Login
+      </button>
+    </div>
 
-  <div id="loginBox" class="flex justify-center">
-    <button onclick="googleLogin()" class="bg-blue-600 text-white px-5 py-2 rounded-xl shadow-lg">
-      Google Login
-    </button>
-  </div>
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Dashboard</h2>
+        <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Logout</button>
+      </div>
+      <p id="welcome" class="mb-4"></p>
 
-  <!-- User Poster Section -->
-  <div id="posterSection" class="hidden">
-    <h2 class="text-xl font-bold mb-3">Post Add (Poster)</h2>
-    <form id="postForm" class="grid gap-3">
-      <input type="text" id="pPrice" placeholder="Price" class="p-2 rounded">
-      <input type="text" id="pBhk" placeholder="BHK" class="p-2 rounded">
-      <input type="text" id="pType" placeholder="Property Type" class="p-2 rounded">
-      <input type="text" id="pAddress" placeholder="Address" class="p-2 rounded">
-      <input type="text" id="pPhone" placeholder="Phone" class="p-2 rounded">
-      <button type="submit" class="bg-green-600 text-white p-2 rounded">Submit Post</button>
-    </form>
+      <!-- Poster Form -->
+      <div class="bg-white p-4 rounded-xl shadow mb-6">
+        <h3 class="text-lg font-semibold mb-2">New Poster</h3>
+        <input id="pTitle" type="text" placeholder="Title" class="border p-2 w-full mb-2 rounded" />
+        <input id="pPrice" type="number" placeholder="Price" class="border p-2 w-full mb-2 rounded" />
+        <button id="postBtn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Post</button>
+      </div>
 
-    <h3 class="mt-5 font-bold">My Posts</h3>
-    <div id="myPosts" class="space-y-2"></div>
-  </div>
-
-  <!-- Admin Section -->
-  <div id="adminSection" class="hidden">
-    <h2 class="text-xl font-bold mb-3">Admin Panel</h2>
-    <div id="allPosts" class="space-y-2"></div>
+      <!-- Admin View -->
+      <div id="adminSection" class="hidden bg-white p-4 rounded-xl shadow">
+        <h3 class="text-lg font-semibold mb-2">Pending Posts (Admin Only)</h3>
+        <div id="postsList" class="space-y-2"></div>
+      </div>
+    </div>
   </div>
 
   <script>
-    // ✅ Firebase Config (apna config lagana)
-   const firebaseConfig = {
-  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-  authDomain: "new-bike-59133.firebaseapp.com",
-  projectId: "new-bike-59133",
-  storageBucket: "new-bike-59133.appspot.com",
-  messagingSenderId: "966945954091",
-  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-};
+    // 🔹 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+      authDomain: "new-bike-59133.firebaseapp.com",
+      projectId: "new-bike-59133",
+      storageBucket: "new-bike-59133.appspot.com",
+      messagingSenderId: "966945954091",
+      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e",
+      databaseURL: "https://new-bike-59133-default-rtdb.firebaseio.com"
+    };
 
+    // Init Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const loginBox = document.getElementById("loginBox");
-    const posterSection = document.getElementById("posterSection");
+    // Elements
+    const loginBtn = document.getElementById("loginBtn");
+    const loginSection = document.getElementById("loginSection");
+    const dashboard = document.getElementById("dashboard");
+    const welcome = document.getElementById("welcome");
+    const postBtn = document.getElementById("postBtn");
+    const postsList = document.getElementById("postsList");
     const adminSection = document.getElementById("adminSection");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    let currentUser = null;
-    const adminEmail = "
-zarasamajiksevasanstha@gmail.com"; // ✅ apna admin email set karo
+    const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
 
-    function googleLogin() {
+    // 🔹 Google Login
+    loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(res => {
-        currentUser = res.user;
-        checkUserRole(currentUser);
-      });
-    }
-
-    function checkUserRole(user) {
-      loginBox.classList.add("hidden");
-      if (user.email === adminEmail) {
-        adminSection.classList.remove("hidden");
-        loadAllPosts();
-      } else {
-        posterSection.classList.remove("hidden");
-        loadMyPosts(user.uid);
-      }
-    }
-
-    // ✅ Poster Form Submit
-    document.getElementById("postForm").addEventListener("submit", e => {
-      e.preventDefault();
-      const postData = {
-        price: document.getElementById("pPrice").value,
-        bhk: document.getElementById("pBhk").value,
-        propertyType: document.getElementById("pType").value,
-        address: document.getElementById("pAddress").value,
-        posterPhone: document.getElementById("pPhone").value,
-        uid: currentUser.uid,
-        email: currentUser.email
-      };
-      db.ref("posts").push(postData);
-      alert("Post Added ✅");
-      document.getElementById("postForm").reset();
-      loadMyPosts(currentUser.uid);
+      auth.signInWithPopup(provider).catch(err => alert(err.message));
     });
 
-    // ✅ Load My Posts (Poster)
-    function loadMyPosts(uid) {
-      const myPostsDiv = document.getElementById("myPosts");
-      db.ref("posts").orderByChild("uid").equalTo(uid).on("value", snap => {
-        myPostsDiv.innerHTML = "";
-        snap.forEach(child => {
-          const p = child.val();
-          myPostsDiv.innerHTML += `
-            <div class="p-2 border rounded">
-              <b>${p.bhk} – ₹${p.price}</b><br>
-              ${p.propertyType}, ${p.address}<br>
-              📞 ${p.posterPhone}
-            </div>`;
-        });
-      });
-    }
+    // 🔹 Logout
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut();
+    });
 
-    // ✅ Load All Posts (Admin)
-    function loadAllPosts() {
-      const allPostsDiv = document.getElementById("allPosts");
-      db.ref("posts").on("value", snap => {
-        allPostsDiv.innerHTML = "";
-        snap.forEach(child => {
-          const p = child.val();
-          allPostsDiv.innerHTML += `
-            <div class="p-2 border rounded">
-              <b>${p.bhk} – ₹${p.price}</b><br>
-              ${p.propertyType}, ${p.address}<br>
-              📞 ${p.posterPhone} <br>
-              <i>${p.email}</i>
-            </div>`;
+    // 🔹 Auth State Change
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginSection.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+        welcome.innerText = `Welcome, ${user.displayName} (${user.email})`;
+
+        // अगर Admin है तो Admin Section दिखे
+        if (user.email === ADMIN_EMAIL) {
+          adminSection.classList.remove("hidden");
+          loadPosts();
+        } else {
+          adminSection.classList.add("hidden");
+        }
+      } else {
+        loginSection.classList.remove("hidden");
+        dashboard.classList.add("hidden");
+      }
+    });
+
+    // 🔹 Post Add (Pending by default)
+    postBtn.addEventListener("click", () => {
+      const title = document.getElementById("pTitle").value;
+      const price = document.getElementById("pPrice").value;
+      const user = auth.currentUser;
+
+      if (!user) return alert("Login first");
+      if (title && price) {
+        const newPostRef = db.ref("posts/pending").push();
+        newPostRef.set({
+          title,
+          price,
+          createdAt: Date.now(),
+          user: user.email
+        });
+        alert("Post added, waiting for admin approval!");
+      } else {
+        alert("Please fill all fields");
+      }
+    });
+
+    // 🔹 Load Posts (Admin)
+    function loadPosts() {
+      postsList.innerHTML = "";
+      db.ref("posts/pending").on("value", snapshot => {
+        postsList.innerHTML = "";
+        snapshot.forEach(child => {
+          const post = child.val();
+          const key = child.key;
+
+          const div = document.createElement("div");
+          div.className = "p-3 border rounded bg-gray-50 flex justify-between items-center";
+          div.innerHTML = `
+            <div>
+              <strong>${post.title}</strong> - ₹${post.price}
+              <br><small>By: ${post.user}</small>
+            </div>
+            <div class="space-x-2">
+              <button class="approve px-3 py-1 bg-green-600 text-white rounded" data-id="${key}">Approve</button>
+              <button class="reject px-3 py-1 bg-red-600 text-white rounded" data-id="${key}">Reject</button>
+            </div>
+          `;
+          postsList.appendChild(div);
+        });
+
+        // Approve & Reject Events
+        document.querySelectorAll(".approve").forEach(btn => {
+          btn.addEventListener("click", e => {
+            const id = e.target.dataset.id;
+            db.ref("posts/pending/" + id).once("value", snap => {
+              db.ref("posts/approved/" + id).set(snap.val());
+              db.ref("posts/pending/" + id).remove();
+            });
+          });
+        });
+
+        document.querySelectorAll(".reject").forEach(btn => {
+          btn.addEventListener("click", e => {
+            const id = e.target.dataset.id;
+            db.ref("posts/pending/" + id).remove();
+          });
         });
       });
     }
