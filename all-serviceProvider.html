@@ -6,18 +6,24 @@
 <title>ZaraFix – Public | New Post</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  input, textarea, button { margin: 5px 0; width: 100%; padding: 8px; }
+  img { display: block; margin-top: 5px; }
+  hr { margin: 15px 0; }
+</style>
 </head>
 <body>
 <h2>New Post</h2>
 <form id="postForm">
   <label>Title</label>
-  <input type="text" id="title" required><br><br>
+  <input type="text" id="title" required><br>
 
   <label>Description</label>
-  <textarea id="description" required></textarea><br><br>
+  <textarea id="description" required></textarea><br>
 
   <label>Image</label>
-  <input type="file" id="image" accept="image/*" required><br><br>
+  <input type="file" id="image" accept="image/*" required><br>
 
   <button type="submit">Add Post</button>
 </form>
@@ -29,8 +35,8 @@
 <div id="posts"></div>
 
 <script>
-  // Firebase config
- const firebaseConfig = {
+  // Firebase configuration
+const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
   databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -45,58 +51,64 @@
   const db = firebase.database().ref('posts');
 
   const form = document.getElementById('postForm');
+  const postsDiv = document.getElementById('posts');
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('title').value;
     const description = document.getElementById('description').value;
     const imageFile = document.getElementById('image').files[0];
 
+    if(!imageFile) { alert("Please select an image"); return; }
+
     const fd = new FormData();
     fd.append("image", imageFile);
 
-    // Upload to imgbb
-    const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {
-      method: "POST",
-      body: fd
-    });
-    const data = await res.json();
-    const imageUrl = data.data.display_url;
+    try {
+      // Upload image to imgbb
+      const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {
+        method: "POST",
+        body: fd
+      });
+      const data = await res.json();
+      const imageUrl = data.data.display_url;
 
-    // Save to Firebase
-    const newPost = {
-      title,
-      description,
-      image: imageUrl,
-      timestamp: Date.now()
-    };
-    db.push(newPost);
+      // Save post to Firebase
+      const newPost = { title, description, image: imageUrl, timestamp: Date.now() };
+      await db.push(newPost);
 
-    form.reset();
-    loadPosts();
+      form.reset();
+      loadPosts();
+    } catch(err) {
+      alert("Error uploading image or saving post");
+      console.error(err);
+    }
   });
-
-  const postsDiv = document.getElementById('posts');
 
   function loadPosts(filter="") {
     db.on('value', snapshot => {
       postsDiv.innerHTML = '';
       const posts = snapshot.val();
+      if(!posts) return;
       for(let id in posts) {
         const post = posts[id];
         if(filter && !post.title.toLowerCase().includes(filter.toLowerCase()) && !post.description.toLowerCase().includes(filter.toLowerCase())) continue;
         const div = document.createElement('div');
-        div.innerHTML = `<h3>${post.title}</h3><p>${post.description}</p><img src="${post.image}" width="200"><hr>`;
+        div.innerHTML = `
+          <h3>${post.title}</h3>
+          <p>${post.description}</p>
+          <img src="${post.image}" width="200"><hr>
+        `;
         postsDiv.appendChild(div);
       }
     });
   }
 
   document.getElementById('search').addEventListener('input', (e) => {
-    const val = e.target.value;
-    loadPosts(val);
+    loadPosts(e.target.value);
   });
 
-  // Load all posts on start
+  // Load posts on page load
   loadPosts();
 </script>
 </body>
