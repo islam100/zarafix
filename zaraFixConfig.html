@@ -5,27 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Image Upload with Notification</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK -->
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="p-6">
+<body class="bg-gray-100 flex items-center justify-center h-screen">
 
-  <!-- Upload Form -->
-  <div id="uploadSection" class="mt-6">
-    <h2 class="text-lg font-bold mb-2">Upload New Image</h2>
-    <input type="file" id="imageUpload" accept="image/*" class="mb-2" />
-    <button onclick="uploadImage()" class="bg-green-600 text-white px-4 py-2 rounded">Upload</button>
-  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-xl w-96 text-center">
+    <h2 class="text-xl font-bold mb-4">Upload Image</h2>
 
-  <!-- Notification -->
-  <div id="notify" class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg">
-    ✅ Image uploaded successfully!
+    <!-- File Input -->
+    <input type="file" id="imageFile" class="mb-4 block w-full text-sm" accept="image/*">
+
+    <!-- Upload Button -->
+    <button onclick="uploadImage()" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
+      Upload
+    </button>
+
+    <!-- Notification -->
+    <div id="notification" class="mt-4 hidden p-2 rounded-xl"></div>
   </div>
 
   <script>
-    // ✅ Firebase Config (यहाँ अपना config डालें)
+    // 🔥 Firebase Config (Apna config yahan lagao)
    const firebaseConfig = {
   apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
   authDomain: "new-bike-59133.firebaseapp.com",
@@ -38,32 +43,49 @@
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const storage = firebase.storage();
     const db = firebase.database();
+    const storage = firebase.storage();
 
     // Upload Function
     function uploadImage() {
-      const file = document.getElementById("imageUpload").files[0];
+      const file = document.getElementById("imageFile").files[0];
       if (!file) {
-        alert("कृपया एक इमेज चुनें!");
+        showNotification("❌ Please select an image first!", "bg-red-500");
         return;
       }
 
-      const storageRef = storage.ref("slideshow/" + Date.now() + "_" + file.name);
-      storageRef.put(file).then((snapshot) => {
-        snapshot.ref.getDownloadURL().then((url) => {
-          db.ref("slideshow").push({ imageUrl: url }).then(() => {
-            // ✅ Notification दिखाएँ
-            let notify = document.getElementById("notify");
-            notify.classList.remove("hidden");
-            setTimeout(() => notify.classList.add("hidden"), 3000);
+      const storageRef = storage.ref("uploads/" + Date.now() + "_" + file.name);
+      const uploadTask = storageRef.put(file);
+
+      uploadTask.on("state_changed", 
+        function progress(snapshot) {
+          let percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          showNotification("⏳ Uploading... " + Math.round(percent) + "%", "bg-yellow-500");
+        }, 
+        function error(err) {
+          showNotification("❌ Upload failed: " + err.message, "bg-red-500");
+        }, 
+        function complete() {
+          uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+            db.ref("images").push({ url: downloadURL, uploadedAt: new Date().toISOString() });
+            showNotification("✅ Image uploaded successfully!", "bg-green-500");
           });
-        });
-      }).catch((err) => {
-        alert("❌ Error uploading: " + err.message);
-      });
+        }
+      );
+    }
+
+    // Show Notification
+    function showNotification(message, color) {
+      const note = document.getElementById("notification");
+      note.className = "mt-4 p-2 rounded-xl text-white text-sm " + color;
+      note.innerText = message;
+      note.classList.remove("hidden");
+
+      // 3 sec baad hide ho jaye
+      setTimeout(() => {
+        note.classList.add("hidden");
+      }, 3000);
     }
   </script>
-
 </body>
 </html>
