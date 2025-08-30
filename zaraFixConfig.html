@@ -3,119 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Auto Slideshow</title>
+<title>Popup Ads Slideshow</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
-  body { font-family: sans-serif; text-align: center; margin: 50px; }
-  #popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-           background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5);}
-  #popup img { max-width:300px; max-height:300px; }
-  #uploadSection { margin-top:20px; }
+  body { font-family: Arial; }
+  #popup {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    flex-direction: column;
+  }
+  #popup img {
+    max-width: 80%;
+    max-height: 80%;
+    border: 5px solid white;
+    border-radius: 10px;
+  }
+  #closeBtn {
+    margin-top: 15px;
+    background: red;
+    color:white;
+    border:none;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
 </style>
 </head>
 <body>
 
-<h2>Firebase Auto Slideshow</h2>
-<button id="loginBtn">Google Login</button>
-<div id="uploadSection" style="display:none;">
-  <input type="file" id="imgFile" multiple>
-  <button id="uploadBtn">Upload Images</button>
-</div>
+<button onclick="showPopup()">Open Popup Ads</button>
 
 <div id="popup">
-  <h3>New Posters</h3>
   <img id="popupImg" src="">
-  <br><button onclick="closePopup()">Close</button>
+  <button id="closeBtn" onclick="hidePopup()">Close</button>
 </div>
 
 <script>
-  // Firebase config
+  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
     authDomain: "new-bike-59133.firebaseapp.com",
+    databaseURL: "https://new-bike-59133-default-rtdb.firebaseio.com",
     projectId: "new-bike-59133",
     storageBucket: "new-bike-59133.appspot.com",
     messagingSenderId: "966945954091",
     appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
   };
-
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
+
   const db = firebase.database();
-  const storage = firebase.storage();
-
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  let currentUser = null;
-
-  const loginBtn = document.getElementById('loginBtn');
-  const uploadSection = document.getElementById('uploadSection');
-  const imgFile = document.getElementById('imgFile');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const popup = document.getElementById('popup');
-  const popupImg = document.getElementById('popupImg');
-
   let images = [];
   let currentIndex = 0;
-  let slideshowInterval;
+  let slideInterval;
 
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result => {
-      currentUser = result.user;
-      alert("Logged in as: " + currentUser.email);
-      if(currentUser.email === adminEmail){
-        uploadSection.style.display = "block";
-      }
-      loginBtn.style.display = "none";
-    }).catch(console.error);
-  };
-
-  uploadBtn.onclick = () => {
-    if(imgFile.files.length === 0){ alert("Select file(s)"); return; }
-    Array.from(imgFile.files).forEach(file => {
-      const storageRef = storage.ref('posters/' + file.name);
-      storageRef.put(file).then(() => {
-        storageRef.getDownloadURL().then(url => {
-          const newPostKey = db.ref('posters').push().key;
-          db.ref('posters/' + newPostKey).set({url: url});
-        });
-      });
-    });
-    alert("Images uploaded successfully!");
-  };
-
-  // Listen for new posters
-  db.ref('posters').on('value', snapshot => {
+  // Fetch images from Firebase (popupAds path)
+  db.ref('popupAds').on('value', snapshot => {
     images = [];
     snapshot.forEach(child => {
-      images.push(child.val().url);
+      images.push(child.val()); // value is direct URL
     });
-    if(images.length > 0){
-      startSlideshow();
-    }
+    console.log("Images Loaded:", images);
   });
 
-  function startSlideshow(){
-    if(slideshowInterval) clearInterval(slideshowInterval);
+  function showPopup() {
+    if(images.length === 0) { alert("No images found!"); return; }
+    document.getElementById('popup').style.display = 'flex';
     currentIndex = 0;
-    popupImg.src = images[currentIndex];
-    popup.style.display = "block";
-    slideshowInterval = setInterval(() => {
-      currentIndex++;
-      if(currentIndex >= images.length) currentIndex = 0;
-      popupImg.src = images[currentIndex];
-    }, 3000); // हर 3 सेकंड में इमेज बदले
+    document.getElementById('popupImg').src = images[currentIndex];
+    slideInterval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % images.length;
+      document.getElementById('popupImg').src = images[currentIndex];
+    }, 3000); // 3 sec per image
   }
 
-  function closePopup(){
-    popup.style.display = "none";
-    if(slideshowInterval) clearInterval(slideshowInterval);
+  function hidePopup() {
+    document.getElementById('popup').style.display = 'none';
+    clearInterval(slideInterval);
   }
-
 </script>
+
 </body>
 </html>
