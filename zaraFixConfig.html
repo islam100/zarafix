@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notice Board – Slideshow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-4">
+
+  <h1 class="text-2xl font-bold mb-4">📢 Notice Board</h1>
+
+  <!-- Slideshow container -->
+  <div id="slideshow" class="w-full max-w-lg h-64 bg-white rounded-xl shadow-md flex items-center justify-center overflow-hidden relative">
+    <img id="slideImage" src="" class="w-full h-full object-contain" alt="Notice">
+  </div>
+
+  <script type="module">
+    // ✅ Firebase Import (v9+ Modular)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getStorage, ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+
+    // 🔑 Firebase Config (yaha apna config paste karo)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // ✅ Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+
+    // 🔗 Storage path jaha aap images upload karenge (ex: /notices/)
+    const listRef = ref(storage, 'notices');
+
+    let images = [];
+    let currentIndex = 0;
+
+    // Fetch all images from Firebase Storage
+    listAll(listRef)
+      .then(async (res) => {
+        for (const itemRef of res.items) {
+          const url = await getDownloadURL(itemRef);
+          images.push(url);
+        }
+        if (images.length > 0) {
+          startSlideshow();
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching images:", error);
+      });
+
+    // Slideshow function
+    function startSlideshow() {
+      const slideImage = document.getElementById("slideImage");
+      slideImage.src = images[currentIndex];
+
+      setInterval(() => {
+        currentIndex = (currentIndex + 1) % images.length;
+        slideImage.src = images[currentIndex];
+      }, 3000); // हर 3 सेकंड में image बदलेगी
+    }
+  </script>
+
+</body>
+</html>
