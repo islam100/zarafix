@@ -1,143 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ads Management</title>
+  <title>ZaraFix – Poster & Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-gray-100 p-6">
+<body class="bg-gray-100 p-5">
 
-  <!-- Auth Section -->
-  <div id="authSection" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg">
-    <h2 class="text-xl font-bold mb-4">Login / Signup</h2>
-    <input id="email" type="email" placeholder="Email" class="w-full border p-2 rounded mb-2">
-    <input id="password" type="password" placeholder="Password" class="w-full border p-2 rounded mb-2">
-    <button onclick="login()" class="bg-blue-600 text-white px-4 py-2 rounded w-full mb-2">Login</button>
-    <button onclick="signup()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Signup</button>
+  <div id="loginBox" class="flex justify-center">
+    <button onclick="googleLogin()" class="bg-blue-600 text-white px-5 py-2 rounded-xl shadow-lg">
+      Google Login
+    </button>
   </div>
 
-  <!-- Upload Form (Users + Admin) -->
-  <div id="uploadSection" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-6">
-    <h2 class="text-xl font-bold mb-4">Upload New Ad</h2>
-    <input type="file" id="adImage" accept="image/*" class="mb-3">
-    <button onclick="uploadAd()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Upload</button>
+  <!-- User Poster Section -->
+  <div id="posterSection" class="hidden">
+    <h2 class="text-xl font-bold mb-3">Post Add (Poster)</h2>
+    <form id="postForm" class="grid gap-3">
+      <input type="text" id="pPrice" placeholder="Price" class="p-2 rounded">
+      <input type="text" id="pBhk" placeholder="BHK" class="p-2 rounded">
+      <input type="text" id="pType" placeholder="Property Type" class="p-2 rounded">
+      <input type="text" id="pAddress" placeholder="Address" class="p-2 rounded">
+      <input type="text" id="pPhone" placeholder="Phone" class="p-2 rounded">
+      <button type="submit" class="bg-green-600 text-white p-2 rounded">Submit Post</button>
+    </form>
+
+    <h3 class="mt-5 font-bold">My Posts</h3>
+    <div id="myPosts" class="space-y-2"></div>
   </div>
 
-  <!-- Admin Panel -->
-  <div id="adminSection" class="hidden max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-6">
-    <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
-    <div id="adsList"></div>
+  <!-- Admin Section -->
+  <div id="adminSection" class="hidden">
+    <h2 class="text-xl font-bold mb-3">Admin Panel</h2>
+    <div id="allPosts" class="space-y-2"></div>
   </div>
 
-<script>
-  // 🔑 Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-    authDomain: "new-bike-59133.firebaseapp.com",
-    projectId: "new-bike-59133",
-    storageBucket: "new-bike-59133.appspot.com",
-    messagingSenderId: "966945954091",
-    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-  };
+  <script>
+    // ✅ Firebase Config (apna config lagana)
+   const firebaseConfig = {
+  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+  authDomain: "new-bike-59133.firebaseapp.com",
+  projectId: "new-bike-59133",
+  storageBucket: "new-bike-59133.appspot.com",
+  messagingSenderId: "966945954091",
+  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const storage = firebase.storage();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+    const loginBox = document.getElementById("loginBox");
+    const posterSection = document.getElementById("posterSection");
+    const adminSection = document.getElementById("adminSection");
 
-  // ✅ Login
-  function login() {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
+    let currentUser = null;
+    const adminEmail = "
+zarasamajiksevasanstha@gmail.com"; // ✅ apna admin email set karo
 
-    auth.signInWithEmailAndPassword(email, pass)
-      .then(() => {
-        alert("✅ Logged In");
-        afterLogin(email);
-      })
-      .catch(err => alert(err.message));
-  }
-
-  // ✅ Signup
-  function signup() {
-    const email = document.getElementById("email").value;
-    const pass = document.getElementById("password").value;
-
-    auth.createUserWithEmailAndPassword(email, pass)
-      .then(() => {
-        alert("✅ Signup Successful, Please Login");
-      })
-      .catch(err => alert(err.message));
-  }
-
-  // ✅ After Login UI
-  function afterLogin(email) {
-    document.getElementById("authSection").classList.add("hidden");
-    document.getElementById("uploadSection").classList.remove("hidden");
-
-    if (email === ADMIN_EMAIL) {
-      document.getElementById("adminSection").classList.remove("hidden");
-      loadAds();
-    }
-  }
-
-  // ✅ Upload Ad
-  function uploadAd() {
-    const file = document.getElementById("adImage").files[0];
-    if (!file) return alert("कृपया इमेज चुनें");
-
-    const storageRef = storage.ref("ads/" + Date.now() + "_" + file.name);
-    storageRef.put(file).then(snapshot => {
-      snapshot.ref.getDownloadURL().then(url => {
-        db.ref("ads").push({
-          imageUrl: url,
-          status: "pending"
-        });
-        alert("⏳ Ad Uploaded, Admin Approval Pending");
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(res => {
+        currentUser = res.user;
+        checkUserRole(currentUser);
       });
-    });
-  }
+    }
 
-  // ✅ Load Ads (Admin Only)
-  function loadAds() {
-    db.ref("ads").on("value", snap => {
-      const ads = snap.val();
-      const adsList = document.getElementById("adsList");
-      adsList.innerHTML = "";
-
-      for (let id in ads) {
-        const ad = ads[id];
-        adsList.innerHTML += `
-          <div class="border p-3 mb-3 rounded flex justify-between items-center">
-            <img src="${ad.imageUrl}" class="h-20 rounded">
-            <span>Status: ${ad.status}</span>
-            <div>
-              <button onclick="updateStatus('${id}','approved')" class="bg-green-600 text-white px-3 py-1 rounded mr-2">Approve</button>
-              <button onclick="updateStatus('${id}','rejected')" class="bg-yellow-600 text-white px-3 py-1 rounded mr-2">Reject</button>
-              <button onclick="deleteAd('${id}')" class="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
-            </div>
-          </div>`;
+    function checkUserRole(user) {
+      loginBox.classList.add("hidden");
+      if (user.email === adminEmail) {
+        adminSection.classList.remove("hidden");
+        loadAllPosts();
+      } else {
+        posterSection.classList.remove("hidden");
+        loadMyPosts(user.uid);
       }
+    }
+
+    // ✅ Poster Form Submit
+    document.getElementById("postForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const postData = {
+        price: document.getElementById("pPrice").value,
+        bhk: document.getElementById("pBhk").value,
+        propertyType: document.getElementById("pType").value,
+        address: document.getElementById("pAddress").value,
+        posterPhone: document.getElementById("pPhone").value,
+        uid: currentUser.uid,
+        email: currentUser.email
+      };
+      db.ref("posts").push(postData);
+      alert("Post Added ✅");
+      document.getElementById("postForm").reset();
+      loadMyPosts(currentUser.uid);
     });
-  }
 
-  // ✅ Update Status
-  function updateStatus(id, status) {
-    db.ref("ads/" + id).update({ status: status });
-  }
+    // ✅ Load My Posts (Poster)
+    function loadMyPosts(uid) {
+      const myPostsDiv = document.getElementById("myPosts");
+      db.ref("posts").orderByChild("uid").equalTo(uid).on("value", snap => {
+        myPostsDiv.innerHTML = "";
+        snap.forEach(child => {
+          const p = child.val();
+          myPostsDiv.innerHTML += `
+            <div class="p-2 border rounded">
+              <b>${p.bhk} – ₹${p.price}</b><br>
+              ${p.propertyType}, ${p.address}<br>
+              📞 ${p.posterPhone}
+            </div>`;
+        });
+      });
+    }
 
-  // ✅ Delete Ad
-  function deleteAd(id) {
-    db.ref("ads/" + id).remove();
-  }
-</script>
-
+    // ✅ Load All Posts (Admin)
+    function loadAllPosts() {
+      const allPostsDiv = document.getElementById("allPosts");
+      db.ref("posts").on("value", snap => {
+        allPostsDiv.innerHTML = "";
+        snap.forEach(child => {
+          const p = child.val();
+          allPostsDiv.innerHTML += `
+            <div class="p-2 border rounded">
+              <b>${p.bhk} – ₹${p.price}</b><br>
+              ${p.propertyType}, ${p.address}<br>
+              📞 ${p.posterPhone} <br>
+              <i>${p.email}</i>
+            </div>`;
+        });
+      });
+    }
+  </script>
 </body>
 </html>
