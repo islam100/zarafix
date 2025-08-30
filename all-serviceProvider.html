@@ -1,114 +1,84 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - Posts</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZaraFix – New Post</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  input, textarea, button { display: block; margin: 10px 0; padding: 8px; width: 300px; }
+</style>
 </head>
-<body class="bg-gray-100 p-4">
+<body>
 
-  <h1 class="text-2xl font-bold mb-4">Create New Post</h1>
-  <form id="postForm" class="bg-white p-4 rounded shadow-md mb-6">
-    <input type="text" id="title" placeholder="Title" class="border p-2 w-full mb-2" required>
-    <textarea id="description" placeholder="Description" class="border p-2 w-full mb-2" required></textarea>
-    <input type="file" id="image" accept="image/*" class="mb-2" required>
-    <button type="submit" class="bg-blue-500 text-white p-2 rounded">Submit Post</button>
-  </form>
+<h2>New Post</h2>
+<label>Title</label>
+<input type="text" id="title" required>
 
-  <h2 class="text-2xl font-bold mb-4">Search Posts</h2>
-  <input type="text" id="searchInput" placeholder="Search..." class="border p-2 w-full mb-4">
+<label>Description</label>
+<textarea id="desc" required></textarea>
 
-  <h2 class="text-2xl font-bold mb-4">All Posts</h2>
-  <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+<label>Image</label>
+<input type="file" id="image" required>
 
-  <script>
-    // ------------------- Firebase Configuration -------------------
-    const firebaseConfig = {
-      apiKey: "_FIREBASE_API_KEY",
-      authDomain: "_YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://_YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-      projectId: "_YOUR_PROJECT_ID",
-      storageBucket: "_YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+<button id="submit">Submit Post</button>
 
-    // ------------------- Post Form -------------------
-    const postForm = document.getElementById('postForm');
-    const titleInput = document.getElementById('title');
-    const descriptionInput = document.getElementById('description');
-    const imageInput = document.getElementById('image');
-    const postsContainer = document.getElementById('postsContainer');
-    const searchInput = document.getElementById('searchInput');
+<script>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
 
-    postForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const title = titleInput.value.trim();
-      const description = descriptionInput.value.trim();
-      const imageFile = imageInput.files[0];
 
-      if (!title || !description || !imageFile) return alert("All fields required!");
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-      // Upload image to ImgBB
-      const formData = new FormData();
-      formData.append("image", imageFile);
-      const imgbbAPIKey = "_YOUR_IMGBB_API_KEY";
-      const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
-        method: "POST",
-        body: formData
-      });
-      const imgbbData = await imgbbResponse.json();
-      const imageUrl = imgbbData.data.url;
+// Submit post
+document.getElementById("submit").addEventListener("click", async () => {
+  const title = document.getElementById("title").value;
+  const desc = document.getElementById("desc").value;
+  const imgFile = document.getElementById("image").files[0];
 
-      // Save post to Firebase
-      const newPostKey = database.ref().child('posts').push().key;
-      const postData = {
-        title, description, imageUrl, timestamp: Date.now()
-      };
-      const updates = {};
-      updates['/posts/' + newPostKey] = postData;
-      await database.ref().update(updates);
+  if(!title || !desc || !imgFile) { alert("All fields required!"); return; }
 
-      // Clear form
-      titleInput.value = '';
-      descriptionInput.value = '';
-      imageInput.value = '';
+  const fd = new FormData();
+  fd.append('image', imgFile);
 
-      loadPosts();
+  try {
+    const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {
+      method: "POST",
+      body: fd
+    });
+    const res = await r.json();
+    const imgURL = res.data.display_url;
+
+    const newPostRef = db.ref("posts").push();
+    await newPostRef.set({
+      title: title,
+      description: desc,
+      image: imgURL,
+      date: new Date().toISOString()
     });
 
-    // ------------------- Load Posts -------------------
-    async function loadPosts() {
-      const snapshot = await database.ref('/posts').once('value');
-      const posts = snapshot.val() || {};
-      const searchText = searchInput.value.toLowerCase();
+    alert("Post added successfully!");
+    document.getElementById("title").value = "";
+    document.getElementById("desc").value = "";
+    document.getElementById("image").value = "";
 
-      postsContainer.innerHTML = '';
-      Object.values(posts)
-        .filter(post => post.title.toLowerCase().includes(searchText) || post.description.toLowerCase().includes(searchText))
-        .sort((a,b) => b.timestamp - a.timestamp)
-        .forEach(post => {
-          const postDiv = document.createElement('div');
-          postDiv.className = 'bg-white p-4 rounded shadow';
-          postDiv.innerHTML = `
-            <img src="${post.imageUrl}" class="w-full h-48 object-cover mb-2 rounded">
-            <h3 class="text-lg font-bold">${post.title}</h3>
-            <p>${post.description}</p>
-          `;
-          postsContainer.appendChild(postDiv);
-        });
-    }
-
-    searchInput.addEventListener('input', loadPosts);
-
-    // Initial load
-    loadPosts();
-  </script>
+  } catch (err) {
+    console.error(err);
+    alert("Error uploading post!");
+  }
+});
+</script>
 
 </body>
 </html>
