@@ -5,45 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZaraFix – Public | New Post</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; padding: 10px; background: #f0f2f5; }
-  h2 { text-align: center; }
-  form { max-width: 500px; margin: 0 auto 20px; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 5px 5px 15px #ccc, -5px -5px 15px #fff; }
-  input, textarea { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; box-shadow: inset 2px 2px 5px #ddd, inset -2px -2px 5px #fff; }
-  button { padding: 10px 20px; border: none; border-radius: 10px; background: #4CAF50; color: #fff; font-weight: bold; cursor: pointer;
-           box-shadow: 3px 3px 5px #999, -3px -3px 5px #fff; transition: 0.2s; }
-  button:hover { box-shadow: inset 3px 3px 5px #999, inset -3px -3px 5px #fff; }
-  #search { max-width: 500px; margin: 10px auto; padding: 10px; display: block; border-radius: 10px; border: 1px solid #ccc; box-shadow: inset 2px 2px 5px #ddd, inset -2px -2px 5px #fff; }
-  .post-card { background: #fff; padding: 15px; margin: 10px auto; max-width: 500px; border-radius: 15px;
-               box-shadow: 5px 5px 15px #ccc, -5px -5px 15px #fff; transition: 0.3s; }
-  .post-card img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
+  body { font-family: Arial, sans-serif; padding: 10px; }
+  input, textarea, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+  button { background: linear-gradient(145deg,#eee,#ccc); border: none; border-radius: 10px; box-shadow: 5px 5px 10px #aaa, -5px -5px 10px #fff; cursor: pointer; }
+  button:hover { box-shadow: inset 5px 5px 10px #aaa, inset -5px -5px 10px #fff; }
+  #postForm { display: none; }
+  img { max-width: 100%; height: auto; }
+  .post { border:1px solid #ddd; border-radius:10px; padding:10px; margin:10px 0; box-shadow:2px 2px 5px #aaa; }
 </style>
 </head>
 <body>
 
-<h2>New Post</h2>
-<form id="postForm">
-  <label>Title</label>
-  <input type="text" id="title" required>
+<h2>ZaraFix Posts</h2>
 
-  <label>Description</label>
-  <textarea id="description" required></textarea>
+<div id="loginDiv">
+  <button id="loginBtn">Login with Google</button>
+</div>
 
-  <label>Image</label>
-  <input type="file" id="image" accept="image/*" required>
+<div id="postFormDiv">
+  <form id="postForm">
+    <label>Title</label>
+    <input type="text" id="title" required><br>
 
-  <button type="submit">Add Post</button>
-</form>
+    <label>Description</label>
+    <textarea id="description" required></textarea><br>
 
-<h2>Search Post</h2>
+    <label>Image</label>
+    <input type="file" id="image" accept="image/*" required><br>
+
+    <button type="submit">Add Post</button>
+    <button type="button" id="logoutBtn">Logout</button>
+  </form>
+</div>
+
+<hr>
+
+<h3>Search Posts</h3>
 <input type="text" id="search" placeholder="Search posts...">
-
 <div id="posts"></div>
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
   databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -53,59 +58,102 @@
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database().ref('posts');
+firebase.initializeApp(firebaseConfig);
 
-  const form = document.getElementById('postForm');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('title').value;
-    const description = document.getElementById('description').value;
-    const imageFile = document.getElementById('image').files[0];
+const auth = firebase.auth();
+const db = firebase.database().ref('posts');
 
-    const fd = new FormData();
-    fd.append("image", imageFile);
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const postFormDiv = document.getElementById('postFormDiv');
+const postForm = document.getElementById('postForm');
+const postsDiv = document.getElementById('posts');
 
-    // Upload to imgbb
-    const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {
-      method: "POST",
-      body: fd
-    });
-    const data = await res.json();
-    const imageUrl = data.data.display_url;
+let adminEmail = "zarasamajiksevasanstha@gmail.com";
+let currentUserEmail = "";
 
-    // Save to Firebase
-    const newPost = { title, description, image: imageUrl, timestamp: Date.now() };
-    db.push(newPost);
+// Login
+loginBtn.onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+}
 
-    form.reset();
-    loadPosts();
-  });
+// Logout
+logoutBtn.onclick = () => {
+  auth.signOut();
+}
 
-  const postsDiv = document.getElementById('posts');
+// Auth state listener
+auth.onAuthStateChanged(user => {
+  if(user){
+    currentUserEmail = user.email;
+    loginBtn.style.display = "none";
+    postFormDiv.style.display = "block";
+  } else {
+    currentUserEmail = "";
+    loginBtn.style.display = "block";
+    postFormDiv.style.display = "none";
+  }
+});
 
-  function loadPosts(filter="") {
-    db.on('value', snapshot => {
-      postsDiv.innerHTML = '';
-      const posts = snapshot.val();
-      for(let id in posts) {
-        const post = posts[id];
-        if(filter && !post.title.toLowerCase().includes(filter.toLowerCase()) && !post.description.toLowerCase().includes(filter.toLowerCase())) continue;
-        const div = document.createElement('div');
-        div.className = 'post-card';
-        div.innerHTML = `<h3>${post.title}</h3><p>${post.description}</p><img src="${post.image}" alt="Post Image">`;
-        postsDiv.appendChild(div);
-      }
-    });
+// Submit post
+postForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!currentUserEmail){
+    alert("Please login first!");
+    return;
   }
 
-  document.getElementById('search').addEventListener('input', (e) => {
-    loadPosts(e.target.value);
+  const title = document.getElementById('title').value;
+  const description = document.getElementById('description').value;
+  const imageFile = document.getElementById('image').files[0];
+
+  const fd = new FormData();
+  fd.append("image", imageFile);
+
+  const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {
+    method: "POST",
+    body: fd
   });
+  const data = await res.json();
+  const imageUrl = data.data.display_url;
 
-  // Load all posts initially
+  const newPost = {
+    title,
+    description,
+    image: imageUrl,
+    author: currentUserEmail,
+    timestamp: Date.now()
+  };
+  db.push(newPost);
+  postForm.reset();
   loadPosts();
-</script>
+});
 
+// Load posts with search
+function loadPosts(filter=""){
+  db.on('value', snapshot=>{
+    postsDiv.innerHTML = "";
+    const posts = snapshot.val();
+    for(let id in posts){
+      const post = posts[id];
+      if(filter && !post.title.toLowerCase().includes(filter.toLowerCase()) && !post.description.toLowerCase().includes(filter.toLowerCase())) continue;
+      const div = document.createElement('div');
+      div.classList.add('post');
+      div.innerHTML = `<h3>${post.title}</h3>
+                       <p>${post.description}</p>
+                       <img src="${post.image}">`;
+      postsDiv.appendChild(div);
+    }
+  });
+}
+
+document.getElementById('search').addEventListener('input', (e)=>{
+  loadPosts(e.target.value);
+});
+
+// Initial load
+loadPosts();
+</script>
 </body>
 </html>
