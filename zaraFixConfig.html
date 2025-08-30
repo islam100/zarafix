@@ -1,124 +1,65 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix — Ads Image Slider Popup</title>
-  <style>
-    .ad-popup-backdrop{position:fixed;left:0;right:0;bottom:0;top:50%;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:9999;}
-    .ad-popup{width:100%;max-width:600px;background:#fff;border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 -5px 20px rgba(0,0,0,0.25);}
-    .ad-header{padding:8px 14px;border-bottom:1px solid #eee;font-weight:600;text-align:center;}
-    .slider{position:relative;overflow:hidden;width:100%;height:50vh;}
-    .slides{display:flex;transition:transform 0.5s ease-in-out;height:100%;}
-    .slides img{width:100%;height:100%;object-fit:cover;flex-shrink:0;}
-    .controls{position:absolute;top:50%;transform:translateY(-50%);width:100%;display:flex;justify-content:space-between;}
-    .controls button{background:rgba(0,0,0,0.5);color:#fff;border:none;padding:8px;cursor:pointer;border-radius:50%;}
-    .ad-footer{display:flex;gap:8px;padding:8px;border-top:1px solid #eee;}
-    .btn{flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
-    .btn-close{background:#f2f2f2}
-    .hidden{display:none}
-  </style>
+  <meta charset="UTF-8">
+  <title>Admin – Upload Ads</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="p-4">
 
-<div id="adPopup" class="hidden" aria-hidden="true"></div>
+  <h1 class="text-xl font-bold mb-4">Upload Ad Image</h1>
+  <form id="uploadForm" class="space-y-3">
+    <input id="adUrl" type="text" placeholder="Image URL" class="border p-2 w-full rounded">
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload</button>
+  </form>
+
+  <h2 class="text-lg font-semibold mt-6">Pending Ads</h2>
+  <div id="pendingList" class="space-y-2"></div>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js'
-  import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js'
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-    authDomain: "new-bike-59133.firebaseapp.com",
-    projectId: "new-bike-59133",
-    storageBucket: "new-bike-59133.appspot.com",
-    messagingSenderId: "966945954091",
-    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+  authDomain: "new-bike-59133.firebaseapp.com",
+  projectId: "new-bike-59133",
+  storageBucket: "new-bike-59133.appspot.com",
+  messagingSenderId: "966945954091",
+  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  const app = initializeApp(firebaseConfig)
-  const db = getDatabase(app)
+const uploadForm = document.getElementById("uploadForm");
+uploadForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const url = document.getElementById("adUrl").value;
+  if(!url) return;
+  const newRef = push(ref(db, "adsUploads"));
+  await set(newRef, { url, status:"pending" });
+  document.getElementById("adUrl").value="";
+});
 
-  const ADS_DB_PATH = 'adsImages' 
-  const SLIDE_INTERVAL = 3000 
-
-  let images = []
-  let currentIndex = 0
-  let slideTimer = null
-
-  const adsRef = ref(db, ADS_DB_PATH)
-  onValue(adsRef, (snapshot)=>{
-    const val = snapshot.val() || {}
-    images = Object.values(val)
-    if(images.length>0) startSlider()
-  })
-
-  function startSlider(){
-    const container = document.getElementById('adPopup')
-    container.innerHTML = ''
-    container.classList.remove('hidden')
-
-    const backdrop = document.createElement('div')
-    backdrop.className = 'ad-popup-backdrop'
-
-    const box = document.createElement('div')
-    box.className = 'ad-popup'
-
-    box.innerHTML = `
-      <div class="ad-header">Sponsored</div>
-      <div class="slider">
-        <div class="slides"></div>
-        <div class="controls">
-          <button id="prev">‹</button>
-          <button id="next">›</button>
-        </div>
-      </div>
-      <div class="ad-footer">
-        <button class="btn btn-close">Close</button>
-      </div>
-    `
-
-    backdrop.appendChild(box)
-    container.appendChild(backdrop)
-
-    const slidesDiv = box.querySelector('.slides')
-    slidesDiv.innerHTML = images.map(url=>`<img src="${url}" alt="ad">`).join('')
-
-    const updateSlide = ()=>{
-      slidesDiv.style.transform = `translateX(-${currentIndex * 100}%)`
+// show pending ads
+const pendingList = document.getElementById("pendingList");
+onValue(ref(db,"adsUploads"), (snap)=>{
+  pendingList.innerHTML="";
+  const data = snap.val() || {};
+  Object.entries(data).forEach(([id,ad])=>{
+    if(ad.status==="pending"){
+      const div=document.createElement("div");
+      div.className="border p-2 flex justify-between items-center";
+      div.innerHTML=`<img src=\"${ad.url}\" class=\"h-16\"> 
+        <button class='bg-green-500 text-white px-3 py-1 rounded'>Approve</button>`;
+      div.querySelector("button").onclick=async()=>{
+        await update(ref(db,`adsUploads/${id}`), { status: \"approved\" });
+        await update(ref(db,`adsImages/${id}`), ad.url);
+      };
+      pendingList.appendChild(div);
     }
-
-    const nextSlide = ()=>{
-      currentIndex = (currentIndex+1)%images.length
-      updateSlide()
-    }
-
-    const prevSlide = ()=>{
-      currentIndex = (currentIndex-1+images.length)%images.length
-      updateSlide()
-    }
-
-    document.getElementById('next').addEventListener('click', ()=>{nextSlide();restartTimer()})
-    document.getElementById('prev').addEventListener('click', ()=>{prevSlide();restartTimer()})
-
-    box.querySelector('.btn-close').addEventListener('click', ()=>closePopup())
-
-    function restartTimer(){
-      if(slideTimer) clearInterval(slideTimer)
-      slideTimer = setInterval(nextSlide, SLIDE_INTERVAL)
-    }
-
-    updateSlide()
-    restartTimer()
-  }
-
-  function closePopup(){
-    const container = document.getElementById('adPopup')
-    container.innerHTML = ''
-    container.classList.add('hidden')
-    if(slideTimer) clearInterval(slideTimer)
-  }
+  });
+});
 </script>
-
 </body>
 </html>
