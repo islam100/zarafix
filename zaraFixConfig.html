@@ -1,135 +1,121 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Samajik Seva</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; padding:20px; }
-    #adminSection, #userSection { display: none; margin-top:20px; }
-    .poster { border:1px solid #ccc; padding:10px; margin:5px; display:inline-block; width:200px; }
-    .popup { position: fixed; top:50%; left:50%; transform: translate(-50%, -50%);
-             background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); display:none; }
-    button { padding:10px 20px; cursor:pointer; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firebase Auto Slideshow</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<style>
+  body { font-family: sans-serif; text-align: center; margin: 50px; }
+  #popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+           background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5);}
+  #popup img { max-width:300px; max-height:300px; }
+  #uploadSection { margin-top:20px; }
+</style>
 </head>
 <body>
 
-  <h2>Zara Samajik Seva Login</h2>
-  <button id="loginBtn">Google Login</button>
+<h2>Firebase Auto Slideshow</h2>
+<button id="loginBtn">Google Login</button>
+<div id="uploadSection" style="display:none;">
+  <input type="file" id="imgFile" multiple>
+  <button id="uploadBtn">Upload Images</button>
+</div>
 
-  <!-- Popup -->
-  <div id="popup" class="popup">
-    <span id="popupMsg"></span><br><br>
-    <button onclick="closePopup()">Close</button>
-  </div>
+<div id="popup">
+  <h3>New Posters</h3>
+  <img id="popupImg" src="">
+  <br><button onclick="closePopup()">Close</button>
+</div>
 
-  <!-- Admin Section -->
-  <div id="adminSection">
-    <h3>Admin Panel</h3>
-    <div>
-      <input type="text" id="posterTitle" placeholder="Poster Title">
-      <input type="text" id="posterImg" placeholder="Poster Image URL">
-      <button onclick="addPoster()">Add Poster</button>
-    </div>
-    <h4>All Posters:</h4>
-    <div id="allPosters"></div>
-  </div>
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+    authDomain: "new-bike-59133.firebaseapp.com",
+    projectId: "new-bike-59133",
+    storageBucket: "new-bike-59133.appspot.com",
+    messagingSenderId: "966945954091",
+    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+  };
 
-  <!-- User Section -->
-  <div id="userSection">
-    <h3>Posters</h3>
-    <div id="userPosters"></div>
-  </div>
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
 
-  <script>
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-      authDomain: "new-bike-59133.firebaseapp.com",
-      projectId: "new-bike-59133",
-      storageBucket: "new-bike-59133.appspot.com",
-      messagingSenderId: "966945954091",
-      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-    };
-    firebase.initializeApp(firebaseConfig);
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  let currentUser = null;
 
-    const db = firebase.database();
+  const loginBtn = document.getElementById('loginBtn');
+  const uploadSection = document.getElementById('uploadSection');
+  const imgFile = document.getElementById('imgFile');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const popup = document.getElementById('popup');
+  const popupImg = document.getElementById('popupImg');
 
-    const loginBtn = document.getElementById('loginBtn');
-    const adminEmail = 'zarasamajiksevasanstha@gmail.com';
+  let images = [];
+  let currentIndex = 0;
+  let slideshowInterval;
 
-    loginBtn.addEventListener('click', () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      firebase.auth().signInWithPopup(provider)
-        .then(result => {
-          const user = result.user;
-          showPopup(`Welcome ${user.displayName}`);
-        })
-        .catch(err => {
-          showPopup(err.message);
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result => {
+      currentUser = result.user;
+      alert("Logged in as: " + currentUser.email);
+      if(currentUser.email === adminEmail){
+        uploadSection.style.display = "block";
+      }
+      loginBtn.style.display = "none";
+    }).catch(console.error);
+  };
+
+  uploadBtn.onclick = () => {
+    if(imgFile.files.length === 0){ alert("Select file(s)"); return; }
+    Array.from(imgFile.files).forEach(file => {
+      const storageRef = storage.ref('posters/' + file.name);
+      storageRef.put(file).then(() => {
+        storageRef.getDownloadURL().then(url => {
+          const newPostKey = db.ref('posters').push().key;
+          db.ref('posters/' + newPostKey).set({url: url});
         });
-    });
-
-    firebase.auth().onAuthStateChanged(user => {
-      if(user){
-        loginBtn.style.display = 'none';
-        if(user.email === adminEmail){
-          document.getElementById('adminSection').style.display = 'block';
-        } else {
-          document.getElementById('userSection').style.display = 'block';
-        }
-        loadPosters();
-      }
-    });
-
-    // Popup Functions
-    function showPopup(msg){
-      const popup = document.getElementById('popup');
-      document.getElementById('popupMsg').innerText = msg;
-      popup.style.display = 'block';
-    }
-    function closePopup(){
-      document.getElementById('popup').style.display = 'none';
-    }
-
-    // Add Poster (Admin)
-    function addPoster(){
-      const title = document.getElementById('posterTitle').value;
-      const img = document.getElementById('posterImg').value;
-      if(title && img){
-        const key = db.ref('posters').push().key;
-        db.ref('posters/' + key).set({ title, img })
-          .then(() => showPopup('Poster Added'))
-          .catch(err => showPopup(err.message));
-        document.getElementById('posterTitle').value = '';
-        document.getElementById('posterImg').value = '';
-      } else {
-        showPopup('Please enter title and image URL');
-      }
-    }
-
-    // Load Posters
-    function loadPosters(){
-      db.ref('posters').on('value', snapshot => {
-        const data = snapshot.val();
-        let html = '';
-        if(data){
-          Object.values(data).forEach(p => {
-            html += `<div class="poster">
-                       <img src="${p.img}" width="180"><br>
-                       <b>${p.title}</b>
-                     </div>`;
-          });
-        }
-        document.getElementById('allPosters').innerHTML = html;
-        document.getElementById('userPosters').innerHTML = html;
       });
-    }
-  </script>
+    });
+    alert("Images uploaded successfully!");
+  };
 
+  // Listen for new posters
+  db.ref('posters').on('value', snapshot => {
+    images = [];
+    snapshot.forEach(child => {
+      images.push(child.val().url);
+    });
+    if(images.length > 0){
+      startSlideshow();
+    }
+  });
+
+  function startSlideshow(){
+    if(slideshowInterval) clearInterval(slideshowInterval);
+    currentIndex = 0;
+    popupImg.src = images[currentIndex];
+    popup.style.display = "block";
+    slideshowInterval = setInterval(() => {
+      currentIndex++;
+      if(currentIndex >= images.length) currentIndex = 0;
+      popupImg.src = images[currentIndex];
+    }, 3000); // हर 3 सेकंड में इमेज बदले
+  }
+
+  function closePopup(){
+    popup.style.display = "none";
+    if(slideshowInterval) clearInterval(slideshowInterval);
+  }
+
+</script>
 </body>
 </html>
