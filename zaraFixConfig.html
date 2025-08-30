@@ -3,46 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase -->
+  <title>Zara Samajik Seva</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding:20px; }
+    #adminSection, #userSection { display: none; margin-top:20px; }
+    .poster { border:1px solid #ccc; padding:10px; margin:5px; display:inline-block; width:200px; }
+    .popup { position: fixed; top:50%; left:50%; transform: translate(-50%, -50%);
+             background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); display:none; }
+    button { padding:10px 20px; cursor:pointer; }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body>
 
-  <div class="p-4">
-    <h1 class="text-2xl font-bold mb-4">ZaraFix Dashboard</h1>
+  <h2>Zara Samajik Seva Login</h2>
+  <button id="loginBtn">Google Login</button>
 
-    <!-- Google Login Button -->
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
-    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Logout</button>
+  <!-- Popup -->
+  <div id="popup" class="popup">
+    <span id="popupMsg"></span><br><br>
+    <button onclick="closePopup()">Close</button>
   </div>
 
-  <!-- Admin Panel -->
-  <div id="adminPanel" class="p-4 hidden">
-    <h2 class="text-xl font-bold mb-2">Admin Panel</h2>
-
-    <!-- Notice/Poster -->
-    <input type="text" id="posterTitle" placeholder="Poster Title" class="border p-2 mb-2 w-full rounded">
-    <input type="text" id="posterImg" placeholder="Poster Image URL" class="border p-2 mb-2 w-full rounded">
-    <button id="addPosterBtn" class="bg-green-500 text-white px-4 py-2 rounded mb-4">Add Poster</button>
-
-    <h3 class="text-lg font-bold mb-2">All Posters:</h3>
-    <div id="posterList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-  </div>
-
-  <!-- Popup Ad -->
-  <div id="popupAd" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white p-4 rounded shadow relative">
-      <span id="closeAd" class="absolute top-2 right-2 cursor-pointer text-red-500 font-bold">&times;</span>
-      <img id="popupImg" src="" alt="Ad" class="w-64 h-64 object-cover">
+  <!-- Admin Section -->
+  <div id="adminSection">
+    <h3>Admin Panel</h3>
+    <div>
+      <input type="text" id="posterTitle" placeholder="Poster Title">
+      <input type="text" id="posterImg" placeholder="Poster Image URL">
+      <button onclick="addPoster()">Add Poster</button>
     </div>
+    <h4>All Posters:</h4>
+    <div id="allPosters"></div>
+  </div>
+
+  <!-- User Section -->
+  <div id="userSection">
+    <h3>Posters</h3>
+    <div id="userPosters"></div>
   </div>
 
   <script>
-    // Firebase config
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
       authDomain: "new-bike-59133.firebaseapp.com",
@@ -53,86 +57,79 @@
     };
     firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
     const db = firebase.database();
 
-    const adminEmail = "zarasamajiksevasanstha@gmail.com";
+    const loginBtn = document.getElementById('loginBtn');
+    const adminEmail = 'zarasamajiksevasanstha@gmail.com';
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const adminPanel = document.getElementById("adminPanel");
-
-    loginBtn.addEventListener("click", () => {
+    loginBtn.addEventListener('click', () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
+      firebase.auth().signInWithPopup(provider)
+        .then(result => {
+          const user = result.user;
+          showPopup(`Welcome ${user.displayName}`);
+        })
+        .catch(err => {
+          showPopup(err.message);
+        });
     });
 
-    logoutBtn.addEventListener("click", () => {
-      auth.signOut();
-    });
-
-    auth.onAuthStateChanged(user => {
+    firebase.auth().onAuthStateChanged(user => {
       if(user){
-        loginBtn.classList.add("hidden");
-        logoutBtn.classList.remove("hidden");
-
+        loginBtn.style.display = 'none';
         if(user.email === adminEmail){
-          adminPanel.classList.remove("hidden");
+          document.getElementById('adminSection').style.display = 'block';
         } else {
-          adminPanel.classList.add("hidden");
+          document.getElementById('userSection').style.display = 'block';
         }
-      } else {
-        loginBtn.classList.remove("hidden");
-        logoutBtn.classList.add("hidden");
-        adminPanel.classList.add("hidden");
+        loadPosters();
       }
     });
 
-    // Posters
-    const posterTitle = document.getElementById("posterTitle");
-    const posterImg = document.getElementById("posterImg");
-    const addPosterBtn = document.getElementById("addPosterBtn");
-    const posterList = document.getElementById("posterList");
+    // Popup Functions
+    function showPopup(msg){
+      const popup = document.getElementById('popup');
+      document.getElementById('popupMsg').innerText = msg;
+      popup.style.display = 'block';
+    }
+    function closePopup(){
+      document.getElementById('popup').style.display = 'none';
+    }
 
-    addPosterBtn.addEventListener("click", () => {
-      const title = posterTitle.value.trim();
-      const img = posterImg.value.trim();
+    // Add Poster (Admin)
+    function addPoster(){
+      const title = document.getElementById('posterTitle').value;
+      const img = document.getElementById('posterImg').value;
       if(title && img){
-        const newPosterRef = db.ref("posters").push();
-        newPosterRef.set({ title, img });
-        posterTitle.value = "";
-        posterImg.value = "";
+        const key = db.ref('posters').push().key;
+        db.ref('posters/' + key).set({ title, img })
+          .then(() => showPopup('Poster Added'))
+          .catch(err => showPopup(err.message));
+        document.getElementById('posterTitle').value = '';
+        document.getElementById('posterImg').value = '';
+      } else {
+        showPopup('Please enter title and image URL');
       }
-    });
+    }
 
-    // Display Posters
-    db.ref("posters").on("value", snapshot => {
-      posterList.innerHTML = "";
-      snapshot.forEach(child => {
-        const data = child.val();
-        const div = document.createElement("div");
-        div.innerHTML = `<img src="${data.img}" alt="${data.title}" class="w-full h-40 object-cover rounded">`;
-        posterList.appendChild(div);
+    // Load Posters
+    function loadPosters(){
+      db.ref('posters').on('value', snapshot => {
+        const data = snapshot.val();
+        let html = '';
+        if(data){
+          Object.values(data).forEach(p => {
+            html += `<div class="poster">
+                       <img src="${p.img}" width="180"><br>
+                       <b>${p.title}</b>
+                     </div>`;
+          });
+        }
+        document.getElementById('allPosters').innerHTML = html;
+        document.getElementById('userPosters').innerHTML = html;
       });
-    });
-
-    // Popup Ad Example (show first poster)
-    const popupAd = document.getElementById("popupAd");
-    const popupImg = document.getElementById("popupImg");
-    const closeAd = document.getElementById("closeAd");
-
-    db.ref("posters").limitToFirst(1).on("value", snapshot => {
-      snapshot.forEach(child => {
-        const data = child.val();
-        popupImg.src = data.img;
-        popupAd.classList.remove("hidden");
-      });
-    });
-
-    closeAd.addEventListener("click", () => {
-      popupAd.classList.add("hidden");
-    });
-
+    }
   </script>
+
 </body>
 </html>
