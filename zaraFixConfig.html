@@ -1,114 +1,143 @@
 <!DOCTYPE html>
-<html lang="hi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Upload with Notification</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h1 class="text-xl font-bold mb-4 text-center">Image Upload</h1>
-    <input type="file" id="fileInput" class="mb-4 w-full border p-2 rounded">
-    <button id="uploadBtn" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Upload</button>
-    
-    <!-- Progress bar -->
-    <div class="w-full bg-gray-200 h-3 rounded mt-4">
-      <div id="progressBar" class="bg-green-500 h-3 rounded w-0"></div>
-    </div>
-
-    <!-- Notification -->
-    <p id="notification" class="mt-4 text-center font-semibold"></p>
-  </div>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
-  <script>
-    // 🔑 अपनी Firebase config डालें
-   const firebaseConfig = {
-  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-  authDomain: "new-bike-59133.firebaseapp.com",
-  projectId: "new-bike-59133",
-  storageBucket: "new-bike-59133.appspot.com",
-  messagingSenderId: "966945954091",
-  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-};
-
-    firebase.initializeApp(firebaseConfig);
-    const storage = firebase.storage();
-
-    const fileInput = document.getElementById("fileInput");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const progressBar = document.getElementById("progressBar");
-    const notification = document.getElementById("notification");
-
-    uploadBtn.addEventListener("click", () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("कृपया पहले कोई image चुनें!");
-        return;
-      }
-
-      const storageRef = storage.ref("uploads/" + file.name);
-      const uploadTask = storageRef.put(file);
-
-      uploadTask.on("state_changed",
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          progressBar.style.width = progress + "%";
-        },
-        (error) => {
-          notification.textContent = "❌ Upload Failed!";
-          notification.className = "mt-4 text-center font-semibold text-red-500";
-        },
-        () => {
-          notification.textContent = "✅ Upload Successful!";
-          notification.className = "mt-4 text-center font-semibold text-green-600";
-        }
-      );
-    });
-  </script>
-
-
-  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Popup Image Example</title>
+  <title>Ads Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 p-6">
 
-  <!-- Popup Modal -->
-  <div id="popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-2xl p-4 shadow-lg relative max-w-md">
-      <!-- Close Button -->
-      <button onclick="closePopup()" class="absolute top-2 right-2 text-red-600 font-bold text-xl">&times;</button>
-      <!-- Image -->
-      <img src="file:///C:/Users/ADMIN/Pictures/logo/c12e3ded-8366-460e-bc02-d09423268e9f%20(1).png" alt="Popup Image" class="rounded-xl">
-    </div>
+  <!-- Auth Section -->
+  <div id="authSection" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h2 class="text-xl font-bold mb-4">Login / Signup</h2>
+    <input id="email" type="email" placeholder="Email" class="w-full border p-2 rounded mb-2">
+    <input id="password" type="password" placeholder="Password" class="w-full border p-2 rounded mb-2">
+    <button onclick="login()" class="bg-blue-600 text-white px-4 py-2 rounded w-full mb-2">Login</button>
+    <button onclick="signup()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Signup</button>
   </div>
 
-  <h1 class="text-center text-2xl font-bold mt-10">आपकी Website का Content</h1>
+  <!-- Upload Form (Users + Admin) -->
+  <div id="uploadSection" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-6">
+    <h2 class="text-xl font-bold mb-4">Upload New Ad</h2>
+    <input type="file" id="adImage" accept="image/*" class="mb-3">
+    <button onclick="uploadAd()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Upload</button>
+  </div>
 
-  <script>
-    // Show popup on page load
-    window.onload = function() {
-      document.getElementById("popup").classList.remove("hidden");
-    };
+  <!-- Admin Panel -->
+  <div id="adminSection" class="hidden max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg mt-6">
+    <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
+    <div id="adsList"></div>
+  </div>
 
-    // Close popup
-    function closePopup() {
-      document.getElementById("popup").classList.add("hidden");
+<script>
+  // 🔑 Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+    authDomain: "new-bike-59133.firebaseapp.com",
+    projectId: "new-bike-59133",
+    storageBucket: "new-bike-59133.appspot.com",
+    messagingSenderId: "966945954091",
+    appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
+
+  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+
+  // ✅ Login
+  function login() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+
+    auth.signInWithEmailAndPassword(email, pass)
+      .then(() => {
+        alert("✅ Logged In");
+        afterLogin(email);
+      })
+      .catch(err => alert(err.message));
+  }
+
+  // ✅ Signup
+  function signup() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(() => {
+        alert("✅ Signup Successful, Please Login");
+      })
+      .catch(err => alert(err.message));
+  }
+
+  // ✅ After Login UI
+  function afterLogin(email) {
+    document.getElementById("authSection").classList.add("hidden");
+    document.getElementById("uploadSection").classList.remove("hidden");
+
+    if (email === ADMIN_EMAIL) {
+      document.getElementById("adminSection").classList.remove("hidden");
+      loadAds();
     }
-  </script>
+  }
 
-</body>
-</html>
+  // ✅ Upload Ad
+  function uploadAd() {
+    const file = document.getElementById("adImage").files[0];
+    if (!file) return alert("कृपया इमेज चुनें");
+
+    const storageRef = storage.ref("ads/" + Date.now() + "_" + file.name);
+    storageRef.put(file).then(snapshot => {
+      snapshot.ref.getDownloadURL().then(url => {
+        db.ref("ads").push({
+          imageUrl: url,
+          status: "pending"
+        });
+        alert("⏳ Ad Uploaded, Admin Approval Pending");
+      });
+    });
+  }
+
+  // ✅ Load Ads (Admin Only)
+  function loadAds() {
+    db.ref("ads").on("value", snap => {
+      const ads = snap.val();
+      const adsList = document.getElementById("adsList");
+      adsList.innerHTML = "";
+
+      for (let id in ads) {
+        const ad = ads[id];
+        adsList.innerHTML += `
+          <div class="border p-3 mb-3 rounded flex justify-between items-center">
+            <img src="${ad.imageUrl}" class="h-20 rounded">
+            <span>Status: ${ad.status}</span>
+            <div>
+              <button onclick="updateStatus('${id}','approved')" class="bg-green-600 text-white px-3 py-1 rounded mr-2">Approve</button>
+              <button onclick="updateStatus('${id}','rejected')" class="bg-yellow-600 text-white px-3 py-1 rounded mr-2">Reject</button>
+              <button onclick="deleteAd('${id}')" class="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+            </div>
+          </div>`;
+      }
+    });
+  }
+
+  // ✅ Update Status
+  function updateStatus(id, status) {
+    db.ref("ads/" + id).update({ status: status });
+  }
+
+  // ✅ Delete Ad
+  function deleteAd(id) {
+    db.ref("ads/" + id).remove();
+  }
+</script>
 
 </body>
 </html>
