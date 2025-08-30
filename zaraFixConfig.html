@@ -1,174 +1,163 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZaraFix – Poster + Admin</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase compat -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>ZaraFix Ads</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #adPopup { display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); z-index:1000; }
+    #adPopup img { max-width:300px; max-height:300px; border:3px solid #333; }
+    button { padding:8px 12px; margin:5px; }
+    .adItem { border:1px solid #ccc; margin:5px; padding:5px; }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-3xl mx-auto">
-    <!-- Login Section -->
-    <div id="loginSection" class="text-center">
-      <h1 class="text-2xl font-bold mb-4">Google Login</h1>
-      <button id="loginBtn" class="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
-        Google Login
-      </button>
-    </div>
+<body>
+  <h2>ZaraFix Ads Management</h2>
 
-    <!-- Dashboard Section -->
-    <div id="dashboard" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Dashboard</h2>
-        <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Logout</button>
-      </div>
-      <p id="welcome" class="mb-4"></p>
-
-      <!-- Poster Form -->
-      <div class="bg-white p-4 rounded-xl shadow mb-6">
-        <h3 class="text-lg font-semibold mb-2">New Poster</h3>
-        <input id="pTitle" type="text" placeholder="Title" class="border p-2 w-full mb-2 rounded" />
-        <input id="pPrice" type="number" placeholder="Price" class="border p-2 w-full mb-2 rounded" />
-        <button id="postBtn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Post</button>
-      </div>
-
-      <!-- Admin View -->
-      <div id="adminSection" class="hidden bg-white p-4 rounded-xl shadow">
-        <h3 class="text-lg font-semibold mb-2">Pending Posts (Admin Only)</h3>
-        <div id="postsList" class="space-y-2"></div>
-      </div>
-    </div>
+  <div id="loginDiv">
+    <button id="googleLogin">Login with Google</button>
   </div>
 
+  <div id="userDiv" style="display:none;">
+    <p>Logged in as <span id="userEmail"></span></p>
+    <button id="logoutBtn">Logout</button>
+
+    <h3>Post New Ad</h3>
+    <form id="adForm">
+      <input type="text" id="adTitle" placeholder="Ad Title" required><br>
+      <input type="url" id="adImage" placeholder="Ad Image URL" required><br>
+      <button type="submit">Submit Ad</button>
+    </form>
+  </div>
+
+  <div id="adminDiv" style="display:none;">
+    <h3>Pending Ads (Admin)</h3>
+    <div id="adsList"></div>
+  </div>
+
+  <!-- Ad Popup -->
+  <div id="adPopup"><img id="popupImg" src=""><button onclick="closePopup()">Close</button></div>
+
   <script>
-    // 🔹 Firebase Config
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
       authDomain: "new-bike-59133.firebaseapp.com",
       projectId: "new-bike-59133",
       storageBucket: "new-bike-59133.appspot.com",
       messagingSenderId: "966945954091",
-      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e",
-      databaseURL: "https://new-bike-59133-default-rtdb.firebaseio.com"
+      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
     };
-
-    // Init Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // Elements
-    const loginBtn = document.getElementById("loginBtn");
-    const loginSection = document.getElementById("loginSection");
-    const dashboard = document.getElementById("dashboard");
-    const welcome = document.getElementById("welcome");
-    const postBtn = document.getElementById("postBtn");
-    const postsList = document.getElementById("postsList");
-    const adminSection = document.getElementById("adminSection");
+    const adminEmail = "zarasamajiksevasanstha@gmail.com";
+
+    // Login
+    const googleLoginBtn = document.getElementById("googleLogin");
     const logoutBtn = document.getElementById("logoutBtn");
-
-    const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
-
-    // 🔹 Google Login
-    loginBtn.addEventListener("click", () => {
+    googleLoginBtn.onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(err => alert(err.message));
-    });
+      auth.signInWithPopup(provider);
+    }
+    logoutBtn.onclick = () => auth.signOut();
 
-    // 🔹 Logout
-    logoutBtn.addEventListener("click", () => {
-      auth.signOut();
-    });
-
-    // 🔹 Auth State Change
     auth.onAuthStateChanged(user => {
-      if (user) {
-        loginSection.classList.add("hidden");
-        dashboard.classList.remove("hidden");
-        welcome.innerText = `Welcome, ${user.displayName} (${user.email})`;
+      if(user){
+        document.getElementById("loginDiv").style.display = "none";
+        document.getElementById("userDiv").style.display = "block";
+        document.getElementById("userEmail").innerText = user.email;
 
-        // अगर Admin है तो Admin Section दिखे
-        if (user.email === ADMIN_EMAIL) {
-          adminSection.classList.remove("hidden");
-          loadPosts();
-        } else {
-          adminSection.classList.add("hidden");
+        if(user.email === adminEmail){
+          document.getElementById("adminDiv").style.display = "block";
+          loadPendingAds();
         }
+        loadApprovedAds();
       } else {
-        loginSection.classList.remove("hidden");
-        dashboard.classList.add("hidden");
+        document.getElementById("loginDiv").style.display = "block";
+        document.getElementById("userDiv").style.display = "none";
+        document.getElementById("adminDiv").style.display = "none";
       }
     });
 
-    // 🔹 Post Add (Pending by default)
-    postBtn.addEventListener("click", () => {
-      const title = document.getElementById("pTitle").value;
-      const price = document.getElementById("pPrice").value;
+    // Post Ad
+    const adForm = document.getElementById("adForm");
+    adForm.onsubmit = e => {
+      e.preventDefault();
+      const title = document.getElementById("adTitle").value;
+      const img = document.getElementById("adImage").value;
       const user = auth.currentUser;
+      db.ref("ads").push({
+        title, img, user: user.email, approved: false
+      });
+      adForm.reset();
+      alert("Ad submitted for approval!");
+    }
 
-      if (!user) return alert("Login first");
-      if (title && price) {
-        const newPostRef = db.ref("posts/pending").push();
-        newPostRef.set({
-          title,
-          price,
-          createdAt: Date.now(),
-          user: user.email
-        });
-        alert("Post added, waiting for admin approval!");
-      } else {
-        alert("Please fill all fields");
-      }
-    });
-
-    // 🔹 Load Posts (Admin)
-    function loadPosts() {
-      postsList.innerHTML = "";
-      db.ref("posts/pending").on("value", snapshot => {
-        postsList.innerHTML = "";
+    // Load Pending Ads (Admin)
+    function loadPendingAds(){
+      const adsList = document.getElementById("adsList");
+      db.ref("ads").on("value", snapshot => {
+        adsList.innerHTML = "";
         snapshot.forEach(child => {
-          const post = child.val();
+          const ad = child.val();
           const key = child.key;
-
-          const div = document.createElement("div");
-          div.className = "p-3 border rounded bg-gray-50 flex justify-between items-center";
-          div.innerHTML = `
-            <div>
-              <strong>${post.title}</strong> - ₹${post.price}
-              <br><small>By: ${post.user}</small>
-            </div>
-            <div class="space-x-2">
-              <button class="approve px-3 py-1 bg-green-600 text-white rounded" data-id="${key}">Approve</button>
-              <button class="reject px-3 py-1 bg-red-600 text-white rounded" data-id="${key}">Reject</button>
-            </div>
-          `;
-          postsList.appendChild(div);
-        });
-
-        // Approve & Reject Events
-        document.querySelectorAll(".approve").forEach(btn => {
-          btn.addEventListener("click", e => {
-            const id = e.target.dataset.id;
-            db.ref("posts/pending/" + id).once("value", snap => {
-              db.ref("posts/approved/" + id).set(snap.val());
-              db.ref("posts/pending/" + id).remove();
-            });
-          });
-        });
-
-        document.querySelectorAll(".reject").forEach(btn => {
-          btn.addEventListener("click", e => {
-            const id = e.target.dataset.id;
-            db.ref("posts/pending/" + id).remove();
-          });
+          if(!ad.approved){
+            const div = document.createElement("div");
+            div.className = "adItem";
+            div.innerHTML = `
+              <img src="${ad.img}" style="max-width:150px;"><br>
+              <b>${ad.title}</b> by ${ad.user}<br>
+              <button onclick="approveAd('${key}')">Approve</button>
+              <button onclick="rejectAd('${key}')">Reject</button>
+            `;
+            adsList.appendChild(div);
+          }
         });
       });
     }
+
+    function approveAd(key){
+      db.ref("ads/"+key).update({approved:true});
+    }
+    function rejectAd(key){
+      db.ref("ads/"+key).remove();
+    }
+
+    // Load Approved Ads & show popup
+    function loadApprovedAds(){
+      const adsArray = [];
+      db.ref("ads").on("value", snapshot => {
+        adsArray.length = 0;
+        snapshot.forEach(child => {
+          const ad = child.val();
+          if(ad.approved) adsArray.push(ad.img);
+        });
+        showAdPopup(adsArray);
+      });
+    }
+
+    // Popup logic
+    let adIndex = 0;
+    function showAdPopup(array){
+      if(array.length === 0) return;
+      const popup = document.getElementById("adPopup");
+      const imgTag = document.getElementById("popupImg");
+      popup.style.display = "block";
+      imgTag.src = array[adIndex];
+      adIndex = (adIndex+1) % array.length;
+      setTimeout(() => showAdPopup(array), 5000);
+    }
+
+    function closePopup(){
+      document.getElementById("adPopup").style.display = "none";
+    }
+
   </script>
 </body>
 </html>
