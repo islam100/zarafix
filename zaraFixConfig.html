@@ -2,64 +2,124 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <title>Admin – Upload Ads</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="p-4">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix Popup Ads</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: sans-serif; }
 
-  <h1 class="text-xl font-bold mb-4">Upload Ad Image</h1>
-  <form id="uploadForm" class="space-y-3">
-    <input id="adUrl" type="text" placeholder="Image URL" class="border p-2 w-full rounded">
-    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Upload</button>
-  </form>
-
-  <h2 class="text-lg font-semibold mt-6">Pending Ads</h2>
-  <div id="pendingList" class="space-y-2"></div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
-  authDomain: "new-bike-59133.firebaseapp.com",
-  projectId: "new-bike-59133",
-  storageBucket: "new-bike-59133.appspot.com",
-  messagingSenderId: "966945954091",
-  appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const uploadForm = document.getElementById("uploadForm");
-uploadForm.addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const url = document.getElementById("adUrl").value;
-  if(!url) return;
-  const newRef = push(ref(db, "adsUploads"));
-  await set(newRef, { url, status:"pending" });
-  document.getElementById("adUrl").value="";
-});
-
-// show pending ads
-const pendingList = document.getElementById("pendingList");
-onValue(ref(db,"adsUploads"), (snap)=>{
-  pendingList.innerHTML="";
-  const data = snap.val() || {};
-  Object.entries(data).forEach(([id,ad])=>{
-    if(ad.status==="pending"){
-      const div=document.createElement("div");
-      div.className="border p-2 flex justify-between items-center";
-      div.innerHTML=`<img src=\"${ad.url}\" class=\"h-16\"> 
-        <button class='bg-green-500 text-white px-3 py-1 rounded'>Approve</button>`;
-      div.querySelector("button").onclick=async()=>{
-        await update(ref(db,`adsUploads/${id}`), { status: \"approved\" });
-        await update(ref(db,`adsImages/${id}`), ad.url);
-      };
-      pendingList.appendChild(div);
+    /* Popup Background */
+    .popup {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
     }
-  });
-});
-</script>
+
+    /* Popup Box */
+    .popup-box {
+      width: 90%;
+      max-width: 400px;
+      height: 300px;
+      background: #111;
+      border-radius: 15px;
+      box-shadow: 0 0 25px rgba(255,255,255,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      perspective: 1200px;
+      animation: popupOpen 0.6s ease;
+    }
+
+    @keyframes popupOpen {
+      from {transform: scale(0.2); opacity: 0;}
+      to {transform: scale(1); opacity: 1;}
+    }
+
+    .popup-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 15px;
+      transform-style: preserve-3d;
+      animation: slide3d 2s infinite;
+    }
+
+    @keyframes slide3d {
+      0% { transform: rotateY(0deg) scale(1);}
+      50% { transform: rotateY(15deg) scale(1.05);}
+      100% { transform: rotateY(0deg) scale(1);}
+    }
+
+    /* Close Button */
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 30px;
+      color: white;
+      cursor: pointer;
+      z-index: 10000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Popup -->
+  <div class="popup" id="popup">
+    <div class="popup-box">
+      <img id="popupImg" src="" alt="popup">
+    </div>
+    <span class="close-btn" onclick="closePopup()">×</span>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ✅ आपका Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
+      authDomain: "new-bike-59133.firebaseapp.com",
+      projectId: "new-bike-59133",
+      storageBucket: "new-bike-59133.appspot.com",
+      messagingSenderId: "966945954091",
+      appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let images = [];
+    let index = 0;
+
+    // ✅ Firebase से Images लोड करो
+    db.ref("popupAds").on("value", snap => {
+      const data = snap.val();
+      if (data) {
+        images = Object.values(data);
+        startSlideshow();
+      }
+    });
+
+    function startSlideshow() {
+      if (images.length === 0) return;
+      const popupImg = document.getElementById("popupImg");
+      popupImg.src = images[index];
+
+      setInterval(() => {
+        index = (index + 1) % images.length;
+        popupImg.src = images[index];
+      }, 2000); // हर 2 सेकंड में change
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
+    }
+  </script>
 </body>
 </html>
