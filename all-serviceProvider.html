@@ -4,127 +4,101 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Service Posts</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  body{font-family:sans-serif;padding:20px;}
+  .card{border:1px solid #ccc;padding:10px;margin:10px 0;border-radius:10px;position:relative;}
+  .approved{background-color:#d4edda;}
+  .waiting{background-color:#fff3cd;}
+  .btn{padding:5px 10px;margin:2px;cursor:pointer;border:none;border-radius:5px;}
+  .approve{background-color:green;color:white;}
+  .reject{background-color:red;color:white;}
+  .delete{background-color:#555;color:white;}
+</style>
 </head>
-<body class="bg-gray-100 p-5">
+<body>
 
-<div id="loginDiv" class="mb-5">
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
-    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Logout</button>
-</div>
-
-<div id="postFormDiv" class="mb-5 hidden">
-    <textarea id="postContent" placeholder="Type your post..." class="border p-2 w-full"></textarea>
-    <button id="submitPost" class="bg-green-500 text-white px-4 py-2 rounded mt-2">Submit Post</button>
-</div>
-
-<div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+<h2>Service Posts</h2>
+<div id="postsContainer"></div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "_FIREBASE_API_KEY",
-  authDomain: "_YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://_YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "_YOUR_PROJECT_ID",
-  storageBucket: "_YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "_SENDER_ID",
-  appId: "_APP_ID"
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.database();
-
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const postFormDiv = document.getElementById("postFormDiv");
-const submitPost = document.getElementById("submitPost");
-const postContent = document.getElementById("postContent");
-const postsContainer = document.getElementById("postsContainer");
-
-let currentUser = null;
+const auth = firebase.auth();
 const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-loginBtn.onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-};
+// Login user (popup)
+function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+}
 
-logoutBtn.onclick = () => auth.signOut();
-
-auth.onAuthStateChanged(user => {
-  currentUser = user;
-  if(user){
-    loginBtn.classList.add("hidden");
-    logoutBtn.classList.remove("hidden");
-    postFormDiv.classList.remove("hidden");
-  } else {
-    loginBtn.classList.remove("hidden");
-    logoutBtn.classList.add("hidden");
-    postFormDiv.classList.add("hidden");
-  }
+// Check login
+auth.onAuthStateChanged(user=>{
+    if(user && user.email===adminEmail){
+        console.log("Admin logged in");
+    }else if(user){
+        console.log("User logged in");
+    }else{
+        console.log("Not logged in");
+    }
 });
 
-submitPost.onclick = () => {
-  if(!postContent.value.trim()) return alert("Post empty!");
-  const newPostKey = db.ref("posts").push().key;
-  db.ref("posts/"+newPostKey).set({
-    content: postContent.value,
-    author: currentUser.displayName,
-    email: currentUser.email,
-    status: "waiting",
-    timestamp: Date.now()
-  });
-  postContent.value = "";
-};
-
-// Fetch and display posts
-db.ref("posts").on("value", snapshot => {
-  postsContainer.innerHTML = "";
-  const posts = snapshot.val();
-  if(!posts) return;
-  
-  // Convert object to array and sort by timestamp descending
-  const postsArr = Object.entries(posts).sort((a,b)=> b[1].timestamp - a[1].timestamp);
-
-  postsArr.forEach(([key, post]) => {
-    const card = document.createElement("div");
-    card.className = `p-4 rounded shadow ${
-      post.status === "approved" ? "bg-green-100" : "bg-yellow-100"
-    }`;
-    
-    card.innerHTML = `
-      <p>${post.content}</p>
-      <p class="text-sm mt-1">By: ${post.author} (${post.status === "approved" ? "Approved" : "Waiting"})</p>
-    `;
-
-    if(currentUser && currentUser.email === adminEmail){
-      const approveBtn = document.createElement("button");
-      approveBtn.textContent = "Approve";
-      approveBtn.className = "bg-green-500 text-white px-2 py-1 rounded mr-2 mt-2";
-      approveBtn.onclick = () => db.ref("posts/"+key+"/status").set("approved");
-
-      const rejectBtn = document.createElement("button");
-      rejectBtn.textContent = "Reject";
-      rejectBtn.className = "bg-red-500 text-white px-2 py-1 rounded mr-2 mt-2";
-      rejectBtn.onclick = () => db.ref("posts/"+key+"/status").set("rejected");
-
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Delete";
-      deleteBtn.className = "bg-gray-500 text-white px-2 py-1 rounded mt-2";
-      deleteBtn.onclick = () => db.ref("posts/"+key).remove();
-
-      card.appendChild(approveBtn);
-      card.appendChild(rejectBtn);
-      card.appendChild(deleteBtn);
+// Fetch posts
+db.ref('posts').on('value', snapshot=>{
+    const container = document.getElementById('postsContainer');
+    container.innerHTML = "";
+    const posts = snapshot.val();
+    if(posts){
+        Object.keys(posts).sort((a,b)=>posts[b].timestamp - posts[a].timestamp).forEach(key=>{
+            const p = posts[key];
+            const div = document.createElement('div');
+            div.className = "card " + (p.status==="approved"?"approved":"waiting");
+            div.innerHTML = `
+                <p><strong>${p.title}</strong></p>
+                <p>${p.description}</p>
+                <p>Status: ${p.status==="approved"?"Approved":"Waiting Approval"}</p>
+            `;
+            // Admin buttons
+            auth.onAuthStateChanged(user=>{
+                if(user && user.email===adminEmail){
+                    const approveBtn = document.createElement('button');
+                    approveBtn.className = 'btn approve';
+                    approveBtn.textContent = 'Approve';
+                    approveBtn.onclick = ()=>db.ref('posts/'+key).update({status:'approved'});
+                    
+                    const rejectBtn = document.createElement('button');
+                    rejectBtn.className = 'btn reject';
+                    rejectBtn.textContent = 'Reject';
+                    rejectBtn.onclick = ()=>db.ref('posts/'+key).update({status:'waiting'});
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn delete';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onclick = ()=>db.ref('posts/'+key).remove();
+                    
+                    div.appendChild(approveBtn);
+                    div.appendChild(rejectBtn);
+                    div.appendChild(deleteBtn);
+                }
+            });
+            container.appendChild(div);
+        });
     }
-
-    postsContainer.appendChild(card);
-  });
 });
 </script>
+
 </body>
 </html>
