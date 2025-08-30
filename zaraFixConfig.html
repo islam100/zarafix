@@ -1,37 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Upload with Notification</title>
+  <title>Image Upload Firebase</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
 
-  <div class="bg-white p-6 rounded-2xl shadow-xl w-96 text-center">
+  <div class="bg-white p-6 rounded-xl shadow-lg w-96 text-center">
     <h2 class="text-xl font-bold mb-4">Upload Image</h2>
 
-    <!-- File Input -->
-    <input type="file" id="imageFile" class="mb-4 block w-full text-sm" accept="image/*">
+    <input type="file" id="fileInput" class="mb-4">
+    <button onclick="uploadImage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Upload</button>
 
-    <!-- Upload Button -->
-    <button onclick="uploadImage()" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
-      Upload
-    </button>
+    <div id="progressBox" class="hidden mt-4">
+      <div class="w-full bg-gray-200 rounded-full">
+        <div id="progressBar" class="bg-green-500 text-xs leading-none py-1 text-center text-white rounded-full" style="width:0%">0%</div>
+      </div>
+    </div>
 
-    <!-- Notification -->
-    <div id="notification" class="mt-4 hidden p-2 rounded-xl"></div>
+    <p id="message" class="mt-4 text-sm"></p>
   </div>
 
   <script>
-    // 🔥 Firebase Config (Apna config yahan lagao)
-   const firebaseConfig = {
+    // 🔹 अपनी Firebase config यहाँ डालें
+  const firebaseConfig = {
   apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
   authDomain: "new-bike-59133.firebaseapp.com",
   projectId: "new-bike-59133",
@@ -40,52 +37,44 @@
   appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
 };
 
-
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const storage = firebase.storage();
 
-    // Upload Function
     function uploadImage() {
-      const file = document.getElementById("imageFile").files[0];
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+
       if (!file) {
-        showNotification("❌ Please select an image first!", "bg-red-500");
+        alert("कृपया एक फ़ाइल चुनें!");
         return;
       }
 
       const storageRef = storage.ref("uploads/" + Date.now() + "_" + file.name);
       const uploadTask = storageRef.put(file);
 
-      uploadTask.on("state_changed", 
-        function progress(snapshot) {
-          let percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          showNotification("⏳ Uploading... " + Math.round(percent) + "%", "bg-yellow-500");
-        }, 
-        function error(err) {
-          showNotification("❌ Upload failed: " + err.message, "bg-red-500");
-        }, 
-        function complete() {
-          uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
-            db.ref("images").push({ url: downloadURL, uploadedAt: new Date().toISOString() });
-            showNotification("✅ Image uploaded successfully!", "bg-green-500");
+      document.getElementById("progressBox").classList.remove("hidden");
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          document.getElementById("progressBar").style.width = progress + "%";
+          document.getElementById("progressBar").innerText = Math.floor(progress) + "%";
+        },
+        (error) => {
+          document.getElementById("message").innerText = "❌ Upload Failed: " + error.message;
+          document.getElementById("message").className = "mt-4 text-red-600 text-sm";
+        },
+        () => {
+          uploadTask.snapshot.ref.getDownloadURL().then((url) => {
+            document.getElementById("message").innerHTML = "✅ Upload Success!<br><a href='" + url + "' target='_blank' class='text-blue-600 underline'>View Image</a>";
+            document.getElementById("message").className = "mt-4 text-green-600 text-sm";
+            console.log("Image URL:", url);
           });
         }
       );
     }
-
-    // Show Notification
-    function showNotification(message, color) {
-      const note = document.getElementById("notification");
-      note.className = "mt-4 p-2 rounded-xl text-white text-sm " + color;
-      note.innerText = message;
-      note.classList.remove("hidden");
-
-      // 3 sec baad hide ho jaye
-      setTimeout(() => {
-        note.classList.add("hidden");
-      }, 3000);
-    }
   </script>
+
 </body>
 </html>
