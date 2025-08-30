@@ -1,43 +1,13 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara Fix – Notice Board</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-</head>
-<body class="bg-gray-100 text-center p-5">
+<input type="file" id="imageUpload" />
+<button onclick="uploadImage()">Upload</button>
 
-  <h1 class="text-2xl font-bold mb-4">📢 Zara Fix – Notice Board</h1>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+  import { getDatabase, ref as dbRef, push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  <!-- Login Button -->
-  <button onclick="login()" id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded-xl">Google Login</button>
-  <p id="userEmail" class="mt-2 text-sm text-gray-600"></p>
-
-  <!-- Upload Form -->
-  <div id="uploadForm" class="hidden mt-5">
-    <input type="file" id="imageFile" class="mb-3">
-    <button onclick="uploadImage()" class="bg-green-600 text-white px-4 py-2 rounded-xl">Upload Image</button>
-  </div>
-
-  <!-- Slideshow (Live Approved Images) -->
-  <div id="slideshow" class="mt-6 w-full max-w-lg mx-auto">
-    <img id="slideImg" class="w-full h-64 object-cover rounded-xl shadow">
-  </div>
-
-  <!-- Admin Panel -->
-  <div id="adminPanel" class="hidden mt-8 p-5 bg-white shadow rounded-xl">
-    <h2 class="text-xl font-bold mb-3">🛠 Admin Approval Panel</h2>
-    <div id="pendingList" class="space-y-3"></div>
-  </div>
-
-  <script>
-    // Firebase Config
-   const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
   authDomain: "new-bike-59133.firebaseapp.com",
   projectId: "new-bike-59133",
@@ -46,102 +16,35 @@
   appId: "1:966945954091:web:c1387e3a27af68aef3cd6e"
 };
 
-    firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
-    const db = firebase.database();
-    const storage = firebase.storage();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  const database = getDatabase(app);
 
-    let currentUser = null;
-    const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  // Sign in with Google
+  const provider = new GoogleAuthProvider();
+  signInWithPopup(auth, provider);
 
-    // Login
-    function login() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(res => {
-        currentUser = res.user;
-        document.getElementById("loginBtn").classList.add("hidden");
-        document.getElementById("userEmail").innerText = currentUser.email;
-        document.getElementById("uploadForm").classList.remove("hidden");
+  // Upload function
+  window.uploadImage = async function() {
+    const file = document.getElementById("imageUpload").files[0];
+    if (!file) return alert("Please select an image");
 
-        if (currentUser.email === adminEmail) {
-          document.getElementById("adminPanel").classList.remove("hidden");
-          loadPendingImages();
-        }
-        loadLiveSlideshow();
-      });
-    }
+    const user = auth.currentUser;
+    if (!user) return alert("Please login first");
 
-    // Upload Image (User → Pending)
-    function uploadImage() {
-      const file = document.getElementById("imageFile").files[0];
-      if (!file) return alert("Please select an image!");
+    const storageRef = ref(storage, "uploads/" + Date.now() + "-" + file.name);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
 
-      const fileRef = storage.ref("pending/" + Date.now() + "_" + file.name);
-      fileRef.put(file).then(() => {
-        fileRef.getDownloadURL().then(url => {
-          db.ref("pending/").push({
-            url: url,
-            uploader: currentUser.email
-          });
-          alert("Image uploaded for admin approval!");
-        });
-      });
-    }
+    // save in db as pending
+    await push(dbRef(database, "images"), {
+      url: url,
+      status: "pending",
+      uploadedBy: user.email
+    });
 
-    // Admin → Load Pending Images
-    function loadPendingImages() {
-      const list = document.getElementById("pendingList");
-      list.innerHTML = "";
-      db.ref("pending/").on("value", snap => {
-        list.innerHTML = "";
-        snap.forEach(child => {
-          const data = child.val();
-          const div = document.createElement("div");
-          div.className = "p-3 border rounded-lg";
-          div.innerHTML = `
-            <img src="${data.url}" class="w-full h-40 object-cover rounded mb-2">
-            <p class="text-sm text-gray-600">Uploader: ${data.uploader}</p>
-            <button onclick="approveImage('${child.key}','${data.url}')" class="bg-blue-600 text-white px-3 py-1 rounded mt-2">Approve</button>
-            <button onclick="rejectImage('${child.key}')" class="bg-red-600 text-white px-3 py-1 rounded mt-2">Reject</button>
-          `;
-          list.appendChild(div);
-        });
-      });
-    }
-
-    // Admin Approve → Move to Live
-    function approveImage(key, url) {
-      db.ref("live/").push({ url: url });
-      db.ref("pending/" + key).remove();
-    }
-
-    // Admin Reject → Delete
-    function rejectImage(key) {
-      db.ref("pending/" + key).remove();
-    }
-
-    // Slideshow → Live Images
-    function loadLiveSlideshow() {
-      const slideImg = document.getElementById("slideImg");
-      let images = [];
-      let index = 0;
-
-      db.ref("live/").on("value", snap => {
-        images = [];
-        snap.forEach(child => {
-          images.push(child.val().url);
-        });
-        if (images.length > 0) {
-          slideImg.src = images[0];
-          index = 0;
-          setInterval(() => {
-            index = (index + 1) % images.length;
-            slideImg.src = images[index];
-          }, 3000);
-        }
-      });
-    }
-  </script>
-</body>
-</html>
+    alert("Image uploaded successfully (Pending Approval)");
+  }
+</script>
