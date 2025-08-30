@@ -3,55 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix Service Posts</title>
+<title>ZaraFix | All Services</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body{font-family:sans-serif;margin:0;padding:0;background:#f2f2f2;}
-  header{padding:15px;text-align:center;background:#4caf50;color:white;}
-  .container{max-width:600px;margin:20px auto;padding:10px;}
-  .card{background:white;border-radius:10px;padding:15px;margin:10px 0;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
-  .approved{border-left:5px solid green;}
-  .waiting{border-left:5px solid orange;}
-  .btn{padding:8px 12px;margin:5px;cursor:pointer;border:none;border-radius:8px;box-shadow:0 4px #999;transition:0.2s;}
-  .btn:active{box-shadow:0 2px #666;transform:translateY(2px);}
-  .approve{background:green;color:white;}
-  .reject{background:orange;color:white;}
-  .delete{background:red;color:white;}
-  #postForm{background:white;padding:15px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin-bottom:20px;}
-  input,textarea,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:1px solid #ccc;}
-  #loginBtn,#logoutBtn{padding:10px 20px;background:#4caf50;color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px #999;}
-  #logoutBtn{background:red;}
+  .card { @apply bg-white shadow-md rounded-lg p-4 mb-4 relative; }
+  .btn3d { @apply bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg active:translate-y-1 transition-all; }
+  .approved { @apply border-l-4 border-green-500; }
+  .waiting { @apply border-l-4 border-yellow-500; }
+  .admin-btn { @apply bg-red-500 text-white px-2 py-1 rounded shadow-md hover:shadow-lg; }
 </style>
 </head>
-<body>
+<body class="bg-gray-100 p-4">
 
-<header>
-  <h1>ZaraFix Service Posts</h1>
-  <button id="loginBtn" onclick="login()">Login with Google</button>
-  <button id="logoutBtn" onclick="logout()" style="display:none;">Logout</button>
-</header>
-
-<div class="container">
-
-  <!-- Post Form -->
-  <div id="postForm" style="display:none;">
-    <h3>New Service Post</h3>
-    <input type="text" id="shopName" placeholder="Shop Name" required>
-    <input type="text" id="address" placeholder="Address" required>
-    <input type="text" id="category" placeholder="Category (type and select)" required>
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-    <textarea id="description" placeholder="Description" required></textarea>
-    <button class="btn approve" onclick="submitPost()">Post</button>
-  </div>
-
-  <!-- Posts will appear here -->
-  <div id="postsContainer"></div>
-
+<div class="flex justify-between mb-4">
+  <button id="loginBtn" class="btn3d">Login with Google</button>
+  <button id="logoutBtn" class="btn3d hidden">Logout</button>
 </div>
 
+<!-- Post Form -->
+<div id="postForm" class="bg-white p-4 rounded shadow-md mb-6 hidden">
+  <h2 class="text-xl font-bold mb-2">New Post</h2>
+  <input type="text" id="shopName" placeholder="Shop Name" class="w-full mb-2 p-2 border rounded"/>
+  <input type="text" id="address" placeholder="Address" class="w-full mb-2 p-2 border rounded"/>
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded"/>
+  <input type="file" id="imageFile" class="mb-2"/>
+  <button id="submitPost" class="btn3d">Submit Post</button>
+</div>
+
+<!-- Posts List -->
+<div id="postsList"></div>
+
 <script>
+  // Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -62,110 +49,123 @@ const firebaseConfig = {
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postForm = document.getElementById("postForm");
+  const postsList = document.getElementById("postsList");
 
-// Login / Logout functions
-function login(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-}
-function logout(){
-  auth.signOut();
-}
+  let currentUser = null;
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-// On Auth State Changed
-auth.onAuthStateChanged(user=>{
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const postForm = document.getElementById('postForm');
-
-  if(user){
-    loginBtn.style.display="none";
-    logoutBtn.style.display="inline-block";
-    postForm.style.display="block";
-  } else {
-    loginBtn.style.display="inline-block";
-    logoutBtn.style.display="none";
-    postForm.style.display="none";
-  }
-});
-
-// Submit new post
-function submitPost(){
-  const shopName = document.getElementById('shopName').value;
-  const address = document.getElementById('address').value;
-  const category = document.getElementById('category').value;
-  const whatsapp = document.getElementById('whatsapp').value;
-  const description = document.getElementById('description').value;
-
-  if(!shopName||!address||!category||!whatsapp||!description){alert("All fields required!"); return;}
-
-  const newPostRef = db.ref('posts').push();
-  newPostRef.set({
-    shopName, address, category, whatsapp, description,
-    status: "waiting",
-    timestamp: Date.now()
+  // Login
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   });
 
-  document.getElementById('shopName').value="";
-  document.getElementById('address').value="";
-  document.getElementById('category').value="";
-  document.getElementById('whatsapp').value="";
-  document.getElementById('description').value="";
-}
+  // Logout
+  logoutBtn.addEventListener("click", () => auth.signOut());
 
-// Fetch and display posts
-db.ref('posts').on('value', snapshot=>{
-  const container = document.getElementById('postsContainer');
-  container.innerHTML="";
-  const posts = snapshot.val();
-  if(posts){
-    Object.keys(posts)
-      .sort((a,b)=>posts[b].timestamp - posts[a].timestamp)
-      .forEach(key=>{
-      const p = posts[key];
-      const div = document.createElement('div');
-      div.className="card "+(p.status==="approved"?"approved":"waiting");
-      div.innerHTML=`
-        <p><strong>${p.shopName}</strong> (${p.category})</p>
-        <p>${p.address}</p>
-        <p>WhatsApp: ${p.whatsapp}</p>
-        <p>${p.description}</p>
-        <p>Status: ${p.status==="approved"?"Approved":"Waiting Approval"}</p>
-      `;
+  // Auth state change
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if(user){
+      loginBtn.classList.add("hidden");
+      logoutBtn.classList.remove("hidden");
+      postForm.classList.remove("hidden");
+      loadPosts();
+    } else {
+      loginBtn.classList.remove("hidden");
+      logoutBtn.classList.add("hidden");
+      postForm.classList.add("hidden");
+      postsList.innerHTML = "";
+    }
+  });
 
-      // Admin buttons
-      auth.onAuthStateChanged(user=>{
-        if(user && user.email===adminEmail){
-          const approveBtn = document.createElement('button');
-          approveBtn.className='btn approve';
-          approveBtn.textContent='Approve';
-          approveBtn.onclick=()=>db.ref('posts/'+key).update({status:'approved'});
+  // Submit Post
+  document.getElementById("submitPost").addEventListener("click", async () => {
+    const shopName = document.getElementById("shopName").value.trim();
+    const address = document.getElementById("address").value.trim();
+    const whatsapp = document.getElementById("whatsapp").value.trim();
+    const file = document.getElementById("imageFile").files[0];
+    if(!shopName || !address || !whatsapp || !file) return alert("सब फील्ड भरें।");
 
-          const rejectBtn = document.createElement('button');
-          rejectBtn.className='btn reject';
-          rejectBtn.textContent='Reject';
-          rejectBtn.onclick=()=>db.ref('posts/'+key).update({status:'waiting'});
+    const storageRef = storage.ref("posts/" + file.name);
+    await storageRef.put(file);
+    const imageUrl = await storageRef.getDownloadURL();
 
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className='btn delete';
-          deleteBtn.textContent='Delete';
-          deleteBtn.onclick=()=>db.ref('posts/'+key).remove();
+    await db.collection("posts").add({
+      shopName,
+      address,
+      whatsapp,
+      imageUrl,
+      uid: currentUser.uid,
+      email: currentUser.email,
+      status: "waiting",
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-          div.appendChild(approveBtn);
-          div.appendChild(rejectBtn);
-          div.appendChild(deleteBtn);
+    document.getElementById("shopName").value = "";
+    document.getElementById("address").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("imageFile").value = "";
+  });
+
+  // Load Posts
+  function loadPosts(){
+    db.collection("posts").orderBy("timestamp","desc").onSnapshot(snapshot => {
+      postsList.innerHTML = "";
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const isAdmin = currentUser && currentUser.email === adminEmail;
+        let card = document.createElement("div");
+        card.className = "card " + (data.status === "approved" ? "approved" : "waiting");
+        card.innerHTML = `
+          <img src="${data.imageUrl}" class="w-full h-48 object-cover rounded mb-2"/>
+          <h3 class="text-lg font-bold">${data.shopName}</h3>
+          <p>${data.address}</p>
+          <a href="https://wa.me/${data.whatsapp}" target="_blank" class="btn3d inline-block mt-2">WhatsApp</a>
+          <p class="mt-2 font-bold">Status: ${data.status}</p>
+        `;
+        if(isAdmin){
+          const approveBtn = document.createElement("button");
+          approveBtn.className = "admin-btn m-1";
+          approveBtn.innerText = "Approve";
+          approveBtn.onclick = () => doc.ref.update({status:"approved"});
+          
+          const rejectBtn = document.createElement("button");
+          rejectBtn.className = "admin-btn m-1 bg-yellow-500";
+          rejectBtn.innerText = "Reject";
+          rejectBtn.onclick = () => doc.ref.update({status:"waiting"});
+          
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "admin-btn m-1 bg-gray-700";
+          deleteBtn.innerText = "Delete";
+          deleteBtn.onclick = () => doc.ref.delete();
+
+          card.appendChild(approveBtn);
+          card.appendChild(rejectBtn);
+          card.appendChild(deleteBtn);
+        } else if(data.uid === currentUser.uid){
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "admin-btn m-1 bg-gray-700";
+          deleteBtn.innerText = "Delete";
+          deleteBtn.onclick = () => doc.ref.delete();
+          card.appendChild(deleteBtn);
+        }
+
+        if(data.status==="approved" || isAdmin || data.uid===currentUser.uid){
+          postsList.appendChild(card);
         }
       });
-
-      container.appendChild(div);
     });
   }
-});
 </script>
+
 </body>
 </html>
