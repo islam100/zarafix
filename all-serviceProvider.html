@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - All Service Providers</title>
+  <title>ZaraFix All Services</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -11,25 +11,30 @@
 </head>
 <body class="bg-gray-100">
 
-  <div class="p-4 flex justify-between items-center bg-white shadow-md">
-    <h1 class="text-2xl font-bold">ZaraFix</h1>
-    <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Login with Google</button>
-    <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded hidden">Logout</button>
+<div class="container mx-auto p-4">
+
+  <!-- Login Button -->
+  <div id="loginDiv" class="text-center mb-4">
+    <button id="googleLoginBtn" class="px-4 py-2 bg-blue-600 text-white rounded">Google Login</button>
   </div>
 
-  <div id="postFormContainer" class="p-4 hidden bg-white shadow-md m-4 rounded">
-    <h2 class="text-xl font-semibold mb-2">New Post</h2>
-    <form id="postForm" class="space-y-2">
-      <input type="text" id="shopName" placeholder="Shop Name" class="w-full border px-2 py-1 rounded" required>
-      <input type="text" id="address" placeholder="Address" class="w-full border px-2 py-1 rounded" required>
-      <input type="text" id="category" placeholder="Category" class="w-full border px-2 py-1 rounded" required>
-      <input type="text" id="whatsapp" placeholder="WhatsApp No." class="w-full border px-2 py-1 rounded" required>
-      <input type="file" id="imageFile" class="w-full border px-2 py-1 rounded" required>
-      <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded">Submit Post</button>
-    </form>
+  <!-- Post Form -->
+  <div id="postFormDiv" class="hidden bg-white p-4 rounded shadow mb-6">
+    <h2 class="text-xl font-bold mb-2">New Post</h2>
+    <input type="text" id="shopName" placeholder="Shop Name" class="border p-2 w-full mb-2 rounded">
+    <input type="text" id="address" placeholder="Address" class="border p-2 w-full mb-2 rounded">
+    <input type="text" id="category" placeholder="Category" class="border p-2 w-full mb-2 rounded">
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" class="border p-2 w-full mb-2 rounded">
+    <input type="file" id="imageFile" class="border p-2 w-full mb-2 rounded">
+    <button id="submitPost" class="px-4 py-2 bg-green-600 text-white rounded">Submit Post</button>
   </div>
 
-  <div id="postsContainer" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  <!-- Posts Display -->
+  <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Posts will be injected here -->
+  </div>
+
+</div>
 
 <script>
   // Firebase config
@@ -42,133 +47,131 @@
     messagingSenderId: "636550144008",
     appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
   };
+
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postFormContainer = document.getElementById("postFormContainer");
-  const postForm = document.getElementById("postForm");
-  const postsContainer = document.getElementById("postsContainer");
-
   let currentUser = null;
-  let isAdmin = false;
+  const adminEmails = ["admin@example.com"]; // Admin emails
 
-  // Login with Google
-  loginBtn.onclick = () => {
+  // Google login
+  document.getElementById("googleLoginBtn").onclick = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    if(user){
-      currentUser = user;
-      isAdmin = user.email === adminEmail;
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      postFormContainer.classList.remove("hidden");
+    try {
+      const result = await auth.signInWithPopup(provider);
+      currentUser = result.user;
+      alert("Logged in as " + currentUser.email);
+      document.getElementById("loginDiv").style.display = "none";
+      document.getElementById("postFormDiv").style.display = "block";
       loadPosts();
-    } else {
-      currentUser = null;
-      isAdmin = false;
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      postFormContainer.classList.add("hidden");
-      postsContainer.innerHTML = '';
+    } catch(e) {
+      alert("Login failed: " + e.message);
     }
-  });
+  };
 
-  // Post form submission
-  postForm.onsubmit = async (e) => {
-    e.preventDefault();
+  // Submit Post
+  document.getElementById("submitPost").onclick = async () => {
     const shopName = document.getElementById("shopName").value;
     const address = document.getElementById("address").value;
     const category = document.getElementById("category").value;
     const whatsapp = document.getElementById("whatsapp").value;
     const file = document.getElementById("imageFile").files[0];
 
-    if(!file) return alert("Please select an image");
+    if(!shopName || !address || !category || !whatsapp || !file){
+      alert("All fields are required");
+      return;
+    }
 
+    // Upload image to imgbb
     const fd = new FormData();
-    fd.append("image", file);
-
-    // Upload to imgbb
+    fd.append('image', file);
     const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
-    const res = await r.json();
-    const imageUrl = res.data.display_url;
+    const data = await r.json();
+    const imageUrl = data.data.display_url;
 
-    const newPostRef = db.ref("posts").push();
-    newPostRef.set({
+    const newPostRef = db.ref('posts').push();
+    await newPostRef.set({
       shopName, address, category, whatsapp, imageUrl,
-      status: "waiting",
-      userEmail: currentUser.email,
+      status: "Waiting",
+      poster: currentUser.email,
       timestamp: Date.now()
     });
 
-    postForm.reset();
-    alert("Post submitted for approval");
+    alert("Post submitted, waiting for approval");
+    document.getElementById("shopName").value = "";
+    document.getElementById("address").value = "";
+    document.getElementById("category").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("imageFile").value = "";
+
+    loadPosts();
   };
 
   // Load posts
   function loadPosts(){
-    db.ref("posts").orderByChild("timestamp").on("value", snapshot => {
-      postsContainer.innerHTML = '';
-      const posts = snapshot.val();
-      if(posts){
-        const postArray = Object.entries(posts).sort((a,b)=>b[1].timestamp - a[1].timestamp);
-        postArray.forEach(([key, post]) => {
-          const card = document.createElement("div");
-          card.className = "bg-white p-4 rounded shadow relative";
+    db.ref('posts').orderByChild('timestamp').on('value', snapshot => {
+      const container = document.getElementById('postsContainer');
+      container.innerHTML = '';
+      const posts = [];
+      snapshot.forEach(snap => {
+        posts.push({id: snap.key, ...snap.val()});
+      });
+      posts.reverse(); // New posts on top
 
-          // Status color
-          let statusColor = post.status === "approved" ? "bg-green-100" : "bg-yellow-100";
-          card.classList.add(statusColor);
+      posts.forEach(post => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded shadow p-2 flex flex-col";
 
-          card.innerHTML = `
-            <img src="${post.imageUrl}" class="w-full h-40 object-cover rounded mb-2">
-            <h2 class="font-bold text-lg">${post.shopName}</h2>
-            <p>${post.address}</p>
-            <p>Category: ${post.category}</p>
-            <p>WhatsApp: <a href="https://wa.me/${post.whatsapp}" target="_blank" class="text-blue-600">${post.whatsapp}</a></p>
-            <p>Status: <span class="font-bold">${post.status}</span></p>
-          `;
+        // Image
+        const img = document.createElement('img');
+        img.src = post.imageUrl;
+        img.className = "w-full h-48 object-cover rounded mb-2";
+        card.appendChild(img);
 
-          if(isAdmin){
-            const btnContainer = document.createElement("div");
-            btnContainer.className = "flex gap-2 mt-2";
+        // Info
+        card.innerHTML += `
+          <h3 class="font-bold text-lg">${post.shopName}</h3>
+          <p>${post.address}</p>
+          <p>${post.category}</p>
+          <p>WhatsApp: <a href="https://wa.me/${post.whatsapp}" target="_blank" class="text-blue-600">${post.whatsapp}</a></p>
+          <p>Status: <span style="color:${post.status=="Approved"?"green":"orange"}">${post.status}</span></p>
+        `;
 
-            const approveBtn = document.createElement("button");
-            approveBtn.className = "px-2 py-1 bg-green-500 text-white rounded 3d-btn";
-            approveBtn.innerText = "Approve";
-            approveBtn.onclick = ()=>db.ref("posts/"+key).update({status:"approved"});
+        // Admin buttons
+        if(currentUser && adminEmails.includes(currentUser.email)){
+          const btnDiv = document.createElement('div');
+          btnDiv.className = "flex gap-2 mt-2";
+          
+          const approveBtn = document.createElement('button');
+          approveBtn.innerText = "Approve";
+          approveBtn.className = "px-2 py-1 bg-green-500 text-white rounded";
+          approveBtn.onclick = () => db.ref('posts/'+post.id).update({status:"Approved"});
+          btnDiv.appendChild(approveBtn);
 
-            const rejectBtn = document.createElement("button");
-            rejectBtn.className = "px-2 py-1 bg-yellow-500 text-white rounded 3d-btn";
-            rejectBtn.innerText = "Reject";
-            rejectBtn.onclick = ()=>db.ref("posts/"+key).update({status:"waiting"});
+          const rejectBtn = document.createElement('button');
+          rejectBtn.innerText = "Reject";
+          rejectBtn.className = "px-2 py-1 bg-orange-500 text-white rounded";
+          rejectBtn.onclick = () => db.ref('posts/'+post.id).update({status:"Waiting"});
+          btnDiv.appendChild(rejectBtn);
 
-            const deleteBtn = document.createElement("button");
-            deleteBtn.className = "px-2 py-1 bg-red-500 text-white rounded 3d-btn";
-            deleteBtn.innerText = "Delete";
-            deleteBtn.onclick = ()=>db.ref("posts/"+key).remove();
+          const deleteBtn = document.createElement('button');
+          deleteBtn.innerText = "Delete";
+          deleteBtn.className = "px-2 py-1 bg-red-500 text-white rounded";
+          deleteBtn.onclick = () => db.ref('posts/'+post.id).remove();
+          btnDiv.appendChild(deleteBtn);
 
-            btnContainer.append(approveBtn, rejectBtn, deleteBtn);
-            card.appendChild(btnContainer);
-          }
+          card.appendChild(btnDiv);
+        }
 
-          postsContainer.appendChild(card);
-        });
-      }
+        container.appendChild(card);
+      });
     });
   }
-</script>
 
+  // Load posts for everyone (without login)
+  loadPosts();
+
+</script>
 </body>
 </html>
