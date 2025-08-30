@@ -1,62 +1,47 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All Service Providers</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: sans-serif; padding: 10px; background: #f0f0f0; }
-    .btn3d {
-      background: linear-gradient(145deg, #ffffff, #d1d1d1);
-      border-radius: 10px;
-      box-shadow: 5px 5px 10px #b8b8b8, -5px -5px 10px #ffffff;
-      padding: 10px 20px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn3d:hover {
-      box-shadow: inset 5px 5px 10px #b8b8b8, inset -5px -5px 10px #ffffff;
-    }
-    input, textarea { padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 100%; margin-bottom: 10px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Service Posts</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 10px; }
+  .btn3d {
+    background: linear-gradient(#4CAF50, #2E7D32);
+    border: none; color: white; padding: 10px 20px;
+    text-align: center; font-size: 16px;
+    border-radius: 10px; cursor: pointer;
+    box-shadow: 0 5px #1B5E20;
+  }
+  .btn3d:active { box-shadow: 0 2px #1B5E20; transform: translateY(3px); }
+  #postForm { margin-top: 20px; display: none; }
+  .post { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 8px; }
+</style>
 </head>
 <body>
 
-<h2 class="text-2xl font-bold mb-4">All Service Providers</h2>
+<h2>All Service Posts</h2>
 
-<!-- Login Button -->
-<div id="loginDiv">
-  <button id="loginBtn" class="btn3d mb-4">Google Login</button>
+<button id="loginBtn" class="btn3d">Login with Google</button>
+<button id="logoutBtn" class="btn3d" style="display:none;">Logout</button>
+
+<div id="postForm">
+  <h3>New Post</h3>
+  <input type="text" id="title" placeholder="Title" style="width:100%; padding:5px; margin:5px 0;">
+  <textarea id="desc" placeholder="Description" style="width:100%; padding:5px; margin:5px 0;"></textarea>
+  <input type="file" id="image"><br><br>
+  <button id="submitPost" class="btn3d">Submit Post</button>
 </div>
 
-<!-- Logout Button -->
-<div id="logoutDiv" style="display:none;">
-  <span id="userEmail" class="mr-2"></span>
-  <button id="logoutBtn" class="btn3d mb-4">Logout</button>
-</div>
-
-<!-- Post Form -->
-<div id="postFormDiv" style="display:none; background:white; padding:20px; border-radius:10px; margin-bottom:20px;">
-  <h3 class="text-xl font-bold mb-2">Post Your Service</h3>
-  <input type="text" id="serviceName" placeholder="Service Name" required>
-  <textarea id="serviceDesc" placeholder="Service Description" required></textarea>
-  <input type="file" id="serviceImage" accept="image/*">
-  <button id="postBtn" class="btn3d">Post Service</button>
-</div>
-
-<!-- Search -->
-<input type="text" id="searchInput" placeholder="Search by Service Name" class="mb-4 p-2 w-full rounded border">
-
-<!-- Posts -->
-<div id="postsDiv"></div>
+<h3>Approved Posts</h3>
+<div id="postsList"></div>
 
 <script>
-  // Firebase Config
- const firebaseConfig = {
+  // Firebase config
+const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
   databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -67,103 +52,86 @@
 };
 
   firebase.initializeApp(firebaseConfig);
+
   const auth = firebase.auth();
   const db = firebase.database();
 
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
-  const imgbbKey = "cad1f0dbfbd25346460789376cc2d7d5"; // example
-
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
-  const loginDiv = document.getElementById('loginDiv');
-  const logoutDiv = document.getElementById('logoutDiv');
-  const postFormDiv = document.getElementById('postFormDiv');
-  const userEmailSpan = document.getElementById('userEmail');
+  const postForm = document.getElementById('postForm');
+  const submitPost = document.getElementById('submitPost');
+  const postsList = document.getElementById('postsList');
 
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider);
-  }
+  };
 
   logoutBtn.onclick = () => auth.signOut();
 
   auth.onAuthStateChanged(user => {
     if(user){
-      loginDiv.style.display = "none";
-      logoutDiv.style.display = "block";
-      postFormDiv.style.display = "block";
-      userEmailSpan.innerText = user.email;
-      loadPosts(user.email);
+      loginBtn.style.display='none';
+      logoutBtn.style.display='inline-block';
+      postForm.style.display='block';
+      // Check admin
+      if(user.email==='zarasamajiksevasanstha@gmail.com'){
+        alert('Welcome Admin');
+      }
     } else {
-      loginDiv.style.display = "block";
-      logoutDiv.style.display = "none";
-      postFormDiv.style.display = "none";
-      document.getElementById('postsDiv').innerHTML = "";
+      loginBtn.style.display='inline-block';
+      logoutBtn.style.display='none';
+      postForm.style.display='none';
     }
   });
 
-  // Post Service
-  document.getElementById('postBtn').onclick = async () => {
-    const name = document.getElementById('serviceName').value.trim();
-    const desc = document.getElementById('serviceDesc').value.trim();
-    const file = document.getElementById('serviceImage').files[0];
-    if(!name || !desc){ alert("Service Name & Description required"); return; }
+  // Submit post
+  submitPost.onclick = async () => {
+    const title = document.getElementById('title').value.trim();
+    const desc = document.getElementById('desc').value.trim();
+    const imgFile = document.getElementById('image').files[0];
 
-    let imageUrl = "";
-    if(file){
-      const fd = new FormData();
-      fd.append('image', file);
-       const r=await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5",{method:"POST",body:fd});
-
-
-      const res = await r.json();
-      imageUrl = res.data.url;
+    if(!title || !desc){
+      alert('Title और Description दोनों भरें');
+      return;
     }
 
-    const postKey = db.ref('posts').push().key;
-    db.ref('posts/' + postKey).set({
-      name, desc, imageUrl, email: auth.currentUser.email, date: Date.now()
-    }).then(()=>{
-      document.getElementById('serviceName').value = "";
-      document.getElementById('serviceDesc').value = "";
-      document.getElementById('serviceImage').value = "";
-    });
-  }
+    let imageUrl = '';
+    if(imgFile){
+      const fd = new FormData();
+      fd.append('image', imgFile);
+      const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
+      const result = await r.json();
+      imageUrl = result.data.url;
+    }
 
-  // Load Posts
-  function loadPosts(userEmail){
-    const postsDiv = document.getElementById('postsDiv');
-    db.ref('posts').on('value', snapshot => {
-      const posts = snapshot.val();
-      postsDiv.innerHTML = "";
-      const searchValue = document.getElementById('searchInput').value.toLowerCase();
-      for(let key in posts){
-        const p = posts[key];
-        if(p.name.toLowerCase().includes(searchValue) || userEmail === adminEmail){
-          const postCard = document.createElement('div');
-          postCard.style.background = "white";
-          postCard.style.marginBottom = "10px";
-          postCard.style.padding = "10px";
-          postCard.style.borderRadius = "10px";
-          postCard.innerHTML = `
-            <h4 class="font-bold text-lg">${p.name}</h4>
-            <p>${p.desc}</p>
-            ${p.imageUrl? `<img src="${p.imageUrl}" width="100%" class="mt-2 rounded">` : ""}
-            <small>Posted by: ${p.email}</small>
-          `;
-          postsDiv.appendChild(postCard);
-        }
+    const newPost = {
+      title,
+      desc,
+      imageUrl,
+      approved: true, // approved by default for all users to see
+      timestamp: Date.now()
+    };
+    db.ref('posts').push(newPost);
+    document.getElementById('title').value='';
+    document.getElementById('desc').value='';
+    document.getElementById('image').value='';
+  };
+
+  // Show approved posts
+  db.ref('posts').on('value', snapshot => {
+    postsList.innerHTML = '';
+    snapshot.forEach(child => {
+      const p = child.val();
+      if(p.approved){
+        const div = document.createElement('div');
+        div.className='post';
+        div.innerHTML = `<h4>${p.title}</h4><p>${p.desc}</p>${p.imageUrl?'<img src="'+p.imageUrl+'" style="max-width:100%;">':''}`;
+        postsList.appendChild(div);
       }
     });
-  }
-
-  // Search
-  document.getElementById('searchInput').addEventListener('input', () => {
-    if(auth.currentUser){
-      loadPosts(auth.currentUser.email);
-    }
   });
-
 </script>
+
 </body>
 </html>
