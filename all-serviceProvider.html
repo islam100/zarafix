@@ -1,177 +1,184 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix Posts</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix Posts</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 16px; margin: 12px; }
+    .approved { background-color: #d4edda; }
+    .waiting { background-color: #fff3cd; }
+    .admin-btn { margin:4px; padding:6px 10px; border-radius:6px; border:none; cursor:pointer; box-shadow: 0 3px 5px rgba(0,0,0,0.2);}
+    .approve-btn { background-color: #4caf50; color:white;}
+    .reject-btn { background-color: #f39c12; color:white;}
+    .delete-btn { background-color: #e74c3c; color:white;}
+  </style>
 </head>
 <body class="bg-gray-100">
 
-<div class="max-w-6xl mx-auto p-4">
+<div class="p-4 flex justify-between items-center">
+  <h1 class="text-2xl font-bold">ZaraFix Posts</h1>
+  <button id="loginBtn" class="px-4 py-2 bg-blue-600 text-white rounded">Login with Google</button>
+  <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded hidden">Logout</button>
+</div>
 
-  <!-- Google Login / Logout -->
-  <div class="flex justify-end mb-4">
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded shadow hover:shadow-lg">Login with Google</button>
-    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded shadow hover:shadow-lg hidden">Logout</button>
-  </div>
+<!-- Post Form -->
+<div id="postFormContainer" class="p-4 bg-white rounded shadow m-4 hidden">
+  <h2 class="text-xl font-semibold mb-2">New Post</h2>
+  <form id="postForm" class="space-y-2">
+    <input type="text" id="shopName" placeholder="Shop Name" required class="border p-2 rounded w-full"/>
+    <input type="text" id="address" placeholder="Address" required class="border p-2 rounded w-full"/>
+    <input type="text" id="category" placeholder="Category" required class="border p-2 rounded w-full"/>
+    <input type="text" id="whatsapp" placeholder="WhatsApp No." required class="border p-2 rounded w-full"/>
+    <input type="file" id="imageFile" accept="image/*" required class="border p-2 rounded w-full"/>
+    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Post</button>
+  </form>
+</div>
 
-  <!-- Post Form (only for logged in users) -->
-  <div id="postForm" class="bg-white p-4 rounded shadow mb-6 hidden">
-    <h2 class="text-lg font-semibold mb-2">New Post</h2>
-    <input type="text" id="shopName" placeholder="Shop Name" class="w-full mb-2 p-2 border rounded">
-    <input type="text" id="shopAddress" placeholder="Address" class="w-full mb-2 p-2 border rounded">
-    <input type="text" id="shopWhatsApp" placeholder="WhatsApp Number" class="w-full mb-2 p-2 border rounded">
-    <input type="file" id="shopImage" class="mb-2">
-    <button id="submitPost" class="bg-green-500 text-white px-4 py-2 rounded shadow hover:shadow-lg">Submit Post</button>
-  </div>
-
-  <!-- Posts Grid -->
-  <div id="postsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+<!-- Posts -->
+<div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+  <!-- Cards will appear here -->
 </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-    authDomain: "zara-fix-2e35a.firebaseapp.com",
-    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-    projectId: "zara-fix-2e35a",
-    storageBucket: "zara-fix-2e35a.appspot.com",
-    messagingSenderId: "636550144008",
-    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+  authDomain: "zara-fix-2e35a.firebaseapp.com",
+  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+  projectId: "zara-fix-2e35a",
+  storageBucket: "zara-fix-2e35a.appspot.com",
+  messagingSenderId: "636550144008",
+  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+let currentUser = null;
+const adminEmails = ["admin@example.com"]; // Replace with actual admin email(s)
 
-  const adminEmail = "admin@example.com"; // यहाँ अपना admin email डालें
+// Login/Logout buttons
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const postFormContainer = document.getElementById("postFormContainer");
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postForm = document.getElementById("postForm");
-  const submitPost = document.getElementById("submitPost");
-  const postsGrid = document.getElementById("postsGrid");
-
-  let currentUser = null;
-
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
-  };
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if(user){
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
-      postForm.classList.remove("hidden");
-    } else {
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      postForm.classList.add("hidden");
-    }
+loginBtn.onclick = async () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    const result = await auth.signInWithPopup(provider);
+    currentUser = result.user;
+    loginBtn.classList.add("hidden");
+    logoutBtn.classList.remove("hidden");
+    postFormContainer.classList.remove("hidden");
     loadPosts();
+  } catch(err) {
+    alert("Login failed: "+err.message);
+  }
+};
+
+logoutBtn.onclick = async () => {
+  await auth.signOut();
+  currentUser = null;
+  loginBtn.classList.remove("hidden");
+  logoutBtn.classList.add("hidden");
+  postFormContainer.classList.add("hidden");
+};
+
+// Post form submission
+document.getElementById("postForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const shopName = document.getElementById("shopName").value;
+  const address = document.getElementById("address").value;
+  const category = document.getElementById("category").value;
+  const whatsapp = document.getElementById("whatsapp").value;
+  const imageFile = document.getElementById("imageFile").files[0];
+  
+  if(!imageFile) return alert("Select image");
+  
+  // Upload to imgbb
+  const fd = new FormData();
+  fd.append("image", imageFile);
+  const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
+  const res = await r.json();
+  const imageUrl = res.data.url;
+
+  const postRef = db.ref("posts").push();
+  await postRef.set({
+    shopName, address, category, whatsapp, imageUrl, posterEmail: currentUser.email,
+    status: "waiting",
+    timestamp: Date.now()
   });
 
-  async function uploadImage(file){
-    const fd = new FormData();
-    fd.append('image', file);
-    const res = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method: "POST", body: fd});
-    const data = await res.json();
-    return data.data.url;
-  }
+  document.getElementById("postForm").reset();
+  loadPosts();
+});
 
-  submitPost.onclick = async () => {
-    const name = document.getElementById("shopName").value;
-    const address = document.getElementById("shopAddress").value;
-    const whatsapp = document.getElementById("shopWhatsApp").value;
-    const imageFile = document.getElementById("shopImage").files[0];
+// Load posts
+async function loadPosts(){
+  const snapshot = await db.ref("posts").orderByChild("timestamp").once("value");
+  const postsContainer = document.getElementById("postsContainer");
+  postsContainer.innerHTML = "";
+  const posts = snapshot.val();
+  if(!posts) return;
 
-    if(!name || !address || !whatsapp || !imageFile){
-      alert("सभी fields भरें!");
-      return;
-    }
+  // Sort by timestamp descending
+  const postArray = Object.keys(posts).map(k=>({id:k, ...posts[k]})).sort((a,b)=>b.timestamp-a.timestamp);
 
-    const imageUrl = await uploadImage(imageFile);
-    const postRef = db.ref("posts").push();
-    postRef.set({
-      name, address, whatsapp, imageUrl,
-      status: "waiting",
-      posterEmail: currentUser.email
-    });
+  postArray.forEach(post=>{
+    const isAdmin = currentUser && adminEmails.includes(currentUser.email);
+    const card = document.createElement("div");
+    card.className = "card "+(post.status=="approved"?"approved":"waiting");
 
-    alert("Post submitted! Waiting for approval.");
-    document.getElementById("shopName").value = "";
-    document.getElementById("shopAddress").value = "";
-    document.getElementById("shopWhatsApp").value = "";
-    document.getElementById("shopImage").value = "";
-    loadPosts();
-  };
-
-  function renderCard(postKey, postData){
-    const isAdmin = currentUser && currentUser.email === adminEmail;
-    const statusColor = postData.status === "approved" ? "bg-green-200" : "bg-yellow-200";
-
-    let buttons = "";
-    if(isAdmin){
-      buttons = `
-        <div class="flex justify-between mt-2">
-          <button onclick="updateStatus('${postKey}','approved')" class="bg-green-500 text-white px-2 py-1 rounded shadow hover:shadow-lg">Approve</button>
-          <button onclick="updateStatus('${postKey}','waiting')" class="bg-yellow-500 text-white px-2 py-1 rounded shadow hover:shadow-lg">Set Waiting</button>
-          <button onclick="deletePost('${postKey}')" class="bg-red-500 text-white px-2 py-1 rounded shadow hover:shadow-lg">Delete</button>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="bg-white p-3 rounded shadow">
-        <img src="${postData.imageUrl}" class="w-full h-48 object-contain rounded mb-2">
-        <h3 class="font-semibold">${postData.name}</h3>
-        <p>${postData.address}</p>
-        <p>WhatsApp: <a href="https://wa.me/${postData.whatsapp}" target="_blank" class="text-blue-500">${postData.whatsapp}</a></p>
-        <p class="mt-1 px-2 py-1 rounded ${statusColor} inline-block">${postData.status.toUpperCase()}</p>
-        ${buttons}
-      </div>
+    card.innerHTML = `
+      <img src="${post.imageUrl}" class="w-full h-48 object-cover rounded mb-2"/>
+      <h3 class="font-bold text-lg">${post.shopName}</h3>
+      <p>${post.address}</p>
+      <p>Category: ${post.category}</p>
+      <p>WhatsApp: <a href="https://wa.me/${post.whatsapp}" target="_blank" class="text-blue-600">${post.whatsapp}</a></p>
+      <p>Status: <strong>${post.status}</strong></p>
+      ${isAdmin ? `
+        <div class="mt-2">
+          <button class="admin-btn approve-btn" onclick="updateStatus('${post.id}','approved')">Approve</button>
+          <button class="admin-btn reject-btn" onclick="updateStatus('${post.id}','waiting')">Reject</button>
+          <button class="admin-btn delete-btn" onclick="deletePost('${post.id}')">Delete</button>
+        </div>` : ""}
     `;
+    postsContainer.appendChild(card);
+  });
+}
+
+// Update status
+function updateStatus(id,status){
+  db.ref("posts/"+id).update({status}).then(loadPosts);
+}
+
+// Delete post
+function deletePost(id){
+  if(confirm("Are you sure you want to delete this post?")){
+    db.ref("posts/"+id).remove().then(loadPosts);
   }
+}
 
-  function loadPosts(){
-    db.ref("posts").once("value", snapshot => {
-      const posts = snapshot.val();
-      postsGrid.innerHTML = "";
-      if(!posts) return;
-
-      Object.keys(posts).forEach(key => {
-        let post = posts[key];
-        // Non-admin users see only approved posts
-        if(!currentUser || currentUser.email !== adminEmail){
-          if(post.status !== "approved") return;
-        }
-        postsGrid.innerHTML += renderCard(key, post);
-      });
-    });
+// Initial load (no login needed)
+auth.onAuthStateChanged(user=>{
+  currentUser = user;
+  if(user){
+    loginBtn.classList.add("hidden");
+    logoutBtn.classList.remove("hidden");
+    postFormContainer.classList.remove("hidden");
+  } else {
+    loginBtn.classList.remove("hidden");
+    logoutBtn.classList.add("hidden");
+    postFormContainer.classList.add("hidden");
   }
-
-  window.updateStatus = (key,status) => {
-    db.ref("posts/"+key).update({status});
-    loadPosts();
-  };
-
-  window.deletePost = (key) => {
-    if(confirm("क्या आप सच में delete करना चाहते हैं?")){
-      db.ref("posts/"+key).remove();
-      loadPosts();
-    }
-  };
+  loadPosts();
+});
 
 </script>
+
 </body>
 </html>
