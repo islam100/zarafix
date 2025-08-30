@@ -1,13 +1,32 @@
-<input type="file" id="imageUpload" />
-<button onclick="uploadImage()">Upload</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Upload with Notification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="p-6">
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
-  import { getDatabase, ref as dbRef, push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  <!-- Upload Form -->
+  <div id="uploadSection" class="mt-6">
+    <h2 class="text-lg font-bold mb-2">Upload New Image</h2>
+    <input type="file" id="imageUpload" accept="image/*" class="mb-2" />
+    <button onclick="uploadImage()" class="bg-green-600 text-white px-4 py-2 rounded">Upload</button>
+  </div>
 
-const firebaseConfig = {
+  <!-- Notification -->
+  <div id="notify" class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded shadow-lg">
+    ✅ Image uploaded successfully!
+  </div>
+
+  <script>
+    // ✅ Firebase Config (यहाँ अपना config डालें)
+   const firebaseConfig = {
   apiKey: "AIzaSyAAOYtvC0kiu_vZTYuQ8phPyMqTEFJj9O0",
   authDomain: "new-bike-59133.firebaseapp.com",
   projectId: "new-bike-59133",
@@ -17,34 +36,34 @@ const firebaseConfig = {
 };
 
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const storage = getStorage(app);
-  const database = getDatabase(app);
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const db = firebase.database();
 
-  // Sign in with Google
-  const provider = new GoogleAuthProvider();
-  signInWithPopup(auth, provider);
+    // Upload Function
+    function uploadImage() {
+      const file = document.getElementById("imageUpload").files[0];
+      if (!file) {
+        alert("कृपया एक इमेज चुनें!");
+        return;
+      }
 
-  // Upload function
-  window.uploadImage = async function() {
-    const file = document.getElementById("imageUpload").files[0];
-    if (!file) return alert("Please select an image");
+      const storageRef = storage.ref("slideshow/" + Date.now() + "_" + file.name);
+      storageRef.put(file).then((snapshot) => {
+        snapshot.ref.getDownloadURL().then((url) => {
+          db.ref("slideshow").push({ imageUrl: url }).then(() => {
+            // ✅ Notification दिखाएँ
+            let notify = document.getElementById("notify");
+            notify.classList.remove("hidden");
+            setTimeout(() => notify.classList.add("hidden"), 3000);
+          });
+        });
+      }).catch((err) => {
+        alert("❌ Error uploading: " + err.message);
+      });
+    }
+  </script>
 
-    const user = auth.currentUser;
-    if (!user) return alert("Please login first");
-
-    const storageRef = ref(storage, "uploads/" + Date.now() + "-" + file.name);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-
-    // save in db as pending
-    await push(dbRef(database, "images"), {
-      url: url,
-      status: "pending",
-      uploadedBy: user.email
-    });
-
-    alert("Image uploaded successfully (Pending Approval)");
-  }
-</script>
+</body>
+</html>
