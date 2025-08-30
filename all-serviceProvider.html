@@ -1,166 +1,174 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZaraFix Posts</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaraFix - All Service Providers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body class="bg-gray-100">
 
-<div class="p-4">
-    <button id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Login with Google</button>
-    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hidden">Logout</button>
-</div>
+  <div class="p-4 flex justify-between items-center bg-white shadow-md">
+    <h1 class="text-2xl font-bold">ZaraFix</h1>
+    <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Login with Google</button>
+    <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded hidden">Logout</button>
+  </div>
 
-<div id="uploadSection" class="p-4 hidden">
-    <input type="text" id="shopName" placeholder="Shop Name" class="border p-2 rounded w-full mb-2">
-    <input type="text" id="address" placeholder="Address" class="border p-2 rounded w-full mb-2">
-    <input type="text" id="whatsapp" placeholder="WhatsApp Number" class="border p-2 rounded w-full mb-2">
-    <input type="file" id="shopImage" class="border p-2 rounded w-full mb-2">
-    <button id="postBtn" class="bg-green-500 text-white px-4 py-2 rounded">Post</button>
-</div>
+  <div id="postFormContainer" class="p-4 hidden bg-white shadow-md m-4 rounded">
+    <h2 class="text-xl font-semibold mb-2">New Post</h2>
+    <form id="postForm" class="space-y-2">
+      <input type="text" id="shopName" placeholder="Shop Name" class="w-full border px-2 py-1 rounded" required>
+      <input type="text" id="address" placeholder="Address" class="w-full border px-2 py-1 rounded" required>
+      <input type="text" id="category" placeholder="Category" class="w-full border px-2 py-1 rounded" required>
+      <input type="text" id="whatsapp" placeholder="WhatsApp No." class="w-full border px-2 py-1 rounded" required>
+      <input type="file" id="imageFile" class="w-full border px-2 py-1 rounded" required>
+      <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded">Submit Post</button>
+    </form>
+  </div>
 
-<div id="postsContainer" class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  <div id="postsContainer" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
 <script>
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-firebase.initializeApp(firebaseConfig);
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-// Admin email
-const adminEmail = "zarasamajiksevasanstha@gmail.com";
-let currentUser = null;
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-// Login
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const uploadSection = document.getElementById("uploadSection");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postFormContainer = document.getElementById("postFormContainer");
+  const postForm = document.getElementById("postForm");
+  const postsContainer = document.getElementById("postsContainer");
 
-loginBtn.onclick = async () => {
+  let currentUser = null;
+  let isAdmin = false;
+
+  // Login with Google
+  loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await firebase.auth().signInWithPopup(provider);
-    currentUser = result.user;
-};
+    auth.signInWithPopup(provider);
+  };
 
-logoutBtn.onclick = () => {
-    firebase.auth().signOut();
-    currentUser = null;
-};
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
-// Auth state change
-firebase.auth().onAuthStateChanged(user => {
+  auth.onAuthStateChanged(user => {
     if(user){
-        currentUser = user;
-        loginBtn.classList.add("hidden");
-        logoutBtn.classList.remove("hidden");
-        uploadSection.classList.remove("hidden");
-        loadPosts();
+      currentUser = user;
+      isAdmin = user.email === adminEmail;
+      loginBtn.classList.add("hidden");
+      logoutBtn.classList.remove("hidden");
+      postFormContainer.classList.remove("hidden");
+      loadPosts();
     } else {
-        currentUser = null;
-        loginBtn.classList.remove("hidden");
-        logoutBtn.classList.add("hidden");
-        uploadSection.classList.add("hidden");
-        document.getElementById("postsContainer").innerHTML = "";
+      currentUser = null;
+      isAdmin = false;
+      loginBtn.classList.remove("hidden");
+      logoutBtn.classList.add("hidden");
+      postFormContainer.classList.add("hidden");
+      postsContainer.innerHTML = '';
     }
-});
+  });
 
-// Post
-document.getElementById("postBtn").onclick = async () => {
+  // Post form submission
+  postForm.onsubmit = async (e) => {
+    e.preventDefault();
     const shopName = document.getElementById("shopName").value;
     const address = document.getElementById("address").value;
+    const category = document.getElementById("category").value;
     const whatsapp = document.getElementById("whatsapp").value;
-    const file = document.getElementById("shopImage").files[0];
+    const file = document.getElementById("imageFile").files[0];
 
-    if(!shopName || !address || !whatsapp || !file){
-        alert("सभी fields भरें और image चुनें");
-        return;
-    }
+    if(!file) return alert("Please select an image");
 
     const fd = new FormData();
     fd.append("image", file);
 
     // Upload to imgbb
     const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
-    const data = await r.json();
-    const imageURL = data.data.url;
+    const res = await r.json();
+    const imageUrl = res.data.display_url;
 
-    // Save to Firebase
-    const newPostRef = firebase.database().ref("posts").push();
-    await newPostRef.set({
-        shopName, address, whatsapp, imageURL,
-        status: "Waiting",
-        uid: currentUser.uid
+    const newPostRef = db.ref("posts").push();
+    newPostRef.set({
+      shopName, address, category, whatsapp, imageUrl,
+      status: "waiting",
+      userEmail: currentUser.email,
+      timestamp: Date.now()
     });
 
-    document.getElementById("shopName").value="";
-    document.getElementById("address").value="";
-    document.getElementById("whatsapp").value="";
-    document.getElementById("shopImage").value="";
+    postForm.reset();
+    alert("Post submitted for approval");
+  };
 
-    loadPosts();
-};
+  // Load posts
+  function loadPosts(){
+    db.ref("posts").orderByChild("timestamp").on("value", snapshot => {
+      postsContainer.innerHTML = '';
+      const posts = snapshot.val();
+      if(posts){
+        const postArray = Object.entries(posts).sort((a,b)=>b[1].timestamp - a[1].timestamp);
+        postArray.forEach(([key, post]) => {
+          const card = document.createElement("div");
+          card.className = "bg-white p-4 rounded shadow relative";
 
-// Load posts
-async function loadPosts(){
-    const snapshot = await firebase.database().ref("posts").once("value");
-    const postsContainer = document.getElementById("postsContainer");
-    postsContainer.innerHTML = "";
+          // Status color
+          let statusColor = post.status === "approved" ? "bg-green-100" : "bg-yellow-100";
+          card.classList.add(statusColor);
 
-    snapshot.forEach(child => {
-        const post = child.val();
-        const id = child.key;
-
-        const card = document.createElement("div");
-        card.className = "bg-white p-4 rounded shadow";
-
-        // Status color
-        let statusColor = "yellow";
-        if(post.status === "Approved") statusColor = "green";
-        if(post.status === "Rejected") statusColor = "red";
-
-        card.innerHTML = `
-            <h3 class="font-bold text-lg">${post.shopName}</h3>
+          card.innerHTML = `
+            <img src="${post.imageUrl}" class="w-full h-40 object-cover rounded mb-2">
+            <h2 class="font-bold text-lg">${post.shopName}</h2>
             <p>${post.address}</p>
-            <p>WhatsApp: ${post.whatsapp}</p>
-            <img src="${post.imageURL}" class="w-full h-48 object-cover my-2 rounded">
-            <p class="font-bold text-white px-2 py-1 rounded" style="background-color:${statusColor}">${post.status}</p>
-        `;
+            <p>Category: ${post.category}</p>
+            <p>WhatsApp: <a href="https://wa.me/${post.whatsapp}" target="_blank" class="text-blue-600">${post.whatsapp}</a></p>
+            <p>Status: <span class="font-bold">${post.status}</span></p>
+          `;
 
-        // Admin buttons
-        if(currentUser && currentUser.email === adminEmail){
+          if(isAdmin){
+            const btnContainer = document.createElement("div");
+            btnContainer.className = "flex gap-2 mt-2";
+
             const approveBtn = document.createElement("button");
+            approveBtn.className = "px-2 py-1 bg-green-500 text-white rounded 3d-btn";
             approveBtn.innerText = "Approve";
-            approveBtn.className = "bg-green-500 text-white px-2 py-1 m-1 rounded";
-            approveBtn.onclick = () => firebase.database().ref("posts/"+id).update({status:"Approved"}).then(loadPosts);
+            approveBtn.onclick = ()=>db.ref("posts/"+key).update({status:"approved"});
 
             const rejectBtn = document.createElement("button");
+            rejectBtn.className = "px-2 py-1 bg-yellow-500 text-white rounded 3d-btn";
             rejectBtn.innerText = "Reject";
-            rejectBtn.className = "bg-red-500 text-white px-2 py-1 m-1 rounded";
-            rejectBtn.onclick = () => firebase.database().ref("posts/"+id).update({status:"Rejected"}).then(loadPosts);
+            rejectBtn.onclick = ()=>db.ref("posts/"+key).update({status:"waiting"});
 
             const deleteBtn = document.createElement("button");
+            deleteBtn.className = "px-2 py-1 bg-red-500 text-white rounded 3d-btn";
             deleteBtn.innerText = "Delete";
-            deleteBtn.className = "bg-gray-500 text-white px-2 py-1 m-1 rounded";
-            deleteBtn.onclick = () => firebase.database().ref("posts/"+id).remove().then(loadPosts);
+            deleteBtn.onclick = ()=>db.ref("posts/"+key).remove();
 
-            card.append(approveBtn, rejectBtn, deleteBtn);
-        }
+            btnContainer.append(approveBtn, rejectBtn, deleteBtn);
+            card.appendChild(btnContainer);
+          }
 
-        postsContainer.appendChild(card);
+          postsContainer.appendChild(card);
+        });
+      }
     });
-}
+  }
 </script>
+
 </body>
 </html>
