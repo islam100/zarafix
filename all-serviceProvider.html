@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Image Upload Direct - Firebase</title>
+  <title>Service Provider Form</title>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Firebase -->
@@ -11,70 +11,92 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+<body class="bg-gray-100 min-h-screen flex justify-center items-center">
 
   <div class="bg-white p-6 rounded-xl shadow-md w-full max-w-md">
-    <h1 class="text-xl font-bold mb-4 text-center">📤 Direct Image Upload</h1>
+    <h1 class="text-xl font-bold mb-4 text-center">📝 Service Provider Registration</h1>
 
-    <input type="file" id="imageFile" accept="image/*" class="mb-3 border p-2 w-full rounded"/>
-    <button onclick="uploadImage()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Upload</button>
+    <form id="providerForm" onsubmit="submitForm(event)">
+      <input type="text" id="name" placeholder="Name" class="w-full border p-2 rounded mb-3" required/>
+      <input type="text" id="category" placeholder="Category (Doctor, Shop, etc.)" class="w-full border p-2 rounded mb-3" required/>
+      <input type="text" id="address" placeholder="Address" class="w-full border p-2 rounded mb-3" required/>
+      <input type="text" id="contact" placeholder="Contact Number" class="w-full border p-2 rounded mb-3" required/>
+      <input type="file" id="imageFile" accept="image/*" class="mb-3 w-full" required/>
+
+      <button id="submitBtn" type="submit" class="bg-blue-500 text-white px-4 py-2 rounded w-full">
+        Submit
+      </button>
+    </form>
 
     <p id="status" class="mt-3 text-center text-sm text-gray-600"></p>
-
-    <div id="preview" class="mt-4"></div>
   </div>
 
   <script>
-    // 🔹 Firebase Config (अपना config यहां डालें)
+    // 🔹 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
       databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
       projectId: "zara-fix-2e35a",
       storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "170786119757",
-      appId: "1:170786119757:web:a41a01f188e3a1d820c1ae"
+      messagingSenderId: "636550144008",
+      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
 
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
     const database = firebase.database();
 
-    async function uploadImage() {
-      const fileInput = document.getElementById("imageFile");
-      const status = document.getElementById("status");
-      const preview = document.getElementById("preview");
+    async function submitForm(e) {
+      e.preventDefault();
 
-      if (!fileInput.files.length) {
-        status.innerText = "⚠️ Please select an image first!";
+      const submitBtn = document.getElementById("submitBtn");
+      const status = document.getElementById("status");
+
+      // Disable button & change text
+      submitBtn.disabled = true;
+      submitBtn.innerText = "⏳ Wait for Approval";
+
+      const name = document.getElementById("name").value;
+      const category = document.getElementById("category").value;
+      const address = document.getElementById("address").value;
+      const contact = document.getElementById("contact").value;
+      const file = document.getElementById("imageFile").files[0];
+
+      if (!file) {
+        status.innerText = "⚠️ Please select an image!";
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit";
         return;
       }
 
-      const file = fileInput.files[0];
-      const storageRef = storage.ref("uploads/" + Date.now() + "_" + file.name);
-
-      status.innerText = "⏳ Uploading...";
-
       try {
+        // Upload Image
+        const storageRef = storage.ref("providers/" + Date.now() + "_" + file.name);
         await storageRef.put(file);
-        const downloadURL = await storageRef.getDownloadURL();
+        const imageUrl = await storageRef.getDownloadURL();
 
-        // Firebase Database में सेव करें
-        const newPostRef = database.ref("images").push();
-        newPostRef.set({
-          imageUrl: downloadURL,
+        // Save to Firebase DB with status = waiting
+        const newPostRef = database.ref("providers").push();
+        await newPostRef.set({
+          name,
+          category,
+          address,
+          contact,
+          imageUrl,
+          status: "waiting", // 🔑 waiting for admin approval
           timestamp: Date.now()
         });
 
-        status.innerText = "✅ Uploaded Successfully!";
-        preview.innerHTML = `<img src="${downloadURL}" class="mt-3 w-full rounded shadow"/>`;
+        status.innerText = "✅ Submitted Successfully! Wait for Admin Approval.";
 
       } catch (error) {
         console.error(error);
         status.innerText = "❌ Error: " + error.message;
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit";
       }
     }
   </script>
-
 </body>
 </html>
