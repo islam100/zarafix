@@ -1,520 +1,162 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix — Providers + Wallet</title>
-
-  <!-- Firebase v8 -->
+  <meta charset="UTF-8">
+  <title>Hospital Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <style>
-    :root{
-      --bg:#0b1020; --card:#0f1530; --accent:#7c90ff; --accent2:#18c8ff; --text:#e6e9ff;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#061026,#07112a);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    header{display:flex;gap:12px;align-items:center}
-    h1{margin:0;font-size:20px}
-    input,textarea,select{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text);padding:10px;border-radius:10px;width:100%}
-    .btn{background:linear-gradient(180deg,#fff,#dfe6ff);color:#061026;border:none;padding:10px 14px;border-radius:14px;font-weight:800;cursor:pointer;box-shadow:0 10px 20px rgba(0,0,0,.4)}
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text)}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .spacer{flex:1}
-    .grid{display:grid;gap:14px;grid-template-columns:repeat(1,1fr);margin-top:16px}
-    @media(min-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
-    @media(min-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.06)}
-    .card h3{margin:0 0 6px 0}
-    .muted{color:#9aa6ff;font-size:13px}
-    .pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.04);display:inline-block}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:18px;z-index:1000}
-    .modal.open{display:flex}
-    .sheet{width:100%;max-width:720px;background:var(--card);padding:16px;border-radius:14px;border:1px solid rgba(255,255,255,.06)}
-    .hide{display:none}
-    .small{font-size:13px;color:#c8d2ff}
-    .thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.06)}
-    .badge{font-size:12px;padding:6px 8px;border-radius:8px;background:rgba(124,144,255,.12);color:var(--text)}
-    .rowbtns{display:flex;gap:8px;flex-wrap:wrap}
-  </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>🛠 ZaraFix — Service Providers</h1>
-      <div class="spacer"></div>
-      <input id="search" placeholder="Search name, city, category..." />
-      <button id="btnLogin" class="btn">Login with Google</button>
-      <button id="btnLogout" class="btn hide">Logout</button>
-      <div id="walletInfo" class="pill hide" style="margin-left:12px">Wallet: ₹<span id="walletAmt">0</span></div>
-    </header>
+  <h1>Hospital Portal</h1>
 
-    <!-- Provider submit form (visible to logged-in users) -->
-    <section id="providerFormWrap" class="card hide" style="margin-top:18px">
-      <h3>Post Service Profile</h3>
-      <div class="small muted">Admin approval के बाद public listing में दिखाई देगा</div>
-      <div style="height:12px"></div>
-      <div class="row" style="gap:14px">
-        <div style="flex:1">
-          <label class="small">Your Name</label>
-          <input id="spName" placeholder="Full name" />
-        </div>
-        <div style="flex:1">
-          <label class="small">Business / Shop Name</label>
-          <input id="businessName" placeholder="Shop or Service name" />
-        </div>
-      </div>
+  <!-- Login / Logout -->
+  <button id="loginBtn">Login with Google</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
 
-      <div style="height:12px"></div>
-      <label class="small">Category</label>
-      <input id="category" placeholder="Doctor, Hospital, Ambulance, Electrician..." />
+  <!-- Post Form (only for normal users) -->
+  <div id="postFormSection" style="display:none;">
+    <h2>Create a Post</h2>
+    <form id="postForm">
+      <label>Hospital Name:</label>
+      <input type="text" id="hospitalName" required><br>
+      <label>Category:</label>
+      <select id="category">
+        <option>Government</option>
+        <option>Private</option>
+        <option>Clinic</option>
+      </select><br>
+      <label>Address:</label>
+      <input type="text" id="address" required><br>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
 
-      <div style="height:12px"></div>
-      <div class="row">
-        <div style="flex:1">
-          <label class="small">Mobile</label>
-          <input id="mobile" placeholder="Contact number" />
-        </div>
-        <div style="flex:1">
-          <label class="small">WhatsApp</label>
-          <input id="whatsapp" placeholder="WhatsApp number" />
-        </div>
-      </div>
+  <!-- Posts visible to everyone -->
+  <h2>All Posts</h2>
+  <div id="postsList"></div>
 
-      <div style="height:12px"></div>
-      <div class="row">
-        <div style="flex:1">
-          <label class="small">Address (city, area)</label>
-          <input id="address" placeholder="Address / City" />
-        </div>
-        <div style="flex:1">
-          <label class="small">Service Hours</label>
-          <input id="hours" placeholder="eg. 9AM - 10PM" value="9AM - 10PM"/>
-        </div>
-      </div>
-
-      <div style="height:12px"></div>
-      <div class="row">
-        <div style="flex:1">
-          <label class="small">Map Location (auto)</label>
-          <input id="latlng" readonly placeholder="lat,lng (click auto detect)"/>
-          <div class="small muted">Allow browser location to auto-fill</div>
-        </div>
-        <div style="flex:1">
-          <label class="small">Profile / Shop Photo</label>
-          <input type="file" id="photo" accept="image/*" />
-          <div class="small muted">Image uploaded directly (ImgBB)</div>
-        </div>
-      </div>
-
-      <div style="height:12px"></div>
-      <div class="rowbtns">
-        <button id="btnLocate" class="btn">📍 Auto Detect Location</button>
-        <button id="btnSubmitProvider" class="btn">Submit for Approval</button>
-        <div id="formStatus" class="badge" style="align-self:center">Status: draft</div>
-      </div>
-    </section>
-
-    <!-- Providers grid (public) -->
-    <section style="margin-top:18px">
-      <div class="grid" id="grid"></div>
-    </section>
-
-    <!-- Recharge Modal -->
-    <div id="rechargeModal" class="modal">
-      <div class="sheet">
-        <h3>Wallet Recharge (₹100)</h3>
-        <div class="small muted">Upload UPI payment screenshot. Admin will verify and approve.</div>
-        <div style="height:12px"></div>
-        <input type="file" id="ssRecharge" accept="image/*" />
-        <div style="height:12px"></div>
-        <div class="rowbtns">
-          <button id="sendRechargeReq" class="btn">Send Recharge Request</button>
-          <button id="closeRecharge" class="btn ghost">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toast -->
-    <div id="toast" style="position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:rgba(0,0,0,.6);padding:10px 14px;border-radius:10px;display:none"></div>
+  <!-- Admin Dashboard -->
+  <div id="adminSection" style="display:none;">
+    <h2>Admin Dashboard</h2>
+    <div id="adminPosts"></div>
   </div>
 
 <script>
-/* ---------------- CONFIG ---------------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-};
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-
-/* ---------------- STATE & UI ---------------- */
-let currentUser = null;
-let isAdmin = false;
-let providers = {}; // cache
-
-const qs = s => document.querySelector(s);
-const grid = qs('#grid');
-const toastEl = qs('#toast');
-function toast(msg){ toastEl.textContent = msg; toastEl.style.display = 'block'; setTimeout(()=>toastEl.style.display='none',2200); }
-
-/* UI refs */
-const btnLogin = qs('#btnLogin'), btnLogout = qs('#btnLogout'), searchInput = qs('#search');
-const providerFormWrap = qs('#providerFormWrap'), btnLocate = qs('#btnLocate'), btnSubmitProvider = qs('#btnSubmitProvider');
-const formStatus = qs('#formStatus');
-const walletInfo = qs('#walletInfo'), walletAmt = qs('#walletAmt');
-const rechargeModal = qs('#rechargeModal'), btnRechargeClose = qs('#closeRecharge'), btnSendRecharge = qs('#sendRechargeReq');
-
-/* ---------------- AUTH ---------------- */
-btnLogin.onclick = async () => {
-  try{
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-  }catch(e){ console.error(e); toast('Login failed'); }
-};
-btnLogout.onclick = ()=> auth.signOut();
-
-auth.onAuthStateChanged(async (user)=>{
-  currentUser = user;
-  isAdmin = !!(user && user.email === ADMIN_EMAIL);
-  btnLogin.classList.toggle('hide', !!user);
-  btnLogout.classList.toggle('hide', !user);
-  providerFormWrap.classList.toggle('hide', !user);
-  walletInfo.classList.toggle('hide', !user);
-
-  if(user){
-    // ensure wallet exists
-    const wref = db.ref('wallets/'+user.uid);
-    const snap = await wref.once('value');
-    if(!snap.exists()) await wref.set({ balance:0, updatedAt: Date.now() });
-    wref.on('value', s=>{ const val = s.val(); walletAmt.textContent = val? (val.balance||0):0 });
-
-    // show admin UI elements if admin
-    if(isAdmin){
-      // Place admin recharge host if not present
-      renderAdminRechargeList();
-    }
-  } else {
-    // hide admin recharge host if existed
-    const host = document.getElementById('adminRechargeHost'); if(host) host.remove();
-  }
-
-  // render providers list (updates visibility/grants using currentUser)
-  renderApprovedProviders();
-});
-
-/* ---------------- IMG UPLOAD (ImgBB) ---------------- */
-async function uploadToImgBB(file){
-  const fd = new FormData();
-  fd.append('image', file);
-  const r = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method:'POST', body: fd });
-  const j = await r.json();
-  if(!j || !j.success) throw new Error('ImgBB upload failed');
-  return j.data.display_url;
-}
-
-/* ---------------- PROVIDER FORM ---------------- */
-btnLocate.onclick = ()=>{
-  if(!navigator.geolocation){ toast('Geolocation not supported'); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    qs('#latlng').value = `${pos.coords.latitude.toFixed(6)},${pos.coords.longitude.toFixed(6)}`;
-  }, ()=> toast('Location permission denied'));
-};
-
-btnSubmitProvider.addEventListener('click', async (e)=>{
-  e.preventDefault();
-  if(!currentUser) return toast('Login required');
-  const p = {
-    uid: currentUser.uid,
-    name: qs('#spName').value.trim(),
-    businessName: qs('#businessName').value.trim(),
-    category: qs('#category').value.trim(),
-    mobile: qs('#mobile').value.trim(),
-    whatsapp: qs('#whatsapp').value.trim(),
-    address: qs('#address').value.trim(),
-    hours: qs('#hours').value.trim(),
-    lat: null, lng: null, city: '',
-    imageUrl: '',
-    status: 'waiting',
-    createdAt: Date.now()
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
+    authDomain: "your-app.firebaseapp.com",
+    databaseURL: "https://your-app.firebaseio.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
   };
-  const ll = qs('#latlng').value.trim();
-  if(ll){ const [la,ln] = ll.split(',').map(s=>parseFloat(s)); p.lat = la; p.lng = ln; }
-  const file = qs('#photo').files[0];
-  try{
-    if(file){ p.imageUrl = await uploadToImgBB(file); }
-    if(p.address){ const parts = p.address.split(','); p.city = parts[parts.length-1].trim(); }
-    await db.ref('providers').push(p);
-    formStatus.textContent = 'Status: waiting';
-    toast('Submitted! Waiting for admin approval');
-    // reset simple fields
-    qs('#spName').value=''; qs('#businessName').value=''; qs('#category').value=''; qs('#mobile').value='';
-    qs('#whatsapp').value=''; qs('#address').value=''; qs('#hours').value='9AM - 10PM'; qs('#latlng').value=''; qs('#photo').value='';
-  }catch(err){ console.error(err); toast('Submit failed'); }
-});
+  firebase.initializeApp(firebaseConfig);
 
-/* ---------------- LIST / FILTER / RENDER ---------------- */
-searchInput.addEventListener('input', ()=> applyFilter());
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-function providerCard(p){
-  const youAreAdmin = isAdmin;
-  const img = p.imageUrl || 'https://i.ibb.co/2t5gZQd/placeholder-shop.png';
-  const hasGrant = currentUser && p._granted === true;
-  const addressBlock = hasGrant ? `<div class="pill">📍 ${p.address||'—'} ${p.lat?`| <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" style="color:#bfe0ff">Map</a>`:''}</div>` :
-    `<div class="pill">🔒 Address hidden — Pay ₹20 to unlock WhatsApp</div>`;
-  const waBtnText = hasGrant? 'WhatsApp Now' : 'Unlock & WhatsApp (₹20)';
-  const ratingHtml = p.avgRating ? `<div class="small">⭐ ${(p.avgRating).toFixed(1)} </div>` : `<div class="small muted">No ratings</div>`;
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postFormSection = document.getElementById("postFormSection");
+  const adminSection = document.getElementById("adminSection");
 
-  return `
-    <div class="card" data-id="${p.id}">
-      <div style="display:flex;gap:12px;align-items:center">
-        <img class="thumb" src="${img}" alt="img"/>
-        <div style="flex:1">
-          <h3 style="margin:0">${p.businessName||'Unnamed'}</h3>
-          <div class="muted">${p.category||'Category'} • ${p.city||''}</div>
-          ${ratingHtml}
-        </div>
-        <div><span class="badge">${p.status||'waiting'}</span></div>
-      </div>
-      <div style="height:8px"></div>
-      ${addressBlock}
-      <div style="height:8px"></div>
-      <div class="rowbtns">
-        <a class="btn ghost" href="tel:${p.mobile||''}">📞 Call Now</a>
-        <button class="btn" data-act="whatsapp" ${!currentUser? 'title="Login required"':''}>💬 ${waBtnText}</button>
-        ${youAreAdmin? `<button class="btn" data-act="approve">Approve</button>
-                       <button class="btn ghost" data-act="reject">Reject</button>
-                       <button class="btn" data-act="delete">Delete</button>` : ''}
-      </div>
-
-      <div style="height:10px"></div>
-      <div>
-        <div class="small muted">Leave a rating</div>
-        <div class="row" style="gap:8px;margin-top:6px">
-          <input data-role="rating" type="number" min="1" max="5" placeholder="1-5" style="width:80px"/>
-          <input data-role="comment" placeholder="Feedback" />
-          <button class="btn" data-act="review">Submit</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function mountCards(list){ grid.innerHTML = list.map(providerCard).join(''); }
-
-// handle buttons inside cards (delegate)
-grid.addEventListener('click', async (e)=>{
-  const actEl = e.target.closest('[data-act]'); if(!actEl) return;
-  const card = e.target.closest('.card'); const id = card?.dataset?.id; if(!id) return;
-  const p = providers[id];
-  const act = actEl.dataset.act;
-
-  if(act === 'whatsapp'){
-    if(!currentUser){ toast('Login required to unlock WhatsApp'); return; }
-    await handleWhatsAppUnlock(p);
-    return;
-  }
-  if(!isAdmin) return;
-  if(act === 'approve'){ await db.ref('providers/'+id+'/status').set('approved'); toast('Approved'); }
-  else if(act === 'reject'){ await db.ref('providers/'+id+'/status').set('rejected'); toast('Rejected (not deleted)'); }
-  else if(act === 'delete'){ if(confirm('Delete listing?')){ await db.ref('providers/'+id).remove(); toast('Deleted'); } }
-});
-
-// review submit
-grid.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('[data-act="review"]'); if(!btn) return;
-  if(!currentUser){ toast('Login to rate'); return; }
-  const card = e.target.closest('.card'); const id = card?.dataset?.id; if(!id) return;
-  const ratingEl = card.querySelector('input[data-role="rating"]'); const commentEl = card.querySelector('input[data-role="comment"]');
-  const rating = parseInt(ratingEl.value,10);
-  if(!(rating>=1 && rating<=5)){ toast('Rating 1-5 only'); return; }
-  const comment = (commentEl.value||'').trim();
-  await db.ref(`reviews/${id}/${currentUser.uid}`).set({ rating, comment, createdAt: Date.now(), user: currentUser.displayName||currentUser.email||'user' });
-  toast('Thanks for the review!');
-});
-
-/* ---------------- compute ratings & grants & render approved ---------------- */
-async function computeRatingsAndGrants(list){
-  const revSnap = await db.ref('reviews').once('value'); const revAll = revSnap.val()||{};
-  const grantsSnap = currentUser? await db.ref('clickGrants/'+currentUser.uid).once('value') : null;
-  const grants = grantsSnap? (grantsSnap.val()||{}) : {};
-  list.forEach(p=>{
-    const rmap = revAll[p.id]||{}; const arr = Object.values(rmap);
-    p.avgRating = arr.length ? (arr.reduce((a,b)=>a+(b.rating||0),0)/arr.length) : 0;
-    p._grantedMap = grants;
+  // Google Login
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   });
-}
 
-function applyFilter(){
-  const q = (searchInput.value||'').toLowerCase();
-  const list = Object.values(providers).filter(p=> p.status==='approved' && (
-    (p.businessName||'').toLowerCase().includes(q) ||
-    (p.category||'').toLowerCase().includes(q) ||
-    (p.city||'').toLowerCase().includes(q) ||
-    (p.address||'').toLowerCase().includes(q)
-  ));
-  if(currentUser){
-    const uid = currentUser.uid;
-    list.forEach(p=> p._granted = !!(p._grantedMap && p._grantedMap[uid]));
-  } else list.forEach(p=> p._granted = false);
-  mountCards(list);
-}
-
-function renderApprovedProviders(){
-  db.ref('providers').on('value', async (snap)=>{
-    providers = {};
-    const val = snap.val()||{};
-    Object.keys(val).forEach(id=> providers[id] = { id, ...val[id] });
-    const list = Object.values(providers).filter(p=>p.status==='approved');
-    await computeRatingsAndGrants(list);
-    applyFilter();
+  // Logout
+  logoutBtn.addEventListener("click", () => {
+    auth.signOut();
   });
-}
-renderApprovedProviders();
 
-/* ---------------- WhatsApp unlock & wallet deduction ---------------- */
-async function handleWhatsAppUnlock(p){
-  const uid = currentUser.uid;
-  const grantRef = db.ref(`clickGrants/${uid}/${p.id}`);
-  const g = await grantRef.once('value');
-  if(g.exists()){ openWhatsApp(p); return; }
-  // check wallet
-  const wref = db.ref('wallets/'+uid);
-  const snap = await wref.once('value'); const bal = (snap.val() && snap.val().balance) || 0;
-  if(bal < 20){ toast('Insufficient balance. Please recharge ₹100'); rechargeModal.classList.add('open'); return; }
-  // transaction
-  const txRes = await wref.transaction(w=>{
-    if(!w) w = { balance:0 };
-    if(w.balance >= 20){ w.balance -= 20; w.updatedAt = Date.now(); return w; }
-    return; // abort
-  });
-  if(txRes.committed){
-    await db.ref('transactions/'+uid).push({ type:'debit', amount:20, reason:'unlock_whatsapp', providerId:p.id, at:Date.now() });
-    await grantRef.set(true);
-    toast('₹20 deducted. WhatsApp unlocked!');
-    openWhatsApp(p);
-  } else {
-    toast('Transaction failed. Try again');
-  }
-}
+  // Auth state check
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
 
-function openWhatsApp(p){
-  const num = (p.whatsapp||'').replace(/\D/g,'');
-  if(!num){ toast('WhatsApp number missing'); return; }
-  // mark grant locally then re-render so address shows
-  if(currentUser){ providers[p.id]._grantedMap = providers[p.id]._grantedMap||{}; providers[p.id]._grantedMap[currentUser.uid] = true; }
-  applyFilter();
-  window.open(`https://wa.me/${num}`,'_blank');
-}
-
-/* ---------------- RECHARGE REQUEST (user) ---------------- */
-qs('#btnRecharge')?.addEventListener?.('click', ()=> rechargeModal.classList.add('open'));
-qs('#btnRecharge')?.addEventListener?.('click', ()=> rechargeModal.classList.add('open'));
-btnRechargeClose.onclick = ()=> rechargeModal.classList.remove('open');
-
-btnSendRecharge.addEventListener('click', async ()=>{
-  if(!currentUser) return toast('Login required');
-  const file = qs('#ssRecharge').files[0];
-  if(!file) return toast('Attach payment screenshot');
-  try{
-    const url = await uploadToImgBB(file);
-    const reqRef = db.ref('rechargeRequests').push();
-    await reqRef.set({ uid: currentUser.uid, amount:100, imageUrl:url, status:'pending', createdAt: Date.now() });
-    toast('Recharge request sent');
-    rechargeModal.classList.remove('open');
-  }catch(e){ console.error(e); toast('Failed to send request'); }
-});
-
-/* ---------------- ADMIN: recharge list & approve ---------------- */
-function renderAdminRechargeList(){
-  if(!isAdmin) return;
-  db.ref('rechargeRequests').on('value', snap=>{
-    const val = snap.val()||{};
-    let html = '';
-    Object.entries(val).forEach(([id, r])=>{
-      html += `
-        <div class="card" data-req="${id}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="small muted">UID: ${r.uid} • Amount: ₹${r.amount}</div>
-              <div style="height:8px"></div>
-              <img src="${r.imageUrl}" style="max-width:200px;border-radius:8px;display:block;margin-bottom:8px"/>
-              <div>Status: ${r.status}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              ${r.status==='pending' ? `<button class="btn" data-act="rcg-approve" data-rid="${id}" data-uid="${r.uid}">Approve ₹100</button>
-                                       <button class="btn ghost" data-act="rcg-reject" data-rid="${id}">Reject</button>` : `<div class="pill">${r.status}</div>`}
-            </div>
-          </div>
-        </div>
-      `;
-    });
-    let host = document.getElementById('adminRechargeHost');
-    if(!host){
-      host = document.createElement('section'); host.id='adminRechargeHost'; host.className='wrap'; host.style.marginTop='18px';
-      document.querySelector('.wrap').insertBefore(host, document.querySelector('.wrap').children[2]);
+      if (user.email === "zarasamajiksevasanstha@gmail.com") {
+        // Admin
+        adminSection.style.display = "block";
+        postFormSection.style.display = "none";
+        loadAdminPosts();
+      } else {
+        // Normal User
+        postFormSection.style.display = "block";
+        adminSection.style.display = "none";
+      }
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      postFormSection.style.display = "none";
+      adminSection.style.display = "none";
     }
-    host.innerHTML = html;
-
-    host.onclick = async (e)=>{
-      const b = e.target.closest('[data-act]'); if(!b) return;
-      const act = b.dataset.act; const rid = b.dataset.rid; const uid = b.dataset.uid;
-      if(act === 'rcg-approve'){
-        const wref = db.ref('wallets/'+uid);
-        await wref.transaction(w=>{ if(!w) w={balance:0}; w.balance = (w.balance||0)+100; w.updatedAt = Date.now(); return w; });
-        await db.ref('transactions/'+uid).push({ type:'credit', amount:100, reason:'admin_recharge', requestId: rid, at: Date.now() });
-        await db.ref('rechargeRequests/'+rid+'/status').set('approved');
-        toast('Recharge approved');
-      } else if(act === 'rcg-reject'){
-        await db.ref('rechargeRequests/'+rid+'/status').set('rejected');
-        toast('Recharge rejected');
-      }
-    };
   });
-}
 
-/* ---------------- INIT ADMIN buttons in provider cards handled earlier via isAdmin flag ---------------- */
+  // Submit Post
+  document.getElementById("postForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const postData = {
+      hospitalName: document.getElementById("hospitalName").value,
+      category: document.getElementById("category").value,
+      address: document.getElementById("address").value,
+      approved: false,
+      user: auth.currentUser.email
+    };
+    db.ref("posts").push(postData);
+    alert("Post submitted! Waiting for admin approval.");
+    document.getElementById("postForm").reset();
+  });
 
-/* ---------------- SECURITY rules suggestion (for firebase console) ---------------- */
-/*
-{
-  "rules": {
-    ".read": true,
-    "providers": {
-      ".write": "auth != null",
-      "$pid": { ".validate": "newData.hasChildren(['uid','status'])" }
-    },
-    "wallets": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+  // Show approved posts to everyone
+  db.ref("posts").on("value", snapshot => {
+    const postsList = document.getElementById("postsList");
+    postsList.innerHTML = "";
+    snapshot.forEach(child => {
+      const post = child.val();
+      if (post.approved) {
+        const div = document.createElement("div");
+        div.innerHTML = `<b>${post.hospitalName}</b> (${post.category}) <br> ${post.address} <hr>`;
+        postsList.appendChild(div);
       }
-    },
-    "clickGrants": {
-      "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid" }
-    },
-    "rechargeRequests": {
-      ".write": "auth != null",
-      ".read": "auth != null" // optionally restrict reads to admin only via custom token check
-    },
-    "reviews": { ".write": "auth != null", ".read": true }
-  }
-}
-*/
+    });
+  });
 
-/* ---------------- DONE ---------------- */
+  // Admin loads all posts
+  function loadAdminPosts() {
+    db.ref("posts").on("value", snapshot => {
+      const adminPosts = document.getElementById("adminPosts");
+      adminPosts.innerHTML = "";
+      snapshot.forEach(child => {
+        const post = child.val();
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <b>${post.hospitalName}</b> (${post.category}) <br> ${post.address}<br>
+          Approved: ${post.approved}<br>
+          <button onclick="approvePost('${child.key}')">Approve</button>
+          <button onclick="deletePost('${child.key}')">Delete</button>
+          <hr>`;
+        adminPosts.appendChild(div);
+      });
+    });
+  }
+
+  // Approve Post
+  function approvePost(id) {
+    db.ref("posts/" + id).update({ approved: true });
+  }
+
+  // Delete Post
+  function deletePost(id) {
+    db.ref("posts/" + id).remove();
+  }
 </script>
 </body>
 </html>
