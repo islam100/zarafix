@@ -1,200 +1,145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ZaraFix - 3D Service Portal (Wallet + WhatsApp Deduction)</title>
+  <meta charset="UTF-8">
+  <title>ZaraFix Service Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #ffecd2, #fcb69f, #c9ffbf, #ffafbd);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+    @keyframes gradientBG {
+      0% {background-position:0% 50%}
+      50% {background-position:100% 50%}
+      100% {background-position:0% 50%}
+    }
 
-<style>
-  :root{
-    --glass: rgba(255,255,255,0.06);
-    --card-radius:18px;
-    --shadow: 0 12px 30px rgba(2,6,23,0.25);
-    --accent1: linear-gradient(135deg,#ff7a7a,#ffb86b);
-    --accent2: linear-gradient(135deg,#7b61ff,#4fc3f7);
-    --accent3: linear-gradient(135deg,#7ee787,#06b6a4);
-    --accent4: linear-gradient(135deg,#ffd86b,#ff7ac1);
-    --wa-color: #25D366;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial;background:linear-gradient(180deg,#0b1220 0%, #071028 100%);color:#e6eef6;min-height:100vh}
-  /* Header — colorful multisection look */
-  header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;gap:12px;position:sticky;top:0;z-index:40}
-  .logo{display:flex;align-items:center;gap:12px}
-  .logo .badge{width:46px;height:46px;border-radius:12px;background:var(--accent1);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-weight:700;color:#071028}
-  .title{font-size:18px;font-weight:700}
-  .header-controls{display:flex;align-items:center;gap:10px}
-  .wallet{background:var(--accent4);padding:8px 12px;border-radius:12px;box-shadow:var(--shadow);font-weight:700;color:#071028}
-  .btn{padding:10px 14px;border-radius:12px;border:none;font-weight:700;cursor:pointer;box-shadow:0 10px rgba(2,6,23,0.25);transform:translateY(0);transition:all .14s}
-  .btn:active{transform:translateY(3px)}
-  .btn-post{background:var(--accent2);color:#071028}
-  .btn-recharge{background:var(--accent3);color:#012b1f}
-  .btn-login{background:#ffd86b;color:#071028}
-  .profile{display:flex;align-items:center;gap:8px;padding:6px;border-radius:12px;background:rgba(255,255,255,0.03)}
-  .profile img{width:38px;height:38px;border-radius:10px;object-fit:cover;background:#081226}
+    header {
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+      border-bottom: 5px solid #fff;
+    }
+    header span {
+      display: inline-block;
+      transform: rotateX(15deg) rotateY(10deg);
+      color: #fff;
+      font-size: 34px;
+      letter-spacing: 3px;
+      text-shadow: 2px 4px 8px rgba(0,0,0,0.6);
+    }
 
-  /* Main layout */
-  .wrap{max-width:1100px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr 360px;gap:16px}
-  @media(max-width:920px){.wrap{grid-template-columns:1fr;padding:10px} .header-controls{flex-wrap:wrap}}
-  /* Left area (listings) */
-  .left-panel{display:flex;flex-direction:column;gap:16px}
-  .search{display:flex;justify-content:center}
-  .search input{width:100%;max-width:780px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:16px}
-  /* Listings grid */
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:var(--card-radius);padding:12px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.03)}
-  .card img{width:100%;height:140px;object-fit:cover;border-radius:10px;margin:8px 0}
-  .card h3{margin:0;font-size:16px}
-  .meta{font-size:13px;color:#bfeeea;margin-top:6px}
-  .card .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
-  .btn-small{padding:8px 12px;border-radius:10px;font-weight:700;border:none;cursor:pointer}
-  .btn-whatsapp{background:var(--wa-color);color:#fff}
-  .admin-controls .btn-small{box-shadow:0 8px rgba(0,0,0,0.18)}
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      margin: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      color: white;
+      box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+    }
+    .btn:hover {
+      transform: scale(1.07);
+      box-shadow: 4px 8px 15px rgba(0,0,0,0.4);
+    }
+    .btn-post {background: linear-gradient(135deg,#ff416c,#ff4b2b);}
+    .btn-whatsapp {background: linear-gradient(135deg,#25D366,#128C7E);}
+    .btn-approve {background: linear-gradient(135deg,#56ab2f,#a8e063);}
+    .btn-reject {background: linear-gradient(135deg,#ff512f,#dd2476);}
+    .btn-delete {background: linear-gradient(135deg,#232526,#414345);}
 
-  /* Right panel (profile, post form toggle, admin panel list) */
-  aside{display:flex;flex-direction:column;gap:12px}
-  .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:14px;box-shadow:var(--shadow)}
-  .panel h4{margin:6px 0 8px 0}
-  .small{font-size:13px;color:#bfeeea}
+    /* Modal */
+    .modal {
+      display:none;
+      position:fixed;
+      top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.7);
+      z-index:1000;
+    }
+    .modal-content {
+      background:#fff;
+      margin:8% auto;
+      padding:20px;
+      width:90%;max-width:450px;
+      border-radius:15px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.4);
+      position:relative;
+      animation: pop 0.4s ease;
+    }
+    @keyframes pop {0%{transform:scale(0.6)}100%{transform:scale(1)}}
+    .close {position:absolute;top:10px;right:15px;font-size:22px;cursor:pointer;}
 
-  /* Modal styles */
-  .modal{display:none;position:fixed;inset:0;background:linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6));justify-content:center;align-items:center;z-index:120}
-  .modal.open{display:flex}
-  .modal-card{width:94%;max-width:520px;background:#071028;padding:18px;border-radius:16px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 20px 60px rgba(0,0,0,0.6)}
-  .modal-card h3{margin:0;color:#dff8f1}
-  .form-row{display:flex;gap:8px;margin-top:10px}
-  .form-row input[type="text"], .form-row input[type="tel"], .form-row input[type="file"], textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-  .modal-actions{display:flex;gap:10px;margin-top:12px;justify-content:flex-end}
+    input,textarea {
+      width:100%;
+      padding:10px;
+      margin:6px 0;
+      border-radius:8px;
+      border:1px solid #ccc;
+      outline:none;
+      box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1);
+    }
 
-  /* color stripes footer look */
-  footer{height:18px;margin-top:18px;border-radius:12px;overflow:hidden;max-width:1100px;margin-left:auto;margin-right:auto}
-  .stripe{height:18px;width:25%;display:inline-block}
-</style>
+    #listings {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:15px;
+      padding:15px;
+    }
+    .card {
+      background:#fff;
+      border-radius:18px;
+      padding:15px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.3);
+      transition:transform 0.3s ease;
+    }
+    .card:hover {transform:translateY(-6px);}
+    .card h3 {margin-top:0;}
+  </style>
 </head>
 <body>
+  <header>
+    <span>ZaraFix</span>
+  </header>
 
-<!-- Header with multi-color chips -->
-<header>
-  <div class="logo">
-    <div class="badge">ZF</div>
-    <div class="title">ZaraFix — Service Providers</div>
-  </div>
+  <center>
+    <button class="btn btn-post" onclick="openForm()">+ Post Service</button>
+  </center>
 
-  <div class="header-controls">
-    <div class="wallet" id="walletDisplay" title="Your wallet balance" style="display:none">Wallet: ₹0</div>
-    <button id="postBtn" class="btn btn-post" style="display:none">➕ Post Service</button>
-    <button id="rechargeBtn" class="btn btn-recharge" style="display:none">💳 Recharge</button>
-    <div class="profile" id="profileBox" style="display:none">
-      <img id="profilePic" src="" alt="dp">
-      <div id="profileName" style="font-weight:700;color:#dff8f1"></div>
-    </div>
-    <button id="loginBtn" class="btn btn-login">Login</button>
-  </div>
-</header>
-
-<div class="wrap">
-  <main class="left-panel">
-    <div class="search"><input id="searchInput" placeholder="Search by name or city..." /></div>
-
-    <div class="cards" id="cardsContainer"></div>
-  </main>
-
-  <aside>
-    <div class="panel" id="quickPanel">
-      <h4>Quick</h4>
-      <div class="small">Post service (login required). Recharge to add ₹100 after admin approval.</div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button id="openPost" class="btn btn-post" style="display:none">Post Service</button>
-        <button id="openRecharge" class="btn btn-recharge" style="display:none">Recharge</button>
-      </div>
-    </div>
-
-    <div class="panel" id="adminPanel" style="display:none">
-      <h4>Admin - Pending</h4>
-      <div id="pendingList" class="small"></div>
-      <h4 style="margin-top:12px">Recharge Requests</h4>
-      <div id="rechargeList" class="small"></div>
-    </div>
-  </aside>
-</div>
-
-<!-- Post Modal -->
-<div class="modal" id="postModal">
-  <div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>Post Service</h3>
-      <button id="closePost" class="btn" style="background:transparent;color:#dff8f1;font-size:20px">✕</button>
-    </div>
-
-    <form id="postForm" style="margin-top:12px">
-      <label class="small">Business / Service Name</label>
-      <input type="text" id="post_name" required>
-
-      <label class="small">Category</label>
-      <input type="text" id="post_category" placeholder="Electrician, Plumber..." required>
-
-      <label class="small">City / Address</label>
-      <input type="text" id="post_city" required>
-
-      <label class="small">Contact Number</label>
-      <input type="tel" id="post_contact" required>
-
-      <label class="small">WhatsApp Number (with country code or local)</label>
-      <input type="text" id="post_whatsapp" placeholder="eg. 919876543210" required>
-
-      <label class="small">Service Hours</label>
-      <input type="text" id="post_hours" placeholder="9AM - 9PM">
-
-      <label class="small">Profile / Shop Image</label>
-      <input type="file" id="post_image" accept="image/*">
-
-      <div class="modal-actions">
-        <button type="button" id="cancelPost" class="btn" style="background:transparent;color:#dff8f1;border:1px solid rgba(255,255,255,0.04)">Cancel</button>
-        <button type="submit" id="submitPost" class="btn btn-post">Submit</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Recharge Modal -->
-<div class="modal" id="rechargeModal">
-  <div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>Recharge ₹100</h3>
-      <button id="closeRecharge" class="btn" style="background:transparent;color:#dff8f1;font-size:20px">✕</button>
-    </div>
-
-    <div style="margin-top:12px">
-      <div class="small">Send payment (UPI) and upload screenshot. Admin will verify and credit ₹100.</div>
-      <label class="small" style="margin-top:10px">Payment Screenshot</label>
-      <input type="file" id="recharge_img" accept="image/*">
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button id="cancelRecharge" class="btn" style="background:transparent;color:#dff8f1">Cancel</button>
-        <button id="sendRecharge" class="btn btn-recharge">Send Request</button>
-      </div>
+  <!-- Post Form Modal -->
+  <div id="postModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeForm()">&times;</span>
+      <h2>Post Your Service</h2>
+      <form id="postForm">
+        <input type="text" id="serviceName" placeholder="Service / Business Name" required>
+        <input type="text" id="category" placeholder="Category (Doctor, Plumber...)" required>
+        <textarea id="address" placeholder="Address" required></textarea>
+        <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
+        <button type="submit" class="btn btn-post">Submit</button>
+      </form>
     </div>
   </div>
-</div>
 
-<footer>
-  <div class="stripe" style="background:linear-gradient(90deg,#ff7a7a,#ffb86b)"></div>
-  <div class="stripe" style="background:linear-gradient(90deg,#7b61ff,#4fc3f7)"></div>
-  <div class="stripe" style="background:linear-gradient(90deg,#7ee787,#06b6a4)"></div>
-  <div class="stripe" style="background:linear-gradient(90deg,#ffd86b,#ff7ac1)"></div>
-</footer>
+  <section id="listings"></section>
 
 <script>
-/* ========== CONFIG ========== */
-const IMGBB_KEY = '72c022c1182b94d6baa3d4fc675dd641';
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-
-// Firebase config (from you)
-const firebaseConfig = {
+  // Firebase config
+ const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
   databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -204,323 +149,67 @@ const firebaseConfig = {
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
 
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+  let currentUser = null;
+  let adminUID = "ADMIN_UID_HERE"; // replace with actual admin uid
 
-/* ========== UI Refs ========== */
-const loginBtn = document.getElementById('loginBtn');
-const profileBox = document.getElementById('profileBox');
-const profilePic = document.getElementById('profilePic');
-const profileName = document.getElementById('profileName');
-const walletDisplay = document.getElementById('walletDisplay');
+  firebase.auth().onAuthStateChanged(user=>{
+    currentUser=user;
+    loadListings();
+  });
 
-const postBtn = document.getElementById('postBtn');
-const rechargeBtn = document.getElementById('rechargeBtn');
-const openPost = document.getElementById('openPost');
-const openRecharge = document.getElementById('openRecharge');
+  function openForm(){document.getElementById("postModal").style.display="block";}
+  function closeForm(){document.getElementById("postModal").style.display="none";}
 
-const postModal = document.getElementById('postModal');
-const closePost = document.getElementById('closePost');
-const cancelPost = document.getElementById('cancelPost');
-const postForm = document.getElementById('postForm');
-const post_image = document.getElementById('post_image');
+  document.getElementById("postForm").addEventListener("submit",e=>{
+    e.preventDefault();
+    if(!currentUser){alert("Login first!");return;}
+    let data={
+      name:document.getElementById("serviceName").value,
+      category:document.getElementById("category").value,
+      address:document.getElementById("address").value,
+      whatsapp:document.getElementById("whatsapp").value,
+      uid:currentUser.uid,
+      approved:false
+    };
+    db.ref("services").push(data);
+    closeForm();
+    alert("Posted successfully! Wait for admin approval.");
+    document.getElementById("postForm").reset();
+  });
 
-const rechargeModal = document.getElementById('rechargeModal');
-const closeRecharge = document.getElementById('closeRecharge');
-const cancelRecharge = document.getElementById('cancelRecharge');
-const sendRecharge = document.getElementById('sendRecharge');
-const recharge_img = document.getElementById('recharge_img');
-
-const cardsContainer = document.getElementById('cardsContainer');
-const pendingList = document.getElementById('pendingList');
-const rechargeList = document.getElementById('rechargeList');
-const adminPanel = document.getElementById('adminPanel');
-const searchInput = document.getElementById('searchInput');
-
-/* ========== Helpers ========== */
-function showModal(modEl){ modEl.classList.add('open'); modEl.style.display='flex'; }
-function hideModal(modEl){ modEl.classList.remove('open'); modEl.style.display='none'; }
-function toast(msg){ alert(msg); }
-
-/* ========== Auth ========== */
-loginBtn.addEventListener('click', async ()=>{
-  if(auth.currentUser){
-    await auth.signOut();
-  } else {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try{ await auth.signInWithPopup(provider); }
-    catch(e){ alert('Login failed: ' + e.message) }
-  }
-});
-
-// ensure wallet exists
-async function ensureWallet(uid){
-  const ref = db.ref('wallets/'+uid);
-  const snap = await ref.once('value');
-  if(!snap.exists()) await ref.set({balance:0});
-}
-
-/* onAuthStateChanged — update UI & load wallet */
-let currentUser = null;
-auth.onAuthStateChanged(async user=>{
-  currentUser = user;
-  if(user){
-    loginBtn.textContent = 'Logout';
-    profileBox.style.display='flex';
-    profilePic.src = user.photoURL || 'https://via.placeholder.com/80x80.png?text=DP';
-    profileName.textContent = user.displayName || user.email.split('@')[0];
-    postBtn.style.display='inline-block';
-    rechargeBtn.style.display='inline-block';
-    openPost.style.display='inline-block';
-    openRecharge.style.display='inline-block';
-    walletDisplay.style.display='inline-block';
-    await ensureWallet(user.uid);
-    const wsnap = await db.ref('wallets/'+user.uid+'/balance').once('value');
-    walletDisplay.textContent = 'Wallet: ₹' + (wsnap.val() || 0);
-  } else {
-    loginBtn.textContent = 'Login';
-    profileBox.style.display='none';
-    postBtn.style.display='none';
-    rechargeBtn.style.display='none';
-    openPost.style.display='none';
-    openRecharge.style.display='none';
-    walletDisplay.style.display='none';
-  }
-  // show/hide admin panel only after auth check
-  adminPanel.style.display = (user && user.email === ADMIN_EMAIL) ? 'block' : 'none';
-  renderListings(); renderAdminPanel();
-});
-
-/* ========== Modal wiring ========== */
-postBtn.addEventListener('click', ()=> showModal(postModal));
-openPost.addEventListener('click', ()=> showModal(postModal));
-closePost.addEventListener('click', ()=> hideModal(postModal));
-cancelPost.addEventListener('click', ()=> hideModal(postModal));
-
-rechargeBtn.addEventListener('click', ()=> showModal(rechargeModal));
-openRecharge.addEventListener('click', ()=> showModal(rechargeModal));
-closeRecharge.addEventListener('click', ()=> hideModal(rechargeModal));
-cancelRecharge.addEventListener('click', ()=> hideModal(rechargeModal));
-
-/* ========== ImgBB uploader ========== */
-async function uploadToImgbb(file){
-  const fd = new FormData();
-  fd.append('image', file);
-  const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, { method:'POST', body: fd });
-  const j = await res.json();
-  if(j && j.data && j.data.url) return j.data.url;
-  throw new Error('ImgBB upload failed');
-}
-
-/* ========== Post submit ========== */
-postForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if(!currentUser){ toast('Login first'); return; }
-  const name = document.getElementById('post_name').value.trim();
-  const category = document.getElementById('post_category').value.trim();
-  const city = document.getElementById('post_city').value.trim();
-  const contact = document.getElementById('post_contact').value.trim();
-  const whatsapp = document.getElementById('post_whatsapp').value.trim();
-  const hours = document.getElementById('post_hours').value.trim();
-  const file = post_image.files[0];
-
-  try{
-    document.getElementById('submitPost').disabled = true;
-    let imageUrl = '';
-    if(file) imageUrl = await uploadToImgbb(file);
-    const ref = db.ref('services').push();
-    await ref.set({
-      name, category, city, contact, whatsapp, hours, image: imageUrl || '', userId: currentUser.uid, status: 'pending', createdAt: Date.now()
-    });
-    toast('Service Posted! Waiting admin approval.');
-    postForm.reset();
-    hideModal(postModal);
-    renderListings();
-  }catch(err){
-    alert('Error: '+err.message);
-  }finally{
-    document.getElementById('submitPost').disabled = false;
-  }
-});
-
-/* ========== Recharge request ========== */
-sendRecharge.addEventListener('click', async ()=>{
-  if(!currentUser){ toast('Login first'); return; }
-  const file = recharge_img.files[0];
-  if(!file){ toast('Select screenshot'); return; }
-  sendRecharge.disabled = true;
-  try{
-    const imageUrl = await uploadToImgbb(file);
-    const rref = db.ref('recharges').push();
-    await rref.set({ uid: currentUser.uid, userEmail: currentUser.email, imageUrl, status: 'pending', createdAt: Date.now() });
-    toast('Recharge request sent to admin');
-    recharge_img.value = '';
-    hideModal(rechargeModal);
-    renderAdminPanel();
-  }catch(e){ alert('Recharge error: '+e.message) }
-  sendRecharge.disabled = false;
-});
-
-/* ========== Listings rendering (live search + admin view) ========== */
-searchInput.addEventListener('input', renderListings);
-function renderListings(){
-  const q = (searchInput.value || '').toLowerCase();
-  cardsContainer.innerHTML = '';
-
-  db.ref('services').orderByChild('createdAt').once('value').then(snap=>{
-    snap.forEach(child=>{
-      const data = child.val();
-      const id = child.key;
-
-      // normal users see only approved posts
-      const isAdmin = (currentUser && currentUser.email === ADMIN_EMAIL);
-      if(!isAdmin && data.status !== 'approved') return;
-
-      // search filter
-      if(q){
-        const hay = ((data.name||'') + ' ' + (data.city||'') + ' ' + (data.category||'')).toLowerCase();
-        if(!hay.includes(q)) return;
-      }
-
-      const card = document.createElement('div'); card.className='card';
-      card.innerHTML = `
-        <h3>${escapeHtml(data.name || '')}</h3>
-        <div class="meta">${escapeHtml(data.category||'')} • ${escapeHtml(data.city||'')}</div>
-        <img src="${data.image || 'https://via.placeholder.com/400x200?text=No+Image'}" alt="">
-        <div class="meta">Hours: ${escapeHtml(data.hours||'—')}</div>
-        <div class="row">
-          <button class="btn-small btn-whatsapp" data-wh="${escapeHtml(data.whatsapp||'')}" data-id="${id}">WhatsApp</button>
-          <button class="btn-small" style="background:linear-gradient(90deg,#a78bfa,#7c3aed);color:#071028" onclick="openMap('${escapeHtml(data.city||'')}')">Map</button>
-        </div>
-        <div class="meta" style="margin-top:8px">Status: <b>${data.status === 'approved' ? '✅ Approved' : '⏳ '+(data.status||'pending')}</b></div>
-      `;
-
-      // admin controls visible only for admin
-      if(isAdmin){
-        const adminDiv = document.createElement('div'); adminDiv.className='admin-controls row';
-        adminDiv.style.marginTop='8px';
-        adminDiv.innerHTML = `
-          <button class="btn-small" style="background:green;color:white" onclick="approvePost('${id}')">Approve</button>
-          <button class="btn-small" style="background:orange;color:#071028" onclick="rejectPost('${id}')">Reject</button>
-          <button class="btn-small" style="background:red;color:white" onclick="deletePost('${id}')">Delete</button>
+  function loadListings(){
+    db.ref("services").on("value",snap=>{
+      let html="";
+      snap.forEach(child=>{
+        let s=child.val(); let key=child.key;
+        if(s.approved || (currentUser && currentUser.uid===adminUID)){
+          html+=`
+          <div class="card">
+            <h3>${s.name}</h3>
+            <p><b>Category:</b> ${s.category}</p>
+            <p><b>Address:</b> ${s.address}</p>
+            ${s.approved ? `<a href="https://wa.me/${s.whatsapp}" target="_blank">
+              <button class="btn btn-whatsapp">WhatsApp</button></a>` : `<p><i>Pending approval</i></p>`}
         `;
-        card.appendChild(adminDiv);
-      }
-
-      // whatsapp click handler (delegated below)
-      cardsContainer.appendChild(card);
-    });
-
-    // attach whatsapp handlers (after cards created)
-    document.querySelectorAll('.btn-whatsapp').forEach(btn=>{
-      btn.onclick = async (ev)=>{
-        const wa = btn.dataset.wh.replace(/\D/g,''); // digits only
-        const postId = btn.dataset.id;
-        if(!currentUser){ toast('Please login to contact.'); return; }
-
-        // check wallet
-        const wRef = db.ref('wallets/'+currentUser.uid+'/balance');
-        const wSnap = await wRef.once('value');
-        let bal = Number(wSnap.val() || 0);
-
-        if(bal >= 20){
-          // deduct atomically using transaction
-          await db.ref('wallets/'+currentUser.uid).transaction(curr=>{
-            if(curr === null) return { balance: 0 };
-            if((curr.balance||0) >= 20) { curr.balance = (curr.balance||0) - 20; return curr; }
-            return;
-          }, async (err, committed, snapshot)=>{
-            if(err) { alert('Transaction error'); return; }
-            if(!committed){ alert('Insufficient balance'); return; }
-            // record contact event
-            await db.ref('contacts').push({ postId, by: currentUser.uid, at: Date.now(), cost: 20 });
-            // open whatsapp
-            const waUrl = 'https://wa.me/' + wa;
-            window.open(waUrl, '_blank');
-            // refresh wallet display
-            const newBal = (snapshot && snapshot.val() && snapshot.val().balance) || 0;
-            walletDisplay.textContent = 'Wallet: ₹' + newBal;
-          });
-        } else {
-          alert('Insufficient Balance! Please recharge your wallet.');
+          if(currentUser && currentUser.uid===adminUID){
+            html+=`
+              <button class="btn btn-approve" onclick="updateStatus('${key}',true)">Approve</button>
+              <button class="btn btn-reject" onclick="updateStatus('${key}',false)">Reject</button>
+              <button class="btn btn-delete" onclick="deleteService('${key}')">Delete</button>
+            `;
+          }
+          html+=`</div>`;
         }
-      };
+      });
+      document.getElementById("listings").innerHTML=html;
     });
-  });
-}
-
-/* ========== Admin panel rendering ========== */
-function renderAdminPanel(){
-  if(!(currentUser && currentUser.email === ADMIN_EMAIL)){
-    pendingList.innerHTML='(Admin only)';
-    rechargeList.innerHTML='';
-    return;
   }
-  // pending services
-  db.ref('services').orderByChild('createdAt').once('value').then(snap=>{
-    pendingList.innerHTML = '';
-    snap.forEach(child=>{
-      const d = child.val(); const id = child.key;
-      if(d.status !== 'approved'){
-        const div = document.createElement('div');
-        div.innerHTML = `<div style="margin-bottom:8px"><b>${escapeHtml(d.name)}</b> • ${escapeHtml(d.city||'')} — ${escapeHtml(d.status||'pending')}
-          <div style="margin-top:6px"><button class="btn-small" onclick="approvePost('${id}')">Approve</button>
-          <button class="btn-small" onclick="rejectPost('${id}')">Reject</button></div></div>`;
-        pendingList.appendChild(div);
-      }
-    });
-  });
 
-  // recharge requests
-  db.ref('recharges').orderByChild('createdAt').once('value').then(snap=>{
-    rechargeList.innerHTML = '';
-    snap.forEach(child=>{
-      const r = child.val(); const id = child.key;
-      if(r.status && r.status !== 'pending') return;
-      const card = document.createElement('div');
-      card.innerHTML = `<div style="margin-bottom:12px"><b>${escapeHtml(r.userEmail||r.uid)}</b><div style="margin-top:6px"><img src="${escapeHtml(r.imageUrl||'')}" style="max-width:120px;border-radius:8px"/></div>
-        <div style="margin-top:6px"><button class="btn-small" style="background:green;color:white" onclick="approveRecharge('${id}','${r.uid}')">Approve</button>
-        <button class="btn-small" style="background:red;color:white" onclick="rejectRecharge('${id}')">Reject</button></div></div>`;
-      rechargeList.appendChild(card);
-    });
-  });
-}
-
-/* ========== Admin action functions ========== */
-window.approvePost = function(id){
-  db.ref('services/'+id).update({ status: 'approved' }).then(()=>{ toast('Approved'); renderListings(); renderAdminPanel(); });
-};
-window.rejectPost = function(id){
-  db.ref('services/'+id).update({ status: 'rejected' }).then(()=>{ toast('Rejected'); renderListings(); renderAdminPanel(); });
-};
-window.deletePost = function(id){
-  if(!confirm('Delete permanently?')) return;
-  db.ref('services/'+id).remove().then(()=>{ toast('Deleted'); renderListings(); renderAdminPanel(); });
-};
-
-window.approveRecharge = async function(reqId, uid){
-  // credit wallet + mark approved
-  const wRef = db.ref('wallets/'+uid);
-  const wsnap = await wRef.once('value'); let cur = (wsnap.val() && wsnap.val().balance) || 0;
-  await wRef.set({ balance: Number(cur) + 100 });
-  await db.ref('recharges/'+reqId).update({ status: 'approved', approvedAt: Date.now() });
-  toast('Recharge approved and ₹100 credited.');
-  renderAdminPanel();
-};
-window.rejectRecharge = function(reqId){
-  db.ref('recharges/'+reqId).update({ status: 'rejected' }).then(()=>{ toast('Recharge rejected'); renderAdminPanel(); });
-};
-
-/* ========== small utilers ========== */
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function openMap(city){ alert('Open map for '+city); }
-
-/* initial render (in case not authenticated yet) */
-renderListings();
-renderAdminPanel();
-
+  function updateStatus(key,val){db.ref("services/"+key).update({approved:val});}
+  function deleteService(key){db.ref("services/"+key).remove();}
 </script>
 </body>
 </html>
