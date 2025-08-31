@@ -4,184 +4,162 @@
   <meta charset="UTF-8">
   <title>ZaraFix Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
-    .hidden { display: none; }
-    .card { background: #fff; padding: 15px; border-radius: 12px; margin: 10px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    button { padding: 10px 15px; border: none; border-radius: 8px; background: #007bff; color: #fff; cursor: pointer; }
-    button:hover { background: #0056b3; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f1f1;
+      margin: 0; padding: 0;
+      text-align: center;
+    }
+    header {
+      background: #0077cc;
+      color: #fff; padding: 15px;
+      font-size: 22px;
+    }
+    .btn {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none; border-radius: 10px;
+      background: linear-gradient(45deg,#0077cc,#00cc77);
+      color: #fff; font-size: 16px;
+      cursor: pointer; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+      transition: transform .2s;
+    }
+    .btn:hover { transform: scale(1.05); }
+    .card {
+      background: #fff; border-radius: 12px;
+      padding: 15px; margin: 12px auto;
+      width: 90%; max-width: 500px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+    #adminSection, #userSection { display: none; }
   </style>
 </head>
 <body>
-  <h1>Zara Fix Portal</h1>
-  <div id="authSection">
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" class="hidden">Logout</button>
-  </div>
 
-  <!-- USER SECTION -->
-  <div id="userSection" class="hidden">
-    <h2>User Dashboard</h2>
-    <form id="requestForm" class="card">
-      <label>Issue</label><br>
-      <input type="text" id="issue" required><br>
-      <label>WhatsApp</label><br>
-      <input type="text" id="whatsapp" required><br>
-      <button type="submit">Submit Request</button>
-    </form>
-    <h3>Your Requests</h3>
-    <div id="userRequests"></div>
-  </div>
+<header>ZaraFix Portal</header>
 
-  <!-- PROVIDER SECTION -->
-  <div id="providerSection" class="hidden">
-    <h2>Provider Dashboard</h2>
-    <p>Wallet: ₹<span id="walletBalance">0</span></p>
-    <div id="jobsList"></div>
-  </div>
+<div id="authSection">
+  <button class="btn" id="loginBtn">Login with Google</button>
+</div>
+<div id="logoutSection" style="display:none;">
+  <button class="btn" id="logoutBtn">Logout</button>
+</div>
 
-  <!-- ADMIN SECTION -->
-  <div id="adminSection" class="hidden">
-    <h2>Admin Dashboard</h2>
-    <div id="allUsers"></div>
-    <div id="allProviders"></div>
-    <div id="allRequests"></div>
-  </div>
+<!-- User Section -->
+<div id="userSection">
+  <h2>User Dashboard</h2>
+  <div id="userPosts"></div>
+</div>
+
+<!-- Admin Section -->
+<div id="adminSection">
+  <h2>Admin Dashboard</h2>
+  <div id="allPosts"></div>
+</div>
 
 <script>
+  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-    authDomain: "zarafix-2f38d.firebaseapp.com",
-    databaseURL: "https://zarafix-2f38d-default-rtdb.firebaseio.com",
-    projectId: "zarafix-2f38d",
-    storageBucket: "zarafix-2f38d.appspot.com",
-    messagingSenderId: "407836885",
-    appId: "1:407836885:web:xxxxxxx"
+    authDomain: "zarafix-1d086.firebaseapp.com",
+    databaseURL: "https://zarafix-1d086-default-rtdb.firebaseio.com",
+    projectId: "zarafix-1d086",
+    storageBucket: "zarafix-1d086.appspot.com",
+    messagingSenderId: "828225954951",
+    appId: "1:828225954951:web:1d85c1cf4d116463996d93"
   };
   firebase.initializeApp(firebaseConfig);
+
   const auth = firebase.auth();
   const db = firebase.database();
+  const adminEmail = "zarasamajiksevasanstha@gmail.com";
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  const userSection = document.getElementById("userSection");
-  const providerSection = document.getElementById("providerSection");
-  const adminSection = document.getElementById("adminSection");
-
-  // Login
-  loginBtn.onclick = () => {
+  // Login with Google
+  document.getElementById("loginBtn").onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider);
   };
 
   // Logout
-  logoutBtn.onclick = () => {
+  document.getElementById("logoutBtn").onclick = () => {
     auth.signOut();
   };
 
-  // On Auth Change
+  // Auth State
   auth.onAuthStateChanged(user => {
     if(user){
-      loginBtn.classList.add("hidden");
-      logoutBtn.classList.remove("hidden");
+      document.getElementById("authSection").style.display="none";
+      document.getElementById("logoutSection").style.display="block";
 
-      if(user.email === "zarasamajiksevasanstha@gmail.com"){
-        // ADMIN LOGIN
-        adminSection.classList.remove("hidden");
-        userSection.classList.add("hidden");
-        providerSection.classList.add("hidden");
-        loadAdminDashboard();
+      if(user.email === adminEmail){
+        loadAdmin();
       } else {
-        // साधारण user या provider 
-        // Example: अगर email में "provider" शब्द है तो provider माने 
-        if(user.email.includes("provider")){
-          providerSection.classList.remove("hidden");
-          userSection.classList.add("hidden");
-          adminSection.classList.add("hidden");
-          loadProviderDashboard(user.uid);
-        } else {
-          userSection.classList.remove("hidden");
-          providerSection.classList.add("hidden");
-          adminSection.classList.add("hidden");
-          loadUserDashboard(user.uid);
-        }
+        loadUser(user.uid);
       }
-
     } else {
-      loginBtn.classList.remove("hidden");
-      logoutBtn.classList.add("hidden");
-      userSection.classList.add("hidden");
-      providerSection.classList.add("hidden");
-      adminSection.classList.add("hidden");
+      document.getElementById("authSection").style.display="block";
+      document.getElementById("logoutSection").style.display="none";
+      document.getElementById("userSection").style.display="none";
+      document.getElementById("adminSection").style.display="none";
     }
   });
 
-  // --- USER FUNCTIONS ---
-  const requestForm = document.getElementById("requestForm");
-  requestForm.onsubmit = (e) => {
-    e.preventDefault();
-    const uid = auth.currentUser.uid;
-    const issue = document.getElementById("issue").value;
-    const whatsapp = document.getElementById("whatsapp").value;
-    db.ref("requests/" + uid).push({ issue, whatsapp, acceptedBy: [] });
-    requestForm.reset();
-  };
-
-  function loadUserDashboard(uid){
-    const container = document.getElementById("userRequests");
-    container.innerHTML = "";
-    db.ref("requests/" + uid).on("value", snap=>{
-      container.innerHTML = "";
-      snap.forEach(req=>{
-        const data = req.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<b>${data.issue}</b><br>WhatsApp: ${data.whatsapp}`;
-        container.appendChild(card);
+  // Load User Posts
+  function loadUser(uid){
+    document.getElementById("userSection").style.display="block";
+    document.getElementById("adminSection").style.display="none";
+    const userPosts = document.getElementById("userPosts");
+    userPosts.innerHTML = "";
+    db.ref("posts/"+uid).on("value",snap=>{
+      userPosts.innerHTML="";
+      snap.forEach(child=>{
+        let data = child.val();
+        let div = document.createElement("div");
+        div.className="card";
+        div.innerHTML = `
+          <h3>${data.title||"No Title"}</h3>
+          <p>${data.details||""}</p>
+          <button class="btn" onclick="deletePost('${uid}','${child.key}')">Delete</button>
+        `;
+        userPosts.appendChild(div);
       });
     });
   }
 
-  // --- PROVIDER FUNCTIONS ---
-  function loadProviderDashboard(uid){
-    document.getElementById("jobsList").innerHTML = "";
-    db.ref("requests").on("value", snap=>{
-      document.getElementById("jobsList").innerHTML = "";
-      snap.forEach(userReq=>{
-        userReq.forEach(req=>{
-          const data = req.val();
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `<b>${data.issue}</b><br><button>Accept</button>`;
-          document.getElementById("jobsList").appendChild(card);
+  // Load All Posts for Admin
+  function loadAdmin(){
+    document.getElementById("adminSection").style.display="block";
+    document.getElementById("userSection").style.display="none";
+    const allPosts = document.getElementById("allPosts");
+    allPosts.innerHTML="";
+    db.ref("posts").on("value",snap=>{
+      allPosts.innerHTML="";
+      snap.forEach(user=>{
+        user.forEach(child=>{
+          let data=child.val();
+          let div=document.createElement("div");
+          div.className="card";
+          div.innerHTML=`
+            <h3>${data.title||"No Title"}</h3>
+            <p>${data.details||""}</p>
+            <small>UserID: ${user.key}</small><br>
+            <button class="btn" onclick="deletePost('${user.key}','${child.key}')">Delete</button>
+          `;
+          allPosts.appendChild(div);
         });
       });
     });
   }
 
-  // --- ADMIN FUNCTIONS ---
-  function loadAdminDashboard(){
-    const allRequests = document.getElementById("allRequests");
-    allRequests.innerHTML = "";
-    db.ref("requests").on("value", snap=>{
-      allRequests.innerHTML = "<h3>All Requests</h3>";
-      snap.forEach(userReq=>{
-        userReq.forEach(req=>{
-          const data = req.val();
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `<b>${data.issue}</b> - ${data.whatsapp}`;
-          allRequests.appendChild(div);
-        });
-      });
-    });
+  // Delete Post
+  function deletePost(uid,key){
+    db.ref("posts/"+uid+"/"+key).remove();
   }
 </script>
 </body>
