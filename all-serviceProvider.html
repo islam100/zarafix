@@ -1,398 +1,88 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix — Service Provider System (Single File)</title>
-  <!-- Tailwind CDN for quick styling (optional) -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Upload Firebase</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Small 3D button style */
-    .btn-3d{display:inline-block;padding:.6rem 1rem;border-radius:.75rem;box-shadow:0 6px 0 rgba(0,0,0,.12);transform:translateY(0);transition:transform .08s,box-shadow .08s}
-    .btn-3d:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.08)}
-    .card{box-shadow:0 6px 18px rgba(0,0,0,.06);border-radius:12px;padding:1rem;background:#fff}
-    body{background:#f3f4f6}
-    .hide{display:none}
-  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="p-4">
-  <div class="max-w-5xl mx-auto">
-    <h1 class="text-2xl font-bold mb-4">ZaraFix — Service Provider Portal (Demo)</h1>
+<body class="p-6 bg-gray-100">
 
-    <!-- Auth / Role select -->
-    <div id="authArea" class="mb-6 card">
-      <div id="userInfo"></div>
-      <div id="authButtons" class="space-x-2">
-        <button id="btnGoogle" class="btn-3d bg-green-500 text-white">Sign in with Google</button>
-        <button id="btnSignOut" class="btn-3d bg-red-500 text-white hide">Sign Out</button>
-        <select id="roleSelect" class="ml-4 p-2 rounded border">
-          <option value="customer">Customer (Default)</option>
-          <option value="provider">Service Provider</option>
-        </select>
-      </div>
-    </div>
+  <h1 class="text-2xl font-bold mb-4">Firebase Image Upload</h1>
 
-    <!-- Provider Profile Form -->
-    <div id="providerForm" class="card mb-6 hide">
-      <h2 class="text-lg font-semibold mb-2">Provider / Business Profile</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input id="serviceName" placeholder="Service / Business Name" class="p-2 border rounded">
-        <select id="category" class="p-2 border rounded">
-          <option>Doctor</option>
-          <option>Hospital</option>
-          <option>Ambulance</option>
-          <option>Electrician</option>
-          <option>Plumber</option>
-          <option>Carpenter</option>
-          <option>Shop</option>
-        </select>
-        <input id="address" placeholder="Address" class="p-2 border rounded col-span-2">
-        <input id="mapLocation" placeholder="Map Location (lat,lng) optional" class="p-2 border rounded">
-        <input id="contact" placeholder="Contact Number" class="p-2 border rounded">
-        <input id="whatsapp" placeholder="WhatsApp Number (country code +91...)" class="p-2 border rounded">
-        <input id="hours" placeholder="Service Hours (e.g. 9:00 - 22:00)" class="p-2 border rounded">
-        <div>
-          <label class="block mb-1">Profile / Shop Image</label>
-          <input id="photoInput" type="file" accept="image/*">
-          <div id="photoPreview" class="mt-2"></div>
-        </div>
-      </div>
-      <div class="mt-4">
-        <button id="saveProvider" class="btn-3d bg-blue-600 text-white">Save Profile (submit for admin approval)</button>
-      </div>
-      <p class="text-sm text-gray-600 mt-2">Note: After submission status = <b>waiting</b>. Admin must approve to show publicly.</p>
-    </div>
+  <!-- Upload Form -->
+  <input type="file" id="imageFile" class="mb-3 border p-2">
+  <button onclick="uploadImage()" class="px-4 py-2 bg-blue-600 text-white rounded">Upload</button>
 
-    <!-- Wallet & Recharge (Customer) -->
-    <div id="walletCard" class="card mb-6 hide">
-      <h2 class="text-lg font-semibold">Wallet</h2>
-      <p>Balance: ₹<span id="walletBalance">0</span></p>
-      <div class="mt-2">
-        <button id="rechargeBtn" class="btn-3d bg-indigo-600 text-white">Recharge Wallet (simulate)</button>
-      </div>
-      <p class="text-sm mt-2 text-gray-600">Recharge here is simulated. Replace with payment gateway integration for production.</p>
-    </div>
+  <p id="status" class="mt-3 text-green-700"></p>
 
-    <!-- Service Listing & Search -->
-    <div class="card mb-6">
-      <div class="flex justify-between items-center mb-3">
-        <div>
-          <input id="searchInput" placeholder="Search by name or city" class="p-2 border rounded mr-2">
-          <select id="filterCategory" class="p-2 border rounded">
-            <option value="">All Categories</option>
-            <option>Hospital</option>
-            <option>Ambulance</option>
-            <option>Doctor</option>
-            <option>Electrician</option>
-            <option>Plumber</option>
-            <option>Shop</option>
-          </select>
-        </div>
-        <div>
-          <button id="refreshList" class="btn-3d bg-gray-700 text-white">Refresh List</button>
-        </div>
-      </div>
-      <div id="providersList" class="grid gap-3"></div>
-    </div>
+  <h2 class="text-xl font-bold mt-6">Uploaded Images:</h2>
+  <div id="gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
 
-    <!-- Admin Panel -->
-    <div id="adminPanel" class="card mb-6 hide">
-      <h2 class="text-lg font-semibold">Admin Panel</h2>
-      <p class="text-sm text-gray-700">Approve / Reject providers</p>
-      <div id="adminList" class="mt-3"></div>
-    </div>
-
-  </div>
-
-  <!-- Firebase SDKs (modular) -->
-  <script type="module">
-    // ----------------- CONFIG: paste your Firebase config here -----------------
+  <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
       databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
       projectId: "zara-fix-2e35a",
       storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+      messagingSenderId: "912682232032",
+      appId: "1:912682232032:web:5cda19691f08c7afcba5a3"
     };
-    // --------------------------------------------------------------------------
 
-    // Import from CDN (no build step required)
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { getDatabase, ref, push, set, onValue, update, get, child, runTransaction } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
-    import { getStorage, ref as sref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js';
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-    const storage = getStorage(app);
-    const provider = new GoogleAuthProvider();
+    const db = firebase.database();
+    const storage = firebase.storage();
 
-    // Change this to your admin email(s)
-    const ADMIN_EMAIL = 'admin@example.com'; // <- change this
-
-    // UI refs
-    const btnGoogle = document.getElementById('btnGoogle');
-    const btnSignOut = document.getElementById('btnSignOut');
-    const userInfo = document.getElementById('userInfo');
-    const roleSelect = document.getElementById('roleSelect');
-
-    const providerForm = document.getElementById('providerForm');
-    const saveProviderBtn = document.getElementById('saveProvider');
-    const photoInput = document.getElementById('photoInput');
-    const photoPreview = document.getElementById('photoPreview');
-
-    const walletCard = document.getElementById('walletCard');
-    const walletBalanceSpan = document.getElementById('walletBalance');
-    const rechargeBtn = document.getElementById('rechargeBtn');
-
-    const providersList = document.getElementById('providersList');
-    const searchInput = document.getElementById('searchInput');
-    const filterCategory = document.getElementById('filterCategory');
-    const refreshList = document.getElementById('refreshList');
-
-    const adminPanel = document.getElementById('adminPanel');
-    const adminList = document.getElementById('adminList');
-
-    let currentUser = null;
-
-    btnGoogle.onclick = async ()=>{
-      try{
-        await signInWithPopup(auth, provider);
-      }catch(e){alert('Sign in error: '+e.message)}
-    }
-    btnSignOut.onclick = ()=>signOut(auth);
-
-    onAuthStateChanged(auth, async (user)=>{
-      currentUser = user;
-      if(user){
-        userInfo.innerHTML = `<p>Signed in: <b>${user.displayName}</b> (${user.email})</p>`;
-        btnGoogle.classList.add('hide'); btnSignOut.classList.remove('hide');
-        // show role-specific UI
-        if(roleSelect.value === 'provider') providerForm.classList.remove('hide'); else providerForm.classList.add('hide');
-        walletCard.classList.remove('hide');
-        // load wallet
-        loadWallet();
-        // admin check
-        if(user.email === ADMIN_EMAIL) { adminPanel.classList.remove('hide'); loadAdminList(); }
-        else adminPanel.classList.add('hide');
-      }else{
-        userInfo.innerHTML = '<p>Not signed in</p>';
-        btnGoogle.classList.remove('hide'); btnSignOut.classList.add('hide');
-        providerForm.classList.add('hide'); walletCard.classList.add('hide'); adminPanel.classList.add('hide');
-      }
-      loadProviders();
-    });
-
-    // Role change
-    roleSelect.onchange = ()=>{
-      if(roleSelect.value === 'provider' && currentUser){ providerForm.classList.remove('hide'); }
-      else providerForm.classList.add('hide');
-    }
-
-    // Photo preview
-    photoInput.onchange = ()=>{
-      const f = photoInput.files[0];
-      if(!f) return; photoPreview.innerHTML = `<img src="${URL.createObjectURL(f)}" width="160" class="rounded">`;
-    }
-
-    // Save provider (submit to DB, status = waiting)
-    saveProviderBtn.onclick = async ()=>{
-      if(!currentUser){ alert('Please sign in first.'); return; }
-      const data = {
-        ownerUid: currentUser.uid,
-        ownerName: currentUser.displayName || '',
-        ownerEmail: currentUser.email || '',
-        serviceName: document.getElementById('serviceName').value || '',
-        category: document.getElementById('category').value || '',
-        address: document.getElementById('address').value || '',
-        mapLocation: document.getElementById('mapLocation').value || '',
-        contact: document.getElementById('contact').value || '',
-        whatsapp: document.getElementById('whatsapp').value || '',
-        hours: document.getElementById('hours').value || '9:00 - 22:00',
-        status: 'waiting', // admin must approve
-        createdAt: Date.now()
-      };
-
-      // upload photo if any
-      const file = photoInput.files[0];
-      if(file){
-        const storageRef = sref(storage, `providers/${currentUser.uid}_${Date.now()}_${file.name}`);
-        const snap = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snap.ref);
-        data.photoURL = url; // store download URL for display
+    // Upload Function
+    function uploadImage() {
+      const file = document.getElementById("imageFile").files[0];
+      if (!file) {
+        alert("कृपया कोई image चुनें!");
+        return;
       }
 
-      // push to Realtime DB
-      const providersRef = ref(db, 'providers');
-      const newRef = push(providersRef);
-      await set(newRef, data);
+      const storageRef = storage.ref("images/" + Date.now() + "_" + file.name);
+      const uploadTask = storageRef.put(file);
 
-      alert('Profile submitted for admin approval.');
-      // clear form
-      document.getElementById('serviceName').value=''; document.getElementById('address').value=''; document.getElementById('contact').value='';
-      photoInput.value=''; photoPreview.innerHTML='';
-      loadProviders();
-    }
-
-    // Load providers (only show approved to public customers)
-    async function loadProviders(){
-      const qRef = ref(db, 'providers');
-      onValue(qRef, (snap)=>{
-        const data = snap.val() || {};
-        const arr = Object.keys(data).map(k=>({id:k, ...data[k]}));
-        renderProviders(arr);
-      });
-    }
-
-    function renderProviders(list){
-      const search = (searchInput.value||'').toLowerCase();
-      const filter = filterCategory.value;
-      providersList.innerHTML = '';
-      list.forEach(p=>{
-        // If provider status is waiting and current user is not admin and not owner, hide it
-        if(p.status !== 'approved' && !(currentUser && (currentUser.email===ADMIN_EMAIL || currentUser.uid===p.ownerUid))) return;
-        if(filter && p.category !== filter) return;
-        if(search && !((p.serviceName||'').toLowerCase().includes(search) || (p.address||'').toLowerCase().includes(search))) return;
-
-        const card = document.createElement('div'); card.className = 'card';
-        card.innerHTML = `
-          <div class="flex items-center">
-            <div style="width:100px">${p.photoURL?`<img src="${p.photoURL}" width="96" class="rounded">`:'<div class="w-24 h-24 bg-gray-100 flex items-center justify-center">No Image</div>'}</div>
-            <div class="ml-4 flex-1">
-              <div class="font-semibold text-lg">${p.serviceName}</div>
-              <div class="text-sm text-gray-600">${p.category} • ${p.hours || ''}</div>
-              <div class="mt-2 text-sm" id="addr_${p.id}">Address: <span class="addrVal">${p.address}</span></div>
-              <div class="mt-2">
-                <button class="btn-3d contactBtn bg-yellow-500 text-white" data-id="${p.id}">Call Now</button>
-                <button class="btn-3d whatsappBtn bg-green-600 text-white" data-id="${p.id}">WhatsApp Now</button>
-                <span class="ml-2 text-sm text-gray-500">Status: ${p.status}</span>
-              </div>
-            </div>
-          </div>`;
-
-        providersList.appendChild(card);
-
-        // Hide address and whatsapp if user hasn't paid for this provider
-        const addrEl = card.querySelector(`#addr_${p.id}`);
-        const whatsappBtn = card.querySelector('.whatsappBtn');
-        const contactBtn = card.querySelector('.contactBtn');
-
-        // If current user is owner or admin, always show
-        if(currentUser && (currentUser.uid === p.ownerUid || currentUser.email === ADMIN_EMAIL)){
-          // show address and enable whatsapp
-        } else {
-          // check payments path
-          const paymentRef = ref(db, `payments/${currentUser?currentUser.uid:'guest'}/${p.id}`);
-          get(paymentRef).then(snap=>{
-            const paid = snap.exists() && snap.val().paid;
-            if(!paid){
-              // hide address and disable whatsapp -> show pay button instead of whatsapp
-              if(addrEl) addrEl.style.display='none';
-              whatsappBtn.textContent = 'Pay ₹20 to View Contact';
-              whatsappBtn.onclick = ()=>payForContact(p.id, p.whatsapp, p.address);
-              contactBtn.onclick = ()=>alert('Call button will show after payment or if provider shares contact.');
-            } else {
-              // show address
-              if(addrEl) addrEl.style.display='block';
-              whatsappBtn.textContent = 'WhatsApp Now';
-              whatsappBtn.onclick = ()=>openWhatsApp(p.whatsapp);
-              contactBtn.onclick = ()=>window.open(`tel:${p.contact}`);
-            }
-          }).catch(()=>{
-            if(addrEl) addrEl.style.display='none';
-            whatsappBtn.textContent = 'Pay ₹20 to View Contact';
-            whatsappBtn.onclick = ()=>payForContact(p.id, p.whatsapp, p.address);
+      uploadTask.on("state_changed",
+        (snapshot) => {
+          let progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          document.getElementById("status").innerText = "Uploading... " + Math.round(progress) + "%";
+        },
+        (error) => {
+          alert("Error: " + error.message);
+        },
+        () => {
+          uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+            db.ref("uploads").push({
+              name: file.name,
+              url: downloadURL
+            });
+            document.getElementById("status").innerText = "Upload Successful!";
           });
         }
-      });
+      );
     }
 
-    // Pay ₹20 to view contact (deduct wallet)
-    async function payForContact(providerId, providerWhatsapp, providerAddress){
-      if(!currentUser){ alert('Please sign in as a Customer to pay.'); return; }
-      const userWalletRef = ref(db, `wallets/${currentUser.uid}`);
-      // runTransaction for concurrency
-      const txnRef = ref(db, `wallets/${currentUser.uid}/balance`);
-      try{
-        const result = await runTransaction(ref(db, `wallets/${currentUser.uid}`), (w)=>{
-          if(w === null) return { balance: 0 };
-          return w;
-        });
-        // ensure balance >=20
-        const snap = await get(userWalletRef);
-        let bal = (snap.exists() && snap.val().balance) ? Number(snap.val().balance) : 0;
-        if(bal < 20){ alert('Insufficient balance. Please recharge your wallet.'); return; }
-        // subtract 20 atomically
-        await runTransaction(userWalletRef, (w)=>{
-          if(w && typeof w.balance !== 'undefined'){
-            if(w.balance >= 20){ w.balance = w.balance - 20; return w; }
-            else return; // abort
-          }
-          return; // abort
-        });
-        // set payment record
-        await set(ref(db, `payments/${currentUser.uid}/${providerId}`), { paid: true, at: Date.now(), amount:20 });
-        alert('Payment successful! Contact unlocked.');
-        // now open whatsapp
-        openWhatsApp(providerWhatsapp);
-        loadWallet();
-        loadProviders();
-      }catch(e){ console.error(e); alert('Payment failed: '+e.message);}    }
+    // Show Images in Gallery
+    db.ref("uploads").on("child_added", (snapshot) => {
+      const data = snapshot.val();
+      const gallery = document.getElementById("gallery");
 
-    function openWhatsApp(num){
-      if(!num){ alert('WhatsApp number not provided by provider'); return; }
-      const clean = num.replace(/[^0-9+]/g,'');
-      const url = `https://api.whatsapp.com/send?phone=${clean}`;
-      window.open(url,'_blank');
-    }
+      let img = document.createElement("img");
+      img.src = data.url;
+      img.className = "w-full h-40 object-cover rounded shadow";
 
-    // Wallet load
-    async function loadWallet(){
-      if(!currentUser) { walletBalanceSpan.innerText = '0'; return; }
-      const snap = await get(ref(db, `wallets/${currentUser.uid}`));
-      const bal = snap.exists() && snap.val().balance ? snap.val().balance : 0;
-      walletBalanceSpan.innerText = bal;
-    }
-
-    // Recharge (simulate) - in production, integrate payment gateway
-    rechargeBtn.onclick = async ()=>{
-      if(!currentUser){ alert('Sign in first'); return; }
-      const amt = parseInt(prompt('Enter amount to add to wallet (₹):', '100')) || 0;
-      if(amt <= 0) return;
-      const walletRef = ref(db, `wallets/${currentUser.uid}`);
-      // simple add
-      const snap = await get(walletRef);
-      const current = snap.exists() && snap.val().balance ? Number(snap.val().balance) : 0;
-      await set(walletRef, { balance: current + amt });
-      alert('Wallet updated +₹'+amt);
-      loadWallet();
-    }
-
-    // Admin: load providers waiting
-    async function loadAdminList(){
-      const snap = await get(ref(db, 'providers'));
-      const data = snap.exists() ? snap.val() : {};
-      adminList.innerHTML = '';
-      Object.keys(data).forEach(k=>{
-        const p = data[k];
-        const el = document.createElement('div'); el.className='p-3 border rounded mb-2';
-        el.innerHTML = `<div class="flex justify-between"><div><b>${p.serviceName}</b> (${p.category})<div class="text-sm">Owner: ${p.ownerName} • ${p.ownerEmail}</div></div>
-                        <div><button class="btn-3d approveBtn bg-green-600 text-white" data-id="${k}">Approve</button>
-                        <button class="btn-3d rejectBtn bg-red-600 text-white ml-2" data-id="${k}">Reject</button></div></div>`;
-        adminList.appendChild(el);
-        el.querySelector('.approveBtn').onclick = async ()=>{ await update(ref(db, `providers/${k}`), { status: 'approved' }); alert('Approved'); loadProviders(); loadAdminList(); }
-        el.querySelector('.rejectBtn').onclick = async ()=>{ await update(ref(db, `providers/${k}`), { status: 'rejected' }); alert('Rejected'); loadProviders(); loadAdminList(); }
-      });
-    }
-
-    refreshList.onclick = ()=>loadProviders();
-
-    // initial load
-    loadProviders();
-
+      gallery.appendChild(img);
+    });
   </script>
 </body>
 </html>
