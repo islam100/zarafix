@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ZaraFix — Service Providers (Single-file)</title>
   <style>
-    /* Minimal 3D-ish mobile-first styling */
     :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
     body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;background:linear-gradient(180deg,#020617 0%,#071129 100%);color:#e6eef6}
     header{display:flex;gap:12px;align-items:center;padding:14px}
@@ -30,7 +29,7 @@
   <header>
     <div class="brand">ZaraFix — Providers</div>
     <div style="flex:1"></div>
-    <button id="loginBtn" class="btn">Login / Signup</button>
+    <button id="loginBtn" class="btn">Login / Signup (Google)</button>
     <button id="logoutBtn" class="btn hidden">Logout</button>
     <button id="openFormBtn" class="btn primary hidden">Post Service</button>
   </header>
@@ -53,8 +52,10 @@
     </div>
 
     <div id="adminPanel" class="card hidden">
-      <h3>Admin: Approve / Recharges</h3>
-      <div id="adminPending" class="small"></div>
+      <h3>Admin Panel — Approvals & Recharges</h3>
+      <div id="adminProvidersPending" class="small"></div>
+      <hr>
+      <div id="adminRechargesPending" class="small"></div>
     </div>
   </main>
 
@@ -96,8 +97,8 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // ---------- CONFIG: Replace IMGBB_KEY with your actual key ----------
-    const IMGBB_KEY = 'REPLACE_WITH_YOUR_IMGBB_KEY_OR_PASTE_72c022c1182b94d6baa3d4fc675dd641';
+    // ---------- CONFIG: Replace IMGBB_KEY with your actual key (or keep empty) ----------
+    const IMGBB_KEY = '';
     const adminEmail = 'zarasamajiksevasanstha@gmail.com';
 
     // Firebase config (from your message)
@@ -128,7 +129,8 @@
     const clearFilter = document.getElementById('clearFilter');
     const rechargeBtn = document.getElementById('rechargeBtn');
     const adminPanel = document.getElementById('adminPanel');
-    const adminPending = document.getElementById('adminPending');
+    const adminProvidersPending = document.getElementById('adminProvidersPending');
+    const adminRechargesPending = document.getElementById('adminRechargesPending');
     const rechargeNotice = document.getElementById('rechargeNotice');
 
     // form fields
@@ -149,9 +151,8 @@
     // ---------- Auth ----------
     loginBtn.addEventListener('click', async ()=>{
       const provider = new firebase.auth.GoogleAuthProvider();
-      try{
-        await auth.signInWithPopup(provider);
-      }catch(e){alert('Login failed: '+e.message)}
+      try{ await auth.signInWithPopup(provider); }
+      catch(e){ alert('Login failed: '+e.message) }
     });
 
     logoutBtn.addEventListener('click', ()=>auth.signOut());
@@ -163,11 +164,15 @@
         // ensure wallet exists
         const walletRef = db.ref('wallets/'+user.uid);
         walletRef.once('value',snap=>{ if(!snap.exists()) walletRef.set({balance:0})});
-        // admin panel visibility
-        if(user.email === adminEmail) adminPanel.classList.remove('hidden'); else adminPanel.classList.add('hidden');
+        // if this user is the admin email, ensure /admins/<uid> is set (safer checks later)
+        if(user.email === adminEmail) db.ref('admins/'+user.uid).set(true);
       }else{
-        loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); openFormBtn.classList.add('hidden'); adminPanel.classList.add('hidden');
+        loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); openFormBtn.classList.add('hidden');
       }
+      // admin panel visibility: check /admins/<uid>
+      if(user){
+        db.ref('admins/'+user.uid).once('value', s=>{ if(s.exists()) adminPanel.classList.remove('hidden'); else adminPanel.classList.add('hidden'); });
+      }else adminPanel.classList.add('hidden');
       renderProviders();
     });
 
@@ -175,10 +180,13 @@
     openFormBtn.addEventListener('click', ()=>{ formModal.classList.remove('hidden') });
     closeModal.addEventListener('click', ()=>{ formModal.classList.add('hidden'); resetForm() });
 
+    let lastObjectUrl = null;
     svcImage.addEventListener('change', e=>{
       const f = e.target.files[0];
-      if(!f) return imgPreview.classList.add('hidden');
+      if(!f) { imgPreview.classList.add('hidden'); if(lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl=null; } return }
+      if(lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
       const url = URL.createObjectURL(f);
+      lastObjectUrl = url;
       imgPreview.src = url; imgPreview.classList.remove('hidden');
     });
 
@@ -192,7 +200,8 @@
         try{ imageUrl = await uploadToImgBB(svcImage.files[0]); }
         catch(e){ formMsg.textContent='Image upload failed: '+e.message; return }
       }
-      const newKey = db.ref('providers').push().key;
+      const newRef = db.ref('providers').push();
+      const newKey = newRef.key;
       const payload = {
         id:newKey,
         ownerUid: currentUser.uid,
@@ -208,10 +217,10 @@
       formModal.classList.add('hidden');
     });
 
-    function resetForm(){ svcName.value=''; svcCategory.value=''; svcCity.value=''; svcWhats.value=''; svcPhone.value=''; svcHours.value=''; svcDesc.value=''; svcImage.value=''; imgPreview.classList.add('hidden'); formMsg.textContent=''; }
+    function resetForm(){ svcName.value=''; svcCategory.value=''; svcCity.value=''; svcWhats.value=''; svcPhone.value=''; svcHours.value=''; svcDesc.value=''; svcImage.value=''; imgPreview.classList.add('hidden'); formMsg.textContent=''; if(lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl=null; } }
 
     async function uploadToImgBB(file){
-      if(!IMGBB_KEY || IMGBB_KEY.startsWith('REPLACE_')) throw new Error('Please set IMGBB key in the code');
+      if(!IMGBB_KEY) throw new Error('Please set IMGBB key in the code');
       const fd = new FormData();
       fd.append('image', file);
       const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, {method:'POST', body:fd});
@@ -229,7 +238,7 @@
       const q = (searchBox.value||'').toLowerCase();
       const catq = (categoryFilter.value||'').toLowerCase();
       providerList.innerHTML='';
-      const list = Object.values(providersCache || {}).filter(p=>p && p.status === 'approved');
+      const list = Object.entries(providersCache || {}).map(([k,v])=>({key:k, ...v})).filter(p=>p && p.status === 'approved');
       const filtered = list.filter(p=>{
         if(q){ const hay=(p.name+' '+(p.city||'')+' '+(p.category||'')).toLowerCase(); if(!hay.includes(q)) return false }
         if(catq){ if(!((p.category||'').toLowerCase().includes(catq))) return false }
@@ -248,17 +257,24 @@
           <div class="small" style="margin-top:6px">${escapeHtml(p.desc||'')}</div>
           <div style="height:8px"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" data-id="${p.id}" data-action="call">Call Now</button>
-            <button class="btn" data-id="${p.id}" data-action="reveal">Reveal Contact</button>
-            <button class="btn" data-id="${p.id}" data-action="whatsapp">WhatsApp Now</button>
+            <button class="btn" data-id="${p.key}" data-action="call">Call Now</button>
+            <button class="btn" data-id="${p.key}" data-action="reveal">Reveal Contact</button>
+            <button class="btn" data-id="${p.key}" data-action="whatsapp">WhatsApp Now</button>
             <div style="flex:1"></div>
           </div>
+          <div class="small" id="contact_${p.key}"></div>
         `;
+        providerList.appendChild(el);
         // attach handlers
         el.querySelectorAll('button').forEach(b=>{
           b.addEventListener('click', ()=>providerAction(b.dataset.action, p));
         });
-        providerList.appendChild(el);
+        // if already revealed for current logged in user, show contact
+        if(currentUser){
+          db.ref('revealed/'+currentUser.uid+'/'+p.key).once('value', s=>{
+            if(s.exists()){ document.getElementById('contact_'+p.key).textContent = `WhatsApp: ${p.whatsapp || 'N/A'} | City: ${p.city || 'N/A'}`; }
+          });
+        }
       });
     }
 
@@ -273,90 +289,96 @@
       }
       if(!auth.currentUser){ alert('Please login to reveal contact or WhatsApp.'); return }
       const uid = auth.currentUser.uid;
-      // check wallet
-      db.ref('wallets/'+uid).once('value', snap=>{
-        const bal = (snap.val() && parseInt(snap.val().balance||0))||0;
-        if(bal < 20){ // show recharge
-          rechargeNotice.classList.remove('hidden');
-          return;
-        }
-        // deduct 20 and reveal contact
+      const walletRef = db.ref('wallets/'+uid);
+      // Use transaction to atomically deduct ₹20
+      walletRef.transaction(curr=>{
+        if(curr && typeof curr.balance === 'number' && curr.balance >= 20){ curr.balance = curr.balance - 20; curr.lastDeductAt = Date.now(); return curr }
+        // if wallet object missing, abort by returning
+        return;
+      }, (err, committed, snapshot)=>{
+        if(err){ alert('Transaction failed: '+err.message); return }
+        if(!committed){ rechargeNotice.classList.remove('hidden'); alert('Insufficient balance. Please recharge.'); return }
+        // mark revealed and show details
         const txKey = db.ref('transactions').push().key;
         const updates = {};
-        updates['/wallets/'+uid+'/balance'] = bal - 20;
-        updates['/wallets/'+uid+'/lastDeductAt'] = Date.now();
-        updates['/wallets/'+uid+'/lastTx'] = txKey;
-        updates['/revealed/'+uid+'/'+p.id] = { providerId: p.id, revealedAt: Date.now() };
+        updates['/transactions/'+txKey] = { uid, providerId: p.key, amount:20, at: Date.now() };
+        updates['/revealed/'+uid+'/'+p.key] = { providerId: p.key, revealedAt: Date.now() };
         db.ref().update(updates).then(()=>{
-          // show wa link and address in an alert (or better: show in UI)
+          // show contact in card and open whatsapp if requested
           const wa = p.whatsapp||'';
-          const msg = `Contact revealed! WhatsApp: ${wa} \nAddress (city): ${p.city || 'N/A'}`;
-          if(action==='whatsapp' && wa){
-            // open whatsapp link
-            const number = wa.replace(/[^0-9]/g,'');
-            window.open('https://wa.me/'+number);
-          }
-          alert(msg);
-        }).catch(e=>alert('Error: '+e.message))
+          document.getElementById('contact_'+p.key).textContent = `WhatsApp: ${wa || 'N/A'} | City: ${p.city || 'N/A'}`;
+          if(action==='whatsapp' && wa){ const number = wa.replace(/[^0-9]/g,''); window.open('https://wa.me/'+number); }
+          alert('Contact revealed successfully.');
+        }).catch(e=>alert('Error saving reveal: '+e.message));
       });
     }
 
-    // ---------- Admin: approve/reject providers and manage recharges ----------
+    // ---------- Admin: approve/reject providers and manage recharges (separate sections) ----------
     db.ref('providers').on('value', snap=>{
       const all = snap.val()||{};
-      if(!currentUser || currentUser.email !== adminEmail) return;
-      // build admin panel HTML
-      let html = '';
-      const keys = Object.keys(all).sort((a,b)=> (all[b].createdAt||0)-(all[a].createdAt||0));
-      keys.forEach(k=>{
-        const p = all[k];
-        html += `<div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(p.name)}</strong> — ${escapeHtml(p.category||'')} — ${p.status||''}`;
-        html += `<div style="margin-top:6px"><button class='btn admin' data-id='${p.id}' data-act='approve'>Approve</button> <button class='btn admin' data-id='${p.id}' data-act='reject'>Reject</button> <button class='btn admin' data-id='${p.id}' data-act='delete'>Delete</button></div></div>`;
+      // build admin providers list only if admin
+      if(!currentUser) return;
+      db.ref('admins/'+currentUser.uid).once('value', s=>{
+        if(!s.exists()) return;
+        let html = '';
+        const entries = Object.entries(all).sort((a,b)=> (b[1].createdAt||0)-(a[1].createdAt||0));
+        entries.forEach(([k,p])=>{
+          html += `<div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(p.name)}</strong> — ${escapeHtml(p.category||'')} — ${p.status||''}`;
+          html += `<div style="margin-top:6px"><button class='btn adminProv' data-key='${k}' data-act='approve'>Approve</button> <button class='btn adminProv' data-key='${k}' data-act='reject'>Reject</button> <button class='btn adminProv' data-key='${k}' data-act='delete'>Delete</button></div></div>`;
+        });
+        adminProvidersPending.innerHTML = html;
+        adminProvidersPending.querySelectorAll('.adminProv').forEach(b=>b.addEventListener('click', e=>{
+          const key = b.dataset.key; const act = b.dataset.act;
+          if(act==='approve') db.ref('providers/'+key+'/status').set('approved');
+          if(act==='reject') db.ref('providers/'+key+'/status').set('rejected');
+          if(act==='delete') db.ref('providers/'+key).remove();
+        }));
       });
-      adminPending.innerHTML = html;
-      adminPending.querySelectorAll('.admin').forEach(b=>b.addEventListener('click', e=>{
-        const id = b.dataset.id; const act = b.dataset.act;
-        if(act==='approve') db.ref('providers/'+id+'/status').set('approved');
-        if(act==='reject') db.ref('providers/'+id+'/status').set('rejected');
-        if(act==='delete') db.ref('providers/'+id).remove();
-      }));
     });
 
     // Recharges: user requests
     rechargeBtn.addEventListener('click', ()=>{
       if(!currentUser){ alert('Login to request recharge'); return }
-      // create recharge request
       const key = db.ref('recharges').push().key;
       const payload = { id:key, uid: currentUser.uid, email: currentUser.email||'', amount:100, status:'pending', createdAt: Date.now() };
       db.ref('recharges/'+key).set(payload).then(()=>{ alert('Recharge request sent to admin for approval (₹100).') })
     });
 
-    // Admin listens for recharges
+    // Admin listens for recharges and can accept atomically
     db.ref('recharges').on('value', snap=>{
-      if(!currentUser || currentUser.email !== adminEmail) return;
-      const all = snap.val()||{}; let html='';
-      Object.values(all).forEach(r=>{
-        html += `<div style="border-bottom:1px dashed rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(r.email)}</strong> — ₹${r.amount} — ${r.status}`;
-        if(r.status==='pending') html += ` <div><button class='btn rechargeAdmin' data-id='${r.id}' data-act='accept'>Accept</button> <button class='btn rechargeAdmin' data-id='${r.id}' data-act='reject'>Reject</button></div>`;
-        html += `</div>`;
-      });
-      adminPending.innerHTML = html;
-      adminPending.querySelectorAll('.rechargeAdmin').forEach(b=>b.addEventListener('click', ()=>{
-        const id = b.dataset.id; const act = b.dataset.act;
-        if(act==='accept'){
-          // mark recharge accepted and add ₹100 to user's wallet
-          db.ref('recharges/'+id+'/status').set('accepted');
-          db.ref('recharges/'+id).once('value', snap=>{
-            const r = snap.val(); if(!r) return;
-            const wref = db.ref('wallets/'+r.uid);
-            wref.once('value', wsnap=>{
-              const current = (wsnap.val() && wsnap.val().balance) || 0;
-              wref.set({balance: current + 100, lastTopupAt: Date.now()});
+      const all = snap.val()||{};
+      if(!currentUser) return;
+      db.ref('admins/'+currentUser.uid).once('value', s=>{
+        if(!s.exists()) return;
+        let html='';
+        Object.values(all).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)).forEach(r=>{
+          html += `<div style="border-bottom:1px dashed rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(r.email)}</strong> — ₹${r.amount} — ${r.status}`;
+          if(r.status==='pending') html += ` <div><button class='btn rechargeAdmin' data-id='${r.id}' data-act='accept'>Accept</button> <button class='btn rechargeAdmin' data-id='${r.id}' data-act='reject'>Reject</button></div>`;
+          html += `</div>`;
+        });
+        adminRechargesPending.innerHTML = html;
+        adminRechargesPending.querySelectorAll('.rechargeAdmin').forEach(b=>b.addEventListener('click', ()=>{
+          const id = b.dataset.id; const act = b.dataset.act;
+          if(act==='accept'){
+            // Atomically mark recharge accepted and add ₹100 to user's wallet using transaction
+            const rechargeRef = db.ref('recharges/'+id);
+            rechargeRef.once('value', snap=>{
+              const r = snap.val(); if(!r || r.status !== 'pending') return;
+              // mark accepted first
+              rechargeRef.child('status').set('accepted');
+              const wref = db.ref('wallets/'+r.uid);
+              wref.transaction(curr=>{
+                if(!curr) return { balance: 100, lastTopupAt: Date.now() };
+                curr.balance = (curr.balance||0) + 100; curr.lastTopupAt = Date.now(); return curr;
+              }, (err, committed, s2)=>{
+                if(err){ alert('Wallet topup failed: '+err.message); return }
+                if(committed) alert('Recharge successful and wallet topped up.');
+              });
             });
-          });
-        }
-        if(act==='reject') db.ref('recharges/'+id+'/status').set('rejected');
-      }));
+          }
+          if(act==='reject') db.ref('recharges/'+id+'/status').set('rejected');
+        }));
+      });
     });
 
     // ---------- Utilities ----------
