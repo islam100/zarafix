@@ -2,79 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Service Provider Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }
-    header { background:#007bff; color:white; padding:10px; display:flex; align-items:center; justify-content:space-between; }
-    header h2 { margin:0; }
-    .header-right { display:flex; align-items:center; gap:15px; }
-    button { padding:8px 15px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
-    .btn-primary { background:#28a745; color:white; }
-    .btn-secondary { background:#ffc107; }
-    .btn-danger { background:#dc3545; color:white; }
-    .wallet { font-weight:bold; }
-
-    /* Modal */
-    .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); }
-    .modal-content { background:#fff; margin:10% auto; padding:20px; border-radius:10px; width:90%; max-width:500px; position:relative; }
-    .close { position:absolute; top:10px; right:15px; font-size:20px; cursor:pointer; }
-
-    label { display:block; margin-top:10px; }
-    input, select { width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:5px; }
-
-    .profile-pic { width:35px; height:35px; border-radius:50%; border:2px solid white; }
-  </style>
-</head>
-<body>
-
-  <header>
-    <h2>Service Portal</h2>
-    <div class="header-right">
-      <span id="wallet" class="wallet" style="display:none;">Wallet: ₹0</span>
-      <button id="rechargeBtn" class="btn-secondary" style="display:none;">Recharge</button>
-      <button id="postBtn" class="btn-primary" style="display:none;">Post Service</button>
-      <img id="profilePic" class="profile-pic" src="" alt="" style="display:none;">
-      <button id="loginBtn" class="btn-danger">Login</button>
-    </div>
-  </header>
-
-  <!-- Post Service Modal -->
-  <div class="modal" id="postModal">
-    <div class="modal-content">
-      <span class="close" id="closeForm">&times;</span>
-      <h3>Post Your Service</h3>
-      <form id="serviceForm">
-        <label>Business/Service Name</label>
-        <input type="text" id="serviceName" required>
-
-        <label>Category</label>
-        <input type="text" id="category" placeholder="Doctor, Hospital, Plumber..." required>
-
-        <label>Address</label>
-        <input type="text" id="address" required>
-
-        <label>Contact Number</label>
-        <input type="tel" id="contact" required>
-
-        <label>WhatsApp Number</label>
-        <input type="tel" id="whatsapp" required>
-
-        <label>Service Hours</label>
-        <input type="text" id="hours" placeholder="9AM - 9PM" required>
-
-        <button type="submit" class="btn-primary" style="margin-top:10px;">Submit</button>
-      </form>
-    </div>
-  </div>
+  <title>Service Provider Portal</title>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: linear-gradient(90deg, #2563eb, #1e3a8a);
+      color: white;
+    }
+
+    header h1 {
+      font-size: 22px;
+      margin: 0;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      margin: 6px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    .btn-login { background: linear-gradient(45deg, #10b981, #059669); color: white; }
+    .btn-post { background: linear-gradient(45deg, #3b82f6, #1d4ed8); color: white; }
+    .btn-recharge { background: linear-gradient(45deg, #f59e0b, #d97706); color: white; }
+
+    #profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #profile img {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 450px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      animation: pop 0.3s ease;
+    }
+    @keyframes pop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .close {
+      float: right;
+      font-size: 22px;
+      cursor: pointer;
+    }
+    form label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    form input, form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    form input:focus, form textarea:focus {
+      border-color: #2563eb;
+    }
+
+    /* Search */
+    #searchBox {
+      margin: 20px;
+      width: 90%;
+      max-width: 500px;
+      padding: 10px;
+      border: 2px solid #2563eb;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Service Provider Portal</h1>
+    <div id="profile">
+      <button class="btn btn-login" id="loginBtn">Login</button>
+    </div>
+  </header>
+
+  <div style="text-align:center; margin-top: 20px;">
+    <input type="text" id="searchBox" placeholder="🔍 Search services...">
+  </div>
+
+  <div style="text-align:center; margin-top: 20px;" id="afterLoginBtns" hidden>
+    <button class="btn btn-post" id="postServiceBtn">➕ Post Service</button>
+    <button class="btn btn-recharge">💰 Recharge Wallet</button>
+  </div>
+
+  <!-- Modal Form -->
+  <div id="serviceModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h2>Post Your Service</h2>
+      <form id="serviceForm">
+        <label>Business Name</label>
+        <input type="text" required>
+
+        <label>Category</label>
+        <input type="text" required>
+
+        <label>Address</label>
+        <input type="text" required>
+
+        <label>WhatsApp Number</label>
+        <input type="text" required>
+
+        <label>Service Hours</label>
+        <input type="text" placeholder="e.g. 9 AM - 9 PM" required>
+
+        <button type="submit" class="btn btn-post" style="width:100%; margin-top:15px;">Submit</button>
+      </form>
+    </div>
+  </div>
+
   <script>
-    // ✅ Firebase Config
+    // Firebase Config
    const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -84,24 +176,16 @@
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
+
     firebase.initializeApp(firebaseConfig);
+
     const auth = firebase.auth();
-    const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
-    const postBtn = document.getElementById("postBtn");
-    const rechargeBtn = document.getElementById("rechargeBtn");
-    const walletSpan = document.getElementById("wallet");
-    const profilePic = document.getElementById("profilePic");
+    const afterLoginBtns = document.getElementById("afterLoginBtns");
+    const profile = document.getElementById("profile");
 
-    // ✅ Modal controls
-    const modal = document.getElementById("postModal");
-    const closeForm = document.getElementById("closeForm");
-    postBtn.onclick = () => modal.style.display = "block";
-    closeForm.onclick = () => modal.style.display = "none";
-    window.onclick = (e) => { if(e.target == modal) modal.style.display = "none"; };
-
-    // ✅ Login / Logout
+    // Login / Logout
     loginBtn.addEventListener("click", () => {
       if (auth.currentUser) {
         auth.signOut();
@@ -111,52 +195,33 @@
       }
     });
 
-    // ✅ Auth State
     auth.onAuthStateChanged(user => {
       if (user) {
         loginBtn.textContent = "Logout";
-        postBtn.style.display = "inline-block";
-        rechargeBtn.style.display = "inline-block";
-        walletSpan.style.display = "inline-block";
-        profilePic.style.display = "inline-block";
-        profilePic.src = user.photoURL;
-
-        // Load wallet
-        db.ref("wallets/" + user.uid).once("value").then(snap => {
-          let balance = snap.val() || 0;
-          walletSpan.textContent = "Wallet: ₹" + balance;
-        });
+        afterLoginBtns.hidden = false;
+        profile.innerHTML = `<img src="${user.photoURL}" alt="profile"><span>${user.displayName}</span> <button class="btn btn-login" id="loginBtn">Logout</button>`;
+        document.getElementById("loginBtn").onclick = () => auth.signOut();
       } else {
-        loginBtn.textContent = "Login";
-        postBtn.style.display = "none";
-        rechargeBtn.style.display = "none";
-        walletSpan.style.display = "none";
-        profilePic.style.display = "none";
+        profile.innerHTML = `<button class="btn btn-login" id="loginBtn">Login</button>`;
+        document.getElementById("loginBtn").onclick = () => {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          auth.signInWithPopup(provider);
+        };
+        afterLoginBtns.hidden = true;
       }
     });
 
-    // ✅ Form Submit
-    document.getElementById("serviceForm").addEventListener("submit", e => {
-      e.preventDefault();
-      const user = auth.currentUser;
-      if (!user) return alert("Login first!");
+    // Modal Open/Close
+    const modal = document.getElementById("serviceModal");
+    document.getElementById("postServiceBtn").onclick = () => modal.style.display = "flex";
+    document.getElementById("closeModal").onclick = () => modal.style.display = "none";
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
 
-      const data = {
-        serviceName: document.getElementById("serviceName").value,
-        category: document.getElementById("category").value,
-        address: document.getElementById("address").value,
-        contact: document.getElementById("contact").value,
-        whatsapp: document.getElementById("whatsapp").value,
-        hours: document.getElementById("hours").value,
-        userId: user.uid,
-        timestamp: Date.now()
-      };
-
-      db.ref("services").push(data).then(() => {
-        alert("Service Posted Successfully!");
-        modal.style.display = "none";
-        document.getElementById("serviceForm").reset();
-      });
+    // Search Live Filter (future list items handle)
+    document.getElementById("searchBox").addEventListener("input", e => {
+      let q = e.target.value.toLowerCase();
+      console.log("Searching:", q);
+      // TODO: Filter service cards here
     });
   </script>
 </body>
