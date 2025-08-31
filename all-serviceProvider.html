@@ -1,197 +1,128 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ZaraFix — Service Providers (Final)</title>
+  <meta charset="UTF-8">
+  <title>ZaraFix - Service Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fad390);
+    }
 
-<style>
-  :root{
-    --card-radius:14px;
-    --shadow: 0 18px 40px rgba(2,6,23,0.25);
-    --accent-a: linear-gradient(135deg,#ff7a7a,#ffb86b);
-    --accent-b: linear-gradient(135deg,#7b61ff,#4fc3f7);
-    --accent-c: linear-gradient(135deg,#7ee787,#06b6a4);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071028 0%, #071122 100%);color:#e6eef6;min-height:100vh}
-  .wrap{max-width:1100px;margin:18px auto;padding:12px}
+    header {
+      text-align: center;
+      padding: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+    }
 
-  /* HEADER with 3D logo */
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:12px;background:linear-gradient(90deg,#1f005c,#5b86e5);box-shadow:var(--shadow)}
-  .logo {
-    display:flex;align-items:center;gap:12px;
-  }
-  .logo-badge{width:56px;height:56px;border-radius:12px;background:var(--accent-b);display:flex;align-items:center;justify-content:center;font-weight:900;color:#071028;font-size:20px;box-shadow:0 12px 30px rgba(0,0,0,0.35);transform:perspective(500px) rotateX(8deg)}
-  .logo-text{font-weight:900;font-size:20px;color:linear-gradient(90deg,#fff,#ddd); text-shadow: 0 8px 22px rgba(0,0,0,0.45)}
-  .header-controls{display:flex;align-items:center;gap:10px}
+    .logo3d {
+      font-size: 40px;
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 2px 2px 5px #000, 0px 0px 25px #ff00ff, 0px 0px 5px #00ffff;
+    }
 
-  .wallet{padding:8px 12px;border-radius:12px;background:var(--accent-c);color:#071028;font-weight:800;box-shadow:0 8px rgba(0,0,0,0.12)}
-  .btn{padding:10px 12px;border-radius:12px;border:none;font-weight:800;cursor:pointer;box-shadow:0 10px rgba(0,0,0,0.16);transition:transform .12s}
-  .btn:active{transform:translateY(3px)}
-  .btn-post{background:var(--accent-b);color:#071028}
-  .btn-recharge{background:var(--accent-c);color:#071028}
-  .btn-login{background:var(--accent-a);color:#071028}
-  .profile{display:flex;align-items:center;gap:8px;padding:6px;border-radius:12px;background:rgba(255,255,255,0.03)}
-  .profile img{width:36px;height:36px;border-radius:8px;object-fit:cover}
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
 
-  /* layout */
-  .layout{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:18px}
-  @media(max-width:940px){.layout{grid-template-columns:1fr;padding:0 8px}}
-  .left{display:flex;flex-direction:column;gap:14px}
-  .search{display:flex;justify-content:center}
-  .search input{width:100%;max-width:820px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:16px}
+    .card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      overflow: hidden;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
 
-  /* cards grid */
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:var(--card-radius);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column}
-  .card img{width:100%;height:140px;object-fit:cover;border-radius:12px;margin-top:8px}
-  .card h3{margin:0;font-size:16px}
-  .meta{font-size:13px;color:#bfeeea;margin-top:8px}
-  .row{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
-  .btn-small{padding:8px 10px;border-radius:10px;border:none;cursor:pointer;font-weight:800}
-  .btn-whatsapp{background:linear-gradient(90deg,#25D366,#128C7E);color:#fff}
-  .btn-call{background:linear-gradient(90deg,#06b6d4,#0ea5ad);color:#071028}
-  .admin-controls{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+    .card:hover {
+      transform: scale(1.03);
+    }
 
-  /* right */
-  aside .panel{background:linear-gradient(180deg,#071428,#081a2a);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
-  .small{font-size:13px;color:#bfeeea}
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
 
-  /* modal */
-  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:120}
-  .modal.open{display:flex}
-  .modal-card{width:94%;max-width:520px;background:#071428;padding:18px;border-radius:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 18px 60px rgba(0,0,0,0.6)}
-  .modal-card h3{margin:0;color:#dff8f1}
-  .form-row{display:flex;gap:8px;margin-top:10px}
-  input[type="text"], input[type="tel"], input[type="file"], textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-  .modal-actions{display:flex;gap:10px;margin-top:12px;justify-content:flex-end}
-  .muted{font-size:13px;color:#9fc3bf}
+    .card-content {
+      padding: 15px;
+    }
 
-  footer{height:14px;margin-top:18px;border-radius:12px;overflow:hidden;max-width:1100px;margin-left:auto;margin-right:auto}
-  .stripe{height:14px;width:25%;display:inline-block}
-</style>
+    .status {
+      font-weight: bold;
+      margin: 5px 0;
+    }
+
+    .status.waiting { color: orange; }
+    .status.approved { color: green; }
+    .status.rejected { color: red; }
+
+    .whatsapp-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: #25d366;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    /* Zoom Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      padding: 50px;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: rgba(0,0,0,0.8);
+    }
+
+    .modal img {
+      margin: auto;
+      display: block;
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #fff;
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="logo">
-        <div class="logo-badge">ZF</div>
-        <div class="logo-text">ZaraFix — Service Providers</div>
-      </div>
 
-      <div class="header-controls">
-        <div id="walletDisplay" class="wallet" style="display:none">Wallet: ₹0</div>
-        <button id="postBtn" class="btn btn-post" style="display:none">➕ Post Service</button>
-        <button id="rechargeBtn" class="btn btn-recharge" style="display:none">💳 Recharge</button>
+  <header>
+    <div class="logo3d">✨ ZaraFix ✨</div>
+  </header>
 
-        <div class="profile" id="profileBox" style="display:none">
-          <img id="profilePic" src="" alt="dp">
-          <div id="profileName" style="font-weight:800;color:#dff8f1"></div>
-        </div>
+  <div class="container" id="cardList"></div>
 
-        <button id="authBtn" class="btn btn-login">Login</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <main class="left">
-        <div class="search"><input id="searchInput" placeholder="Search by name, city, category..."></div>
-        <div class="cards" id="cardsContainer"></div>
-      </main>
-
-      <aside>
-        <div class="panel">
-          <h4 style="margin:0 0 8px 0">Quick</h4>
-          <div class="small">Post service after login. Admin approves listings.</div>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-            <button id="openPostAside" class="btn btn-post" style="display:none">Post Service</button>
-            <button id="openRechargeAside" class="btn btn-recharge" style="display:none">Recharge</button>
-          </div>
-        </div>
-
-        <div id="adminPanel" class="panel" style="display:none;margin-top:12px">
-          <h4 style="margin:0 0 8px 0">Admin - Pending</h4>
-          <div id="pendingList" class="small"></div>
-          <h4 style="margin-top:12px">Recharge Requests</h4>
-          <div id="rechargeList" class="small"></div>
-        </div>
-      </aside>
-    </div>
-
-    <footer>
-      <div class="stripe" style="background:linear-gradient(90deg,#ff7a7a,#ffb86b)"></div>
-      <div class="stripe" style="background:linear-gradient(90deg,#7b61ff,#4fc3f7)"></div>
-      <div class="stripe" style="background:linear-gradient(90deg,#7ee787,#06b6a4)"></div>
-      <div class="stripe" style="background:linear-gradient(90deg,#ffd86b,#ff7ac1)"></div>
-    </footer>
+  <!-- Zoom Modal -->
+  <div id="zoomModal" class="modal" onclick="this.style.display='none'">
+    <img id="zoomImg" src="">
   </div>
 
-  <!-- Provider Modal -->
-  <div id="providerModal" class="modal"><div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>Provider Profile</h3>
-      <button id="closeProvider" class="btn" style="background:transparent;color:#dff8f1;font-size:20px">✕</button>
-    </div>
-
-    <form id="providerForm" style="margin-top:12px">
-      <label class="muted">Service/Business Name</label>
-      <input id="pf_name" type="text" required>
-
-      <label class="muted">Category (e.g. Electrician, Plumber)</label>
-      <input id="pf_category" type="text" required>
-
-      <label class="muted">City / Address</label>
-      <input id="pf_city" type="text" required>
-
-      <label class="muted">Contact Number</label>
-      <input id="pf_contact" type="tel" required>
-
-      <label class="muted">WhatsApp Number</label>
-      <input id="pf_whatsapp" type="text" required>
-
-      <label class="muted">Service Hours</label>
-      <input id="pf_hours" placeholder="e.g. 9AM - 9PM">
-
-      <label class="muted">Profile / Shop Image</label>
-      <input id="pf_image" type="file" accept="image/*">
-
-      <div class="modal-actions">
-        <button type="button" id="cancelProvider" class="btn" style="background:transparent;color:#dff8f1;border:1px solid rgba(255,255,255,0.03)">Cancel</button>
-        <button id="submitProvider" type="submit" class="btn btn-post">Submit for Approval</button>
-      </div>
-    </form>
-  </div></div>
-
-  <!-- Recharge Modal -->
-  <div id="rechargeModal" class="modal"><div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>Recharge ₹100</h3>
-      <button id="closeRecharge" class="btn" style="background:transparent;color:#dff8f1;font-size:20px">✕</button>
-    </div>
-
-    <div style="margin-top:12px">
-      <div class="small">Upload payment screenshot (UPI). Admin will verify and credit ₹100.</div>
-      <label class="muted" style="margin-top:10px">Payment Screenshot</label>
-      <input id="recharge_img" type="file" accept="image/*">
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-        <button id="cancelRecharge" class="btn" style="background:transparent;color:#dff8f1">Cancel</button>
-        <button id="sendRecharge" class="btn btn-recharge">Send Request</button>
-      </div>
-    </div>
-  </div></div>
-
-<script>
-/* ===== CONFIG ===== */
-const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-
-const firebaseConfig = {
+  <script>
+    // 🔥 Firebase Config
+    
+     const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
   databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
@@ -200,389 +131,50 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
 
-/* ===== UI Refs ===== */
-const authBtn = document.getElementById('authBtn');
-const profileBox = document.getElementById('profileBox');
-const profilePic = document.getElementById('profilePic');
-const profileName = document.getElementById('profileName');
-const walletDisplay = document.getElementById('walletDisplay');
+    firebase.initializeApp(firebaseConfig);
 
-const postBtn = document.getElementById('postBtn');
-const rechargeBtn = document.getElementById('rechargeBtn');
-const openPostAside = document.getElementById('openPostAside');
-const openRechargeAside = document.getElementById('openRechargeAside');
+    const db = firebase.database();
+    const cardList = document.getElementById("cardList");
 
-const providerModal = document.getElementById('providerModal');
-const closeProvider = document.getElementById('closeProvider');
-const cancelProvider = document.getElementById('cancelProvider');
-const providerForm = document.getElementById('providerForm');
-const pf_image = document.getElementById('pf_image');
+    // 🔥 Realtime load posts
+    db.ref("posts").on("value", (snapshot) => {
+      cardList.innerHTML = "";
+      snapshot.forEach(child => {
+        let data = child.val();
+        let statusClass = "waiting";
+        let statusText = "⏳ Waiting for approval";
 
-const rechargeModal = document.getElementById('rechargeModal');
-const closeRecharge = document.getElementById('closeRecharge');
-const cancelRecharge = document.getElementById('cancelRecharge');
-const sendRecharge = document.getElementById('sendRecharge');
-const recharge_img = document.getElementById('recharge_img');
+        if (data.status === "approved") {
+          statusClass = "approved";
+          statusText = "✅ Approved";
+        } else if (data.status === "rejected") {
+          statusClass = "rejected";
+          statusText = "❌ Rejected";
+        }
 
-const cardsContainer = document.getElementById('cardsContainer');
-const pendingList = document.getElementById('pendingList');
-const rechargeList = document.getElementById('rechargeList');
-const adminPanel = document.getElementById('adminPanel');
-const searchInput = document.getElementById('searchInput');
+        let card = document.createElement("div");
+        card.className = "card";
 
-/* ===== helpers ===== */
-function showModal(m){ m.classList.add('open'); m.style.display='flex'; }
-function hideModal(m){ m.classList.remove('open'); m.style.display='none'; }
-function toast(s){ alert(s); }
+        card.innerHTML = `
+          <img src="${data.image || 'https://via.placeholder.com/300'}" onclick="openZoom('${data.image}')">
+          <div class="card-content">
+            <h3>${data.title || "No Title"}</h3>
+            <p>${data.description || ""}</p>
+            <p class="status ${statusClass}">${statusText}</p>
+            ${data.status === "approved" ? `<a href="https://wa.me/${data.whatsapp}" class="whatsapp-btn">WhatsApp</a>` : ""}
+          </div>
+        `;
 
-/* ===== Auth ===== */
-authBtn.addEventListener('click', async ()=>{
-  if(auth.currentUser){ await auth.signOut(); return; }
-  const useGoogle = confirm('Sign in with Google? OK = Google, Cancel = Email/Password');
-  if(useGoogle){
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try{ await auth.signInWithPopup(provider); } catch(e){ alert('Login failed: '+e.message); }
-  } else {
-    const email = prompt('Email:'); if(!email) return;
-    const pass = prompt('Password:'); if(!pass) return;
-    try{ await auth.signInWithEmailAndPassword(email, pass); }
-    catch(e){ if(e.code==='auth/user-not-found'){ try{ await auth.createUserWithEmailAndPassword(email, pass); alert('Account created'); }catch(e2){alert('Signup failed:'+e2.message)} } else alert('Login error:'+e.message) }
-  }
-});
-
-async function ensureWallet(uid){
-  const ref = db.ref('wallets/'+uid);
-  const snap = await ref.once('value');
-  if(!snap.exists()) await ref.set({balance:0});
-}
-
-/* ===== onAuth change ===== */
-let currentUser = null;
-auth.onAuthStateChanged(async user=>{
-  currentUser = user;
-  if(user){
-    authBtn.textContent='Logout';
-    profileBox.style.display='flex';
-    profilePic.src = user.photoURL || 'https://via.placeholder.com/80x80.png?text=DP';
-    profileName.textContent = user.displayName || user.email.split('@')[0];
-    postBtn.style.display='inline-block';
-    rechargeBtn.style.display='inline-block';
-    openPostAside.style.display='inline-block';
-    openRechargeAside.style.display='inline-block';
-    await ensureWallet(user.uid);
-    const wsnap = await db.ref('wallets/'+user.uid+'/balance').once('value');
-    walletDisplay.style.display='inline-block';
-    walletDisplay.textContent = 'Wallet: ₹' + ((wsnap.val()!=null)?wsnap.val():0);
-  } else {
-    authBtn.textContent='Login';
-    profileBox.style.display='none';
-    postBtn.style.display='none';
-    rechargeBtn.style.display='none';
-    openPostAside.style.display='none';
-    openRechargeAside.style.display='none';
-    walletDisplay.style.display='none';
-  }
-  adminPanel.style.display = (user && user.email === ADMIN_EMAIL) ? 'block' : 'none';
-  // re-render lists after auth change
-  renderListings();
-  renderAdminPanel();
-});
-
-/* ===== Modal wiring ===== */
-postBtn.addEventListener('click', ()=> showModal(providerModal));
-openPostAside.addEventListener('click', ()=> showModal(providerModal));
-closeProvider.addEventListener('click', ()=> hideModal(providerModal));
-cancelProvider.addEventListener('click', ()=> hideModal(providerModal));
-
-rechargeBtn.addEventListener('click', ()=> showModal(rechargeModal));
-openRechargeAside.addEventListener('click', ()=> showModal(rechargeModal));
-closeRecharge.addEventListener('click', ()=> hideModal(rechargeModal));
-cancelRecharge.addEventListener('click', ()=> hideModal(rechargeModal));
-
-/* ===== imgbb uploader ===== */
-async function uploadToImgbb(file){
-  const fd = new FormData();
-  fd.append('image', file);
-  const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, { method:'POST', body: fd });
-  const j = await res.json();
-  if(j && j.data && j.data.url) return j.data.url;
-  throw new Error('ImgBB upload failed');
-}
-
-/* ===== provider submit ===== */
-providerForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if(!currentUser){ toast('Login first'); return; }
-  const name = document.getElementById('pf_name').value.trim();
-  const category = document.getElementById('pf_category').value.trim();
-  const city = document.getElementById('pf_city').value.trim();
-  const contact = document.getElementById('pf_contact').value.trim();
-  const whatsapp = document.getElementById('pf_whatsapp').value.trim();
-  const hours = document.getElementById('pf_hours').value.trim();
-  const file = pf_image.files[0];
-  try{
-    document.getElementById('submitProvider').disabled = true;
-    let imageUrl = '';
-    if(file) imageUrl = await uploadToImgbb(file);
-    const ref = db.ref('providers').push();
-    await ref.set({
-      name, category, city, contact, whatsapp, hours, image: imageUrl||'', ownerUid: currentUser.uid, status:'pending', createdAt: Date.now()
+        cardList.appendChild(card);
+      });
     });
-    toast('Submitted for admin approval');
-    providerForm.reset();
-    hideModal(providerModal);
-    // UI refresh
-    renderListings(); renderAdminPanel();
-  }catch(err){ alert('Error: '+err.message) }
-  document.getElementById('submitProvider').disabled = false;
-});
 
-/* ===== recharge submit ===== */
-sendRecharge.addEventListener('click', async ()=>{
-  if(!currentUser){ toast('Login first'); return; }
-  const file = recharge_img.files[0]; if(!file){ toast('Select screenshot'); return; }
-  sendRecharge.disabled = true;
-  try{
-    const imageUrl = await uploadToImgbb(file);
-    const rref = db.ref('recharges').push();
-    await rref.set({ uid: currentUser.uid, userEmail: currentUser.email, imageUrl, status:'pending', createdAt: Date.now() });
-    toast('Recharge request sent to admin');
-    recharge_img.value = '';
-    hideModal(rechargeModal);
-    renderAdminPanel();
-  }catch(e){ alert('Recharge error: '+e.message) }
-  sendRecharge.disabled = false;
-});
-
-/* ===== LIST RENDERING with live child listeners ===== */
-const rendered = {}; // keep map of rendered cards
-
-// child_added
-db.ref('providers').on('child_added', snapshot => {
-  const id = snapshot.key;
-  const data = snapshot.val();
-  rendered[id] = data;
-  renderCard(id, data);
-});
-
-// child_changed
-db.ref('providers').on('child_changed', snapshot => {
-  const id = snapshot.key;
-  const data = snapshot.val();
-  rendered[id] = data;
-  updateCard(id, data);
-});
-
-// child_removed
-db.ref('providers').on('child_removed', snapshot => {
-  const id = snapshot.key;
-  delete rendered[id];
-  removeCard(id);
-});
-
-// render all (initial + on search)
-async function renderListings(){
-  const q = (searchInput.value||'').toLowerCase();
-  // clear container
-  cardsContainer.innerHTML = '';
-  const isAdmin = (currentUser && currentUser.email === ADMIN_EMAIL);
-  // items: use rendered map
-  const items = Object.keys(rendered).map(k=>({ id:k, ...rendered[k]})).sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
-  for(const it of items){
-    if(!isAdmin && it.status !== 'approved') continue;
-    const hay = ((it.name||'') + ' ' + (it.city||'') + ' ' + (it.category||'')).toLowerCase();
-    if(q && !hay.includes(q)) continue;
-    renderCard(it.id, it);
-  }
-}
-
-// create card
-function renderCard(id, it){
-  // if card exists update instead of duplicating
-  if(document.getElementById('prov-'+id)) return updateCard(id,it);
-
-  const card = document.createElement('div'); card.className='card'; card.id = 'prov-'+id;
-  const img = it.image || 'https://via.placeholder.com/600x360?text=No+Image';
-  card.innerHTML = `
-    <h3>${escapeHtml(it.name||'')}</h3>
-    <div class="meta">${escapeHtml(it.category||'')} • ${escapeHtml(it.city||'')}</div>
-    <img src="${img}" alt="img">
-    <div class="meta">Hours: ${escapeHtml(it.hours||'—')}</div>
-    <div class="row">
-      <button class="btn-small btn-call" data-phone="${escapeHtml(it.contact||'')}">Call</button>
-      <button class="btn-small btn-whatsapp" data-wa="${escapeHtml(it.whatsapp||'')}" data-id="${id}">WhatsApp</button>
-    </div>
-    <div class="meta" style="margin-top:8px">Status: <b>${escapeHtml(it.status||'pending')}</b></div>
-  `;
-  // admin controls if admin
-  const isAdmin = (currentUser && currentUser.email === ADMIN_EMAIL);
-  if(isAdmin){
-    const adminDiv = document.createElement('div'); adminDiv.className='admin-controls';
-    adminDiv.innerHTML = `
-      <button class="btn-small" style="background:linear-gradient(90deg,#56ab2f,#a8e063);color:#071028" onclick="approveProvider('${id}')">Approve</button>
-      <button class="btn-small" style="background:linear-gradient(90deg,#ffb86b,#ff7a7a);color:#071028" onclick="rejectProvider('${id}')">Reject</button>
-      <button class="btn-small" style="background:linear-gradient(90deg,#232526,#414345);color:white" onclick="deleteProvider('${id}')">Delete</button>
-    `;
-    card.appendChild(adminDiv);
-  }
-  cardsContainer.appendChild(card);
-
-  // attach handlers
-  card.querySelectorAll('.btn-call').forEach(b=> b.onclick = ()=> {
-    const phone = b.dataset.phone || '';
-    if(!phone) return alert('Phone not available');
-    window.open('tel:'+phone);
-  });
-  card.querySelectorAll('.btn-whatsapp').forEach(b=> b.onclick = async ()=>{
-    const wa = b.dataset.wa || '';
-    const provId = b.dataset.id;
-    if(!wa) return alert('WhatsApp not available');
-    if(!currentUser) return alert('Please login to contact provider');
-    // check wallet
-    const wRef = db.ref('wallets/'+currentUser.uid+'/balance');
-    const wSnap = await wRef.once('value'); const bal = Number(wSnap.val()||0);
-    if(bal < 20) return alert('Insufficient balance. Please recharge.');
-    // transaction deduct
-    db.ref('wallets/'+currentUser.uid+'/balance').transaction(curr=>{
-      if(curr === null) return 0;
-      if(curr >= 20) return curr - 20;
-      return;
-    }, async (err, committed, snapshot)=>{
-      if(err) { alert('Transaction failed: '+err.message); return; }
-      if(!committed){ alert('Insufficient balance. Please recharge.'); return; }
-      await db.ref('contacts').push({ providerId: provId, by: currentUser.uid, at: Date.now(), cost:20 });
-      const waNum = wa.replace(/\D/g,'');
-      window.open('https://wa.me/'+waNum,'_blank');
-      // update wallet display
-      const newBal = (snapshot && snapshot.val()) || 0;
-      walletDisplay.textContent = 'Wallet: ₹' + newBal;
-    });
-  });
-}
-
-// update existing card
-function updateCard(id, data){
-  const el = document.getElementById('prov-'+id);
-  if(!el) {
-    // if not present, render (respecting search/auth filter)
-    renderListings();
-    return;
-  }
-  // update inner parts (status, image, meta)
-  el.querySelector('h3').innerText = data.name || '';
-  el.querySelector('.meta').innerText = `${data.category||''} • ${data.city||''}`;
-  const img = el.querySelector('img'); if(img) img.src = data.image || 'https://via.placeholder.com/600x360?text=No+Image';
-  const statusEl = el.querySelector('.meta:last-of-type'); // last meta is status
-  if(statusEl) statusEl.innerHTML = `Status: <b>${escapeHtml(data.status||'pending')}</b>`;
-  // refresh admin controls (if admin)
-  const isAdmin = (currentUser && currentUser.email === ADMIN_EMAIL);
-  if(isAdmin && !el.querySelector('.admin-controls')){
-    const adminDiv = document.createElement('div'); adminDiv.className='admin-controls';
-    adminDiv.innerHTML = `
-      <button class="btn-small" style="background:linear-gradient(90deg,#56ab2f,#a8e063);color:#071028" onclick="approveProvider('${id}')">Approve</button>
-      <button class="btn-small" style="background:linear-gradient(90deg,#ffb86b,#ff7a7a);color:#071028" onclick="rejectProvider('${id}')">Reject</button>
-      <button class="btn-small" style="background:linear-gradient(90deg,#232526,#414345);color:white" onclick="deleteProvider('${id}')">Delete</button>
-    `;
-    el.appendChild(adminDiv);
-  } else if(!isAdmin){
-    const ac = el.querySelector('.admin-controls'); if(ac) ac.remove();
-  }
-}
-
-// remove card
-function removeCard(id){
-  const el = document.getElementById('prov-'+id);
-  if(el) el.remove();
-}
-
-/* ===== Admin actions ===== */
-window.approveProvider = async function(id){
-  await db.ref('providers/'+id+'/status').set('approved');
-  toast('Approved');
-};
-window.rejectProvider = async function(id){
-  await db.ref('providers/'+id+'/status').set('rejected');
-  toast('Rejected (can approve later)');
-};
-window.deleteProvider = async function(id){
-  if(!confirm('Delete permanently?')) return;
-  await db.ref('providers/'+id).remove();
-  toast('Deleted');
-};
-
-/* ===== Admin panel render ===== */
-async function renderAdminPanel(){
-  if(!(currentUser && currentUser.email === ADMIN_EMAIL)){
-    pendingList.innerHTML = '(Admin only)';
-    rechargeList.innerHTML = '';
-    return;
-  }
-  // pending providers
-  const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-  pendingList.innerHTML = '';
-  snap.forEach(child=>{
-    const d = child.val(); const id = child.key;
-    if(d.status !== 'approved'){
-      const div = document.createElement('div'); div.style.marginBottom='8px';
-      div.innerHTML = `<b>${escapeHtml(d.name)}</b> • ${escapeHtml(d.city||'')} — ${escapeHtml(d.status||'pending')}
-        <div style="margin-top:6px"><button onclick="approveProvider('${id}')" class="btn-small" style="background:green">Approve</button>
-        <button onclick="rejectProvider('${id}')" class="btn-small" style="background:orange">Reject</button></div>`;
-      pendingList.appendChild(div);
+    // 🔍 Zoom Image
+    function openZoom(src) {
+      document.getElementById("zoomImg").src = src;
+      document.getElementById("zoomModal").style.display = "block";
     }
-  });
-
-  // recharge requests
-  const rsnap = await db.ref('recharges').orderByChild('createdAt').once('value');
-  rechargeList.innerHTML = '';
-  rsnap.forEach(child=>{
-    const r = child.val(); const id = child.key;
-    if(!r.status || r.status === 'pending'){
-      const div = document.createElement('div'); div.style.marginBottom='12px';
-      div.innerHTML = `<b>${escapeHtml(r.userEmail || r.uid)}</b>
-        <div style="margin-top:6px"><img src="${escapeHtml(r.imageUrl||'')}" style="max-width:120px;border-radius:8px"/></div>
-        <div style="margin-top:6px"><button class="btn-small" style="background:green;color:#071028" onclick="approveRecharge('${id}','${r.uid}')">Approve</button>
-        <button class="btn-small" style="background:red;color:white" onclick="rejectRecharge('${id}')">Reject</button></div>`;
-      rechargeList.appendChild(div);
-    }
-  });
-}
-
-/* ===== Recharge admin actions ===== */
-window.approveRecharge = async function(reqId, uid){
-  const wRef = db.ref('wallets/'+uid);
-  const wsnap = await wRef.once('value'); let cur = (wsnap.val() && wsnap.val().balance) || 0;
-  await wRef.set({ balance: Number(cur) + 100 });
-  await db.ref('recharges/'+reqId).update({ status:'approved', approvedAt: Date.now() });
-  toast('Recharge approved and ₹100 credited.');
-  renderAdminPanel();
-  // if approved user is current user, refresh wallet display
-  if(currentUser && currentUser.uid === uid){
-    const newbal = (await db.ref('wallets/'+uid+'/balance').once('value')).val()||0;
-    walletDisplay.textContent = 'Wallet: ₹'+newbal;
-  }
-};
-window.rejectRecharge = function(reqId){
-  db.ref('recharges/'+reqId).update({ status:'rejected' }).then(()=>{ toast('Recharge rejected'); renderAdminPanel(); });
-};
-
-/* ===== search handler ===== */
-searchInput.addEventListener('input', renderListings);
-
-/* ===== util ===== */
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* ===== initial: load providers into rendered map once ===== */
-(async function initialLoad(){
-  const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-  snap.forEach(child => { rendered[child.key] = child.val(); });
-  renderListings();
-  renderAdminPanel();
-})();
-
-</script>
+  </script>
 </body>
 </html>
