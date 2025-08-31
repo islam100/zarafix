@@ -2,199 +2,187 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Zara Fix - Service Provider + Wallet</title>
+  <title>ZaraFix Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-    header { background: #4a00e0; color: #fff; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; }
-    .container { padding: 15px; }
-    .btn { padding: 10px 20px; border: none; border-radius: 8px; margin: 5px; cursor: pointer; font-weight: bold; background: linear-gradient(45deg,#4a00e0,#8e2de2); color: #fff; }
-    .btn:hover { opacity: 0.8; }
-    .card { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: 10px 0; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
     .hidden { display: none; }
-    input, select { width: 100%; padding: 8px; margin: 6px 0; border-radius: 8px; border: 1px solid #ccc; }
+    .card { background: #fff; padding: 15px; border-radius: 12px; margin: 10px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    button { padding: 10px 15px; border: none; border-radius: 8px; background: #007bff; color: #fff; cursor: pointer; }
+    button:hover { background: #0056b3; }
   </style>
 </head>
 <body>
-  <header>Zara Fix - Service Provider Portal</header>
-  <div class="container">
-    <button id="loginBtn" class="btn">Login with Google</button>
-    <button id="logoutBtn" class="btn hidden">Logout</button>
+  <h1>Zara Fix Portal</h1>
+  <div id="authSection">
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" class="hidden">Logout</button>
+  </div>
 
-    <!-- Provider Form -->
-    <div id="providerForm" class="hidden card">
-      <h3>Register as Service Provider</h3>
-      <input type="text" id="name" placeholder="Your Name" required>
-      <input type="text" id="shop" placeholder="Shop Name" required>
-      <input type="text" id="address" placeholder="Address" required>
-      <input type="text" id="category" placeholder="Category" required>
-      <input type="text" id="whatsapp" placeholder="WhatsApp Number" required>
-      <button class="btn" onclick="submitProvider()">Submit</button>
-    </div>
+  <!-- USER SECTION -->
+  <div id="userSection" class="hidden">
+    <h2>User Dashboard</h2>
+    <form id="requestForm" class="card">
+      <label>Issue</label><br>
+      <input type="text" id="issue" required><br>
+      <label>WhatsApp</label><br>
+      <input type="text" id="whatsapp" required><br>
+      <button type="submit">Submit Request</button>
+    </form>
+    <h3>Your Requests</h3>
+    <div id="userRequests"></div>
+  </div>
 
-    <!-- Wallet + Recharge -->
-    <div id="walletSection" class="hidden card">
-      <h3>Wallet Balance: ₹<span id="walletBalance">0</span></h3>
-      <button class="btn" onclick="rechargeWallet()">Recharge ₹100</button>
-      <input type="file" id="screenshot" accept="image/*">
-      <button class="btn" onclick="submitRecharge()">Submit Screenshot</button>
-    </div>
+  <!-- PROVIDER SECTION -->
+  <div id="providerSection" class="hidden">
+    <h2>Provider Dashboard</h2>
+    <p>Wallet: ₹<span id="walletBalance">0</span></p>
+    <div id="jobsList"></div>
+  </div>
 
-    <!-- Public Listings -->
-    <div id="listings" class="card">
-      <h3>Approved Listings</h3>
-      <div id="listContainer"></div>
-    </div>
-
-    <!-- Admin Panel -->
-    <div id="adminPanel" class="hidden card">
-      <h3>Admin Panel</h3>
-      <div id="adminContainer"></div>
-    </div>
+  <!-- ADMIN SECTION -->
+  <div id="adminSection" class="hidden">
+    <h2>Admin Dashboard</h2>
+    <div id="allUsers"></div>
+    <div id="allProviders"></div>
+    <div id="allRequests"></div>
   </div>
 
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyAa8htkfGK-4D3cIQVyxT3o_8WMvghkr-8",
-    authDomain: "zarafix-1.firebaseapp.com",
-    databaseURL: "https://zarafix-1-default-rtdb.firebaseio.com",
-    projectId: "zarafix-1",
-    storageBucket: "zarafix-1.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcdef123456"
+    authDomain: "zarafix-2f38d.firebaseapp.com",
+    databaseURL: "https://zarafix-2f38d-default-rtdb.firebaseio.com",
+    projectId: "zarafix-2f38d",
+    storageBucket: "zarafix-2f38d.appspot.com",
+    messagingSenderId: "407836885",
+    appId: "1:407836885:web:xxxxxxx"
   };
   firebase.initializeApp(firebaseConfig);
-
   const auth = firebase.auth();
   const db = firebase.database();
-  const storage = firebase.storage();
 
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
-  const providerForm = document.getElementById("providerForm");
-  const walletSection = document.getElementById("walletSection");
-  const adminPanel = document.getElementById("adminPanel");
 
-  let currentUser = null;
-  const adminEmail = "zarasamajiksevasanstha@gmail.com";
+  const userSection = document.getElementById("userSection");
+  const providerSection = document.getElementById("providerSection");
+  const adminSection = document.getElementById("adminSection");
 
+  // Login
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider);
   };
 
-  logoutBtn.onclick = () => auth.signOut();
+  // Logout
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
 
+  // On Auth Change
   auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
+    if(user){
       loginBtn.classList.add("hidden");
       logoutBtn.classList.remove("hidden");
 
-      if (user.email === adminEmail) {
-        adminPanel.classList.remove("hidden");
-        loadAdminPanel();
+      if(user.email === "zarasamajiksevasanstha@gmail.com"){
+        // ADMIN LOGIN
+        adminSection.classList.remove("hidden");
+        userSection.classList.add("hidden");
+        providerSection.classList.add("hidden");
+        loadAdminDashboard();
       } else {
-        providerForm.classList.remove("hidden");
-        walletSection.classList.remove("hidden");
-        loadWallet();
+        // साधारण user या provider 
+        // Example: अगर email में "provider" शब्द है तो provider माने 
+        if(user.email.includes("provider")){
+          providerSection.classList.remove("hidden");
+          userSection.classList.add("hidden");
+          adminSection.classList.add("hidden");
+          loadProviderDashboard(user.uid);
+        } else {
+          userSection.classList.remove("hidden");
+          providerSection.classList.add("hidden");
+          adminSection.classList.add("hidden");
+          loadUserDashboard(user.uid);
+        }
       }
+
     } else {
-      currentUser = null;
       loginBtn.classList.remove("hidden");
       logoutBtn.classList.add("hidden");
-      providerForm.classList.add("hidden");
-      walletSection.classList.add("hidden");
-      adminPanel.classList.add("hidden");
+      userSection.classList.add("hidden");
+      providerSection.classList.add("hidden");
+      adminSection.classList.add("hidden");
     }
   });
 
-  function submitProvider() {
-    if (!currentUser) return;
-    const data = {
-      name: document.getElementById("name").value,
-      shop: document.getElementById("shop").value,
-      address: document.getElementById("address").value,
-      category: document.getElementById("category").value,
-      whatsapp: document.getElementById("whatsapp").value,
-      approved: false
-    };
-    db.ref("providers/" + currentUser.uid).set(data);
-    alert("Provider details submitted. Awaiting admin approval.");
-  }
+  // --- USER FUNCTIONS ---
+  const requestForm = document.getElementById("requestForm");
+  requestForm.onsubmit = (e) => {
+    e.preventDefault();
+    const uid = auth.currentUser.uid;
+    const issue = document.getElementById("issue").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    db.ref("requests/" + uid).push({ issue, whatsapp, acceptedBy: [] });
+    requestForm.reset();
+  };
 
-  function loadWallet() {
-    db.ref("wallets/" + currentUser.uid).on("value", snap => {
-      const balance = snap.val() || 0;
-      document.getElementById("walletBalance").innerText = balance;
-    });
-  }
-
-  function rechargeWallet() {
-    alert("Upload screenshot and submit recharge request");
-  }
-
-  function submitRecharge() {
-    const file = document.getElementById("screenshot").files[0];
-    if (!file) return alert("Please upload a screenshot");
-    const ref = storage.ref("recharges/" + currentUser.uid + "/" + file.name);
-    ref.put(file).then(snapshot => {
-      snapshot.ref.getDownloadURL().then(url => {
-        db.ref("rechargeRequests/" + currentUser.uid).push({
-          screenshot: url,
-          amount: 100,
-          status: "pending"
-        });
-        alert("Recharge request submitted. Admin will verify.");
-      });
-    });
-  }
-
-  function loadAdminPanel() {
-    db.ref("providers").on("value", snap => {
-      const container = document.getElementById("adminContainer");
-      container.innerHTML = "";
-      snap.forEach(child => {
-        const data = child.val();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<b>${data.name}</b> - ${data.category}<br>${data.shop}<br>${data.address}<br>
-          WhatsApp: ${data.whatsapp}<br>
-          Approved: ${data.approved}
-          <br><button class='btn' onclick="approveProvider('${child.key}')">Approve</button>
-          <button class='btn' onclick="deleteProvider('${child.key}')">Delete</button>`;
-        container.appendChild(card);
-      });
-    });
-  }
-
-  function approveProvider(uid) {
-    db.ref("providers/" + uid).update({approved: true});
-  }
-
-  function deleteProvider(uid) {
-    db.ref("providers/" + uid).remove();
-  }
-
-  // Public approved listings
-  db.ref("providers").on("value", snap => {
-    const container = document.getElementById("listContainer");
+  function loadUserDashboard(uid){
+    const container = document.getElementById("userRequests");
     container.innerHTML = "";
-    snap.forEach(child => {
-      const data = child.val();
-      if (data.approved) {
+    db.ref("requests/" + uid).on("value", snap=>{
+      container.innerHTML = "";
+      snap.forEach(req=>{
+        const data = req.val();
         const card = document.createElement("div");
         card.className = "card";
-        card.innerHTML = `<b>${data.name}</b> (${data.category})<br>${data.shop}<br>${data.address}`;
+        card.innerHTML = `<b>${data.issue}</b><br>WhatsApp: ${data.whatsapp}`;
         container.appendChild(card);
-      }
+      });
     });
-  });
+  }
+
+  // --- PROVIDER FUNCTIONS ---
+  function loadProviderDashboard(uid){
+    document.getElementById("jobsList").innerHTML = "";
+    db.ref("requests").on("value", snap=>{
+      document.getElementById("jobsList").innerHTML = "";
+      snap.forEach(userReq=>{
+        userReq.forEach(req=>{
+          const data = req.val();
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `<b>${data.issue}</b><br><button>Accept</button>`;
+          document.getElementById("jobsList").appendChild(card);
+        });
+      });
+    });
+  }
+
+  // --- ADMIN FUNCTIONS ---
+  function loadAdminDashboard(){
+    const allRequests = document.getElementById("allRequests");
+    allRequests.innerHTML = "";
+    db.ref("requests").on("value", snap=>{
+      allRequests.innerHTML = "<h3>All Requests</h3>";
+      snap.forEach(userReq=>{
+        userReq.forEach(req=>{
+          const data = req.val();
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `<b>${data.issue}</b> - ${data.whatsapp}`;
+          allRequests.appendChild(div);
+        });
+      });
+    });
+  }
 </script>
 </body>
 </html>
