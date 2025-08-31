@@ -1,413 +1,101 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix - Service Provider Page (Single File)</title>
-  <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#0ea5a0;--glass:rgba(255,255,255,0.03)}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071028 0%, #08162a 100%);}
-    .container{max-width:1100px;margin:20px auto;padding:18px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{font-size:20px;margin:0}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{background:linear-gradient(180deg,var(--accent),#059286);border:none;color:white;padding:10px 14px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(14,165,160,0.18);transform:translateY(0);transition:transform .12s}
-    .btn:active{transform:translateY(2px)}
-    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
-    .card{background:var(--glass);padding:14px;border-radius:14px;margin-top:14px;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.03)}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
-    .form-row{display:flex;gap:8px}
-    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e6eef6}
-    label{font-size:13px;color:#cfe8e4}
-    .providers{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
-    .provider-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:12px}
-    .provider-top{display:flex;gap:10px;align-items:center}
-    .avatar{width:56px;height:56px;border-radius:10px;background:#0b1220;display:inline-block;object-fit:cover}
-    .meta{flex:1}
-    .tag{font-size:12px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.03);display:inline-block}
-    .searchbox{width:100%;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#e6eef6}
-    .footer-note{font-size:12px;color:#9fc3bf;margin-top:10px}
-    .small{font-size:13px;color:#bfeeea}
-    .hidden{display:none}
-    @media(max-width:880px){.grid{grid-template-columns:1fr}.controls{flex-wrap:wrap}}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>ZaraFix — Service Providers</h1>
-        <div class="small">Admin: <strong>zarasamajiksevasanstha@gmail.com</strong></div>
-      </div>
-      <div class="controls">
-        <button id="btnToggleForm" class="btn ghost">Post Service</button>
-        <button id="btnRecharge" class="btn ghost">Recharge Wallet</button>
-        <button id="btnLogin" class="btn">Login / Register</button>
-      </div>
-    </header>
-
-    <div class="grid">
-      <main>
-        <div class="card">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="search" class="searchbox" placeholder="Search providers by name or city..." />
-            <select id="filterCategory" class="searchbox" style="width:200px">
-              <option value="">All categories</option>
-              <option>Doctor</option>
-              <option>Hospital</option>
-              <option>Ambulance</option>
-              <option>Electrician</option>
-              <option>Plumber</option>
-              <option>Carpenter</option>
-              <option>Shop</option>
-            </select>
-          </div>
-
-          <div id="providers" class="providers"></div>
-          <div class="footer-note">Note: WhatsApp & Address visible only to logged-in customers with ₹100+ wallet (deducts ₹20 per click).</div>
-        </div>
-      </main>
-
-      <aside>
-        <!-- Login / Register Card -->
-        <div id="authCard" class="card">
-          <h3 id="authTitle">Login / Register</h3>
-          <div id="userInfo" class="hidden">
-            <div class="small">Signed in as <span id="userEmail"></span></div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="btnLogout" class="btn ghost">Logout</button>
-              <button id="btnAsAdmin" class="btn ghost hidden">Admin Panel</button>
-            </div>
-          </div>
-
-          <div id="authForms">
-            <label>Email</label>
-            <input id="inputEmail" placeholder="email@example.com" />
-            <label>Password</label>
-            <input id="inputPassword" type="password" placeholder="password" />
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="btnEmailLogin" class="btn">Sign In</button>
-              <button id="btnEmailSignup" class="btn ghost">Sign Up</button>
-            </div>
-            <div style="margin-top:10px">
-              <button id="btnGoogle" class="btn">Sign In with Google</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Post Form -->
-        <div id="postCard" class="card hidden">
-          <h3>Post Provider Profile</h3>
-          <label>Service / Business Name</label>
-          <input id="p_name" />
-          <label>Category (type)</label>
-          <input id="p_category" placeholder="e.g. Electrician" />
-          <label>City / Address</label>
-          <input id="p_city" />
-          <label>WhatsApp Number</label>
-          <input id="p_whatsapp" placeholder="91xxxxxxxxxx" />
-          <label>Contact Number</label>
-          <input id="p_contact" />
-          <label>Service Hours</label>
-          <input id="p_hours" placeholder="9AM - 10PM" />
-          <label>Profile / Shop Image (upload)</label>
-          <input id="p_image" type="file" accept="image/*" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btnSubmitPost" class="btn">Submit for Approval</button>
-            <button id="btnCancelPost" class="btn ghost">Cancel</button>
-          </div>
-          <div class="small" style="margin-top:8px">Images are uploaded to ImgBB and stored as URLs in Firebase.</div>
-        </div>
-
-        <!-- Recharge Card -->
-        <div id="rechargeCard" class="card hidden">
-          <h3>Recharge Wallet (₹100)</h3>
-          <label>Upload payment screenshot</label>
-          <input id="recharge_img" type="file" accept="image/*" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btnSendRecharge" class="btn">Send Recharge Request</button>
-            <button id="btnCancelRecharge" class="btn ghost">Cancel</button>
-          </div>
-          <div class="small" style="margin-top:8px">Admin will approve and credit ₹100 to your wallet.</div>
-        </div>
-
-        <!-- Admin Panel (shown only to admin) -->
-        <div id="adminCard" class="card hidden">
-          <h3>Admin Panel</h3>
-          <div id="pendingList"></div>
-          <h4 style="margin-top:10px">Recharge Requests</h4>
-          <div id="rechargeList"></div>
-        </div>
-      </aside>
-    </div>
-  </div>
-
-  <!-- Firebase v8 -->
+  <meta charset="UTF-8">
+  <title>Zara Fix Service Provider</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script>
-    // ============== CONFIG - replace only if you want ==============
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-    // ImgBB key (you included this in your message). Change if needed.
-    const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-    // Admin email
-    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f4f4f4; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#6200ea; color:#fff; position:sticky; top:0; }
+    header h1 { font-size:20px; margin:0; }
+    #userInfo { display:flex; align-items:center; gap:10px; }
+    #userInfo img { width:35px; height:35px; border-radius:50%; }
+    .container { padding:20px; }
+    .btn { background:#6200ea; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; }
+    .btn:hover { background:#3700b3; }
+    #searchBox { width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; margin-bottom:20px; }
+    .card { background:#fff; padding:15px; border-radius:10px; margin:10px 0; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+    .actions { display:flex; gap:10px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Zara Fix</h1>
+    <div id="userInfo"></div>
+  </header>
 
+  <div class="container">
+    <input type="text" id="searchBox" placeholder="Search services...">
+
+    <div id="loginSection">
+      <button id="googleLogin" class="btn">Login with Google</button>
+    </div>
+
+    <div id="mainSection" style="display:none;">
+      <div class="actions">
+        <button class="btn" id="postServiceBtn">Post Service</button>
+        <button class="btn" id="walletBtn">Recharge Wallet</button>
+      </div>
+      <div id="servicesList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DB_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
     firebase.initializeApp(firebaseConfig);
+
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // UI refs
-    const btnLogin = document.getElementById('btnLogin');
-    const btnGoogle = document.getElementById('btnGoogle');
-    const btnEmailLogin = document.getElementById('btnEmailLogin');
-    const btnEmailSignup = document.getElementById('btnEmailSignup');
-    const btnLogout = document.getElementById('btnLogout');
-    const inputEmail = document.getElementById('inputEmail');
-    const inputPassword = document.getElementById('inputPassword');
-    const userInfo = document.getElementById('userInfo');
-    const userEmailSpan = document.getElementById('userEmail');
-    const authForms = document.getElementById('authForms');
-    const btnToggleForm = document.getElementById('btnToggleForm');
-    const postCard = document.getElementById('postCard');
-    const btnSubmitPost = document.getElementById('btnSubmitPost');
-    const btnCancelPost = document.getElementById('btnCancelPost');
-    const p_image = document.getElementById('p_image');
-    const providersDiv = document.getElementById('providers');
-    const search = document.getElementById('search');
-    const filterCategory = document.getElementById('filterCategory');
-    const btnRecharge = document.getElementById('btnRecharge');
-    const rechargeCard = document.getElementById('rechargeCard');
-    const btnSendRecharge = document.getElementById('btnSendRecharge');
-    const recharge_img = document.getElementById('recharge_img');
-    const adminCard = document.getElementById('adminCard');
-    const pendingList = document.getElementById('pendingList');
-    const rechargeList = document.getElementById('rechargeList');
+    const userInfo = document.getElementById("userInfo");
+    const loginSection = document.getElementById("loginSection");
+    const mainSection = document.getElementById("mainSection");
 
-    // toggle post form
-    btnToggleForm.addEventListener('click', ()=>{
-      if(!auth.currentUser){alert('Please login to post');return}
-      postCard.classList.toggle('hidden');
-    });
-    btnCancelPost.addEventListener('click', ()=>postCard.classList.add('hidden'));
-
-    btnRecharge.addEventListener('click', ()=>{
-      if(!auth.currentUser){alert('Please login to recharge');return}
-      rechargeCard.classList.toggle('hidden');
-    });
-    document.getElementById('btnCancelRecharge').addEventListener('click', ()=>rechargeCard.classList.add('hidden'));
-
-    // Auth handlers
-    btnEmailSignup.addEventListener('click', async ()=>{
-      const email = inputEmail.value.trim(); const pass = inputPassword.value;
-      if(!email||!pass){alert('Enter email & password');return}
-      try{ await auth.createUserWithEmailAndPassword(email,pass); alert('Signed up'); }
-      catch(e){alert(e.message)}
-    });
-    btnEmailLogin.addEventListener('click', async ()=>{
-      const email = inputEmail.value.trim(); const pass = inputPassword.value;
-      if(!email||!pass){alert('Enter email & password');return}
-      try{ await auth.signInWithEmailAndPassword(email,pass); }
-      catch(e){alert(e.message)}
-    });
-    btnGoogle.addEventListener('click', async ()=>{
+    document.getElementById("googleLogin").onclick = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      try{ await auth.signInWithPopup(provider); }
-      catch(e){alert(e.message)}
-    });
-    btnLogout.addEventListener('click', ()=>auth.signOut());
+      auth.signInWithPopup(provider);
+    };
 
-    // onAuth
-    auth.onAuthStateChanged(async user=>{
+    auth.onAuthStateChanged(user => {
       if(user){
-        userInfo.classList.remove('hidden'); authForms.classList.add('hidden');
-        userEmailSpan.textContent = user.email;
-        document.getElementById('btnAsAdmin').classList.toggle('hidden', user.email!==ADMIN_EMAIL);
-        // ensure wallet exists
-        const walletRef = db.ref('wallets/'+user.uid);
-        const wSnap = await walletRef.once('value');
-        if(!wSnap.exists()) walletRef.set({balance:0});
+        loginSection.style.display = "none";
+        mainSection.style.display = "block";
+        userInfo.innerHTML = `<img src="${user.photoURL}" alt="dp"> <span>${user.displayName}</span>`;
       } else {
-        userInfo.classList.add('hidden'); authForms.classList.remove('hidden');
-        userEmailSpan.textContent = '';
-        document.getElementById('btnAsAdmin').classList.add('hidden');
+        loginSection.style.display = "block";
+        mainSection.style.display = "none";
+        userInfo.innerHTML = "";
       }
-      renderProviders(); renderAdminPanel();
     });
 
-    // Submit provider post
-    btnSubmitPost.addEventListener('click', async ()=>{
-      const user = auth.currentUser; if(!user){alert('Login first');return}
-      const name = document.getElementById('p_name').value.trim();
-      const category = document.getElementById('p_category').value.trim();
-      const city = document.getElementById('p_city').value.trim();
-      const whatsapp = document.getElementById('p_whatsapp').value.trim();
-      const contact = document.getElementById('p_contact').value.trim();
-      const hours = document.getElementById('p_hours').value.trim();
-      const file = p_image.files[0];
-      if(!name||!category||!city){alert('Fill name, category, city');return}
-      btnSubmitPost.disabled=true; btnSubmitPost.textContent='Uploading...';
-      let imageUrl='';
-      try{
-        if(file){
-          const fd = new FormData(); fd.append('image', file);
-          const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd});
-          const j = await res.json(); imageUrl = j.data.url;
-        }
-        const postRef = db.ref('providers').push();
-        await postRef.set({
-          name,category,city,whatsapp,contact,hours,imageUrl,ownerUid:user.uid,status:'waiting',createdAt:Date.now()
-        });
-        alert('Submitted for admin approval');
-        postCard.classList.add('hidden');
-        // clear
-        document.getElementById('p_name').value=''; document.getElementById('p_category').value=''; document.getElementById('p_city').value=''; document.getElementById('p_whatsapp').value=''; document.getElementById('p_contact').value=''; document.getElementById('p_hours').value=''; p_image.value='';
-      }catch(e){alert('Error: '+e.message)}
-      btnSubmitPost.disabled=false; btnSubmitPost.textContent='Submit for Approval';
-      renderProviders();
+    // Search filter
+    document.getElementById("searchBox").addEventListener("input", function(){
+      const val = this.value.toLowerCase();
+      document.querySelectorAll(".card").forEach(card => {
+        card.style.display = card.innerText.toLowerCase().includes(val) ? "block" : "none";
+      });
     });
 
-    // Render providers with search & filter
-    async function renderProviders(){
-      providersDiv.innerHTML='';
-      const q = (search.value||'').toLowerCase();
-      const cat = filterCategory.value;
-      const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-      const list = snap.val()||{};
-      const items = Object.keys(list).map(k=>({id:k,...list[k]})).reverse();
-      const user = auth.currentUser;
-      for(const it of items){
-        if(it.status!=='approved') continue; // show only approved to public
-        if(cat && it.category!==cat) continue;
-        if(q && !(it.name.toLowerCase().includes(q) || (it.city||'').toLowerCase().includes(q))) continue;
-        const card = document.createElement('div'); card.className='provider-card';
-        card.innerHTML = `
-          <div class="provider-top">
-            <img src="${it.imageUrl||'https://via.placeholder.com/120x80?text=No+Image'}" class="avatar" />
-            <div class="meta">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div><strong>${escapeHtml(it.name)}</strong> <div class="small">${escapeHtml(it.city)} • ${escapeHtml(it.category)}</div></div>
-                <div class="tag">${escapeHtml(it.hours||'—')}</div>
-              </div>
-            </div>
-          </div>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-            <button class="btn callBtn">Call Now</button>
-            <button class="btn whatsappBtn">WhatsApp Now</button>
-            <button class="btn ghost viewBtn">View</button>
-          </div>
-        `;
-        // buttons
-        const callBtn = card.querySelector('.callBtn');
-        callBtn.addEventListener('click', ()=>{
-          window.open('tel:' + (it.contact||it.whatsapp||''));
-        });
-        const whatsappBtn = card.querySelector('.whatsappBtn');
-        whatsappBtn.addEventListener('click', async ()=>{
-          if(!auth.currentUser){alert('Login to contact provider');return}
-          // check user's wallet
-          const uid = auth.currentUser.uid;
-          const wSnap = await db.ref('wallets/'+uid).once('value');
-          const bal = (wSnap.val() && wSnap.val().balance) || 0;
-          if(bal < 20){alert('Not enough balance. Please recharge.');return}
-          // deduct 20 atomically (simple: read->write, could race but OK for MVP)
-          const newBal = bal - 20;
-          await db.ref('wallets/'+uid).set({balance:newBal});
-          // record click
-          await db.ref('contacts').push({providerId:it.id,by:uid,at:Date.now(),cost:20});
-          // open whatsapp
-          const wa = it.whatsapp||'';
-          if(wa) window.open('https://wa.me/' + wa.replace(/[^0-9]/g,''));
-          else alert('WhatsApp number not available');
-          renderProviders();
-        });
-
-        // view button to show address/whatsapp only if user has >=20 (not deducted) OR admin/owner
-        const viewBtn = card.querySelector('.viewBtn');
-        viewBtn.addEventListener('click', async ()=>{
-          const u = auth.currentUser;
-          let allowed=false;
-          if(u){ const w = (await db.ref('wallets/'+u.uid).once('value')).val()||{balance:0}; if(w.balance>=20) allowed=true; if(u.email===ADMIN_EMAIL) allowed=true; if(u.uid===it.ownerUid) allowed=true; }
-          if(allowed){ alert('WhatsApp: '+(it.whatsapp||'N/A') + '\nAddress/City: '+(it.city||'N/A')); }
-          else alert('You need ₹20 in wallet to view contact. Click Recharge.');
-        });
-
-        // if current user is admin, append admin controls on card
-        const current = auth.currentUser;
-        if(current && current.email===ADMIN_EMAIL){
-          const adminZone = document.createElement('div'); adminZone.style.marginTop='8px';
-          adminZone.innerHTML = `<button class="btn" data-act="approve">Approve</button> <button class="btn ghost" data-act="reject">Reject</button> <button class="btn ghost" data-act="del">Delete</button>`;
-          adminZone.querySelector('[data-act=approve]').addEventListener('click', async ()=>{ await db.ref('providers/'+it.id+'/status').set('approved'); alert('Approved'); renderProviders(); renderAdminPanel(); });
-          adminZone.querySelector('[data-act=reject]').addEventListener('click', async ()=>{ await db.ref('providers/'+it.id+'/status').set('rejected'); alert('Rejected (can be approved later)'); renderProviders(); renderAdminPanel(); });
-          adminZone.querySelector('[data-act=del]').addEventListener('click', async ()=>{ if(confirm('Delete permanently?')){ await db.ref('providers/'+it.id).remove(); alert('Deleted'); renderProviders(); renderAdminPanel(); } });
-          card.appendChild(adminZone);
-        }
-
-        providersDiv.appendChild(card);
-      }
-    }
-
-    // Admin panel listing (pending approvals and recharges)
-    async function renderAdminPanel(){
-      const user = auth.currentUser;
-      if(!user || user.email!==ADMIN_EMAIL){ adminCard.classList.add('hidden'); return }
-      adminCard.classList.remove('hidden');
-      pendingList.innerHTML=''; rechargeList.innerHTML='';
-      const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-      const list = snap.val()||{}; for(const k of Object.keys(list)){ const it=list[k]; if(it.status==='waiting'||it.status==='rejected'){ const div=document.createElement('div'); div.className='card'; div.style.marginTop='8px'; div.innerHTML = `<strong>${escapeHtml(it.name)}</strong> <div>${escapeHtml(it.city)} • ${escapeHtml(it.category)}</div> <div style="margin-top:8px"><button data-id="${k}" class="btn">Approve</button> <button data-id="${k}" class="btn ghost">Reject</button></div>`; pendingList.appendChild(div); div.querySelector('.btn').addEventListener('click', async e=>{ await db.ref('providers/'+k+'/status').set('approved'); alert('Approved'); renderAdminPanel(); renderProviders(); }); div.querySelector('.btn.ghost').addEventListener('click', async e=>{ await db.ref('providers/'+k+'/status').set('rejected'); alert('Rejected'); renderAdminPanel(); renderProviders(); }); }}
-      // recharge requests
-      const rSnap = await db.ref('recharges').orderByChild('createdAt').once('value'); const rlist = rSnap.val()||{};
-      for(const rk of Object.keys(rlist)){ const r=rlist[rk]; const card=document.createElement('div'); card.className='card'; card.style.marginTop='8px'; card.innerHTML = `<div><strong>${escapeHtml(r.userEmail||r.uid)}</strong> requested recharge <div style="margin-top:6px"><img src="${escapeHtml(r.imageUrl||'')}" style="max-width:160px;border-radius:8px" /></div><div style="margin-top:8px"><button data-id="${rk}" class="btn">Approve Recharge</button> <button data-id="${rk}" class="btn ghost">Reject</button></div></div>`; rechargeList.appendChild(card);
-        card.querySelector('.btn').addEventListener('click', async ()=>{
-          // credit wallet 100
-          const uref = db.ref('wallets/'+r.uid);
-          const wsnap = (await uref.once('value')).val()||{balance:0};
-          await uref.set({balance:(wsnap.balance||0)+100});
-          await db.ref('recharges/'+rk+'/status').set('approved');
-          alert('Recharge approved and ₹100 credited');
-          renderAdminPanel();
-        });
-        card.querySelector('.btn.ghost').addEventListener('click', async ()=>{
-          await db.ref('recharges/'+rk+'/status').set('rejected'); alert('Recharge rejected'); renderAdminPanel();
-        });
-      }
-    }
-
-    // Send recharge request
-    btnSendRecharge.addEventListener('click', async ()=>{
-      const user = auth.currentUser; if(!user){alert('Login first');return}
-      const file = recharge_img.files[0]; if(!file){alert('Select image');return}
-      btnSendRecharge.disabled=true; btnSendRecharge.textContent='Uploading...';
-      try{
-        const fd = new FormData(); fd.append('image', file);
-        const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd});
-        const j = await res.json(); const imageUrl = j.data.url;
-        const rref = db.ref('recharges').push();
-        await rref.set({uid:user.uid,userEmail:user.email,imageUrl,createdAt:Date.now(),status:'pending'});
-        alert('Recharge request sent to admin'); rechargeCard.classList.add('hidden'); recharge_img.value='';
-        renderAdminPanel();
-      }catch(e){alert('Error: '+e.message)}
-      btnSendRecharge.disabled=false; btnSendRecharge.textContent='Send Recharge Request';
+    // Dummy service list
+    const servicesList = document.getElementById("servicesList");
+    ["Electrician","Plumber","Doctor"].forEach(s => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h3>${s}</h3><p>Available in your area.</p>`;
+      servicesList.appendChild(card);
     });
-
-    // helper escape
-    function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-    // wire search/filter
-    search.addEventListener('input', renderProviders); filterCategory.addEventListener('change', renderProviders);
-
-    // initial load
-    renderProviders(); renderAdminPanel();
   </script>
 </body>
 </html>
