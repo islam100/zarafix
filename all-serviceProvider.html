@@ -1,390 +1,93 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix — Service Providers (Single-file)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Form</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;background:linear-gradient(180deg,#020617 0%,#071129 100%);color:#e6eef6}
-    header{display:flex;gap:12px;align-items:center;padding:14px}
-    .brand{font-weight:700;font-size:18px}
-    .btn{background:var(--glass);border-radius:12px;padding:10px 14px;box-shadow:0 6px 12px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-    .btn.primary{background:linear-gradient(145deg,#0596a6,#0bd0d6);color:#02121a}
-    .container{padding:12px}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    input[type=text],input[type=tel],input[type=email],select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 8px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-    .small{font-size:13px;opacity:0.85}
-    .img-preview{width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:8px}
-    .hidden{display:none}
-    .search{flex:1;min-width:180px}
-    .rating{color:#ffd166}
-    footer{padding:18px;text-align:center;opacity:0.8}
-    @media(min-width:900px){header{padding:22px}.container{max-width:1100px;margin:0 auto}}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+
+    .form-container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding-bottom: 80px; /* नीचे extra space ताकि scroll करने पर button overlap न करे */
+    }
+
+    .form-container label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    .form-container input,
+    .form-container select,
+    .form-container textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* Sticky Submit Button */
+    .submit-btn {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #007bff;
+      color: white;
+      padding: 15px;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 0;
+      box-shadow: 0 -2px 6px rgba(0,0,0,0.2);
+    }
+
+    .submit-btn:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">ZaraFix — Providers</div>
-    <div style="flex:1"></div>
-    <button id="loginBtn" class="btn">Login / Signup (Google)</button>
-    <button id="logoutBtn" class="btn hidden">Logout</button>
-    <button id="openFormBtn" class="btn primary hidden">Post Service</button>
-  </header>
 
-  <main class="container">
-    <div class="controls">
-      <input id="searchBox" class="search" type="text" placeholder="Search by name or city...">
-      <input id="categoryFilter" type="text" placeholder="Filter by category (type and press Enter)">
-      <button id="clearFilter" class="btn">Clear</button>
-    </div>
+  <div class="form-container">
+    <h2>Post Your Service</h2>
+    <form id="serviceForm">
+      <label for="title">Service Title</label>
+      <input type="text" id="title" required>
 
-    <div id="providerList" class="grid"></div>
+      <label for="desc">Description</label>
+      <textarea id="desc" rows="3" required></textarea>
 
-    <div id="noProviders" class="card hidden">No providers found.</div>
+      <label for="category">Category</label>
+      <select id="category" required>
+        <option value="">Select</option>
+        <option value="doctor">Doctor</option>
+        <option value="hospital">Hospital</option>
+        <option value="electrician">Electrician</option>
+        <option value="plumber">Plumber</option>
+      </select>
 
-    <div id="rechargeNotice" class="card hidden">
-      <h4>Wallet required</h4>
-      <p class="small">You need at least ₹20 in your wallet to reveal contact details. Click Recharge to send request to admin.</p>
-      <button id="rechargeBtn" class="btn primary">Request Recharge (₹100)</button>
-    </div>
-
-    <div id="adminPanel" class="card hidden">
-      <h3>Admin Panel — Approvals & Recharges</h3>
-      <div id="adminProvidersPending" class="small"></div>
-      <hr>
-      <div id="adminRechargesPending" class="small"></div>
-    </div>
-  </main>
-
-  <!-- Provider Form Modal (simple inline) -->
-  <div id="formModal" class="card hidden" style="position:fixed;right:12px;top:80px;z-index:50;width:360px;max-width:92%">
-    <h3>Post Service (Providers)</h3>
-    <div class="small">Visible to public only after admin approval</div>
-    <div style="height:10px"></div>
-    <input id="svcName" type="text" placeholder="Service / Shop Name"/>
-    <div style="height:8px"></div>
-    <input id="svcCategory" type="text" placeholder="Category (e.g. Electrician)"/>
-    <div style="height:8px"></div>
-    <input id="svcCity" type="text" placeholder="City"/>
-    <div style="height:8px"></div>
-    <input id="svcWhats" type="tel" placeholder="WhatsApp number (with country code, e.g. 919876543210)"/>
-    <div style="height:8px"></div>
-    <input id="svcPhone" type="tel" placeholder="Call number (optional)"/>
-    <div style="height:8px"></div>
-    <input id="svcHours" type="text" placeholder="Service hours (e.g. 9AM - 10PM)"/>
-    <div style="height:8px"></div>
-    <textarea id="svcDesc" placeholder="Short description"></textarea>
-    <div style="height:8px"></div>
-    <label class="small">Upload Profile / Shop Image</label>
-    <input id="svcImage" type="file" accept="image/*"/>
-    <img id="imgPreview" class="img-preview hidden" />
-    <div style="height:8px"></div>
-    <div style="display:flex;gap:8px">
-      <button id="saveProvider" class="btn primary">Submit (Waiting approval)</button>
-      <button id="closeModal" class="btn">Close</button>
-    </div>
-    <div id="formMsg" class="small"></div>
+      <label for="image">Upload Image</label>
+      <input type="file" id="image" accept="image/*">
+    </form>
   </div>
 
-  <footer>Built for ZaraFix — Mobile-first • Admin: zarasamajiksevasanstha@gmail.com</footer>
+  <!-- Sticky Submit Button -->
+  <button type="submit" form="serviceForm" class="submit-btn">Submit</button>
 
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <script>
-    // ---------- CONFIG: Replace IMGBB_KEY with your actual key (or keep empty) ----------
-    const IMGBB_KEY = '';
-    const adminEmail = 'zarasamajiksevasanstha@gmail.com';
-
-    // Firebase config (from your message)
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-
-    // UI refs
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const openFormBtn = document.getElementById('openFormBtn');
-    const formModal = document.getElementById('formModal');
-    const closeModal = document.getElementById('closeModal');
-    const saveProvider = document.getElementById('saveProvider');
-    const providerList = document.getElementById('providerList');
-    const searchBox = document.getElementById('searchBox');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const clearFilter = document.getElementById('clearFilter');
-    const rechargeBtn = document.getElementById('rechargeBtn');
-    const adminPanel = document.getElementById('adminPanel');
-    const adminProvidersPending = document.getElementById('adminProvidersPending');
-    const adminRechargesPending = document.getElementById('adminRechargesPending');
-    const rechargeNotice = document.getElementById('rechargeNotice');
-
-    // form fields
-    const svcName = document.getElementById('svcName');
-    const svcCategory = document.getElementById('svcCategory');
-    const svcCity = document.getElementById('svcCity');
-    const svcWhats = document.getElementById('svcWhats');
-    const svcPhone = document.getElementById('svcPhone');
-    const svcHours = document.getElementById('svcHours');
-    const svcDesc = document.getElementById('svcDesc');
-    const svcImage = document.getElementById('svcImage');
-    const imgPreview = document.getElementById('imgPreview');
-    const formMsg = document.getElementById('formMsg');
-
-    let currentUser = null;
-    let providersCache = {};
-
-    // ---------- Auth ----------
-    loginBtn.addEventListener('click', async ()=>{
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try{ await auth.signInWithPopup(provider); }
-      catch(e){ alert('Login failed: '+e.message) }
-    });
-
-    logoutBtn.addEventListener('click', ()=>auth.signOut());
-
-    auth.onAuthStateChanged(async user=>{
-      currentUser = user;
-      if(user){
-        loginBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden'); openFormBtn.classList.remove('hidden');
-        // ensure wallet exists
-        const walletRef = db.ref('wallets/'+user.uid);
-        walletRef.once('value',snap=>{ if(!snap.exists()) walletRef.set({balance:0})});
-        // if this user is the admin email, ensure /admins/<uid> is set (safer checks later)
-        if(user.email === adminEmail) db.ref('admins/'+user.uid).set(true);
-      }else{
-        loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); openFormBtn.classList.add('hidden');
-      }
-      // admin panel visibility: check /admins/<uid>
-      if(user){
-        db.ref('admins/'+user.uid).once('value', s=>{ if(s.exists()) adminPanel.classList.remove('hidden'); else adminPanel.classList.add('hidden'); });
-      }else adminPanel.classList.add('hidden');
-      renderProviders();
-    });
-
-    // ---------- Provider Form UI ----------
-    openFormBtn.addEventListener('click', ()=>{ formModal.classList.remove('hidden') });
-    closeModal.addEventListener('click', ()=>{ formModal.classList.add('hidden'); resetForm() });
-
-    let lastObjectUrl = null;
-    svcImage.addEventListener('change', e=>{
-      const f = e.target.files[0];
-      if(!f) { imgPreview.classList.add('hidden'); if(lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl=null; } return }
-      if(lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
-      const url = URL.createObjectURL(f);
-      lastObjectUrl = url;
-      imgPreview.src = url; imgPreview.classList.remove('hidden');
-    });
-
-    saveProvider.addEventListener('click', async ()=>{
-      if(!currentUser){ alert('Please login with Google to post as provider.'); return }
-      const name = svcName.value.trim();
-      if(!name){ formMsg.textContent='Enter service name'; return }
-      formMsg.textContent='Uploading image (if any) and saving...';
-      let imageUrl = '';
-      if(svcImage.files[0]){
-        try{ imageUrl = await uploadToImgBB(svcImage.files[0]); }
-        catch(e){ formMsg.textContent='Image upload failed: '+e.message; return }
-      }
-      const newRef = db.ref('providers').push();
-      const newKey = newRef.key;
-      const payload = {
-        id:newKey,
-        ownerUid: currentUser.uid,
-        ownerEmail: currentUser.email || '',
-        name, category: svcCategory.value.trim()||'Other', city: svcCity.value.trim()||'', whatsapp: svcWhats.value.trim()||'', phone: svcPhone.value.trim()||'', hours: svcHours.value.trim()||'', desc: svcDesc.value.trim()||'', img: imageUrl, status:'waiting', createdAt: Date.now()
-      };
-      const updates = {};
-      updates['/providers/'+newKey] = payload;
-      updates['/userProviders/'+currentUser.uid+'/'+newKey] = payload;
-      await db.ref().update(updates);
-      formMsg.textContent='Submitted. Waiting for admin approval.';
-      resetForm();
-      formModal.classList.add('hidden');
-    });
-
-    function resetForm(){ svcName.value=''; svcCategory.value=''; svcCity.value=''; svcWhats.value=''; svcPhone.value=''; svcHours.value=''; svcDesc.value=''; svcImage.value=''; imgPreview.classList.add('hidden'); formMsg.textContent=''; if(lastObjectUrl){ URL.revokeObjectURL(lastObjectUrl); lastObjectUrl=null; } }
-
-    async function uploadToImgBB(file){
-      if(!IMGBB_KEY) throw new Error('Please set IMGBB key in the code');
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY, {method:'POST', body:fd});
-      const j = await res.json();
-      if(!j.success) throw new Error((j.error && j.error.message) || 'unknown imgbb error');
-      return j.data.url;
-    }
-
-    // ---------- Render Providers ----------
-    db.ref('providers').on('value', snap=>{
-      providersCache = snap.val()||{}; renderProviders();
-    });
-
-    function renderProviders(){
-      const q = (searchBox.value||'').toLowerCase();
-      const catq = (categoryFilter.value||'').toLowerCase();
-      providerList.innerHTML='';
-      const list = Object.entries(providersCache || {}).map(([k,v])=>({key:k, ...v})).filter(p=>p && p.status === 'approved');
-      const filtered = list.filter(p=>{
-        if(q){ const hay=(p.name+' '+(p.city||'')+' '+(p.category||'')).toLowerCase(); if(!hay.includes(q)) return false }
-        if(catq){ if(!((p.category||'').toLowerCase().includes(catq))) return false }
-        return true;
-      });
-      if(filtered.length===0) document.getElementById('noProviders').classList.remove('hidden'); else document.getElementById('noProviders').classList.add('hidden');
-      filtered.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
-      filtered.forEach(p=>{
-        const el = document.createElement('div'); el.className='card';
-        el.innerHTML = `
-          ${p.img?`<img src="${p.img}" class="img-preview">`:''}
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div><strong>${escapeHtml(p.name)}</strong><div class="small">${escapeHtml(p.category||'')}</div></div>
-            <div class="small">${formatDate(p.createdAt)}</div>
-          </div>
-          <div class="small" style="margin-top:6px">${escapeHtml(p.desc||'')}</div>
-          <div style="height:8px"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" data-id="${p.key}" data-action="call">Call Now</button>
-            <button class="btn" data-id="${p.key}" data-action="reveal">Reveal Contact</button>
-            <button class="btn" data-id="${p.key}" data-action="whatsapp">WhatsApp Now</button>
-            <div style="flex:1"></div>
-          </div>
-          <div class="small" id="contact_${p.key}"></div>
-        `;
-        providerList.appendChild(el);
-        // attach handlers
-        el.querySelectorAll('button').forEach(b=>{
-          b.addEventListener('click', ()=>providerAction(b.dataset.action, p));
-        });
-        // if already revealed for current logged in user, show contact
-        if(currentUser){
-          db.ref('revealed/'+currentUser.uid+'/'+p.key).once('value', s=>{
-            if(s.exists()){ document.getElementById('contact_'+p.key).textContent = `WhatsApp: ${p.whatsapp || 'N/A'} | City: ${p.city || 'N/A'}`; }
-          });
-        }
-      });
-    }
-
-    searchBox.addEventListener('input', ()=>renderProviders());
-    categoryFilter.addEventListener('keypress', e=>{ if(e.key==='Enter') renderProviders() });
-    clearFilter.addEventListener('click', ()=>{ categoryFilter.value=''; searchBox.value=''; renderProviders() });
-
-    function providerAction(action, p){
-      if(action==='call'){
-        if(p.phone) window.open('tel:'+p.phone); else alert('No call number available');
-        return;
-      }
-      if(!auth.currentUser){ alert('Please login to reveal contact or WhatsApp.'); return }
-      const uid = auth.currentUser.uid;
-      const walletRef = db.ref('wallets/'+uid);
-      // Use transaction to atomically deduct ₹20
-      walletRef.transaction(curr=>{
-        if(curr && typeof curr.balance === 'number' && curr.balance >= 20){ curr.balance = curr.balance - 20; curr.lastDeductAt = Date.now(); return curr }
-        // if wallet object missing, abort by returning
-        return;
-      }, (err, committed, snapshot)=>{
-        if(err){ alert('Transaction failed: '+err.message); return }
-        if(!committed){ rechargeNotice.classList.remove('hidden'); alert('Insufficient balance. Please recharge.'); return }
-        // mark revealed and show details
-        const txKey = db.ref('transactions').push().key;
-        const updates = {};
-        updates['/transactions/'+txKey] = { uid, providerId: p.key, amount:20, at: Date.now() };
-        updates['/revealed/'+uid+'/'+p.key] = { providerId: p.key, revealedAt: Date.now() };
-        db.ref().update(updates).then(()=>{
-          // show contact in card and open whatsapp if requested
-          const wa = p.whatsapp||'';
-          document.getElementById('contact_'+p.key).textContent = `WhatsApp: ${wa || 'N/A'} | City: ${p.city || 'N/A'}`;
-          if(action==='whatsapp' && wa){ const number = wa.replace(/[^0-9]/g,''); window.open('https://wa.me/'+number); }
-          alert('Contact revealed successfully.');
-        }).catch(e=>alert('Error saving reveal: '+e.message));
-      });
-    }
-
-    // ---------- Admin: approve/reject providers and manage recharges (separate sections) ----------
-    db.ref('providers').on('value', snap=>{
-      const all = snap.val()||{};
-      // build admin providers list only if admin
-      if(!currentUser) return;
-      db.ref('admins/'+currentUser.uid).once('value', s=>{
-        if(!s.exists()) return;
-        let html = '';
-        const entries = Object.entries(all).sort((a,b)=> (b[1].createdAt||0)-(a[1].createdAt||0));
-        entries.forEach(([k,p])=>{
-          html += `<div style="border-bottom:1px solid rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(p.name)}</strong> — ${escapeHtml(p.category||'')} — ${p.status||''}`;
-          html += `<div style="margin-top:6px"><button class='btn adminProv' data-key='${k}' data-act='approve'>Approve</button> <button class='btn adminProv' data-key='${k}' data-act='reject'>Reject</button> <button class='btn adminProv' data-key='${k}' data-act='delete'>Delete</button></div></div>`;
-        });
-        adminProvidersPending.innerHTML = html;
-        adminProvidersPending.querySelectorAll('.adminProv').forEach(b=>b.addEventListener('click', e=>{
-          const key = b.dataset.key; const act = b.dataset.act;
-          if(act==='approve') db.ref('providers/'+key+'/status').set('approved');
-          if(act==='reject') db.ref('providers/'+key+'/status').set('rejected');
-          if(act==='delete') db.ref('providers/'+key).remove();
-        }));
-      });
-    });
-
-    // Recharges: user requests
-    rechargeBtn.addEventListener('click', ()=>{
-      if(!currentUser){ alert('Login to request recharge'); return }
-      const key = db.ref('recharges').push().key;
-      const payload = { id:key, uid: currentUser.uid, email: currentUser.email||'', amount:100, status:'pending', createdAt: Date.now() };
-      db.ref('recharges/'+key).set(payload).then(()=>{ alert('Recharge request sent to admin for approval (₹100).') })
-    });
-
-    // Admin listens for recharges and can accept atomically
-    db.ref('recharges').on('value', snap=>{
-      const all = snap.val()||{};
-      if(!currentUser) return;
-      db.ref('admins/'+currentUser.uid).once('value', s=>{
-        if(!s.exists()) return;
-        let html='';
-        Object.values(all).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)).forEach(r=>{
-          html += `<div style="border-bottom:1px dashed rgba(255,255,255,0.03);padding:8px"><strong>${escapeHtml(r.email)}</strong> — ₹${r.amount} — ${r.status}`;
-          if(r.status==='pending') html += ` <div><button class='btn rechargeAdmin' data-id='${r.id}' data-act='accept'>Accept</button> <button class='btn rechargeAdmin' data-id='${r.id}' data-act='reject'>Reject</button></div>`;
-          html += `</div>`;
-        });
-        adminRechargesPending.innerHTML = html;
-        adminRechargesPending.querySelectorAll('.rechargeAdmin').forEach(b=>b.addEventListener('click', ()=>{
-          const id = b.dataset.id; const act = b.dataset.act;
-          if(act==='accept'){
-            // Atomically mark recharge accepted and add ₹100 to user's wallet using transaction
-            const rechargeRef = db.ref('recharges/'+id);
-            rechargeRef.once('value', snap=>{
-              const r = snap.val(); if(!r || r.status !== 'pending') return;
-              // mark accepted first
-              rechargeRef.child('status').set('accepted');
-              const wref = db.ref('wallets/'+r.uid);
-              wref.transaction(curr=>{
-                if(!curr) return { balance: 100, lastTopupAt: Date.now() };
-                curr.balance = (curr.balance||0) + 100; curr.lastTopupAt = Date.now(); return curr;
-              }, (err, committed, s2)=>{
-                if(err){ alert('Wallet topup failed: '+err.message); return }
-                if(committed) alert('Recharge successful and wallet topped up.');
-              });
-            });
-          }
-          if(act==='reject') db.ref('recharges/'+id+'/status').set('rejected');
-        }));
-      });
-    });
-
-    // ---------- Utilities ----------
-    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
-    function formatDate(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleDateString()+' '+d.toLocaleTimeString(); }
-  </script>
 </body>
 </html>
