@@ -1,118 +1,180 @@
-👉 Main Features जो Service Provider Page में होने चाहिए:
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZaraFix — Service Providers</title>
 
-Registration / Login Section
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-Service Provider अपना नाम, मोबाइल नंबर, WhatsApp नंबर और Email डालकर रजिस्टर कर सके।
+<style>
+:root{
+  --bg:#071426; --card:#0e1b2a; --muted:#9fb2c7; --accent:#4f46e5; --good:#16a34a; --warn:#f59e0b; --danger:#ef4444;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Roboto,Arial;background:linear-gradient(180deg,#031022,#071426);color:#e6f7ff}
+.container{max-width:1100px;margin:18px auto;padding:14px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:12px;background:linear-gradient(145deg,#0d2238,#071426);box-shadow:0 12px 36px rgba(0,0,0,0.6)}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:56px;height:56px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#1e40af,#4f46e5);font-weight:800;color:white}
+.h1{font-size:18px;margin:0}
+.controls{display:flex;gap:8px;align-items:center}
 
-Google Login का option भी हो सकता है।
+/* Buttons */
+.btn{border:0;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700;color:white;box-shadow:0 10px 24px rgba(0,0,0,0.5)}
+.btn-acc{background:linear-gradient(145deg,#4f46e5,#2563eb)}
+.btn-good{background:linear-gradient(145deg,#10b981,#059669)}
+.btn-warn{background:linear-gradient(145deg,#f59e0b,#f97316)}
+.btn-danger{background:linear-gradient(145deg,#ef4444,#dc2626)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#dbeafe}
 
-Profile Upload Form
+/* Layout */
+main{display:grid;grid-template-columns:1fr 380px;gap:18px;margin-top:16px}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+.panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 18px 40px rgba(0,0,0,0.6)}
+.searchRow{display:flex;gap:10px;align-items:center}
+.input{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:#e6f7ff;width:100%}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:12px}
+.card{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg,#071826,#061221);box-shadow: 0 12px 30px rgba(0,0,0,0.6)}
+.media{height:160px;background:#071826}
+.media img{width:100%;height:100%;object-fit:cover;display:block}
+.card-body{padding:12px;color:#d8eefb}
+.chip{position:absolute;left:12px;top:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,0.4);font-size:13px}
+.titleRow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:13px}
+.pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);font-size:13px}
 
-Service/Business का नाम
+/* smaller */
+.small{font-size:13px;color:var(--muted)}
+.btnRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-Service Category (Doctor, Hospital, Ambulance, Shop, Electrician, Plumber आदि)
+/* modal */
+.modal{display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:9999}
+.modal .box{background:#fff;color:#0b1720;padding:14px;border-radius:12px;width:92%;max-width:520px;max-height:88%;overflow:auto}
+.closeX{position:absolute;right:12px;top:8px;font-weight:800;cursor:pointer}
 
-Address + Map Location
+/* error box */
+#errorBox{position:fixed;right:12px;bottom:12px;z-index:10000;max-width:420px}
+.err{background:#2b0d0d;padding:10px;border-radius:10px;border:1px solid #4a1010;color:#ffdede;margin-top:8px}
 
-Contact Number / WhatsApp
+/* rating */
+.stars{display:inline-flex;gap:6px;align-items:center}
+.star{cursor:pointer;font-size:18px;color:#ffd166}
 
-Service Hours (कितने बजे से कितने बजे तक available हैं)
+/* color borders variety */
+.card[data-hue="1"]{border-left:6px solid #2563eb}
+.card[data-hue="2"]{border-left:6px solid #10b981}
+.card[data-hue="3"]{border-left:6px solid #f97316}
+.card[data-hue="4"]{border-left:6px solid #8b5cf6}
+.card[data-hue="5"]{border-left:6px solid #ef4444}
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <div class="brand">
+      <div class="logo">ZF</div>
+      <div>
+        <div class="h1">ZaraFix — Service Providers</div>
+        <div class="small">Search • Post • Approve • Wallet-based WhatsApp unlock</div>
+      </div>
+    </div>
 
-Profile Photo / Shop Photo upload करने का option
+    <div class="controls">
+      <div id="walletBadge" class="pill small" style="display:none">Wallet: ₹<span id="walletAmt">0</span></div>
+      <button id="rechargeBtn" class="btn btn-warn" style="display:none">Recharge ₹100</button>
+      <button id="postToggle" class="btn btn-ghost">Post Service</button>
+      <button id="loginBtn" class="btn btn-acc">Google Login</button>
+    </div>
+  </header>
 
-Service Listing Page
+  <main>
+    <!-- Left: Listings -->
+    <section>
+      <div class="panel">
+        <div class="searchRow">
+          <input id="searchBox" class="input" placeholder="Search by name, category, city, address..." />
+          <button id="clearSearch" class="btn btn-ghost">Clear</button>
+          <div style="flex:1"></div>
+          <div class="small" style="color:var(--muted)">Approved listings visible to everyone. Login to post & unlock.</div>
+        </div>
 
-जो भी Providers register करें, उनकी details list/card के रूप में दिखे।
+        <div id="cards" class="grid-cards"></div>
+        <div id="emptyMsg" class="small muted" style="padding:12px">कोई approved listing नहीं मिली।</div>
+      </div>
+    </section>
 
-Search और Filter (जैसे Hospital, Ambulance, Doctor, Electrician आदि)।
+    <!-- Right: Post form + admin lists (inside same UI) -->
+    <aside>
+      <div id="postPanel" class="panel" style="display:none">
+        <h3>Post Service (Login required)</h3>
 
-Rating & Review System
+        <form id="registerForm" style="margin-bottom:12px">
+          <h4 class="small">Register as Provider (optional if using Google)</h4>
+          <label class="small">Full Name</label>
+          <input id="reg_name" class="input" placeholder="Your name" />
+          <label class="small">Mobile</label>
+          <input id="reg_mobile" class="input" placeholder="Mobile number" />
+          <label class="small">WhatsApp</label>
+          <input id="reg_wa" class="input" placeholder="WhatsApp number" />
+          <label class="small">Email</label>
+          <input id="reg_email" class="input" placeholder="Email" />
+          <button id="regSubmit" type="button" class="btn btn-ghost" style="margin-top:6px">Register Profile</button>
+        </form>
 
-Users provider को rating (⭐) और feedback दे सकें।
+        <hr style="border:none;height:1px;background:rgba(255,255,255,0.03);margin:8px 0">
 
-Direct Contact Buttons
+        <form id="postForm">
+          <label class="small">Your Name</label>
+          <input id="pf_name" class="input" placeholder="Your name" required/>
+          <label class="small">Service / Business Name</label>
+          <input id="pf_bname" class="input" placeholder="Shop or Service name" required />
+          <label class="small">Category (type)</label>
+          <input id="pf_category" class="input" placeholder="Doctor, Electrician, Plumber, Ambulance..." required />
+          <label class="small">City / Area</label>
+          <input id="pf_city" class="input" placeholder="City or Area" required />
+          <label class="small">Contact (Mobile)</label>
+          <input id="pf_phone" class="input" placeholder="Mobile number" required />
+          <label class="small">WhatsApp Number</label>
+          <input id="pf_whatsapp" class="input" placeholder="WhatsApp number" required />
+          <label class="small">Address</label>
+          <input id="pf_address" class="input" placeholder="Full address / landmark" required />
+          <label class="small">Service Hours</label>
+          <input id="pf_hours" class="input" placeholder="e.g. 9AM - 10PM" />
+          <label class="small">Profile / Shop Image</label>
+          <input id="pf_image" type="file" accept="image/*" />
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button type="submit" class="btn btn-good">Submit for Approval</button>
+            <button id="cancelPost" type="button" class="btn btn-ghost">Cancel</button>
+          </div>
+        </form>
+      </div>
 
-"Call Now" और "WhatsApp Now" के बटन।
+      <div id="adminLists" class="panel" style="display:none;margin-top:12px">
+        <h3>Admin Controls</h3>
+        <div id="adminContent" class="small muted">(Admin logged in — controls appear inside cards too.)</div>
+      </div>
 
-Admin Panel (Backend)
+      <div class="panel" style="margin-top:12px">
+        <h4>How it works</h4>
+        <div class="small muted">Anyone can view approved listings. Login to post, recharge, unlock WhatsApp (₹20), and see address. Admin (zarasamajiksevasanstha@gmail.com) can approve/reject/delete & accept recharges.</div>
+      </div>
+    </aside>
+  </main>
 
-Admin सभी service providers की जानकारी approve / reject कर सके।
+  <div id="errorBox"></div>
+</div>
 
-गलत listing delete करने का option हो।
+<!-- Modals -->
+<div id="cardModal" class="modal"><div class="box"><div style="position:relative"><span id="closeCard" class="closeX">✕</span><div id="modalBody"></div></div></div></div>
 
-isme wallet bhi banaye aagar koi user provider ko whatsapp
- button click kare to wallet se 20 rs.cut ho jaye /
- agar wallet me amount nahi hai to whatsapp button 
-aur address na dikhe , admin apruvel listing ke liye jaruri hai , 
-
-🔑 Final Features (Service Provider Page + Wallet System)
-1. Registration / Login
-
-Google Login से Authentication
-
-Service Provider अपना प्रोफ़ाइल बना सके (नाम, मोबाइल, ईमेल, WhatsApp)।
-
-Normal User (Customer) सिर्फ़ services देखे और Wallet recharge कर सके।
-
-
-2. Provider Profile Form
-
-Service/Business Name
-
-Service Category (Doctor, Hospital, Ambulance, Carpenter, Electrician, Plumber आदि)
-
-
-
-Contact Number / WhatsApp
-
-Service Hours (Morning 9AM – Night 10PM)
-
-Profile/Shop Image Upload (imgbb या Firebase Storage से)
-
-Status = Waiting (Admin Approval के बाद ही Public दिखे)
-
-3. Service Listing Page
-
-सभी Providers की Approved Listings card format में दिखें।
-
-Filters (Category select → Hospital, Ambulance, Electrician आदि)।
-
-Search by name / city।
-
-Card में →
-
-Shop Name
-
-Category
-
-Address (Only if Wallet Deduction success)
-
-WhatsApp Button (Wallet कटने पर enable हो)
-
-Call Now Button
-
-login ke baad wahi button logout bane ,, listing card sabhi ko dikhe login ki jarurat nahi hai ,
-
-mobile frendly ho , sabhi button 3d me dikhe 
-
-imase upload kare,(url nahi karna hai ) direct imase apload kare 
-
-
-wallet recharg button click karne se admin ko dikhe recharg accept button list ke card me ,,
- card me likha ho request recharg , admin click karta hai to recharg ho jaye 100 rs fix , likhe recharge sucsesfull
- isme search box de ,, (dropdown ki jarurat nahi hai na de hame )
-
-
-
-UPER HEADE5R ME AAPNE customer aur provider ka button diya hai is ehata de sabhi list card dikhe apruved , 
-login hone par post form dikhe , admin  zarasamajiksevasanstha@gmail.com  login google 
-se kare to admin card me hi sab button dikhe admin ko apruve/reject/delete button,, 
-reject karne se delete na ho,, wapas se admin  apruve kar sake 
-customer provider ka button hata de , list card post sabhi ko dikhe , logon se post  ho  dekhne ke liye login jaruri nhi 
-
-submit nahi ho raha hai , admin login se admin card me sabhi dikhe   admin zarasamajiksevasanstha@gmail.com
-
-
+<script>
+/* =====================
+   CONFIG (use your provided Firebase config)
+   ===================== */
 const firebaseConfig = {
   apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
   authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -122,10 +184,393 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
+const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+// ImgBB key you gave earlier — replace if you have another
+const IMGBB_API = "cad1f0dbfbd25346460789376cc2d7d5";
 
+/* =====================
+   Init Firebase & UI refs
+   ===================== */
+if(typeof firebase === 'undefined'){ document.getElementById('errorBox').innerHTML = '<div class="err">Firebase SDK failed to load.</div>'; throw new Error('Firebase SDK missing'); }
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
 
-  const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
+const loginBtn = document.getElementById('loginBtn');
+const postToggle = document.getElementById('postToggle');
+const postPanel = document.getElementById('postPanel');
+const postForm = document.getElementById('postForm');
+const cancelPost = document.getElementById('cancelPost');
+const cardsWrap = document.getElementById('cards');
+const emptyMsg = document.getElementById('emptyMsg');
+const searchBox = document.getElementById('searchBox');
+const clearSearch = document.getElementById('clearSearch');
+const walletBadge = document.getElementById('walletBadge');
+const walletAmt = document.getElementById('walletAmt');
+const rechargeBtn = document.getElementById('rechargeBtn');
+const adminLists = document.getElementById('adminLists');
+const adminContent = document.getElementById('adminContent');
+const cardModal = document.getElementById('cardModal');
+const modalBody = document.getElementById('modalBody');
+const closeCard = document.getElementById('closeCard');
+const registerFormBtn = document.getElementById('regSubmit');
 
+let currentUser = null;
+let providersCache = {};
+window.__accessCache = {};
 
+/* =====================
+   Error helper
+   ===================== */
+function showErr(msg){ console.error(msg); const box = document.getElementById('errorBox'); if(!box) return; const el = document.createElement('div'); el.className='err'; el.textContent = String(msg).slice(0,250); box.appendChild(el); setTimeout(()=>{ try{ box.removeChild(el); }catch(e){} },20000); }
+window.addEventListener('error', e => showErr('Error: '+(e.message||e)));
+window.addEventListener('unhandledrejection', e => showErr('Rejection: '+JSON.stringify(e.reason)));
 
-pura page 3d me aur sabhi ke colur alag alag dikhe ,, mobile frendly
+/* =====================
+   Auth & UI wiring
+   ===================== */
+loginBtn.addEventListener('click', async ()=>{
+  if(auth.currentUser){ await auth.signOut(); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try{ await auth.signInWithPopup(provider); } catch(e){ alert('Login failed: '+(e.message||e)); }
+});
+
+postToggle.addEventListener('click', ()=> {
+  postPanel.style.display = (postPanel.style.display === 'none' || postPanel.style.display === '') ? 'block' : 'none';
+});
+cancelPost.addEventListener('click', ()=> { postPanel.style.display='none'; });
+closeCard.addEventListener('click', ()=> { cardModal.style.display='none'; });
+
+/* =====================
+   Auth state
+   ===================== */
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if(user){
+    loginBtn.textContent = 'Logout'; loginBtn.classList.remove('btn-acc'); loginBtn.classList.add('btn-ghost');
+    walletBadge.style.display = 'inline-block'; rechargeBtn.style.display = 'inline-block';
+    postPanel.style.display = 'none';
+    // ensure wallet exists
+    const wref = db.ref('wallet/'+user.uid);
+    wref.child('balance').transaction(v => (v===null?0:v));
+    wref.child('createdAt').set(firebase.database.ServerValue.TIMESTAMP);
+    wref.on('value', snap => { const v = snap.val(); walletAmt.textContent = (v && v.balance) ? v.balance : 0; });
+    db.ref('wallet/'+user.uid+'/access').on('value', snap => { window.__accessCache[user.uid] = snap.val() || {}; renderCards(); });
+    if(user.email === ADMIN_EMAIL) adminLists.style.display = 'block'; else adminLists.style.display = 'none';
+  } else {
+    loginBtn.textContent = 'Google Login'; loginBtn.classList.add('btn-acc'); loginBtn.classList.remove('btn-ghost');
+    walletBadge.style.display = 'none'; rechargeBtn.style.display = 'none'; postPanel.style.display='none'; adminLists.style.display='none';
+  }
+  renderCards();
+});
+
+/* =====================
+   Registration (manual)
+   ===================== */
+registerFormBtn.addEventListener('click', async ()=>{
+  const name = (document.getElementById('reg_name')||{}).value.trim();
+  const mobile = (document.getElementById('reg_mobile')||{}).value.trim();
+  const wa = (document.getElementById('reg_wa')||{}).value.trim();
+  const email = (document.getElementById('reg_email')||{}).value.trim();
+  if(!name || !mobile) return alert('Name & Mobile required');
+  try{
+    const ref = db.ref('users').push();
+    await ref.set({ id: ref.key, name, mobile, whatsapp: wa||'', email: email||'', createdAt: firebase.database.ServerValue.TIMESTAMP });
+    alert('Registered provider profile saved. (Still need to post service separately)');
+  }catch(e){ showErr('register failed: '+ e.message); alert('Register failed'); }
+});
+
+/* =====================
+   Post form submission: upload image to ImgBB -> create provider entry (status waiting)
+   ===================== */
+async function uploadToImgBB(file){
+  const fd = new FormData(); fd.append('image', file);
+  try{
+    const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_API, { method:'POST', body: fd });
+    if(!res.ok) throw new Error('ImgBB returned '+res.status);
+    const j = await res.json(); return j && j.data && j.data.url ? j.data.url : null;
+  }catch(e){ showErr('ImgBB upload error: '+ e.message); return null; }
+}
+
+postForm.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  if(!currentUser){ if(confirm('Login required to post. Login now?')) loginBtn.click(); return; }
+  const name = (document.getElementById('pf_name')||{}).value.trim();
+  const bname = (document.getElementById('pf_bname')||{}).value.trim();
+  const category = (document.getElementById('pf_category')||{}).value.trim();
+  const city = (document.getElementById('pf_city')||{}).value.trim();
+  const phone = (document.getElementById('pf_phone')||{}).value.trim();
+  const whatsapp = (document.getElementById('pf_whatsapp')||{}).value.trim();
+  const address = (document.getElementById('pf_address')||{}).value.trim();
+  const hours = (document.getElementById('pf_hours')||{}).value.trim();
+  const fileInput = document.getElementById('pf_image');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+
+  if(!name || !bname || !category || !city || !phone || !whatsapp || !address){ alert('सभी आवश्यक फ़ील्ड भरें'); return; }
+
+  try{
+    let imageUrl = '';
+    if(file) imageUrl = await uploadToImgBB(file);
+    const ref = db.ref('providers').push();
+    const payload = {
+      id: ref.key, uid: currentUser.uid, ownerName: name, businessName: bname, category, city, phone, whatsapp,
+      address, hours, image: imageUrl||'', status: 'waiting', createdAt: firebase.database.ServerValue.TIMESTAMP,
+      ratings: { sum:0, count:0, avg:0 }
+    };
+    await ref.set(payload);
+    alert('Submitted! Waiting for admin approval.');
+    postForm.reset();
+    postPanel.style.display='none';
+  }catch(e){ showErr('post submit failed: '+ e.message); alert('Submit failed'); }
+});
+
+/* =====================
+   Realtime: providers listener
+   ===================== */
+db.ref('providers').on('value', snap => {
+  providersCache = snap.val() || {};
+  renderCards();
+  if(currentUser && currentUser.email === ADMIN_EMAIL) loadAdminLists();
+}, err => showErr('providers listener failed: '+ (err && err.message)));
+
+/* =====================
+   Render cards
+   ===================== */
+function renderCards(){
+  try{
+    const q = (searchBox.value||'').toLowerCase().trim();
+    const all = Object.values(providersCache || {});
+    const approved = all.filter(p => p && p.status === 'approved');
+    const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+    const source = isAdmin ? all.filter(Boolean) : approved;
+    const filtered = source.filter(p => {
+      const hay = ((p.businessName||'')+' '+(p.category||'')+' '+(p.city||'')+' '+(p.address||'')+' '+(p.ownerName||'')).toLowerCase();
+      return hay.includes(q);
+    });
+
+    cardsWrap.innerHTML = '';
+    if(filtered.length === 0){ emptyMsg.style.display = 'block'; return; } else emptyMsg.style.display = 'none';
+
+    filtered.forEach((p, idx) => {
+      const node = createCard(p, (idx%5)+1);
+      if(node) cardsWrap.appendChild(node);
+    });
+  }catch(e){ showErr('renderCards error: '+ e.message); }
+}
+
+function createCard(p, hue){
+  try{
+    const el = document.createElement('div'); el.className = 'card'; el.setAttribute('data-hue', String(hue));
+    const mediaDiv = document.createElement('div'); mediaDiv.className='media';
+    if(p.image){ const img = document.createElement('img'); img.src = p.image; mediaDiv.appendChild(img); }
+    el.appendChild(mediaDiv);
+
+    const body = document.createElement('div'); body.className='card-body';
+    const chip = document.createElement('div'); chip.className='chip'; chip.textContent = p.category || '—'; chip.style.position='absolute';
+    el.appendChild(chip);
+
+    const titleRow = document.createElement('div'); titleRow.className='titleRow';
+    const titleLeft = document.createElement('div');
+    const nameEl = document.createElement('div'); nameEl.innerHTML = `<strong>${escapeHtml(p.businessName||'Unnamed')}</strong><div class="small muted">${escapeHtml(p.city||'')}</div>`;
+    titleLeft.appendChild(nameEl);
+    const statusPill = document.createElement('div'); statusPill.className='pill small'; statusPill.textContent = (p.status||'') ;
+    titleRow.appendChild(titleLeft); titleRow.appendChild(statusPill);
+    body.appendChild(titleRow);
+
+    const addr = document.createElement('div'); addr.className='small muted'; addr.style.marginTop='8px';
+    let addressText = 'Login to view address & WhatsApp';
+    if(currentUser){
+      if(currentUser.email === ADMIN_EMAIL || currentUser.uid === p.uid || accessGranted(currentUser.uid, p.id)) addressText = p.address || '';
+      else addressText = 'Recharge & unlock to view address';
+    }
+    addr.textContent = addressText;
+    body.appendChild(addr);
+
+    const hrs = document.createElement('div'); hrs.className='small muted'; hrs.style.marginTop='8px'; hrs.textContent = 'Hours: '+(p.hours||'—');
+    body.appendChild(hrs);
+
+    const actions = document.createElement('div'); actions.className='btnRow';
+    const callBtn = document.createElement('a'); callBtn.className='btn btn-ghost'; callBtn.textContent='Call Now'; callBtn.href = 'tel:'+ (p.phone || '');
+    actions.appendChild(callBtn);
+
+    const waBtn = document.createElement('button'); waBtn.className='btn btn-acc';
+    const waVisible = currentUser && ( currentUser.email === ADMIN_EMAIL || currentUser.uid === p.uid || accessGranted(currentUser.uid, p.id) );
+    waBtn.textContent = waVisible ? 'WhatsApp Now' : 'Unlock WhatsApp (₹20)';
+    waBtn.addEventListener('click', async (ev) => { ev.stopPropagation(); handleWhatsAppClick(p); });
+    actions.appendChild(waBtn);
+
+    const rateBtn = document.createElement('button'); rateBtn.className='btn btn-warn'; rateBtn.textContent='Rate';
+    rateBtn.addEventListener('click', (e)=>{ e.stopPropagation(); openRating(p); });
+    actions.appendChild(rateBtn);
+
+    if(currentUser && currentUser.uid === p.uid && currentUser.email !== ADMIN_EMAIL){
+      const del = document.createElement('button'); del.className='btn btn-danger'; del.textContent='Delete';
+      del.addEventListener('click', async (ev)=>{ ev.stopPropagation(); if(confirm('Delete your listing?')) await db.ref('providers/'+p.id).remove(); });
+      actions.appendChild(del);
+    }
+
+    if(currentUser && currentUser.email === ADMIN_EMAIL){
+      const ap = document.createElement('button'); ap.className='btn btn-good'; ap.textContent='Approve';
+      ap.addEventListener('click', async (e)=>{ e.stopPropagation(); await db.ref('providers/'+p.id).update({ status:'approved' }); });
+      const rj = document.createElement('button'); rj.className='btn btn-danger'; rj.textContent='Reject';
+      rj.addEventListener('click', async (e)=>{ e.stopPropagation(); await db.ref('providers/'+p.id).update({ status:'rejected' }); });
+      const delA = document.createElement('button'); delA.className='btn btn-ghost'; delA.textContent='Delete';
+      delA.addEventListener('click', async (e)=>{ e.stopPropagation(); if(confirm('Delete permanently?')) await db.ref('providers/'+p.id).remove(); });
+      const rechargeProvider = document.createElement('button'); rechargeProvider.className='btn btn-warn'; rechargeProvider.textContent='Add ₹100 Wallet';
+      rechargeProvider.addEventListener('click', async (e) => { e.stopPropagation(); await db.ref('wallet/'+p.uid+'/balance').transaction(v=> (v||0)+100); alert('Added ₹100 to provider wallet'); });
+      actions.appendChild(ap); actions.appendChild(rj); actions.appendChild(delA); actions.appendChild(rechargeProvider);
+    }
+
+    body.appendChild(actions);
+
+    const reviewsWrap = document.createElement('div'); reviewsWrap.style.marginTop='10px';
+    loadAndRenderReviews(p.id, reviewsWrap);
+    body.appendChild(reviewsWrap);
+
+    el.appendChild(body);
+
+    el.addEventListener('click', ()=> {
+      modalBody.innerHTML = `<h2>${escapeHtml(p.businessName||'')}</h2>
+        <p><b>Category:</b> ${escapeHtml(p.category||'')}</p>
+        <p><b>City:</b> ${escapeHtml(p.city||'')}</p>
+        <p><b>Address:</b> ${(currentUser && (currentUser.email===ADMIN_EMAIL || currentUser.uid===p.uid || accessGranted(currentUser.uid,p.id))) ? escapeHtml(p.address||'') : 'Locked'}</p>
+        <p><b>Contact:</b> ${ (currentUser && (currentUser.email===ADMIN_EMAIL || currentUser.uid===p.uid || accessGranted(currentUser.uid,p.id))) ? escapeHtml(p.whatsapp||'') : 'Locked'}</p>`;
+      cardModal.style.display = 'flex';
+    });
+
+    return el;
+  }catch(e){ showErr('createCard error: '+ e.message); return null; }
+}
+
+/* =====================
+   Reviews & Rating
+   ===================== */
+function loadAndRenderReviews(providerId, container){
+  container.innerHTML = '';
+  db.ref('reviews/'+providerId).once('value').then(snap=>{
+    const all = snap.val() || {};
+    const arr = Object.values(all);
+    if(!arr.length){ container.innerHTML = '<div class="small muted">No reviews yet.</div>'; return; }
+    const avg = (arr.reduce((a,b)=>a+(b.rating||0),0)/arr.length).toFixed(1);
+    const top = document.createElement('div'); top.className='small muted'; top.textContent = `Average: ${avg} ★ (${arr.length})`;
+    container.appendChild(top);
+    arr.slice().reverse().forEach(r=>{
+      const d = document.createElement('div'); d.style.marginTop='8px';
+      d.innerHTML = `<div style="font-weight:600">${escapeHtml(r.userName||'User')} <span class="small muted"> - ${r.rating||0}★</span></div><div class="small muted">${escapeHtml(r.comment||'')}</div>`;
+      container.appendChild(d);
+    });
+  }).catch(e=> console.error('load reviews failed', e));
+}
+
+function openRating(provider){
+  if(!currentUser){ if(confirm('Login required to rate. Login now?')) loginBtn.click(); return; }
+  const rating = prompt('Rate 1–5: (number)');
+  if(!rating) return;
+  const rnum = Math.max(1, Math.min(5, Math.round(Number(rating)||0)));
+  const comment = prompt('Optional feedback:') || '';
+  db.ref('reviews/'+provider.id).push({ rating: rnum, comment, userId: currentUser.uid, userName: currentUser.displayName || currentUser.email, at: firebase.database.ServerValue.TIMESTAMP })
+  .then(()=> {
+    db.ref('providers/'+provider.id+'/ratings').transaction(r=>{
+      if(!r) return { sum: rnum, count: 1, avg: rnum };
+      const sum = (r.sum||0) + rnum; const count = (r.count||0) + 1; return { sum, count, avg: (sum/count) };
+    });
+    alert('Thanks for your review!');
+    renderCards();
+  }).catch(e => showErr('submit review failed: '+ e.message));
+}
+
+/* =====================
+   Access / Wallet / Whatsapp flow
+   ===================== */
+function accessPath(uid, pid){ return 'wallet/'+String(uid)+'/access/'+String(pid); }
+function accessGranted(uid, pid){ return !!(window.__accessCache && window.__accessCache[uid] && window.__accessCache[uid][pid]); }
+auth.onAuthStateChanged(u=>{ if(!u) return; db.ref('wallet/'+u.uid+'/access').on('value', snap=>{ window.__accessCache[u.uid] = snap.val() || {}; renderCards(); }); });
+
+async function handleWhatsAppClick(provider){
+  try{
+    if(!currentUser){ if(confirm('Login required. Login now?')) loginBtn.click(); return; }
+    const uid = currentUser.uid;
+    const pid = provider.id;
+    if(currentUser.email === ADMIN_EMAIL || currentUser.uid === provider.uid || accessGranted(uid,pid)){
+      window.open('https://wa.me/'+encodeURIComponent(provider.whatsapp.replace(/[^0-9]/g,''))+'?text='+encodeURIComponent('Hello '+provider.businessName+' (via ZaraFix)'), '_blank');
+      renderCards(); return;
+    }
+    const balRef = db.ref('wallet/'+uid+'/balance');
+    const res = await balRef.transaction(curr => { if(curr===null) curr=0; if(curr>=20) return curr-20; return; }, undefined, false);
+    if(!res || !res.committed){ alert('Wallet low. Please recharge ₹100 to unlock.'); return; }
+    const t = db.ref('wallet/'+uid+'/transactions').push();
+    await t.set({ id: t.key, type:'debit', amount:20, for:'whatsapp_access', providerId: pid, at: firebase.database.ServerValue.TIMESTAMP });
+    await db.ref(accessPath(uid,pid)).set(true);
+    window.open('https://wa.me/'+encodeURIComponent(provider.whatsapp.replace(/[^0-9]/g,''))+'?text='+encodeURIComponent('Hello '+provider.businessName+' (via ZaraFix)'), '_blank');
+    renderCards();
+  }catch(e){ showErr('handleWhatsAppClick failed: '+ (e.message||e)); alert('Action failed'); }
+}
+
+/* =====================
+   Recharge flow (user -> admin approve)
+   ===================== */
+rechargeBtn.addEventListener('click', async ()=>{
+  if(!currentUser){ alert('Login required'); return; }
+  if(!confirm('Create recharge request of ₹100? You will upload payment screenshot. Continue?')) return;
+  const input = document.createElement('input'); input.type='file'; input.accept='image/*';
+  input.onchange = async ()=> {
+    const file = input.files[0]; if(!file) return;
+    try{
+      const fd = new FormData(); fd.append('image', file);
+      const r = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_API, { method:'POST', body: fd });
+      if(!r.ok) throw new Error('Upload failed: '+ r.status);
+      const j = await r.json(); const shot = j && j.data && j.data.url ? j.data.url : null;
+      if(!shot) throw new Error('ImgBB returned bad response');
+      const rr = db.ref('recharges').push();
+      await rr.set({ id: rr.key, uid: currentUser.uid, email: currentUser.email||'', amount:100, screenshot: shot, status:'pending', at: firebase.database.ServerValue.TIMESTAMP });
+      alert('Recharge request submitted. Admin will approve.');
+      if(currentUser && currentUser.email === ADMIN_EMAIL) loadAdminLists();
+    }catch(err){ showErr('Recharge upload failed: '+ (err && err.message? err.message: String(err))); alert('Recharge failed'); }
+  };
+  input.click();
+});
+
+/* =====================
+   Admin: lists & approve recharges
+   ===================== */
+function loadAdminLists(){
+  if(!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+  adminContent.innerHTML = '';
+  db.ref('recharges').orderByChild('at').once('value').then(snap=>{
+    const all = snap.val() || {};
+    const arr = Object.values(all).reverse();
+    if(!arr.length) { adminContent.innerHTML = '<div class="small muted">No recharge requests.</div>'; return; }
+    arr.forEach(r=>{
+      const row = document.createElement('div'); row.style.marginTop='8px';
+      row.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><img src="${escapeHtml(r.screenshot||'')}" style="width:90px;height:70px;object-fit:cover;border-radius:6px"/><div style="flex:1"><strong>${escapeHtml(r.email||r.uid||'')}</strong><div class="small muted">Amount: ₹${r.amount||100}</div></div></div>`;
+      const btnRow = document.createElement('div'); btnRow.style.marginTop='6px';
+      const accept = document.createElement('button'); accept.className='btn btn-good'; accept.textContent='Accept & Add ₹100';
+      accept.addEventListener('click', async ()=> {
+        await db.ref('wallet/'+r.uid+'/balance').transaction(v=> (v||0)+100);
+        await db.ref('wallet/'+r.uid+'/transactions').push({ type:'credit', amount:100, for:'recharge', at: firebase.database.ServerValue.TIMESTAMP });
+        await db.ref('recharges/'+r.id).update({ status:'approved' });
+        alert('Recharge approved & ₹100 added');
+        loadAdminLists();
+      });
+      const reject = document.createElement('button'); reject.className='btn btn-warn'; reject.textContent='Reject';
+      reject.addEventListener('click', async ()=> { await db.ref('recharges/'+r.id).update({ status:'rejected' }); loadAdminLists(); });
+      btnRow.appendChild(accept); btnRow.appendChild(reject);
+      row.appendChild(btnRow);
+      adminContent.appendChild(row);
+    });
+  }).catch(e => showErr('load recharges failed: '+ e.message));
+}
+
+/* =====================
+   Helpers & startup
+   ===================== */
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+searchBox.addEventListener('input', renderCards);
+clearSearch.addEventListener('click', ()=>{ searchBox.value=''; renderCards(); });
+
+/* If admin logged in at startup */
+auth.onAuthStateChanged(u => { if(u && u.email === ADMIN_EMAIL) loadAdminLists(); });
+
+</script>
+</body>
+</html>
