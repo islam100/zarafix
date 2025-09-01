@@ -1,153 +1,97 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="hi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ZaraFix - Service Provider Page (Single File)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZaraFix | Service Providers + Wallet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#0ea5a0;--glass:rgba(255,255,255,0.03)}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071028 0%, #08162a 100%);}
-    .container{max-width:1100px;margin:20px auto;padding:18px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{font-size:20px;margin:0}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{background:linear-gradient(180deg,var(--accent),#059286);border:none;color:white;padding:10px 14px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(14,165,160,0.18);transform:translateY(0);transition:transform .12s}
-    .btn:active{transform:translateY(2px)}
-    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
-    .card{background:var(--glass);padding:14px;border-radius:14px;margin-top:14px;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.03)}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
-    .form-row{display:flex;gap:8px}
-    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e6eef6}
-    label{font-size:13px;color:#cfe8e4}
-    .providers{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
-    .provider-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:12px}
-    .provider-top{display:flex;gap:10px;align-items:center}
-    .avatar{width:56px;height:56px;border-radius:10px;background:#0b1220;display:inline-block;object-fit:cover}
-    .meta{flex:1}
-    .tag{font-size:12px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.03);display:inline-block}
-    .searchbox{width:100%;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#e6eef6}
-    .footer-note{font-size:12px;color:#9fc3bf;margin-top:10px}
-    .small{font-size:13px;color:#bfeeea}
-    .hidden{display:none}
-    @media(max-width:880px){.grid{grid-template-columns:1fr}.controls{flex-wrap:wrap}}
+    /* 3D buttons + card colors */
+    .btn-3d{box-shadow:0 6px 0 rgba(0,0,0,.18);transform:translateY(-2px);transition:all .12s}
+    .btn-3d:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
+    .card-3d{box-shadow:0 10px 20px rgba(0,0,0,.08);border-radius:16px;padding:12px}
   </style>
 </head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>ZaraFix — Service Providers</h1>
-        <div class="small">Admin: <strong>zarasamajiksevasanstha@gmail.com</strong></div>
-      </div>
-      <div class="controls">
-        <button id="btnToggleForm" class="btn ghost">Post Service</button>
-        <button id="btnRecharge" class="btn ghost">Recharge Wallet</button>
-        <button id="btnLogin" class="btn">Login / Register</button>
+<body class="bg-gray-50 min-h-screen font-sans">
+  <div class="max-w-5xl mx-auto p-4">
+    <header class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">ZaraFix | Service Providers</h1>
+      <div class="space-x-2">
+        <button id="btn-login" class="px-4 py-2 bg-blue-500 text-white rounded btn-3d">Login with Google</button>
+        <button id="btn-logout" class="px-4 py-2 bg-red-500 text-white rounded btn-3d hidden">Logout</button>
       </div>
     </header>
 
-    <div class="grid">
-      <main>
-        <div class="card">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="search" class="searchbox" placeholder="Search providers by name or city..." />
-            <select id="filterCategory" class="searchbox" style="width:200px">
-              <option value="">All categories</option>
-              <option>Doctor</option>
-              <option>Hospital</option>
-              <option>Ambulance</option>
-              <option>Electrician</option>
-              <option>Plumber</option>
-              <option>Carpenter</option>
-              <option>Shop</option>
-            </select>
-          </div>
-
-          <div id="providers" class="providers"></div>
-          <div class="footer-note">Note: WhatsApp & Address visible only to logged-in customers with ₹100+ wallet (deducts ₹20 per click).</div>
-        </div>
-      </main>
-
-      <aside>
-        <!-- Login / Register Card -->
-        <div id="authCard" class="card">
-          <h3 id="authTitle">Login / Register</h3>
-          <div id="userInfo" class="hidden">
-            <div class="small">Signed in as <span id="userEmail"></span></div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="btnLogout" class="btn ghost">Logout</button>
-              <button id="btnAsAdmin" class="btn ghost hidden">Admin Panel</button>
-            </div>
-          </div>
-
-          <div id="authForms">
-            <label>Email</label>
-            <input id="inputEmail" placeholder="email@example.com" />
-            <label>Password</label>
-            <input id="inputPassword" type="password" placeholder="password" />
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="btnEmailLogin" class="btn">Sign In</button>
-              <button id="btnEmailSignup" class="btn ghost">Sign Up</button>
-            </div>
-            <div style="margin-top:10px">
-              <button id="btnGoogle" class="btn">Sign In with Google</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Post Form -->
-        <div id="postCard" class="card hidden">
-          <h3>Post Provider Profile</h3>
-          <label>Service / Business Name</label>
-          <input id="p_name" />
-          <label>Category (type)</label>
-          <input id="p_category" placeholder="e.g. Electrician" />
-          <label>City / Address</label>
-          <input id="p_city" />
-          <label>WhatsApp Number</label>
-          <input id="p_whatsapp" placeholder="91xxxxxxxxxx" />
-          <label>Contact Number</label>
-          <input id="p_contact" />
-          <label>Service Hours</label>
-          <input id="p_hours" placeholder="9AM - 10PM" />
-          <label>Profile / Shop Image (upload)</label>
-          <input id="p_image" type="file" accept="image/*" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btnSubmitPost" class="btn">Submit for Approval</button>
-            <button id="btnCancelPost" class="btn ghost">Cancel</button>
-          </div>
-          <div class="small" style="margin-top:8px">Images are uploaded to ImgBB and stored as URLs in Firebase.</div>
-        </div>
-
-        <!-- Recharge Card -->
-        <div id="rechargeCard" class="card hidden">
-          <h3>Recharge Wallet (₹100)</h3>
-          <label>Upload payment screenshot</label>
-          <input id="recharge_img" type="file" accept="image/*" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="btnSendRecharge" class="btn">Send Recharge Request</button>
-            <button id="btnCancelRecharge" class="btn ghost">Cancel</button>
-          </div>
-          <div class="small" style="margin-top:8px">Admin will approve and credit ₹100 to your wallet.</div>
-        </div>
-
-        <!-- Admin Panel (shown only to admin) -->
-        <div id="adminCard" class="card hidden">
-          <h3>Admin Panel</h3>
-          <div id="pendingList"></div>
-          <h4 style="margin-top:10px">Recharge Requests</h4>
-          <div id="rechargeList"></div>
-        </div>
-      </aside>
+    <!-- Notices -->
+    <div id="admin-panel" class="mb-4 p-3 bg-white rounded shadow hidden">
+      <h2 class="font-semibold">Admin Panel (zarasamajiksevasanstha@gmail.com)</h2>
+      <div class="mt-2 space-y-2">
+        <div id="recharge-requests"></div>
+        <div id="provider-approvals"></div>
+      </div>
     </div>
+
+    <!-- Post form (visible when logged in) -->
+    <div id="post-form" class="mb-6 p-4 bg-white rounded shadow hidden">
+      <h2 class="font-semibold mb-2">Post Service Provider</h2>
+      <form id="providerForm" class="space-y-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input required name="name" placeholder="Full Name" class="p-2 border rounded" />
+          <input required name="mobile" placeholder="Mobile Number" class="p-2 border rounded" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input required name="business" placeholder="Service/Business Name" class="p-2 border rounded" />
+          <input required name="email" placeholder="Email" class="p-2 border rounded" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input required name="category" placeholder="Category (Doctor, Hospital, Electrician...)" class="p-2 border rounded" />
+          <input required name="whatsapp" placeholder="WhatsApp Number" class="p-2 border rounded" />
+        </div>
+        <input required name="address" placeholder="Address" class="w-full p-2 border rounded" />
+        <input name="serviceHours" placeholder="Service Hours (eg. 09:00 - 22:00)" class="w-full p-2 border rounded" />
+        <div>
+          <label class="block text-sm">Upload Image (Profile / Shop)</label>
+          <input type="file" id="imageFile" accept="image/*" class="mt-1" />
+        </div>
+        <div class="flex items-center space-x-2">
+          <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded btn-3d">Submit</button>
+          <span id="form-msg" class="text-sm text-gray-600"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Wallet / Recharge -->
+    <div id="wallet-area" class="mb-6 p-4 bg-white rounded shadow hidden">
+      <div class="flex items-center justify-between">
+        <div>Wallet Balance: <span id="wallet-balance">₹0</span></div>
+        <div>
+          <button id="btn-request-recharge" class="px-3 py-1 bg-yellow-500 rounded btn-3d">Request Recharge (₹100)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Listings & Search -->
+    <div class="mb-4 p-4 bg-white rounded shadow">
+      <div class="flex items-center gap-2 mb-3">
+        <input id="searchBox" placeholder="Search by name or city" class="p-2 border rounded flex-1" />
+        <select id="filterCat" class="p-2 border rounded hidden">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div id="cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+
+    <footer class="text-center text-sm text-gray-500 mt-6">Built for ZaraFix • Mobile friendly • 3D buttons</footer>
   </div>
 
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
   <script>
-    // ============== CONFIG - replace only if you want ==============
+    // *** Paste user's firebaseConfig here (from your message) ***
     const firebaseConfig = {
       apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
       authDomain: "zara-fix-2e35a.firebaseapp.com",
@@ -157,256 +101,243 @@
       messagingSenderId: "636550144008",
       appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
     };
-    // ImgBB key (you included this in your message). Change if needed.
-    const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-    // Admin email
-    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+    const storage = firebase.storage();
+
+    // Admin email
+    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
 
     // UI refs
-    const btnLogin = document.getElementById('btnLogin');
-    const btnGoogle = document.getElementById('btnGoogle');
-    const btnEmailLogin = document.getElementById('btnEmailLogin');
-    const btnEmailSignup = document.getElementById('btnEmailSignup');
-    const btnLogout = document.getElementById('btnLogout');
-    const inputEmail = document.getElementById('inputEmail');
-    const inputPassword = document.getElementById('inputPassword');
-    const userInfo = document.getElementById('userInfo');
-    const userEmailSpan = document.getElementById('userEmail');
-    const authForms = document.getElementById('authForms');
-    const btnToggleForm = document.getElementById('btnToggleForm');
-    const postCard = document.getElementById('postCard');
-    const btnSubmitPost = document.getElementById('btnSubmitPost');
-    const btnCancelPost = document.getElementById('btnCancelPost');
-    const p_image = document.getElementById('p_image');
-    const providersDiv = document.getElementById('providers');
-    const search = document.getElementById('search');
-    const filterCategory = document.getElementById('filterCategory');
-    const btnRecharge = document.getElementById('btnRecharge');
-    const rechargeCard = document.getElementById('rechargeCard');
-    const btnSendRecharge = document.getElementById('btnSendRecharge');
-    const recharge_img = document.getElementById('recharge_img');
-    const adminCard = document.getElementById('adminCard');
-    const pendingList = document.getElementById('pendingList');
-    const rechargeList = document.getElementById('rechargeList');
+    const btnLogin = document.getElementById('btn-login');
+    const btnLogout = document.getElementById('btn-logout');
+    const postFormWrap = document.getElementById('post-form');
+    const providerForm = document.getElementById('providerForm');
+    const formMsg = document.getElementById('form-msg');
+    const cards = document.getElementById('cards');
+    const walletArea = document.getElementById('wallet-area');
+    const walletBalanceEl = document.getElementById('wallet-balance');
+    const btnRequestRecharge = document.getElementById('btn-request-recharge');
+    const adminPanel = document.getElementById('admin-panel');
+    const rechargeRequestsEl = document.getElementById('recharge-requests');
+    const providerApprovalsEl = document.getElementById('provider-approvals');
+    const searchBox = document.getElementById('searchBox');
 
-    // toggle post form
-    btnToggleForm.addEventListener('click', ()=>{
-      if(!auth.currentUser){alert('Please login to post');return}
-      postCard.classList.toggle('hidden');
-    });
-    btnCancelPost.addEventListener('click', ()=>postCard.classList.add('hidden'));
+    let currentUser = null;
 
-    btnRecharge.addEventListener('click', ()=>{
-      if(!auth.currentUser){alert('Please login to recharge');return}
-      rechargeCard.classList.toggle('hidden');
-    });
-    document.getElementById('btnCancelRecharge').addEventListener('click', ()=>rechargeCard.classList.add('hidden'));
-
-    // Auth handlers
-    btnEmailSignup.addEventListener('click', async ()=>{
-      const email = inputEmail.value.trim(); const pass = inputPassword.value;
-      if(!email||!pass){alert('Enter email & password');return}
-      try{ await auth.createUserWithEmailAndPassword(email,pass); alert('Signed up'); }
-      catch(e){alert(e.message)}
-    });
-    btnEmailLogin.addEventListener('click', async ()=>{
-      const email = inputEmail.value.trim(); const pass = inputPassword.value;
-      if(!email||!pass){alert('Enter email & password');return}
-      try{ await auth.signInWithEmailAndPassword(email,pass); }
-      catch(e){alert(e.message)}
-    });
-    btnGoogle.addEventListener('click', async ()=>{
+    // Auth
+    btnLogin.addEventListener('click', async ()=>{
       const provider = new firebase.auth.GoogleAuthProvider();
-      try{ await auth.signInWithPopup(provider); }
-      catch(e){alert(e.message)}
+      try{ await auth.signInWithPopup(provider);}catch(e){alert('Login failed: '+e.message)}
     });
     btnLogout.addEventListener('click', ()=>auth.signOut());
 
-    // onAuth
-    auth.onAuthStateChanged(async user=>{
+    auth.onAuthStateChanged(user=>{
+      currentUser = user;
       if(user){
-        userInfo.classList.remove('hidden'); authForms.classList.add('hidden');
-        userEmailSpan.textContent = user.email;
-        document.getElementById('btnAsAdmin').classList.toggle('hidden', user.email!==ADMIN_EMAIL);
-        // ensure wallet exists
-        const walletRef = db.ref('wallets/'+user.uid);
-        const wSnap = await walletRef.once('value');
-        if(!wSnap.exists()) walletRef.set({balance:0});
-      } else {
-        userInfo.classList.add('hidden'); authForms.classList.remove('hidden');
-        userEmailSpan.textContent = '';
-        document.getElementById('btnAsAdmin').classList.add('hidden');
+        btnLogin.classList.add('hidden'); btnLogout.classList.remove('hidden');
+        postFormWrap.classList.remove('hidden'); walletArea.classList.remove('hidden');
+        loadWallet(user.uid);
+        if(user.email===ADMIN_EMAIL) adminPanel.classList.remove('hidden'); else adminPanel.classList.add('hidden');
+      }else{
+        btnLogin.classList.remove('hidden'); btnLogout.classList.add('hidden');
+        postFormWrap.classList.add('hidden'); walletArea.classList.add('hidden'); adminPanel.classList.add('hidden');
       }
-      renderProviders(); renderAdminPanel();
     });
 
-    // Submit provider post
-    btnSubmitPost.addEventListener('click', async ()=>{
-      const user = auth.currentUser; if(!user){alert('Login first');return}
-      const name = document.getElementById('p_name').value.trim();
-      const category = document.getElementById('p_category').value.trim();
-      const city = document.getElementById('p_city').value.trim();
-      const whatsapp = document.getElementById('p_whatsapp').value.trim();
-      const contact = document.getElementById('p_contact').value.trim();
-      const hours = document.getElementById('p_hours').value.trim();
-      const file = p_image.files[0];
-      if(!name||!category||!city){alert('Fill name, category, city');return}
-      btnSubmitPost.disabled=true; btnSubmitPost.textContent='Uploading...';
-      let imageUrl='';
-      try{
-        if(file){
-          const fd = new FormData(); fd.append('image', file);
-          const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd});
-          const j = await res.json(); imageUrl = j.data.url;
+    // Provider form submit
+    providerForm.addEventListener('submit', async (e)=>{
+      e.preventDefault(); formMsg.textContent='Submitting...';
+      const fd = new FormData(providerForm);
+      const data = { name: fd.get('name'), mobile: fd.get('mobile'), business: fd.get('business'), email: fd.get('email'), category: fd.get('category'), whatsapp: fd.get('whatsapp'), address: fd.get('address'), serviceHours: fd.get('serviceHours') || '', status: 'waiting', createdAt: Date.now() };
+
+      // image upload
+      const fileEl = document.getElementById('imageFile');
+      if(fileEl.files.length){
+        const f = fileEl.files[0];
+        const path = `provider_images/${Date.now()}_${f.name}`;
+        const snap = await storage.ref(path).put(f);
+        const url = await snap.ref.getDownloadURL();
+        data.image = url;
+      }
+
+      const newRef = db.ref('providers').push();
+      await newRef.set(data);
+      formMsg.textContent='Submitted — Waiting for admin approval';
+      providerForm.reset();
+      setTimeout(()=>formMsg.textContent='','3000');
+    });
+
+    // Load and render listings
+    async function loadListings(){
+      const snap = await db.ref('providers').once('value');
+      const obj = snap.val() || {};
+      const q = searchBox.value.trim().toLowerCase();
+      cards.innerHTML='';
+      Object.keys(obj).reverse().forEach(key=>{
+        const p = obj[key];
+        // Show all listings to everyone but only APPROVED are public
+        // As per spec: "sabh ko dikhe login ki jarurat nahi" -> show all cards but only show contact/address/whatsapp when approved and wallet conditions met
+        const isApproved = p.status === 'approved';
+        // search filter
+        if(q){
+          const combined = ((p.business||'')+' '+(p.address||'')+' '+(p.category||'')+' '+(p.name||'')).toLowerCase();
+          if(!combined.includes(q)) return;
         }
-        const postRef = db.ref('providers').push();
-        await postRef.set({
-          name,category,city,whatsapp,contact,hours,imageUrl,ownerUid:user.uid,status:'waiting',createdAt:Date.now()
-        });
-        alert('Submitted for admin approval');
-        postCard.classList.add('hidden');
-        // clear
-        document.getElementById('p_name').value=''; document.getElementById('p_category').value=''; document.getElementById('p_city').value=''; document.getElementById('p_whatsapp').value=''; document.getElementById('p_contact').value=''; document.getElementById('p_hours').value=''; p_image.value='';
-      }catch(e){alert('Error: '+e.message)}
-      btnSubmitPost.disabled=false; btnSubmitPost.textContent='Submit for Approval';
-      renderProviders();
-    });
-
-    // Render providers with search & filter
-    async function renderProviders(){
-      providersDiv.innerHTML='';
-      const q = (search.value||'').toLowerCase();
-      const cat = filterCategory.value;
-      const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-      const list = snap.val()||{};
-      const items = Object.keys(list).map(k=>({id:k,...list[k]})).reverse();
-      const user = auth.currentUser;
-      for(const it of items){
-        if(it.status!=='approved') continue; // show only approved to public
-        if(cat && it.category!==cat) continue;
-        if(q && !(it.name.toLowerCase().includes(q) || (it.city||'').toLowerCase().includes(q))) continue;
-        const card = document.createElement('div'); card.className='provider-card';
+        const card = document.createElement('div');
+        card.className = 'card-3d bg-white p-3 rounded';
+        card.style.borderLeft = `6px solid ${randomColorFromKey(key)}`;
         card.innerHTML = `
-          <div class="provider-top">
-            <img src="${it.imageUrl||'https://via.placeholder.com/120x80?text=No+Image'}" class="avatar" />
-            <div class="meta">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div><strong>${escapeHtml(it.name)}</strong> <div class="small">${escapeHtml(it.city)} • ${escapeHtml(it.category)}</div></div>
-                <div class="tag">${escapeHtml(it.hours||'—')}</div>
+          <div class="flex gap-3">
+            <div class="w-24 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+              <img src="${p.image||'https://picsum.photos/200?random='+Math.floor(Math.random()*1000)}" class="w-full h-full object-cover" />
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="font-semibold text-lg">${escapeHtml(p.business||p.name||'—')}</div>
+                  <div class="text-sm text-gray-600">${escapeHtml(p.category||'—')}</div>
+                </div>
+                <div class="text-sm">${isApproved?'<span class="text-green-600 font-semibold">Approved</span>':'<span class="text-orange-600">Waiting</span>'}</div>
+              </div>
+              <div class="mt-2 text-sm text-gray-700">${isApproved?escapeHtml(p.address||'—'):'Address hidden until approval'}</div>
+              <div class="mt-2 flex gap-2">
+                <button class="call-btn px-3 py-1 rounded btn-3d bg-indigo-500 text-white">Call Now</button>
+                <button class="whatsapp-btn px-3 py-1 rounded btn-3d bg-green-600 text-white">WhatsApp Now</button>
               </div>
             </div>
           </div>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-            <button class="btn callBtn">Call Now</button>
-            <button class="btn whatsappBtn">WhatsApp Now</button>
-            <button class="btn ghost viewBtn">View</button>
-          </div>
         `;
-        // buttons
-        const callBtn = card.querySelector('.callBtn');
+
+        // Event listeners
+        const callBtn = card.querySelector('.call-btn');
+        const waBtn = card.querySelector('.whatsapp-btn');
         callBtn.addEventListener('click', ()=>{
-          window.open('tel:' + (it.contact||it.whatsapp||''));
+          if(!isApproved){ alert('This provider not approved yet.'); return; }
+          window.open(`tel:${p.mobile || p.whatsapp || ''}`,'_self');
         });
-        const whatsappBtn = card.querySelector('.whatsappBtn');
-        whatsappBtn.addEventListener('click', async ()=>{
-          if(!auth.currentUser){alert('Login to contact provider');return}
-          // check user's wallet
-          const uid = auth.currentUser.uid;
-          const wSnap = await db.ref('wallets/'+uid).once('value');
-          const bal = (wSnap.val() && wSnap.val().balance) || 0;
-          if(bal < 20){alert('Not enough balance. Please recharge.');return}
-          // deduct 20 atomically (simple: read->write, could race but OK for MVP)
-          const newBal = bal - 20;
-          await db.ref('wallets/'+uid).set({balance:newBal});
-          // record click
-          await db.ref('contacts').push({providerId:it.id,by:uid,at:Date.now(),cost:20});
-          // open whatsapp
-          const wa = it.whatsapp||'';
-          if(wa) window.open('https://wa.me/' + wa.replace(/[^0-9]/g,''));
-          else alert('WhatsApp number not available');
-          renderProviders();
-        });
-
-        // view button to show address/whatsapp only if user has >=20 (not deducted) OR admin/owner
-        const viewBtn = card.querySelector('.viewBtn');
-        viewBtn.addEventListener('click', async ()=>{
-          const u = auth.currentUser;
-          let allowed=false;
-          if(u){ const w = (await db.ref('wallets/'+u.uid).once('value')).val()||{balance:0}; if(w.balance>=20) allowed=true; if(u.email===ADMIN_EMAIL) allowed=true; if(u.uid===it.ownerUid) allowed=true; }
-          if(allowed){ alert('WhatsApp: '+(it.whatsapp||'N/A') + '\nAddress/City: '+(it.city||'N/A')); }
-          else alert('You need ₹20 in wallet to view contact. Click Recharge.');
+        waBtn.addEventListener('click', async ()=>{
+          if(!isApproved){ alert('This provider not approved yet.'); return; }
+          if(!currentUser){ alert('Please login to use WhatsApp contact'); return; }
+          const userSnap = await db.ref('wallets/'+currentUser.uid).once('value');
+          const wallet = userSnap.val() || {balance:0};
+          if(wallet.balance >= 20){
+            // Deduct 20
+            const newBal = wallet.balance - 20;
+            await db.ref('wallets/'+currentUser.uid).set({balance:newBal});
+            loadWallet(currentUser.uid);
+            // open whatsapp
+            const waNumber = p.whatsapp || p.mobile || '';
+            window.open('https://wa.me/'+waNumber.replace(/[\s+\-()]/g,'')+'?text='+encodeURIComponent('Hello, I need your service'), '_blank');
+            alert('₹20 deducted from wallet. Address & WhatsApp opened.');
+          }else{
+            alert('Wallet me paise kam hain. Please recharge.');
+          }
         });
 
-        // if current user is admin, append admin controls on card
-        const current = auth.currentUser;
-        if(current && current.email===ADMIN_EMAIL){
-          const adminZone = document.createElement('div'); adminZone.style.marginTop='8px';
-          adminZone.innerHTML = `<button class="btn" data-act="approve">Approve</button> <button class="btn ghost" data-act="reject">Reject</button> <button class="btn ghost" data-act="del">Delete</button>`;
-          adminZone.querySelector('[data-act=approve]').addEventListener('click', async ()=>{ await db.ref('providers/'+it.id+'/status').set('approved'); alert('Approved'); renderProviders(); renderAdminPanel(); });
-          adminZone.querySelector('[data-act=reject]').addEventListener('click', async ()=>{ await db.ref('providers/'+it.id+'/status').set('rejected'); alert('Rejected (can be approved later)'); renderProviders(); renderAdminPanel(); });
-          adminZone.querySelector('[data-act=del]').addEventListener('click', async ()=>{ if(confirm('Delete permanently?')){ await db.ref('providers/'+it.id).remove(); alert('Deleted'); renderProviders(); renderAdminPanel(); } });
-          card.appendChild(adminZone);
+        // Admin controls inside each card (if admin)
+        if(currentUser && currentUser.email===ADMIN_EMAIL){
+          const adminControls = document.createElement('div');
+          adminControls.className='mt-3 flex gap-2';
+          const btnApprove = document.createElement('button'); btnApprove.textContent='Approve'; btnApprove.className='px-3 py-1 bg-green-600 text-white rounded btn-3d';
+          const btnReject = document.createElement('button'); btnReject.textContent='Reject'; btnReject.className='px-3 py-1 bg-yellow-500 text-white rounded btn-3d';
+          const btnDelete = document.createElement('button'); btnDelete.textContent='Delete'; btnDelete.className='px-3 py-1 bg-red-600 text-white rounded btn-3d';
+          adminControls.append(btnApprove, btnReject, btnDelete);
+          card.appendChild(adminControls);
+
+          btnApprove.addEventListener('click', async ()=>{ await db.ref('providers/'+key+'/status').set('approved'); loadListings(); renderAdminApprovals(); });
+          btnReject.addEventListener('click', async ()=>{ await db.ref('providers/'+key+'/status').set('rejected'); loadListings(); renderAdminApprovals(); });
+          btnDelete.addEventListener('click', async ()=>{ if(confirm('Delete permanently?')){ await db.ref('providers/'+key).remove(); loadListings(); renderAdminApprovals(); } });
         }
 
-        providersDiv.appendChild(card);
-      }
+        cards.appendChild(card);
+      });
     }
 
-    // Admin panel listing (pending approvals and recharges)
-    async function renderAdminPanel(){
-      const user = auth.currentUser;
-      if(!user || user.email!==ADMIN_EMAIL){ adminCard.classList.add('hidden'); return }
-      adminCard.classList.remove('hidden');
-      pendingList.innerHTML=''; rechargeList.innerHTML='';
-      const snap = await db.ref('providers').orderByChild('createdAt').once('value');
-      const list = snap.val()||{}; for(const k of Object.keys(list)){ const it=list[k]; if(it.status==='waiting'||it.status==='rejected'){ const div=document.createElement('div'); div.className='card'; div.style.marginTop='8px'; div.innerHTML = `<strong>${escapeHtml(it.name)}</strong> <div>${escapeHtml(it.city)} • ${escapeHtml(it.category)}</div> <div style="margin-top:8px"><button data-id="${k}" class="btn">Approve</button> <button data-id="${k}" class="btn ghost">Reject</button></div>`; pendingList.appendChild(div); div.querySelector('.btn').addEventListener('click', async e=>{ await db.ref('providers/'+k+'/status').set('approved'); alert('Approved'); renderAdminPanel(); renderProviders(); }); div.querySelector('.btn.ghost').addEventListener('click', async e=>{ await db.ref('providers/'+k+'/status').set('rejected'); alert('Rejected'); renderAdminPanel(); renderProviders(); }); }}
-      // recharge requests
-      const rSnap = await db.ref('recharges').orderByChild('createdAt').once('value'); const rlist = rSnap.val()||{};
-      for(const rk of Object.keys(rlist)){ const r=rlist[rk]; const card=document.createElement('div'); card.className='card'; card.style.marginTop='8px'; card.innerHTML = `<div><strong>${escapeHtml(r.userEmail||r.uid)}</strong> requested recharge <div style="margin-top:6px"><img src="${escapeHtml(r.imageUrl||'')}" style="max-width:160px;border-radius:8px" /></div><div style="margin-top:8px"><button data-id="${rk}" class="btn">Approve Recharge</button> <button data-id="${rk}" class="btn ghost">Reject</button></div></div>`; rechargeList.appendChild(card);
-        card.querySelector('.btn').addEventListener('click', async ()=>{
-          // credit wallet 100
-          const uref = db.ref('wallets/'+r.uid);
-          const wsnap = (await uref.once('value')).val()||{balance:0};
-          await uref.set({balance:(wsnap.balance||0)+100});
-          await db.ref('recharges/'+rk+'/status').set('approved');
-          alert('Recharge approved and ₹100 credited');
-          renderAdminPanel();
-        });
-        card.querySelector('.btn.ghost').addEventListener('click', async ()=>{
-          await db.ref('recharges/'+rk+'/status').set('rejected'); alert('Recharge rejected'); renderAdminPanel();
-        });
-      }
+    // Random color generator from key
+    function randomColorFromKey(k){
+      let h=0; for(let i=0;i<k.length;i++) h = (h<<5)-h + k.charCodeAt(i);
+      const c = Math.abs(h)%360; return `hsl(${c} 70% 45%)`;
     }
 
-    // Send recharge request
-    btnSendRecharge.addEventListener('click', async ()=>{
-      const user = auth.currentUser; if(!user){alert('Login first');return}
-      const file = recharge_img.files[0]; if(!file){alert('Select image');return}
-      btnSendRecharge.disabled=true; btnSendRecharge.textContent='Uploading...';
-      try{
-        const fd = new FormData(); fd.append('image', file);
-        const res = await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd});
-        const j = await res.json(); const imageUrl = j.data.url;
-        const rref = db.ref('recharges').push();
-        await rref.set({uid:user.uid,userEmail:user.email,imageUrl,createdAt:Date.now(),status:'pending'});
-        alert('Recharge request sent to admin'); rechargeCard.classList.add('hidden'); recharge_img.value='';
-        renderAdminPanel();
-      }catch(e){alert('Error: '+e.message)}
-      btnSendRecharge.disabled=false; btnSendRecharge.textContent='Send Recharge Request';
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>\"]/g, (c)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;' }[c]||c)); }
+
+    // Wallet
+    async function loadWallet(uid){
+      const snap = await db.ref('wallets/'+uid).once('value');
+      const w = snap.val() || {balance:0};
+      walletBalanceEl.textContent = '₹'+(w.balance||0);
+    }
+
+    btnRequestRecharge.addEventListener('click', async ()=>{
+      if(!currentUser){ alert('Please login to request recharge'); return; }
+      const reqRef = db.ref('recharge_requests').push();
+      await reqRef.set({ userId: currentUser.uid, email: currentUser.email || '', amount: 100, status: 'pending', createdAt: Date.now() });
+      alert('Recharge request sent to admin.');
+      renderAdminRechargeRequests();
     });
 
-    // helper escape
-    function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    // Admin: render recharge requests and provider approvals
+    async function renderAdminRechargeRequests(){
+      const snap = await db.ref('recharge_requests').orderByChild('status').equalTo('pending').once('value');
+      const obj = snap.val() || {};
+      rechargeRequestsEl.innerHTML = '<h3 class="font-medium">Recharge Requests</h3>';
+      Object.keys(obj).forEach(key=>{
+        const r = obj[key];
+        const div = document.createElement('div');
+        div.className='p-2 bg-gray-50 rounded my-2 flex items-center justify-between';
+        div.innerHTML = `<div>${r.email} • ₹${r.amount}</div>`;
+        const ap = document.createElement('button'); ap.textContent='Approve +₹100'; ap.className='px-3 py-1 bg-green-600 text-white rounded btn-3d';
+        ap.addEventListener('click', async ()=>{
+          // credit wallet 100
+          const wSnap = await db.ref('wallets/'+r.userId).once('value');
+          const w = wSnap.val()||{balance:0};
+          const newBal = (w.balance||0) + 100;
+          await db.ref('wallets/'+r.userId).set({balance:newBal});
+          await db.ref('recharge_requests/'+key+'/status').set('approved');
+          alert('Recharge successful (₹100 added)');
+          renderAdminRechargeRequests(); loadListings();
+        });
+        const rej = document.createElement('button'); rej.textContent='Reject'; rej.className='px-3 py-1 bg-yellow-500 text-white rounded btn-3d ml-2';
+        rej.addEventListener('click', async ()=>{ await db.ref('recharge_requests/'+key+'/status').set('rejected'); renderAdminRechargeRequests(); });
+        div.appendChild(ap); div.appendChild(rej);
+        rechargeRequestsEl.appendChild(div);
+      });
+    }
 
-    // wire search/filter
-    search.addEventListener('input', renderProviders); filterCategory.addEventListener('change', renderProviders);
+    async function renderAdminApprovals(){
+      const snap = await db.ref('providers').orderByChild('status').once('value');
+      const obj = snap.val()||{};
+      providerApprovalsEl.innerHTML = '<h3 class="font-medium">Provider Approvals</h3>';
+      Object.keys(obj).forEach(key=>{
+        const p = obj[key];
+        const div = document.createElement('div');
+        div.className='p-2 bg-gray-50 rounded my-2 flex items-center justify-between';
+        div.innerHTML = `<div>${p.business||p.name} • ${p.status}</div>`;
+        const ap = document.createElement('button'); ap.textContent='Approve'; ap.className='px-3 py-1 bg-green-600 text-white rounded btn-3d';
+        ap.addEventListener('click', async ()=>{ await db.ref('providers/'+key+'/status').set('approved'); renderAdminApprovals(); loadListings(); });
+        const rej = document.createElement('button'); rej.textContent='Reject'; rej.className='px-3 py-1 bg-yellow-500 text-white rounded btn-3d ml-2';
+        rej.addEventListener('click', async ()=>{ await db.ref('providers/'+key+'/status').set('rejected'); renderAdminApprovals(); loadListings(); });
+        div.appendChild(ap); div.appendChild(rej);
+        providerApprovalsEl.appendChild(div);
+      });
+    }
 
-    // initial load
-    renderProviders(); renderAdminPanel();
+    // Live listeners
+    db.ref('providers').on('value', ()=>loadListings());
+    db.ref('recharge_requests').on('value', ()=>{ if(currentUser && currentUser.email===ADMIN_EMAIL) renderAdminRechargeRequests(); });
+
+    // Helpers
+    searchBox.addEventListener('input', ()=>loadListings());
+
+    // when auth changes, re-render admin lists
+    auth.onAuthStateChanged(user=>{ if(user && user.email===ADMIN_EMAIL){ renderAdminRechargeRequests(); renderAdminApprovals(); } else { providerApprovalsEl.innerHTML=''; rechargeRequestsEl.innerHTML=''; } loadListings(); });
+
+    // initial
+    loadListings();
+
   </script>
+
 </body>
 </html>
