@@ -301,6 +301,7 @@
       const area = id('listArea'); area.innerHTML='';
       if(list.length===0) return area.innerHTML='<div class="card small">No providers found</div>';
       list.forEach(p=>{
+        const isAdmin = currentUser && currentUser.email===ADMIN_EMAIL && currentUser.providerData && currentUser.providerData.some(x=>x.providerId==='google.com');
         const div = document.createElement('div');div.className='provider-card card';
         div.innerHTML = `
           <div class="avatar">${(p.name||'--').slice(0,2).toUpperCase()}</div>
@@ -308,11 +309,17 @@
             <h3>${escapeHtml(p.name)}</h3>
             <p class="small">${escapeHtml(p.category)} • ${escapeHtml(p.city||'')}</p>
             <p class="small">Hours: ${escapeHtml(p.hours||'')}</p>
+            <p class="small">Status: <span style="text-transform:capitalize">${escapeHtml(p.status||'waiting')}</span></p>
           </div>
           <div class="card-actions">
             <button data-key="${p.postKey}" class="btn3d btnCall">Call Now</button>
             <button data-key="${p.postKey}" class="btn3d btnWhats">WhatsApp</button>
             <button data-key="${p.postKey}" class="btn3d btnView">Details</button>
+            ${isAdmin?`<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px">
+              <button data-key="${p.postKey}" class="btn3d btnApprove">Approve</button>
+              <button data-key="${p.postKey}" class="btn3d btnReject">Reject</button>
+              <button data-key="${p.postKey}" class="btn3d btnDelete">Delete</button>
+            </div>`:''}
           </div>`;
         area.appendChild(div);
       });
@@ -320,6 +327,17 @@
       document.querySelectorAll('.btnWhats').forEach(b=>b.addEventListener('click', onWhatsClick));
       document.querySelectorAll('.btnCall').forEach(b=>b.addEventListener('click', onCallClick));
       document.querySelectorAll('.btnView').forEach(b=>b.addEventListener('click', onViewClick));
+      // admin actions
+      document.querySelectorAll('.btnApprove').forEach(b=>b.addEventListener('click', async (e)=>{
+        const key = e.currentTarget.dataset.key; await db.ref('providers/'+key+'/status').set('approved'); showToast('Listing approved'); loadListings();
+      }));
+      document.querySelectorAll('.btnReject').forEach(b=>b.addEventListener('click', async (e)=>{
+        const key = e.currentTarget.dataset.key; await db.ref('providers/'+key+'/status').set('rejected'); showToast('Listing rejected (can be approved later)'); loadListings();
+      }));
+      document.querySelectorAll('.btnDelete').forEach(b=>b.addEventListener('click', async (e)=>{
+        const key = e.currentTarget.dataset.key; if(!confirm('Delete this listing permanently?')) return; await db.ref('providers/'+key).remove(); showToast('Listing deleted'); loadListings();
+      }));
+    }
     }
 
     async function onViewClick(e){
@@ -411,14 +429,41 @@
     // on auth change
     auth.onAuthStateChanged(async user=>{
       currentUser = user;
+      const isGoogle = user && user.providerData && user.providerData.some(p=>p.providerId==='google.com');
+      // UI behavior: provider features (Provider Profile, Wallet, Admin Panel) only visible after Google sign-in
       if(user){
         id('userEmail').textContent = user.email;
         btnLogin.style.display='none'; btnLogout.style.display='inline-block';
-        // load user profile into DB if missing
+
+        // load/create user record if missing
         const uRef = db.ref('users/'+user.uid);
         const s = await uRef.once('value');
         if(!s.exists()){
-          await uRef.set({name:user.displayName||'',email:user.email,wallet:0,role:'customer',createdAt:Date.now(),lastDeduction:Date.now()});
+          await uRef.set({name:user.displayName||'',email:user.email,wallet:0,role:'customer',createdAt:Date.now(),lastDeduction:Date.now(),authProvider:(user.providerData[0]&&user.providerData[0].providerId)||''});
+        }
+        const u = (await uRef.once('value')).val();
+        walletBalSpan.textContent = (u.wallet||0);
+
+        // show provider form and wallet only if signed in with Google
+        if(isGoogle){
+          providerFormCard.style.display='block';
+          walletCard.style.display='block';
+        }else{
+          providerFormCard.style.display='none';
+          walletCard.style.display='none';
+        }
+
+        // admin card only if admin email AND signed-in with Google
+        if(user.email===ADMIN_EMAIL && isGoogle) adminCard.style.display='block'; else adminCard.style.display='none';
+
+        // attempt to apply daily deductions when logging in
+        await applyDailyDeductions(user.uid,(await db.ref('users/'+user.uid).once('value')).val());
+        loadListings();
+      }else{
+        // not logged in: show auth card so user can sign-in (Google recommended)
+        id('userEmail').textContent = '—'; btnLogin.style.display='inline-block'; btnLogout.style.display='none'; providerFormCard.style.display='none'; adminCard.style.display='none'; walletCard.style.display='none'; walletBalSpan.textContent='0'; loadListings();
+      }
+    });
         }
         const u = (await uRef.once('value')).val();
         walletBalSpan.textContent = (u.wallet||0);
