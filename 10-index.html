@@ -1,430 +1,319 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZaraFix - Service Provider Portal</title>
-  <style>
-    /* Simple 3D-ish UI, mobile friendly */
-    *{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
-    body{margin:0;background:linear-gradient(135deg,#f7f8fc,#eef6ff);min-height:100vh;padding:14px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(45deg,#ff9a9e,#fad0c4);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.08)}
-    h1{margin:0;font-size:18px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap}
-    .btn-3d{padding:10px 14px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 8px 0 rgba(0,0,0,.12);transform:translateY(0);transition:all .12s ease;font-weight:700}
-    .btn-3d:active{transform:translateY(6px);box-shadow:0 2px 0 rgba(0,0,0,.08)}
-    .btn-primary{background:linear-gradient(135deg,#6dd3ff,#6d9bff);color:#03204c}
-    .btn-success{background:linear-gradient(135deg,#7ef7a0,#34d399);color:#04321a}
-    .btn-danger{background:linear-gradient(135deg,#ff9a9e,#ff7b7b);color:#3b0000}
-    .btn-ghost{background:linear-gradient(135deg,#ffd6a5,#ffc6ff);color:#3b0a4f}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ZaraFix पर सभी Service Providers की सूची। Doctors, Hospitals, Ambulance, Shops, Electricians, Plumbers आदि खोजें।">
+  <meta name="google-site-verification" content="747ecEujhHluFPpMSv_v2bkpZ7IT6pbVqDW1XrpEQBo" />
+  <title>All Service Provider Portal</title>
 
-    main{margin-top:14px;display:grid;grid-template-columns:1fr 420px;gap:14px}
-    @media(max-width:980px){main{grid-template-columns:1fr} .side{order:2}}
-
-    .panel{background:#fff;padding:14px;border-radius:14px;box-shadow:0 12px 40px rgba(20,30,60,.06)}
-    form .row{display:flex;gap:8px;margin-bottom:8px}
-    label{display:block;font-size:13px;margin-bottom:6px}
-    input[type=text], input[type=email], input[type=tel], textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef7}
-    input[type=file]{padding:6px}
-    textarea{min-height:70px}
-
-    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-    .card{background:linear-gradient(180deg,#ffffff,#fbfdff);padding:12px;border-radius:16px;position:relative;overflow:hidden;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
-    .card:active{transform:translateY(6px)}
-    .card.expanded{grid-column:1/-1;transform:scale(1.02);box-shadow:0 30px 60px rgba(10,20,50,.12)}
-    .top{display:flex;gap:12px;align-items:flex-start}
-    .avatar{width:110px;height:110px;border-radius:12px;overflow:hidden;flex:0 0 110px;background:#f0f0f4;padding:6px}
-    .avatar img{width:100%;height:100%;object-fit:contain}
-    .info{flex:1}
-    .name{font-weight:800;font-size:16px;margin-bottom:6px}
-    .meta{font-size:13px;color:#556}
-    .images{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-    .images img{width:80px;height:80px;border-radius:10px;object-fit:contain}
-    .admin-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px}
-    .wallet{background:linear-gradient(135deg,#fff7cc,#fff1d6);padding:10px;border-radius:12px}
-    .search{display:flex;gap:8px;margin-bottom:10px}
-    .search input{flex:1;padding:10px;border-radius:12px;border:1px solid #e6eef7}
-    .reviews{margin-top:8px}
-    .review{background:#fbfbff;padding:8px;border-radius:8px;margin-bottom:6px}
-    footer{margin-top:16px;color:#446}
-    @media(max-width:520px){.avatar{width:88px;height:88px;flex:0 0 88px}.images img{width:60px;height:60px}}
-  </style>
-</head>
-<body>
-  <header>
-    <div class="brand">
-      <div class="logo">ZF</div>
-      <div>
-        <h1>ZaraFix - Service Providers</h1>
-        <div style="font-size:13px;color:#556">Mobile-friendly • 3D buttons • Direct image upload</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <button id="btn-login" class="btn-3d btn-primary">Google Login</button>
-      <button id="btn-logout" class="btn-3d btn-danger" style="display:none">Logout</button>
-      <button id="showForm" class="btn-3d btn-success" style="display:none">Post Service</button>
-      <button id="showList" class="btn-3d btn-ghost">View Listings</button>
-    </div>
-  </header>
-
-  <main>
-    <!-- Left: Listings & search -->
-    <section class="panel">
-      <div class="search">
-        <input id="searchBox" placeholder="Search name, category, address... (no dropdown)" />
-        <button id="clearSearch" class="btn-3d">Clear</button>
-      </div>
-
-      <div id="cards" class="cards"></div>
-    </section>
-
-    <!-- Right: Form, Wallet, Admin panel -->
-    <aside class="side panel">
-      <div id="authInfo">Not logged in</div>
-
-      <div id="formWrap" style="margin-top:12px;display:none">
-        <h3>Create / Update Provider</h3>
-        <form id="providerForm">
-          <div class="row"><div style="flex:1"><label>Full Name</label><input id="p_name" type="text" required></div></div>
-          <div class="row"><div style="flex:1"><label>Mobile (for contact)</label><input id="p_mobile" type="tel" required></div></div>
-          <div class="row"><div style="flex:1"><label>WhatsApp Number</label><input id="p_whatsapp" type="tel"></div></div>
-          <div class="row"><div style="flex:1"><label>Email</label><input id="p_email" type="email"></div></div>
-
-          <div class="row"><div style="flex:1"><label>Service / Business Name</label><input id="p_service" type="text" required></div></div>
-          <div class="row"><div style="flex:1"><label>Category / Services (no dropdown)</label><input id="p_category" type="text" placeholder="eg: Plumber, Electrician, Ambulance"></div></div>
-
-          <div class="row"><div style="flex:1"><label>Address</label><input id="p_address" type="text"></div></div>
-          <div class="row"><div style="flex:1"><label>Map Location (optional)</label><input id="p_map" type="text" placeholder="Lat,Lng or leave to auto-detect"></div></div>
-          <div class="row"><div style="flex:1"><label>Service Hours</label><input id="p_hours" type="text" placeholder="eg: 09:00 - 21:00"></div></div>
-
-          <div class="row"><div style="flex:1"><label>Upload Shop Photos (multiple)</label><input id="p_images" type="file" accept="image/*" multiple></div></div>
-
-          <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-3d btn-primary">Save</button>
-            <button id="btn-geoloc" type="button" class="btn-3d">Auto-detect Location</button>
-          </div>
-        </form>
-
-        <div style="margin-top:10px;font-size:13px;color:#556">Admin ( <strong>zarasamajiksevasanstha@gmail.com</strong> ) will approve listings.</div>
-      </div>
-
-      <!-- Wallet: shown only when logged in -->
-      <div id="walletBox" style="margin-top:12px;display:none">
-        <h3>Wallet</h3>
-        <div class="wallet">Balance: <span id="walletAmt">0</span> ₹</div>
-        <div style="margin-top:10px"><button id="reqRecharge" class="btn-3d">Request ₹100 Recharge</button></div>
-      </div>
-
-      <div id="adminPanel" style="margin-top:18px;display:none">
-        <h3>Admin Panel</h3>
-        <div id="rechargeRequests"></div>
-      </div>
-    </aside>
-  </main>
-
-  <footer>
-    <small>Built for ZaraFix — Replace API keys before public deployment.</small>
-  </footer>
-
-  <!-- Firebase v8 -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+    header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
+             display:flex; align-items:center; justify-content:space-between;
+             padding:10px 20px; box-shadow:0 3px 8px rgba(0,0,0,0.3); flex-wrap:wrap; }
+    header h1 { margin:0; font-size:20px; text-shadow:1px 1px 3px #000; }
+    button { cursor:pointer; padding:6px 10px; border:none; border-radius:6px;
+             box-shadow:0 3px 5px rgba(0,0,0,0.25); font-weight:bold; margin:3px; font-size:13px; }
+    .btn3d { background:#4CAF50; color:#fff; }
+    .btn3d:disabled { background:#999; box-shadow:none; }
+    .logoutBtn { background:#E53935; color:#fff; }
+    .waBtn { background:#25D366; color:#fff; }
+    .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
 
-  <script>
-    // ----- CONFIGURE -----
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-      authDomain: "zara-fix-2e35a.firebaseapp.com",
-      databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-      projectId: "zara-fix-2e35a",
-      storageBucket: "zara-fix-2e35a.appspot.com",
-      messagingSenderId: "636550144008",
-      appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
-    };
-
-    const IMGBB_KEY = 'cad1f0dbfbd25346460789376cc2d7d5';
-    const ADMIN_EMAIL = 'zarasamajiksevasanstha@gmail.com';
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth(); const db = firebase.database();
-
-    // Elements
-    const btnLogin = document.getElementById('btn-login');
-    const btnLogout = document.getElementById('btn-logout');
-    const authInfo = document.getElementById('authInfo');
-    const showForm = document.getElementById('showForm');
-    const formWrap = document.getElementById('formWrap');
-    const providerForm = document.getElementById('providerForm');
-    const cardsWrap = document.getElementById('cards');
-    const walletBox = document.getElementById('walletBox');
-    const walletAmt = document.getElementById('walletAmt');
-    const reqRecharge = document.getElementById('reqRecharge');
-    const adminPanel = document.getElementById('adminPanel');
-    const rechargeRequests = document.getElementById('rechargeRequests');
-    const searchBox = document.getElementById('searchBox');
-    const clearSearch = document.getElementById('clearSearch');
-
-    let currentUser = null;
-    let myProviderRecord = null;
-
-    // Login / Logout
-    btnLogin.addEventListener('click',async()=>{
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try{ await auth.signInWithPopup(provider); }catch(e){alert(e.message)}
-    });
-    btnLogout.addEventListener('click',()=>auth.signOut());
-
-    // showForm toggle requires login
-    showForm.addEventListener('click',()=>{ if(!currentUser){alert('Please login first'); return;} formWrap.style.display = formWrap.style.display==='none'?'block':'none' });
-
-    // geolocation
-    document.getElementById('btn-geoloc').addEventListener('click',()=>{
-      if(navigator.geolocation){ navigator.geolocation.getCurrentPosition(p=>{ document.getElementById('p_map').value = p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6); }, ()=>alert('Could not get location')) }else alert('Geolocation not supported')
-    });
-
-    // Auth change
-    auth.onAuthStateChanged(async user=>{
-      currentUser = user;
-      if(user){
-        authInfo.innerHTML = `<strong>${user.displayName}</strong><div style="font-size:13px;color:#556">${user.email}</div>`;
-        btnLogin.style.display='none'; btnLogout.style.display='inline-block'; showForm.style.display='inline-block';
-        document.getElementById('p_email').value = user.email;
-
-        // load provider record if exists
-        const snap = await db.ref('providers').orderByChild('ownerUid').equalTo(user.uid).once('value');
-        myProviderRecord = null; snap.forEach(c=>{ myProviderRecord = { key:c.key, ...c.val() } });
-        walletAmt.textContent = (myProviderRecord && myProviderRecord.wallet) ? myProviderRecord.wallet : 0;
-
-        // show wallet & form
-        walletBox.style.display = 'block';
-        formWrap.style.display = 'block';
-
-        // admin panel visibility
-        adminPanel.style.display = (user.email === ADMIN_EMAIL)? 'block' : 'none';
-      } else {
-        authInfo.innerText = 'Not logged in';
-        btnLogin.style.display='inline-block'; btnLogout.style.display='none'; showForm.style.display='none';
-        walletBox.style.display = 'none'; adminPanel.style.display='none'; formWrap.style.display='none';
-        walletAmt.textContent = '0'; myProviderRecord = null;
-      }
-      // re-render
-      renderProviders(searchBox.value);
-    });
-
-    // Save provider (create listing)
-    providerForm.addEventListener('submit', async e=>{
-      e.preventDefault();
-      if(!currentUser){ alert('Login first'); return; }
-
-      const data = {
-        ownerUid: currentUser.uid,
-        ownerName: document.getElementById('p_name').value.trim(),
-        mobile: document.getElementById('p_mobile').value.trim(),
-        whatsapp: document.getElementById('p_whatsapp').value.trim(),
-        email: document.getElementById('p_email').value.trim() || currentUser.email,
-        service: document.getElementById('p_service').value.trim(),
-        category: document.getElementById('p_category').value.trim(),
-        address: document.getElementById('p_address').value.trim(),
-        map: document.getElementById('p_map').value.trim(),
-        hours: document.getElementById('p_hours').value.trim(),
-        approved: false,
-        rejected: false,
-        wallet: 0,
-        createdAt: Date.now()
-      };
-
-      // upload images to ImgBB (multiple)
-      const files = document.getElementById('p_images').files;
-      const urls = [];
-      if(files && files.length){
-        for(let i=0;i<files.length;i++){
-          const fd = new FormData(); fd.append('image', files[i]);
-          try{
-            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`,{method:'POST',body:fd});
-            const j = await res.json();
-            if(j && j.data && j.data.url) urls.push(j.data.url);
-          }catch(err){ console.warn('imgbb fail',err); }
-        }
-      }
-      if(urls.length){ data.images = urls; data.avatar = urls[0]; }
-
-      // push record
-      const newRef = db.ref('providers').push();
-      await newRef.set(data);
-      alert('Submitted for admin approval');
-      providerForm.reset();
-    });
-
-    // Recharge request
-    reqRecharge.addEventListener('click', async ()=>{
-      if(!currentUser){ alert('Login first'); return; }
-      // Find provider key for this user
-      const snap = await db.ref('providers').orderByChild('ownerUid').equalTo(currentUser.uid).once('value');
-      let key = null; snap.forEach(c=>{ key = c.key; });
-      if(!key){ alert('Create provider listing first to request recharge'); return; }
-
-      // upload screenshot to imgbb
-      const input = document.createElement('input'); input.type='file'; input.accept='image/*';
-      input.onchange = async ()=> {
-        const file = input.files[0]; if(!file) return;
-        const fd = new FormData(); fd.append('image', file);
-        try{
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`,{method:'POST',body:fd});
-          const j = await res.json();
-          const img = j.data && j.data.url ? j.data.url : '';
-          const reqRef = db.ref('rechargeRequests').push();
-          await reqRef.set({ ownerUid: currentUser.uid, providerKey: key, screenshot: img||'', status:'pending', requestedAt: Date.now() });
-          alert('Recharge request sent to admin');
-        }catch(e){ alert('Upload failed') }
-      };
-      input.click();
-    });
-
-    // Admin listens for rechargeRequests
-    db.ref('rechargeRequests').on('value', snap=>{
-      rechargeRequests.innerHTML = '';
-      snap.forEach(c=>{
-        const r = c.val(); const k = c.key;
-        const div = document.createElement('div'); div.className='panel'; div.style.marginBottom='8px';
-        div.innerHTML = `
-          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-            <div><strong>Request</strong><div style='font-size:13px;color:#556'>by ${r.ownerUid}</div></div>
-            <div style='display:flex;gap:8px'>
-              <button class='btn-3d btn-success' data-accept='${k}'>Accept ₹100</button>
-              <button class='btn-3d btn-danger' data-reject='${k}'>Reject</button>
-            </div>
-          </div>
-          <div style='margin-top:8px'>Screenshot: ${r.screenshot? `<img src="${r.screenshot}" style='width:100%;border-radius:8px'/>`: 'No image'}</div>
-        `;
-        rechargeRequests.appendChild(div);
-      });
-    });
-
-    // Admin accepts/rejects recharge requests
-    rechargeRequests.addEventListener('click', async e=>{
-      const acc = e.target.dataset.accept; const rej = e.target.dataset.reject;
-      if(acc){
-        const k = acc; const rSnap = await db.ref('rechargeRequests/'+k).once('value'); const r = rSnap.val(); if(!r) return;
-        const providerKey = r.providerKey; const pSnap = await db.ref('providers/'+providerKey).once('value');
-        if(!pSnap.exists()) return alert('provider not found');
-        const p = pSnap.val(); const newAmt = (p.wallet||0) + 100; await db.ref('providers/'+providerKey+'/wallet').set(newAmt);
-        await db.ref('rechargeRequests/'+k+'/status').set('accepted');
-        alert('Recharged ₹100');
-      }
-      if(rej){
-        const k = rej; await db.ref('rechargeRequests/'+k+'/status').set('rejected'); alert('Marked rejected');
-      }
-    });
-
-    // Render providers with rules and search
-    function renderProviders(filterText=''){
-      db.ref('providers').on('value', snap => {
-        cardsWrap.innerHTML = '';
-        const list = [];
-        snap.forEach(c=>{ const d = c.val(); d._key = c.key; list.push(d); });
-        const ft = filterText.trim().toLowerCase();
-
-        list.sort((a,b)=>b.createdAt - a.createdAt).forEach(p=>{
-          const amIadmin = currentUser && currentUser.email === ADMIN_EMAIL;
-          const amIowner = currentUser && currentUser.uid === p.ownerUid;
-
-          // public sees only approved; owner/admin can see pending/rejected
-          if(!p.approved && !amIadmin && !amIowner) return;
-          if(p.rejected && !amIadmin && !amIowner) return;
-
-          // filter
-          if(ft){
-            const hay = ((p.service||'')+' '+(p.category||'')+' '+(p.address||'')+' '+(p.ownerName||'')).toLowerCase();
-            if(!hay.includes(ft)) return;
-          }
-
-          const card = document.createElement('div'); card.className='card';
-          if(p.rejected) card.style.background='linear-gradient(90deg,#fff0f0,#fff5f5)';
-
-          const adminButtons = (currentUser && currentUser.email===ADMIN_EMAIL) ? `
-            <div class='admin-controls'>
-              <button class='btn-3d btn-success' data-approve='${p._key}'>Approve</button>
-              <button class='btn-3d btn-danger' data-reject='${p._key}'>Reject</button>
-              <button class='btn-3d' data-delete='${p._key}'>Delete</button>
-            </div>` : '';
-
-          const viewerIsOwnerOrAdmin = currentUser && (currentUser.uid===p.ownerUid || currentUser.email===ADMIN_EMAIL);
-
-          let contactHtml = '';
-          if(viewerIsOwnerOrAdmin){
-            contactHtml = `<button class='btn-3d' data-wa='${p._key}'>WhatsApp Now</button>
-                           <a class='btn-3d' href='https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address||'')}' target='_blank'>Address</a>`;
-          } else if(p.approved){
-            contactHtml = `<div class='chip'>WhatsApp locked (login & have ₹20 wallet to contact)</div>`;
-          } else {
-            contactHtml = `<div class='chip'>Listing not public yet</div>`;
-          }
-
-          card.innerHTML = `
-            ${adminButtons}
-            <div class="top">
-              <div class='avatar'><img src='${(p.avatar||'https://via.placeholder.com/110')}' alt='shop photo'/></div>
-              <div class='info'>
-                <div class='name'>${escapeHtml(p.service)} <span style='font-size:12px;color:#777'>(${escapeHtml(p.ownerName||'')})</span></div>
-                <div class='meta'><strong>Category:</strong> ${escapeHtml(p.category||'')} • <strong>Hours:</strong> ${escapeHtml(p.hours||'')}</div>
-                <div class='meta' style='margin-top:6px'><strong>Status:</strong> ${p.approved?'<span style="color:green">Approved</span>': p.rejected?'<span style="color:crimson">Rejected</span>':'Pending'}</div>
-                <div style='margin-top:8px'>${escapeHtml(p.address||'')}</div>
-                <div style='margin-top:8px'>${contactHtml}</div>
-              </div>
-            </div>
-            <div class='images'>${(p.images||[]).map(u=>`<img src='${u}' alt='photo'/>`).join('')}</div>
-            <div class='actions'><button class='btn-3d' data-rate='${p._key}'>Rate</button></div>
-            <div class='reviews' id='reviews_${p._key}'></div>
-          `;
-
-          // expand on click (ignore button clicks)
-          card.addEventListener('click',(ev)=>{ if(ev.target.closest('[data-approve],[data-reject],[data-delete],[data-wa],[data-rate]')) return; card.classList.toggle('expanded'); });
-
-          // admin controls
-          card.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click',async(ev)=>{ ev.stopPropagation(); const k=b.dataset.approve; await db.ref('providers/'+k+'/approved').set(true); await db.ref('providers/'+k+'/rejected').set(false); }));
-          card.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click',async(ev)=>{ ev.stopPropagation(); const k=b.dataset.reject; await db.ref('providers/'+k+'/rejected').set(true); await db.ref('providers/'+k+'/approved').set(false); }));
-          card.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',async(ev)=>{ ev.stopPropagation(); if(confirm('Delete permanently?')){ const k=b.dataset.delete; await db.ref('providers/'+k).remove(); } }));
-
-          // whatsapp: deduct ₹20 from caller's wallet if caller is a registered provider
-          card.querySelectorAll('[data-wa]').forEach(b=>b.addEventListener('click',async(ev)=>{ ev.stopPropagation(); const k=b.dataset.wa; const pSnap = await db.ref('providers/'+k).once('value'); const pdata = pSnap.val();
-            if(!currentUser){ alert('Login to contact'); return; }
-            // get caller provider record
-            const mySnap = await db.ref('providers').orderByChild('ownerUid').equalTo(currentUser.uid).once('value');
-            let myKey=null, myData=null; mySnap.forEach(c=>{ myKey=c.key; myData=c.val(); });
-            if(!myKey){ alert('You must be a registered provider to contact. Create listing & wallet first.'); return; }
-            if((myData.wallet||0) < 20){ alert('Wallet low — please request recharge ₹100'); return; }
-            // deduct
-            const newAmt = (myData.wallet||0) - 20; await db.ref('providers/'+myKey+'/wallet').set(newAmt);
-            // open whatsapp
-            const wa = pdata.whatsapp || pdata.mobile || '';
-            const num = wa.replace(/\D/g,''); const text = encodeURIComponent('Hello, I saw your service on ZaraFix');
-            window.open(`https://wa.me/${num}?text=${text}`,'_blank');
-          }));
-
-          // rating
-          card.querySelectorAll('[data-rate]').forEach(b=>b.addEventListener('click',async(ev)=>{ ev.stopPropagation(); const k=b.dataset.rate; const score = prompt('Rate 1-5 (stars)'); const note = prompt('Feedback (optional)'); const s = parseInt(score||'0'); if(!s || s<1 || s>5) return alert('Invalid rating'); const rRef = db.ref('providers/'+k+'/reviews').push(); await rRef.set({score:s,note:note||'',by: currentUser?currentUser.uid:'guest',at:Date.now()}); alert('Thanks for rating'); }));
-
-          // watch reviews
-          const rv = card.querySelector('#reviews_'+p._key);
-          db.ref('providers/'+p._key+'/reviews').on('value', s=>{ rv.innerHTML=''; s.forEach(r=>{ const v=r.val(); const div=document.createElement('div'); div.className='review'; div.innerHTML=`<div><strong>${'⭐'.repeat(v.score||0)}</strong></div><div style='font-size:13px;color:#334'>${escapeHtml(v.note||'')}</div>`; rv.appendChild(div); }) });
-
-          cardsWrap.appendChild(card);
-        });
-      });
+    /* Search Bar */
+    .searchBar {
+      margin:12px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:10px;
+    }
+    .searchBar input {
+      padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; min-width:220px;
     }
 
-    // initial render + search handlers
-    renderProviders();
-    searchBox.addEventListener('input', ()=>{ renderProviders(searchBox.value); });
-    clearSearch.addEventListener('click', ()=>{ searchBox.value=''; renderProviders(); });
+    /* Grid */
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:12px; padding:12px; }
+    .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
+            padding:10px; position:relative; transition:transform .2s; cursor:pointer;
+            font-size:13px; border:2px solid red; }
+    .card:hover { transform:scale(1.02); }
+    .card img { width:100%; height:150px; object-fit:cover; border-radius:6px; }
+    .card h3 { margin:6px 0 3px; font-size:15px; }
+    .card p { margin:1px 0; font-size:13px; }
 
-    // escape helper
-    function escapeHtml(s){ if(!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    .pending { background:#ffcdd2; border:2px solid #f44336; animation:blinkBorder 1s infinite; }
+    @keyframes blinkBorder { 50% { border-color:#b71c1c; } }
 
-  </script>
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+             background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
+    .modal-content { background:#fff; padding:15px; border-radius:10px; width:90%; max-width:420px;
+                     max-height:90%; overflow:auto; position:relative; font-size:14px; }
+    .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
+    form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
+    form input { width:100%; padding:5px; margin:3px 0 8px;
+                 border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>All Service Providers</h1>
+  <div>
+    <a href="index.html">
+      <button style="background-color:blue; color:white;">🏡 Home</button>
+    </a>
+    <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
+    <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
+    <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
+  </div>
+</header>
+
+<!-- 🔍 Search Bar -->
+<div class="searchBar">
+  <input type="text" id="searchInput" placeholder="Search by name, category, address...">
+</div>
+
+<main>
+  <div class="grid" id="posts"></div>
+</main>
+
+<!-- Post Form Modal -->
+<div class="modal" id="postModal">
+  <div class="modal-content">
+    <span class="close" id="closeForm">&times;</span>
+    <h2>Post Your Service</h2>
+    <form id="postForm">
+      
+      <label>Service/Business Name</label>
+      <input type="text" id="serviceName" required>
+      
+      <label>Service Category (Doctor, Hospital, Ambulance, Shop, Electrician, Plumber...)</label>
+      <input type="text" id="serviceCategory" required>
+
+      <label>Address</label>
+      <input type="text" id="address" required>
+      
+      <label>Mobile/WhatsApp Number</label>
+      <input type="tel" id="phone" required>
+      
+      <label>Upload Images (max 5)</label>
+      <input type="file" id="images" accept="image/*" multiple>
+      
+      <button type="submit" class="btn3d">Submit Service</button>
+    </form>
+  </div>
+</div>
+
+<!-- Card View Modal -->
+<div class="modal" id="cardModal">
+  <div class="modal-content" id="cardContent">
+    <span class="close" id="closeCard">&times;</span>
+    <div class="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDT-D80OSwDetRfDEKHTKNvdRTPJnG8Cs4",
+  authDomain: "hospital-dc40b.firebaseapp.com",
+  databaseURL: "https://hospital-dc40b-default-rtdb.firebaseio.com",
+  projectId: "hospital-dc40b",
+  storageBucket: "hospital-dc40b.appspot.com",
+  messagingSenderId: "445806713376",
+  appId: "1:445806713376:web:77dab96b91f7fc71c07a45"
+};
+  
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const newPostBtn=document.getElementById('newPostBtn');
+const postModal=document.getElementById('postModal');
+const closeForm=document.getElementById('closeForm');
+const postForm=document.getElementById('postForm');
+const postsDiv=document.getElementById('posts');
+const cardModal=document.getElementById('cardModal');
+const cardContent=document.getElementById('cardContent');
+const closeCard=document.getElementById('closeCard');
+const searchInput=document.getElementById('searchInput');
+
+let currentUser=null;
+let allPosts=[];
+
+loginBtn.onclick=()=>{ const provider=new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); };
+logoutBtn.onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
+  loadPosts();
+});
+
+newPostBtn.onclick=()=>postModal.style.display="flex";
+closeForm.onclick=()=>postModal.style.display="none";
+closeCard.onclick=()=>cardModal.style.display="none";
+
+// Upload images via ImgBB
+async function uploadImages(files) {
+  const urls = [];
+  const apiKey = "cad1f0dbfbd25346460789376cc2d7d5";
+  for (let i = 0; i < Math.min(5, files.length); i++) {
+    const f = files[i];
+    const fd = new FormData();
+    fd.append("image", f);
+    try {
+      const r = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: fd });
+      const j = await r.json();
+      if (j && j.data && j.data.url) urls.push(j.data.url);
+    } catch (err) { console.error("Upload failed", err); }
+  }
+  return urls;
+}
+
+// Post submit
+postForm.onsubmit=async e=>{
+  e.preventDefault();
+  if(!currentUser) return alert("Login first");
+  const submitBtn=postForm.querySelector("button[type=submit]");
+  submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
+
+  const post = {
+    serviceName: document.getElementById('serviceName').value,
+    serviceCategory: document.getElementById('serviceCategory').value,
+    address: document.getElementById('address').value,
+    phone: document.getElementById('phone').value,
+    posterUid: currentUser.uid,
+    posterName: currentUser.displayName,
+    posterEmail: currentUser.email,
+    status: "pending",
+    created: Date.now()
+  };
+
+  const files=document.getElementById('images').files;
+  if(files.length>0) post.images=await uploadImages(files);
+
+  db.ref("posts").push(post,(err)=>{
+    if(err){ alert("❌ Error"); }
+    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Service";
+  });
+};
+
+// Load posts
+function loadPosts(){
+  db.ref("posts").orderByChild("created").on("value",snap=>{
+    allPosts=[];
+    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
+    allPosts.reverse();
+    renderPosts();
+  });
+}
+
+// Render posts
+function renderPosts() {
+  postsDiv.innerHTML = "";
+  const keyword = searchInput.value.toLowerCase();
+
+  allPosts.forEach(p => {
+    // Admin sees all, others only approved or their own
+    if (currentUser?.email !== "zarasamajiksevasanstha@gmail.com") {
+      if (p.status !== "approved" && (!currentUser || p.posterUid !== currentUser.uid)) return;
+    }
+
+    if (keyword && !(
+      p.serviceName?.toLowerCase().includes(keyword) ||
+      p.serviceCategory?.toLowerCase().includes(keyword) ||
+      p.address?.toLowerCase().includes(keyword)
+    )) return;
+
+    const card = document.createElement("div");
+    card.className = "card";
+    if (p.status === "pending") card.classList.add("pending");
+    if (p.status === "rejected") card.style.background = "#ffe0b2";
+
+    if (p.images && p.images.length) {
+      const img = document.createElement("img");
+      img.src = p.images[0];
+      card.appendChild(img);
+    }
+
+    card.innerHTML += `
+      <h3>📌 ${p.serviceName}</h3>
+      <p>🏷️ ${p.serviceCategory}</p>
+      <p>📍 ${p.address}</p>
+      <p>📞 ${p.phone}</p>
+      <p>👤 ${p.posterName}</p>
+      <p>${p.status === "approved" ? "✅ Approved" : p.status === "rejected" ? "❌ Rejected" : "⏳ Pending Approval"}</p>
+    `;
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "btnRow";
+
+    const waBtn = document.createElement("button");
+    waBtn.textContent = "💬 WhatsApp";
+    waBtn.className = "waBtn";
+    waBtn.onclick = e => {
+      e.stopPropagation();
+      const msg = `send by-ZARA FIX - Hello, I want to know more about your service: ${p.serviceName} (${p.serviceCategory}) at ${p.address}.`;
+      window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    };
+    btnRow.appendChild(waBtn);
+
+    if (currentUser && currentUser.email === "zarasamajiksevasanstha@gmail.com") {
+      const apBtn = document.createElement("button");
+      apBtn.textContent = "✅ Approve";
+      apBtn.className = "btn3d";
+      apBtn.onclick = async e => { e.stopPropagation(); await db.ref("posts/" + p.id).update({status:"approved"}); };
+
+      const rjBtn = document.createElement("button");
+      rjBtn.textContent = "❌ Reject";
+      rjBtn.className = "logoutBtn";
+      rjBtn.onclick = async e => { e.stopPropagation(); await db.ref("posts/" + p.id).update({status:"rejected"}); };
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑 Delete";
+      delBtn.className = "logoutBtn";
+      delBtn.onclick = async e => { e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+
+      btnRow.appendChild(apBtn);
+      btnRow.appendChild(rjBtn);
+      btnRow.appendChild(delBtn);
+    }
+
+    card.appendChild(btnRow);
+
+    card.onclick = () => {
+      cardContent.querySelector('.modal-body').innerHTML = `
+        <h2>${p.serviceName}</h2>
+        <p><b>Category:</b> ${p.serviceCategory}</p>
+        <p><b>Address:</b> ${p.address}</p>
+        <p><b>Phone:</b> ${p.phone}</p>
+      `;
+      cardModal.style.display = "flex";
+    };
+
+    postsDiv.appendChild(card);
+  });
+}
+
+searchInput.addEventListener("input",renderPosts);
+</script>
 </body>
 </html>
