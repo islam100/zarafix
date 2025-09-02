@@ -1,830 +1,573 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut,
-} from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-  runTransaction,
-} from "firebase/firestore";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-import { motion, AnimatePresence } from "framer-motion";
-import { Star, LogIn, LogOut, PhoneCall, ThumbsUp, Search, Upload, MapPin, Image as ImageIcon, MessageSquare, Wallet, X, Check, Ban, Trash2, RefreshCcw, ZoomIn, ZoomOut } from "lucide-react";
+<!-- Save as zara-fix-plain.html and open in browser -->
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ZaraFix — Service Providers (Plain HTML)</title>
+  <!-- Tailwind CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* small custom styles for 3D buttons, gradients & modal */
+    .btn-3d { box-shadow: 0 8px 0 rgba(0,0,0,0.22); transform: translateY(0); transition: transform .12s, box-shadow .12s; }
+    .btn-3d:active { transform: translateY(4px); box-shadow: 0 4px 0 rgba(0,0,0,0.16); }
+    .card-3d { transition: transform .12s; }
+    .card-3d:hover { transform: translateY(-6px); }
+    .img-fit { width:100%; height:160px; object-fit: contain; background:#fff; }
+    .modal-bg { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    /* gradients pool */
+    .g1{background:linear-gradient(135deg,#ff7eb3,#ffb199);} .g2{background:linear-gradient(135deg,#8affc1,#6ee7ff);}
+    .g3{background:linear-gradient(135deg,#9b8cff,#ff9a9e);} .g4{background:linear-gradient(135deg,#86efac,#60a5fa);}
+    .g5{background:linear-gradient(135deg,#ffd86b,#ff8b8b);} .g6{background:linear-gradient(135deg,#c4f0ff,#d6bbff);}
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <div class="max-w-6xl mx-auto p-4">
+    <header class="flex items-center gap-4">
+      <h1 class="text-2xl font-extrabold">ZaraFix — Service Providers</h1>
+      <div class="flex-1">
+        <input id="search" placeholder="Search: Hospital, Ambulance, Doctor, Electrician..." class="w-full rounded-xl border px-4 py-2" />
+      </div>
+      <div id="auth-area" class="flex items-center gap-2">
+        <button id="loginBtn" class="btn-3d rounded-2xl bg-emerald-600 text-white px-4 py-2 flex items-center gap-2"><span>Login with Google</span></button>
+      </div>
+    </header>
 
-// ===== Firebase Config (Provided) =====
-const firebaseConfig = {
-  apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
-  authDomain: "zara-fix-2e35a.firebaseapp.com",
-  databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
-  projectId: "zara-fix-2e35a",
-  storageBucket: "zara-fix-2e35a.appspot.com",
-  messagingSenderId: "636550144008",
-  appId: "1:636550144008:web:a849496ad1d1557d7ab1bd",
-};
+    <main class="mt-6 grid md:grid-cols-3 gap-4">
+      <!-- Left column: Post form & My listings & Admin recharge -->
+      <section class="md:col-span-1">
+        <div id="postBox" class="rounded-3xl p-4 bg-white shadow hidden">
+          <h2 class="font-bold mb-2">Create / Update Listing</h2>
+          <form id="postForm" class="space-y-2">
+            <input id="personName" placeholder="Your Name" required class="w-full rounded-xl border px-3 py-2" />
+            <div class="grid grid-cols-2 gap-2">
+              <input id="phone" placeholder="Mobile" required class="rounded-xl border px-3 py-2" />
+              <input id="whatsapp" placeholder="WhatsApp (optional)" class="rounded-xl border px-3 py-2" />
+            </div>
+            <input id="email" placeholder="Email (optional)" class="w-full rounded-xl border px-3 py-2" />
+            <input id="serviceName" placeholder="Service / Business Name" required class="w-full rounded-xl border px-3 py-2" />
+            <input id="category" placeholder="Category (free text)" class="w-full rounded-xl border px-3 py-2" />
+            <textarea id="address" placeholder="Address" class="w-full rounded-xl border px-3 py-2"></textarea>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="lat" placeholder="Latitude (opt)" class="rounded-xl border px-3 py-2" />
+              <input id="lng" placeholder="Longitude (opt)" class="rounded-xl border px-3 py-2" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="hoursFrom" placeholder="From (e.g., 09:00)" class="rounded-xl border px-3 py-2" />
+              <input id="hoursTo" placeholder="To (e.g., 18:00)" class="rounded-xl border px-3 py-2" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold">Upload Images (multiple)</label>
+              <input id="images" type="file" accept="image/*" multiple class="block w-full rounded-xl mt-1" />
+              <div id="selectedCount" class="text-xs text-gray-600 mt-1"></div>
+            </div>
+            <button class="btn-3d bg-indigo-700 text-white w-full rounded-2xl py-2" type="submit">Submit for Approval</button>
+          </form>
 
-// Init once
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+          <div class="mt-4">
+            <h3 class="font-bold">My Listings</h3>
+            <div id="myListings" class="space-y-2 mt-2"></div>
+          </div>
 
-const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com"; // exact match
+          <div id="rechargeBox" class="mt-4">
+            <h3 class="font-bold">Wallet</h3>
+            <div class="flex items-center gap-2 mt-2">
+              <div id="balance" class="font-semibold bg-white px-3 py-1 rounded-xl shadow">₹0</div>
+              <button id="reqRecharge" class="btn-3d bg-amber-500 px-3 py-1 rounded-2xl">Request ₹100 Recharge</button>
+            </div>
+            <div id="rechargeMsg" class="text-xs text-gray-600 mt-2"></div>
+          </div>
 
-// Utility: random gradient for cards so sabhi ke color alag-alag dikhein
-const gradients = [
-  "from-pink-500 via-red-500 to-yellow-500",
-  "from-emerald-500 via-teal-500 to-cyan-500",
-  "from-indigo-500 via-purple-500 to-pink-500",
-  "from-sky-500 via-blue-500 to-indigo-500",
-  "from-amber-500 via-orange-500 to-rose-500",
-  "from-lime-500 via-green-500 to-emerald-500",
-];
-const pickGradient = (seed) => gradients[seed % gradients.length];
+          <div id="adminRechargeRequests" class="mt-4 hidden">
+            <h3 class="font-bold">Recharge Requests (Admin)</h3>
+            <div id="rechargeList" class="space-y-2 mt-2"></div>
+          </div>
+        </div>
+      </section>
 
-// 3D button style helper
-const btn3D =
-  "relative inline-flex items-center gap-2 rounded-2xl px-4 py-2 font-semibold text-white shadow-[0_8px_0_rgba(0,0,0,0.25)] transition-transform active:translate-y-1 active:shadow-[0_4px_0_rgba(0,0,0,0.25)]";
+      <!-- Right: Listings grid -->
+      <section class="md:col-span-2">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <button id="zoomOut" class="btn-3d bg-sky-600 text-white px-3 py-1 rounded-2xl">-</button>
+            <button id="zoomIn" class="btn-3d bg-sky-600 text-white px-3 py-1 rounded-2xl">+</button>
+            <div class="text-sm text-gray-600 ml-2">Zoom</div>
+          </div>
+        </div>
 
-// Image container style to ensure image not cut (object-contain)
-const imgBox = "w-full h-48 bg-white/60 rounded-xl overflow-hidden flex items-center justify-center";
+        <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </section>
+    </main>
+  </div>
 
-// Provider card status colors
-const statusColors = {
-  approved: "ring-green-500",
-  pending: "ring-amber-500",
-  rejected: "ring-rose-500",
-};
+  <!-- Preview Modal -->
+  <div id="modal" class="fixed inset-0 hidden modal-bg z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-3xl overflow-auto">
+      <div class="p-4 border-b flex items-start justify-between">
+        <div>
+          <h3 id="modalTitle" class="text-xl font-black"></h3>
+          <p id="modalCat" class="text-xs text-gray-600"></p>
+        </div>
+        <button id="closeModal" class="p-2">✕</button>
+      </div>
+      <div class="p-4" id="modalBody"></div>
+    </div>
+  </div>
 
-// ===== Main Component =====
-export default function ServiceProviderPortal() {
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [wallet, setWallet] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [providers, setProviders] = useState([]);
-  const [mine, setMine] = useState([]); // current user's listings
-  const [searchText, setSearchText] = useState("");
-  const [zoom, setZoom] = useState(1); // zoom control for cards area
-  const [preview, setPreview] = useState(null); // card modal
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+  /*************** CONFIG - replace if needed (you provided these) ***************/
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7ZqL-PVuFdd8rMVIyW7CgHQjPRGHD2h8",
+    authDomain: "zara-fix-2e35a.firebaseapp.com",
+    databaseURL: "https://zara-fix-2e35a-default-rtdb.firebaseio.com",
+    projectId: "zara-fix-2e35a",
+    storageBucket: "zara-fix-2e35a.appspot.com",
+    messagingSenderId: "636550144008",
+    appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
+  };
+  // imgbb key you showed earlier:
+  const IMGBB_KEY = "cad1f0dbfbd25346460789376cc2d7d5";
+  /***************************************************************************/
 
-  // Form state
-  const [form, setForm] = useState({
-    personName: "",
-    phone: "",
-    whatsapp: "",
-    email: "",
-    serviceName: "",
-    category: "",
-    address: "",
-    lat: "",
-    lng: "",
-    hoursFrom: "",
-    hoursTo: "",
-    images: [],
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  // constants
+  const ADMIN_EMAIL = "zarasamajiksevasanstha@gmail.com";
+  let currentUser = null;
+  let zoom = 1;
+
+  // helpers
+  const $ = id => document.getElementById(id);
+  const setText = (id, t) => { const el = $(id); if(el) el.textContent = t; };
+
+  // UI elements
+  const loginBtn = $("loginBtn");
+  const authArea = $("auth-area");
+  const postBox = $("postBox");
+  const postForm = $("postForm");
+  const imagesInput = $("images");
+  const selectedCount = $("selectedCount");
+  const myListings = $("myListings");
+  const grid = $("grid");
+  const modal = $("modal");
+  const modalTitle = $("modalTitle");
+  const modalCat = $("modalCat");
+  const modalBody = $("modalBody");
+  const closeModal = $("closeModal");
+  const balanceDiv = $("balance");
+  const reqRecharge = $("reqRecharge");
+  const rechargeList = $("rechargeList");
+  const adminRechargeRequests = $("adminRechargeRequests");
+
+  // search & zoom
+  const searchBox = $("search");
+  $("zoomIn").addEventListener("click", ()=> { zoom = Math.min(1.4, zoom+0.1); grid.style.transform = `scale(${zoom})`; });
+  $("zoomOut").addEventListener("click", ()=> { zoom = Math.max(0.8, zoom-0.1); grid.style.transform = `scale(${zoom})`; });
+
+  // Login flow
+  loginBtn.addEventListener("click", async () => {
+    if (!currentUser) {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try { await auth.signInWithPopup(provider); } catch(e){ alert('Login failed: '+e.message); }
+    } else {
+      auth.signOut();
+    }
   });
 
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        setIsAdmin(u.email === ADMIN_EMAIL);
-        await ensureUserDoc(u);
-        const walletUnsub = onSnapshot(doc(db, "users", u.uid), (snap) => {
-          setWallet(snap.data()?.wallet ?? 0);
-        });
-        // My listings realtime
-        const myQ = query(
-          collection(db, "providers"),
-          where("ownerUid", "==", u.uid),
-          orderBy("createdAt", "desc")
-        );
-        const unsubMine = onSnapshot(myQ, (snap) => {
-          const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setMine(arr);
-        });
-        return () => {
-          walletUnsub();
-          unsubMine();
-        };
-      } else {
-        setIsAdmin(false);
-        setWallet(0);
-        setMine([]);
+  auth.onAuthStateChanged(async (user) => {
+    currentUser = user;
+    if (user) {
+      loginBtn.innerHTML = `<img src="${user.photoURL||''}" class="w-6 h-6 rounded-full"> Logout`;
+      postBox.classList.remove("hidden");
+      // ensure user node
+      const uRef = db.ref('users/'+user.uid);
+      const snap = await uRef.once('value');
+      if (!snap.exists()) {
+        await uRef.set({ uid: user.uid, name: user.displayName||'', email: user.email||'', wallet: 0, createdAt: Date.now() });
       }
-    });
-    return () => unsub();
-  }, []);
-
-  // Public provider listings (approved only for public; if admin or owner—also show their rejected/pending in My tab)
-  useEffect(() => {
-    const qApproved = query(
-      collection(db, "providers"),
-      where("status", "==", "approved"),
-      orderBy("createdAt", "desc")
-    );
-    const unsub = onSnapshot(qApproved, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setProviders(arr);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  // Ensure user doc + default wallet
-  const ensureUserDoc = async (u) => {
-    const ref = doc(db, "users", u.uid);
-    const sn = await getDoc(ref);
-    if (!sn.exists()) {
-      await setDoc(ref, {
-        uid: u.uid,
-        name: u.displayName || "",
-        email: u.email || "",
-        wallet: 0,
-        createdAt: serverTimestamp(),
-      });
+      // show my listings
+      listenMyListings();
+      listenBalance();
+      // if admin, show recharge requests
+      if (user.email === ADMIN_EMAIL) adminRechargeRequests.classList.remove('hidden'); else adminRechargeRequests.classList.add('hidden');
+    } else {
+      loginBtn.innerHTML = 'Login with Google';
+      postBox.classList.add("hidden");
+      myListings.innerHTML = '';
+      balanceDiv.textContent = '₹0';
     }
-  };
+  });
 
-  // Auth handlers
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  };
-  const logout = async () => {
-    await signOut(auth);
-  };
-
-  // Upload images to Firebase Storage and return URLs
-  const uploadImages = async (files) => {
+  // Upload images to imgbb (returns array of urls)
+  async function uploadToImgbb(files) {
     const urls = [];
-    for (const file of files) {
-      const path = `providers/${Date.now()}-${file.name}`;
-      const ref = storageRef(storage, path);
-      await uploadBytes(ref, file);
-      const url = await getDownloadURL(ref);
-      urls.push(url);
+    for (const f of files) {
+      const fd = new FormData();
+      fd.append('image', await toBase64File(f));
+      try {
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method:'POST', body: fd });
+        const j = await res.json();
+        if (j && j.data && j.data.url) urls.push(j.data.url);
+      } catch (e) { console.error('imgbb fail', e); }
     }
     return urls;
-  };
+  }
+  // helper to convert file -> base64 string (imgbb wants base64 without data: prefix)
+  function toBase64File(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => {
+        // remove prefix data:*/*;base64,
+        const s = r.result.split(',')[1];
+        res(s);
+      };
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
 
-  // Submit provider profile
-  const submitProvider = async (e) => {
+  // Post form submit
+  postForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!user) return alert("Please login with Google first.");
-    try {
-      const images = form.images;
-      let urls = [];
-      if (images && images.length) {
-        urls = await uploadImages(images);
-      }
-      await addDoc(collection(db, "providers"), {
-        ownerUid: user.uid,
-        personName: form.personName,
-        phone: form.phone,
-        whatsapp: form.whatsapp,
-        email: form.email || user.email || "",
-        serviceName: form.serviceName,
-        category: form.category,
-        address: form.address,
-        lat: form.lat,
-        lng: form.lng,
-        hoursFrom: form.hoursFrom,
-        hoursTo: form.hoursTo,
-        photos: urls,
-        status: "pending", // admin approval required
-        createdAt: serverTimestamp(),
-      });
-      alert("Profile submitted. Admin approval pending.");
-      setForm({
-        personName: "",
-        phone: "",
-        whatsapp: "",
-        email: "",
-        serviceName: "",
-        category: "",
-        address: "",
-        lat: "",
-        lng: "",
-        hoursFrom: "",
-        hoursTo: "",
-        images: [],
-      });
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (e) {
-      console.error(e);
-      alert("Failed to submit. Please try again.");
-    }
-  };
+    if (!currentUser) return alert('Login required to post.');
+    const data = {
+      ownerUid: currentUser.uid,
+      personName: $('personName').value.trim(),
+      phone: $('phone').value.trim(),
+      whatsapp: $('whatsapp').value.trim(),
+      email: $('email').value.trim() || currentUser.email,
+      serviceName: $('serviceName').value.trim(),
+      category: $('category').value.trim(),
+      address: $('address').value.trim(),
+      lat: $('lat').value.trim(),
+      lng: $('lng').value.trim(),
+      hoursFrom: $('hoursFrom').value.trim(),
+      hoursTo: $('hoursTo').value.trim(),
+      status: 'pending',
+      createdAt: Date.now()
+    };
+    const files = Array.from(imagesInput.files || []);
+    if (files.length) {
+      const urls = await uploadToImgbb(files);
+      data.photos = urls;
+    } else data.photos = [];
+    // push to /providers
+    const ref = db.ref('providers').push();
+    await ref.set(data);
+    alert('Profile submitted — admin approval pending.');
+    postForm.reset();
+    selectedCount.textContent = '';
+  });
 
-  // Search filter (no dropdown). Matches name/category/service/address
-  const filteredProviders = useMemo(() => {
-    const t = searchText.trim().toLowerCase();
-    if (!t) return providers;
-    return providers.filter((p) => {
-      const hay = [
-        p.serviceName,
-        p.category,
-        p.address,
-        p.personName,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(t);
+  imagesInput.addEventListener('change', ()=> {
+    selectedCount.textContent = imagesInput.files.length ? `${imagesInput.files.length} file(s) selected` : '';
+  });
+
+  // Listen and render public approved providers
+  function listenPublicProviders() {
+    const ref = db.ref('providers');
+    ref.on('value', (snap) => {
+      const obj = snap.val() || {};
+      const arr = Object.entries(obj).map(([id, v]) => ({ id, ...v }));
+      // show only approved for public
+      const approved = arr.filter(a => a.status === 'approved');
+      renderGrid(approved);
     });
-  }, [providers, searchText]);
+  }
+  listenPublicProviders();
 
-  // Wallet: request recharge (creates a request visible to admin)
-  const requestRecharge = async () => {
-    if (!user) return alert("Login required.");
-    await addDoc(collection(db, "rechargeRequests"), {
-      uid: user.uid,
-      amount: 100,
-      status: "pending",
-      createdAt: serverTimestamp(),
+  // render grid
+  function renderGrid(list) {
+    const q = searchBox.value.trim().toLowerCase();
+    const filtered = !q ? list : list.filter(p => {
+      return [p.serviceName, p.category, p.address, p.personName].join(' ').toLowerCase().includes(q);
     });
-    alert("Recharge requested. Admin will approve.");
-  };
-
-  // Admin: approve recharge
-  const approveRecharge = async (reqId, uid, amount) => {
-    if (!isAdmin) return;
-    await runTransaction(db, async (trx) => {
-      const userRef = doc(db, "users", uid);
-      const reqRef = doc(db, "rechargeRequests", reqId);
-      const userSnap = await trx.get(userRef);
-      const bal = userSnap.data()?.wallet ?? 0;
-      trx.update(userRef, { wallet: bal + amount });
-      trx.update(reqRef, { status: "approved" });
-    });
-  };
-
-  // WhatsApp click: deduct 20 if sufficient; else hide button (UI handles hide); when allowed, open wa.me
-  const handleWhatsAppClick = async (provider) => {
-    if (!user) return alert("Login to contact via WhatsApp.");
-    try {
-      await runTransaction(db, async (trx) => {
-        const userRef = doc(db, "users", user.uid);
-        const snap = await trx.get(userRef);
-        const bal = snap.data()?.wallet ?? 0;
-        if (bal < 20) throw new Error("INSUFFICIENT");
-        trx.update(userRef, { wallet: bal - 20 });
-        // Optionally log a contact
-        await addDoc(collection(db, "contactLogs"), {
-          uid: user.uid,
-          providerId: provider.id,
-          cost: 20,
-          createdAt: serverTimestamp(),
-        });
-      });
-      // Open WhatsApp in new tab
-      const num = (provider.whatsapp || provider.phone || "").replace(/\D/g, "");
-      if (!num) return alert("No WhatsApp number available.");
-      window.open(`https://wa.me/${num}`, "_blank");
-    } catch (e) {
-      if (e.message === "INSUFFICIENT") {
-        alert("Wallet balance low. Please recharge to contact.");
+    grid.innerHTML = '';
+    filtered.forEach((p, i) => {
+      const card = document.createElement('div');
+      card.className = `card-3d rounded-3xl p-3 ${['g1','g2','g3','g4','g5','g6'][i%6]} shadow`;
+      card.innerHTML = `
+        <div class="rounded-2xl p-3 bg-white/80">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-bold">${escapeHtml(p.serviceName||'Untitled')}</div>
+              <div class="text-xs opacity-80">${escapeHtml(p.category||'')}</div>
+            </div>
+            <div class="text-xs font-semibold uppercase ${p.status==='approved'?'text-green-700':'text-amber-700'}">${p.status||'pending'}</div>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            ${(p.photos||[]).slice(0,2).map(u=>`<img src="${u}" class="img-fit rounded-xl" />`).join('')}
+            ${!(p.photos||[]).length ? `<div class="img-fit rounded-xl flex items-center justify-center text-xs text-gray-500">No image</div>` : ''}
+          </div>
+          <div class="mt-3 text-sm">
+            <div>Hours: ${escapeHtml(p.hoursFrom||'--')} - ${escapeHtml(p.hoursTo||'--')}</div>
+            <div class="mt-2" id="sensitive-${p.id}"></div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button data-id="${p.id}" class="btn-3d contactBtn bg-emerald-600 text-white px-3 py-1 rounded-2xl">WhatsApp Now</button>
+            <button data-id="${p.id}" class="btn-3d viewBtn bg-indigo-600 text-white px-3 py-1 rounded-2xl">Open</button>
+            <div class="ml-auto"></div>
+          </div>
+        </div>
+      `;
+      // show/hide address & whatsapp based on wallet & login
+      const sensitiveArea = card.querySelector(`#sensitive-${p.id}`);
+      const canSee = currentUser && userHasSufficientBalanceSync(20) && p.status==='approved';
+      if (canSee) {
+        sensitiveArea.innerHTML = `<div class="text-xs"><strong>Address:</strong> ${escapeHtml(p.address||'')}</div>
+                                   <div class="text-xs">WhatsApp: ${escapeHtml(p.whatsapp||p.phone||'')}</div>`;
       } else {
-        console.error(e);
-        alert("Could not process. Try again.");
+        sensitiveArea.innerHTML = `<div class="italic text-xs text-gray-600">Recharge wallet to view address & contact.</div>`;
       }
-    }
-  };
 
-  // Ratings & Reviews
-  const submitReview = async (providerId, rating, text) => {
-    if (!user) return alert("Login to review.");
-    await addDoc(collection(db, "providers", providerId, "reviews"), {
-      uid: user.uid,
-      rating,
-      text,
-      createdAt: serverTimestamp(),
+      // admin inline controls if admin user
+      if (currentUser && currentUser.email === ADMIN_EMAIL) {
+        const adminBtns = document.createElement('div');
+        adminBtns.className = 'flex gap-2 ml-auto';
+        adminBtns.innerHTML = `
+          <button data-id="${p.id}" class="btn-3d approveBtn bg-green-600 text-white px-3 py-1 rounded-2xl">Approve</button>
+          <button data-id="${p.id}" class="btn-3d rejectBtn bg-amber-600 text-white px-3 py-1 rounded-2xl">Reject</button>
+          <button data-id="${p.id}" class="btn-3d deleteBtn bg-rose-600 text-white px-3 py-1 rounded-2xl">Delete</button>
+        `;
+        card.querySelector('.mt-3 .ml-auto').appendChild(adminBtns);
+      }
+
+      grid.appendChild(card);
     });
-    alert("Review submitted.");
-  };
+    // attach events
+    grid.querySelectorAll('.viewBtn').forEach(b => b.onclick = () => openModalById(b.dataset.id));
+    grid.querySelectorAll('.contactBtn').forEach(b => b.onclick = () => handleWhatsAppClick(b.dataset.id));
+    grid.querySelectorAll('.approveBtn').forEach(b => b.onclick = () => adminApprove(b.dataset.id));
+    grid.querySelectorAll('.rejectBtn').forEach(b => b.onclick = () => adminReject(b.dataset.id));
+    grid.querySelectorAll('.deleteBtn').forEach(b => b.onclick = () => adminDelete(b.dataset.id));
+  }
 
-  const getAverage = (reviews = []) => {
-    if (!reviews.length) return 0;
-    return (
-      reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
-    ).toFixed(1);
-  };
+  // utility: escape HTML
+  function escapeHtml(s=''){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
-  // Admin controls for listing
-  const approveListing = async (id) => {
-    if (!isAdmin) return;
-    await updateDoc(doc(db, "providers", id), { status: "approved" });
-  };
-  const rejectListing = async (id) => {
-    if (!isAdmin) return;
-    await updateDoc(doc(db, "providers", id), { status: "rejected" });
-  };
-  const deleteListing = async (id) => {
-    if (!isAdmin) return;
-    if (!confirm("Delete this listing permanently?")) return;
-    await deleteDoc(doc(db, "providers", id));
-  };
-
-  // Fetch reviews for a provider (listen when in preview)
-  useEffect(() => {
-    if (!preview) return;
-    const unsub = onSnapshot(
-      collection(db, "providers", preview.id, "reviews"),
-      (snap) => {
-        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setPreview((prev) => ({ ...prev, _reviews: arr }));
-      }
-    );
-    return () => unsub();
-  }, [preview?.id]);
-
-  // Admin recharge requests stream
-  const [rechargeRequests, setRechargeRequests] = useState([]);
-  useEffect(() => {
-    if (!isAdmin) return;
-    const unsub = onSnapshot(
-      query(collection(db, "rechargeRequests"), orderBy("createdAt", "desc")),
-      (snap) => {
-        setRechargeRequests(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-        );
-      }
-    );
-    return () => unsub();
-  }, [isAdmin]);
-
-  // UI helpers
-  const Card = ({ p, index }) => {
-    const g = pickGradient(index + (p.id?.length || 0));
-    const avg = getAverage(p._reviews || []);
-
-    const canSeeSensitive = user && wallet >= 20 && p.status === "approved"; // address/whatsapp hidden if no balance
-
-    return (
-      <motion.div
-        layout
-        onClick={() => setPreview(p)}
-        className={`group cursor-pointer select-none rounded-3xl p-1 ring-4 ${statusColors[p.status || "pending"]} shadow-xl transition-transform hover:-translate-y-1`}
-        style={{
-          transform: `scale(${zoom})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <div className={`rounded-3xl bg-gradient-to-br ${g} p-1`}> 
-          <div className="rounded-3xl bg-white/70 backdrop-blur p-4 grid gap-3">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-extrabold tracking-tight">
-                  {p.serviceName || "Untitled Service"}
-                </h3>
-                <p className="text-xs opacity-80">
-                  {p.category || "Category"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-sm">
-                  <Star className="w-4 h-4" />
-                  <span>{avg || "0.0"}</span>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                    p.status === "approved"
-                      ? "bg-green-600 text-white"
-                      : p.status === "rejected"
-                      ? "bg-rose-600 text-white"
-                      : "bg-amber-500 text-white"
-                  }`}
-                >
-                  {p.status || "pending"}
-                </span>
-              </div>
-            </div>
-
-            {/* Images (object-contain, no cut) */}
-            <div className="grid grid-cols-3 gap-2">
-              {(p.photos || []).slice(0, 3).map((src, i) => (
-                <div className={imgBox} key={i} onClick={(e)=>{e.stopPropagation(); setPreview(p);}}>
-                  <img src={src} alt="photo" className="max-h-full max-w-full object-contain" />
-                </div>)
-              )}
-              {(!p.photos || p.photos.length === 0) && (
-                <div className={`${imgBox} text-xs text-gray-600 flex-col py-6`}>
-                  <ImageIcon />
-                  No images
-                </div>
-              )}
-            </div>
-
-            {/* Address + Hours */}
-            <div className="text-sm grid gap-1">
-              {canSeeSensitive ? (
-                <p className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {p.address || ""}</p>
-              ) : (
-                <p className="italic text-gray-600">Recharge wallet to view address.</p>
-              )}
-              <p className="opacity-80">
-                Hours: {p.hoursFrom || "--"} – {p.hoursTo || "--"}
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {canSeeSensitive && (p.whatsapp || p.phone) ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleWhatsAppClick(p); }}
-                  className={`${btn3D} bg-emerald-600`}
-                >
-                  <MessageSquare className="w-4 h-4" /> WhatsApp Now
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); requestRecharge(); }}
-                  className={`${btn3D} bg-indigo-600`}
-                >
-                  <Wallet className="w-4 h-4" /> Recharge to Contact
-                </button>
-              )}
-
-              {/* Admin inline controls (visible to admin only) */}
-              {isAdmin && (
-                <div className="ml-auto flex gap-2">
-                  <button onClick={(e)=>{e.stopPropagation(); approveListing(p.id);}} className={`${btn3D} bg-green-600`}>
-                    <Check className="w-4 h-4" /> Approve
-                  </button>
-                  <button onClick={(e)=>{e.stopPropagation(); rejectListing(p.id);}} className={`${btn3D} bg-amber-600`}>
-                    <Ban className="w-4 h-4" /> Reject
-                  </button>
-                  <button onClick={(e)=>{e.stopPropagation(); deleteListing(p.id);}} className={`${btn3D} bg-rose-600`}>
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+  // open modal for id
+  async function openModalById(id) {
+    const snap = await db.ref('providers/'+id).once('value');
+    const p = snap.val();
+    if (!p) return alert('Listing not found');
+    modalTitle.textContent = p.serviceName || 'Untitled';
+    modalCat.textContent = p.category || '';
+    let html = `
+      <div class="grid gap-3">
+        <div class="grid grid-cols-2 gap-2">
+          ${(p.photos||[]).map(u=>`<img src="${u}" class="img-fit rounded-xl" />`).join('')}
         </div>
-      </motion.div>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100/60">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/40 border-b border-black/5">
-        <div className="mx-auto max-w-7xl px-3 py-3 flex items-center gap-2">
-          <h1 className="text-xl md:text-2xl font-black tracking-tight">
-            ZaraFix – Service Providers
-          </h1>
-
-          {/* Search (no dropdown) */}
-          <div className="ml-3 flex-1 max-w-xl">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search: Hospital, Ambulance, Doctor, Electrician..."
-                className="w-full rounded-2xl border px-4 py-2 pl-10 shadow focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <Search className="absolute left-3 top-2.5 w-5 h-5 opacity-60" />
-            </div>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="hidden sm:flex items-center gap-1 ml-2">
-            <button onClick={()=> setZoom((z)=> Math.max(0.8, +(z - 0.1).toFixed(2)))} className={`${btn3D} bg-sky-600`}>
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button onClick={()=> setZoom((z)=> Math.min(1.4, +(z + 0.1).toFixed(2)))} className={`${btn3D} bg-sky-600`}>
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Wallet + Auth */}
-          <div className="ml-auto flex items-center gap-2">
-            {user && (
-              <div className="flex items-center gap-2">
-                <div className="rounded-2xl bg-white/80 px-3 py-1 shadow font-semibold flex items-center gap-2">
-                  <Wallet className="w-4 h-4" /> ₹{wallet}
-                </div>
-                <button onClick={requestRecharge} className={`${btn3D} bg-indigo-600`}>
-                  <RefreshCcw className="w-4 h-4" /> Request ₹100 Recharge
-                </button>
-              </div>
-            )}
-
-            {!user ? (
-              <button onClick={login} className={`${btn3D} bg-emerald-600`}>
-                <LogIn className="w-4 h-4" /> Login with Google
-              </button>
-            ) : (
-              <button onClick={logout} className={`${btn3D} bg-rose-600`}>
-                <LogOut className="w-4 h-4" /> Logout
-              </button>
-            )}
-          </div>
+        <div><strong>Contact Person:</strong> ${escapeHtml(p.personName)}</div>
+        <div><strong>Hours:</strong> ${escapeHtml(p.hoursFrom||'--')} - ${escapeHtml(p.hoursTo||'--')}</div>
+        <div><strong>Address:</strong> ${currentUser && userHasSufficientBalanceSync(20) && p.status==='approved' ? escapeHtml(p.address) : '<em>Recharge to view</em>'}</div>
+        <div class="flex gap-2 mt-2">
+          ${currentUser && userHasSufficientBalanceSync(20) && p.status==='approved' ? `<button id="modalWa" class="btn-3d bg-emerald-600 text-white px-3 py-1 rounded-2xl">WhatsApp Now</button>` : `<button id="modalReq" class="btn-3d bg-indigo-600 text-white px-3 py-1 rounded-2xl">Recharge to Contact</button>`}
         </div>
-      </header>
-
-      {/* Content */}
-      <main className="mx-auto max-w-7xl px-3 md:px-4 py-6 grid md:grid-cols-3 gap-5">
-        {/* Left: Post Form (visible after login) */}
-        <section className="md:col-span-1">
-          <div className="rounded-3xl bg-white/80 backdrop-blur p-4 shadow-2xl border">
-            <h2 className="text-lg font-extrabold mb-3">Create / Update Your Listing</h2>
-            {!user ? (
-              <p className="text-sm text-gray-600">Login with Google to post your service/profile.</p>
-            ) : (
-              <form onSubmit={submitProvider} className="grid gap-3">
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold">Your Name</label>
-                  <input className="rounded-xl border px-3 py-2" value={form.personName} onChange={e=>setForm({...form, personName:e.target.value})} required />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">Mobile</label>
-                    <input className="rounded-xl border px-3 py-2" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} required />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">WhatsApp</label>
-                    <input className="rounded-xl border px-3 py-2" value={form.whatsapp} onChange={e=>setForm({...form, whatsapp:e.target.value})} />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold">Email</label>
-                  <input type="email" className="rounded-xl border px-3 py-2" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold">Service / Business Name</label>
-                  <input className="rounded-xl border px-3 py-2" value={form.serviceName} onChange={e=>setForm({...form, serviceName:e.target.value})} required />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold">Category (free text)</label>
-                  <input className="rounded-xl border px-3 py-2" placeholder="Doctor, Hospital, Ambulance, Electrician, Plumber..." value={form.category} onChange={e=>setForm({...form, category:e.target.value})} />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold">Address</label>
-                  <textarea className="rounded-xl border px-3 py-2" value={form.address} onChange={e=>setForm({...form, address:e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">Latitude (opt)</label>
-                    <input className="rounded-xl border px-3 py-2" value={form.lat} onChange={e=>setForm({...form, lat:e.target.value})} />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">Longitude (opt)</label>
-                    <input className="rounded-xl border px-3 py-2" value={form.lng} onChange={e=>setForm({...form, lng:e.target.value})} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">Available From</label>
-                    <input className="rounded-xl border px-3 py-2" placeholder="e.g., 09:00" value={form.hoursFrom} onChange={e=>setForm({...form, hoursFrom:e.target.value})} />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-xs font-semibold">To</label>
-                    <input className="rounded-xl border px-3 py-2" placeholder="e.g., 18:00" value={form.hoursTo} onChange={e=>setForm({...form, hoursTo:e.target.value})} />
-                  </div>
-                </div>
-
-                {/* Multiple image upload (direct file upload, not URL) */}
-                <div className="grid gap-2">
-                  <label className="text-xs font-semibold flex items-center gap-2"><Upload className="w-4 h-4"/>Upload Images (multiple)</label>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={(e)=> setForm({...form, images: Array.from(e.target.files||[])})} className="block w-full text-sm" />
-                  {!!form.images?.length && (
-                    <div className="text-xs opacity-70">Selected: {form.images.length} file(s)</div>
-                  )}
-                </div>
-
-                <button type="submit" className={`${btn3D} bg-indigo-700 w-full justify-center`}>
-                  <ThumbsUp className="w-4 h-4" /> Submit for Approval
-                </button>
-              </form>
-            )}
-
-            {/* My Listings (visible if logged in) */}
-            {user && (
-              <div className="mt-6">
-                <h3 className="font-bold mb-2">My Listings</h3>
-                <div className="grid gap-3">
-                  {mine.map((p, i) => (
-                    <div key={p.id} className={`rounded-2xl border p-3 ${p.status==='rejected' ? 'bg-rose-50' : p.status==='pending' ? 'bg-amber-50' : 'bg-emerald-50'}`}>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-semibold">{p.serviceName}</div>
-                          <div className="text-xs opacity-70">Status: {p.status}</div>
-                        </div>
-                        <button onClick={()=> setPreview(p)} className="text-xs underline">Open</button>
-                      </div>
-                    </div>
-                  ))}
-                  {mine.length === 0 && (
-                    <div className="text-sm text-gray-600">No listings yet.</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Admin: Recharge Requests */}
-            {isAdmin && (
-              <div className="mt-6">
-                <h3 className="font-bold mb-2">Recharge Requests</h3>
-                <div className="grid gap-3">
-                  {rechargeRequests.map((r) => (
-                    <div key={r.id} className={`rounded-2xl border p-3 ${r.status==='approved' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                      <div className="text-sm font-semibold">UID: {r.uid}</div>
-                      <div className="text-xs">Amount: ₹{r.amount} | Status: {r.status}</div>
-                      {r.status !== 'approved' && (
-                        <button onClick={()=> approveRecharge(r.id, r.uid, r.amount)} className={`${btn3D} bg-green-600 mt-2`}>
-                          <Check className="w-4 h-4" /> Accept Recharge
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {rechargeRequests.length === 0 && (
-                    <div className="text-sm text-gray-600">No pending requests.</div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Right: Listings grid */}
-        <section className="md:col-span-2">
-          {loading ? (
-            <div className="p-6 text-center">Loading...</div>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredProviders.map((p, idx) => (
-                <Card key={p.id} p={p} index={idx} />
-              ))}
-              {filteredProviders.length === 0 && (
-                <div className="text-sm text-gray-600">No providers found.</div>
-              )}
-            </div>
-          )}
-        </section>
-      </main>
-
-      {/* Preview Modal (click card to expand/big) */}
-      <AnimatePresence>
-        {preview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-3"
-            onClick={() => setPreview(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.97, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 180, damping: 16 }}
-              className={`w-full max-w-3xl rounded-3xl overflow-hidden ring-4 ${statusColors[preview.status || 'pending']} bg-white`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b">
-                <div>
-                  <h3 className="text-xl font-black">{preview.serviceName}</h3>
-                  <p className="text-xs opacity-70">{preview.category}</p>
-                </div>
-                <button onClick={() => setPreview(null)} className="p-2 rounded-xl hover:bg-black/5">
-                  <X />
-                </button>
-              </div>
-
-              {/* Image carousel */}
-              <div className="p-4 grid grid-cols-2 gap-3">
-                {(preview.photos || []).map((src, i) => (
-                  <div key={i} className={`${imgBox} h-56`}>
-                    <img src={src} alt="photo" className="max-h-full max-w-full object-contain" />
-                  </div>
-                ))}
-                {(!preview.photos || preview.photos.length === 0) && (
-                  <div className={`${imgBox} h-56 text-sm text-gray-600 flex-col`}>
-                    <ImageIcon /> No images
-                  </div>
-                )}
-              </div>
-
-              {/* Map (OpenStreetMap embed without API key, if lat/lng present) */}
-              {preview.lat && preview.lng && (
-                <div className="px-4 pb-4">
-                  <div className="rounded-2xl overflow-hidden border">
-                    <iframe
-                      title="map"
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(preview.lng)-0.01}%2C${Number(preview.lat)-0.01}%2C${Number(preview.lng)+0.01}%2C${Number(preview.lat)+0.01}&layer=mapnik&marker=${preview.lat}%2C${preview.lng}`}
-                      className="w-full h-64"
-                      loading="lazy"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Details */}
-              <div className="px-4 pb-4 grid gap-2 text-sm">
-                <div><span className="font-semibold">Contact Person:</span> {preview.personName}</div>
-                <div><span className="font-semibold">Hours:</span> {preview.hoursFrom || '--'} – {preview.hoursTo || '--'}</div>
-                <div><span className="font-semibold">Address:</span> {user && wallet >= 20 && preview.status==='approved' ? preview.address : <em>Recharge to view</em>}</div>
-
-                <div className="flex items-center gap-2 flex-wrap mt-2">
-                  {user && wallet >= 20 && (preview.whatsapp || preview.phone) ? (
-                    <button onClick={()=> handleWhatsAppClick(preview)} className={`${btn3D} bg-emerald-600`}>
-                      <MessageSquare className="w-4 h-4" /> WhatsApp Now
-                    </button>
-                  ) : (
-                    <button onClick={requestRecharge} className={`${btn3D} bg-indigo-600`}>
-                      <Wallet className="w-4 h-4" /> Recharge to Contact
-                    </button>
-                  )}
-
-                  {/* Admin controls */}
-                  {isAdmin && (
-                    <>
-                      <button onClick={()=> approveListing(preview.id)} className={`${btn3D} bg-green-600`}><Check className="w-4 h-4"/>Approve</button>
-                      <button onClick={()=> rejectListing(preview.id)} className={`${btn3D} bg-amber-600`}><Ban className="w-4 h-4"/>Reject</button>
-                      <button onClick={()=> deleteListing(preview.id)} className={`${btn3D} bg-rose-600`}><Trash2 className="w-4 h-4"/>Delete</button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Reviews */}
-              <div className="px-4 pb-6">
-                <h4 className="font-bold mb-2">Ratings & Reviews</h4>
-                <ReviewBox providerId={preview.id} onSubmit={submitReview} />
-                <div className="mt-3 grid gap-2">
-                  {(preview._reviews || []).map((r) => (
-                    <div key={r.id} className="rounded-2xl border p-3">
-                      <div className="flex items-center gap-2 text-amber-500">
-                        {Array.from({ length: r.rating || 0 }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                      </div>
-                      <div className="text-sm mt-1">{r.text}</div>
-                    </div>
-                  ))}
-                  {(!preview._reviews || preview._reviews.length === 0) && (
-                    <div className="text-sm text-gray-600">No reviews yet.</div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Footer note */}
-      <footer className="py-6 text-center text-xs text-gray-500">
-        Mobile friendly • 3D buttons • Cards expand on click • Images fit (no cut)
-      </footer>
-    </div>
-  );
-}
-
-// ========= Small Components =========
-function ReviewBox({ providerId, onSubmit }) {
-  const [rating, setRating] = useState(0);
-  const [text, setText] = useState("");
-  return (
-    <div className="rounded-2xl border p-3 bg-white/60">
-      <div className="flex items-center gap-2">
-        {[1,2,3,4,5].map((n) => (
-          <button key={n} onClick={() => setRating(n)} className={`p-1 ${n <= rating ? 'text-amber-500' : 'text-gray-400'}`}>
-            <Star className={`w-6 h-6 ${n <= rating ? 'fill-current' : ''}`} />
-          </button>
-        ))}
       </div>
-      <textarea value={text} onChange={(e)=>setText(e.target.value)} placeholder="Write your feedback..." className="w-full rounded-xl border px-3 py-2 mt-2" />
-      <button onClick={()=>{ if(!rating) return alert('Select rating'); onSubmit(providerId, rating, text); setRating(0); setText(''); }} className={`${btn3D} bg-indigo-700 mt-2`}>
-        Submit Review
-      </button>
-    </div>
-  );
-}
+    `;
+    // reviews stub
+    html += `<div class="mt-4"><h4 class="font-bold">Ratings & Reviews</h4><div id="reviewsArea"></div>
+      <div class="mt-2"><textarea id="reviewText" class="w-full rounded-xl border px-3 py-2" placeholder="Write feedback..."></textarea>
+      <div class="flex gap-2 mt-2"><select id="reviewRating" class="rounded-xl border px-3 py-2"><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select>
+      <button id="submitReview" class="btn-3d bg-indigo-700 text-white px-3 py-1 rounded-2xl">Submit Review</button></div></div></div>`;
+    modalBody.innerHTML = html;
+    modal.classList.remove('hidden');
+
+    // attach modal actions
+    if ($('modalWa')) $('modalWa').onclick = () => { handleWhatsAppClick(id); };
+    if ($('modalReq')) $('modalReq').onclick = () => { requestRechargeAction(); };
+    $('submitReview').onclick = async () => {
+      if (!currentUser) return alert('Login to review');
+      const rating = parseInt($('reviewRating').value,10);
+      const text = $('reviewText').value.trim();
+      await db.ref(`providers/${id}/reviews`).push({ uid: currentUser.uid, rating, text, createdAt: Date.now() });
+      alert('Review submitted');
+      $('reviewText').value=''; $('reviewRating').value='5';
+      loadReviews(id);
+    };
+    loadReviews(id);
+  }
+  closeModal.onclick = ()=> modal.classList.add('hidden');
+
+  async function loadReviews(providerId) {
+    const snap = await db.ref(`providers/${providerId}/reviews`).once('value');
+    const obj = snap.val()||{};
+    const arr = Object.values(obj);
+    const area = $('reviewsArea');
+    if (!area) return;
+    if (!arr.length) area.innerHTML = '<div class="text-sm text-gray-600">No reviews yet.</div>';
+    else area.innerHTML = arr.map(r=>`<div class="rounded-xl border p-2"><div class="text-amber-500">${'★'.repeat(r.rating||0)}</div><div class="text-sm">${escapeHtml(r.text||'')}</div></div>`).join('');
+  }
+
+  // My Listings (owner sees their pending/rejected too)
+  function listenMyListings() {
+    if (!currentUser) return;
+    const ref = db.ref('providers').orderByChild('ownerUid').equalTo(currentUser.uid);
+    ref.on('value', (snap) => {
+      const obj = snap.val()||{};
+      const arr = Object.entries(obj).map(([id,v])=>({id,...v}));
+      myListings.innerHTML = arr.map(p=>`<div class="rounded-xl p-3 ${p.status==='rejected'?'bg-rose-50':p.status==='pending'?'bg-amber-50':'bg-emerald-50'}">
+        <div class="flex items-center justify-between"><div><div class="font-semibold">${escapeHtml(p.serviceName)}</div><div class="text-xs">Status: ${p.status}</div></div><button data-id="${p.id}" class="openMineBtn text-xs underline">Open</button></div></div>`).join('');
+      myListings.querySelectorAll('.openMineBtn').forEach(b => b.onclick = ()=> openModalById(b.dataset.id));
+    });
+  }
+
+  // Balance listener
+  function listenBalance(){
+    if (!currentUser) return;
+    db.ref('users/'+currentUser.uid+'/wallet').on('value', snap => {
+      const val = snap.val()||0;
+      balanceDiv.textContent = `₹${val}`;
+    });
+  }
+
+  // helper synchronous-ish check for balance (uses cached DOM value)
+  function userHasSufficientBalanceSync(amount) {
+    const t = balanceDiv.textContent.replace('₹','')||'0';
+    return parseInt(t,10) >= amount;
+  }
+
+  // Request Recharge
+  reqRecharge.onclick = () => requestRechargeAction();
+  function requestRechargeAction() {
+    if (!currentUser) return alert('Login required');
+    const ref = db.ref('rechargeRequests').push();
+    ref.set({ uid: currentUser.uid, amount: 100, status: 'pending', createdAt: Date.now() });
+    $('rechargeMsg').textContent = 'Recharge requested — admin will approve.';
+  }
+
+  // Admin: listen recharge requests
+  function listenRechargeRequests(){
+    db.ref('rechargeRequests').on('value', snap => {
+      const obj = snap.val()||{};
+      const arr = Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.createdAt-a.createdAt);
+      rechargeList.innerHTML = arr.map(r => `<div class="rounded-xl p-3 ${r.status==='approved'?'bg-emerald-50':'bg-amber-50'}">
+        <div class="text-sm font-semibold">UID: ${r.uid}</div><div class="text-xs">Amount: ₹${r.amount} | Status: ${r.status}</div>
+        ${r.status!=='approved'?`<div class="mt-2"><button data-id="${r.id}" data-uid="${r.uid}" class="approveReq btn-3d bg-green-600 text-white px-3 py-1 rounded-2xl">Accept Recharge</button></div>`:''}
+      </div>`).join('');
+      rechargeList.querySelectorAll('.approveReq').forEach(b=> b.onclick = () => adminApproveRecharge(b.dataset.id, b.dataset.uid));
+    });
+  }
+  listenRechargeRequests();
+
+  // admin approves recharge: add ₹100 to user's wallet, mark request approved
+  async function adminApproveRecharge(reqId, uid){
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return alert('Admin only');
+    const userRef = db.ref('users/'+uid);
+    await userRef.transaction(u => {
+      if (u) { u.wallet = (u.wallet||0) + 100; return u; }
+      return u;
+    });
+    await db.ref('rechargeRequests/'+reqId).update({ status:'approved' });
+    alert('Recharge successful');
+  }
+
+  // Admin listing actions
+  async function adminApprove(id){
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return alert('Admin only');
+    await db.ref('providers/'+id).update({ status:'approved' });
+  }
+  async function adminReject(id){
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return alert('Admin only');
+    await db.ref('providers/'+id).update({ status:'rejected' });
+  }
+  async function adminDelete(id){
+    if (!currentUser || currentUser.email !== ADMIN_EMAIL) return alert('Admin only');
+    if (!confirm('Delete permanently?')) return;
+    await db.ref('providers/'+id).remove();
+  }
+
+  // WhatsApp click: deduct ₹20 then open wa.me
+  async function handleWhatsAppClick(providerId){
+    if (!currentUser) return alert('Login to contact');
+    // get provider
+    const snap = await db.ref('providers/'+providerId).once('value');
+    const p = snap.val();
+    if (!p) return alert('Provider not found');
+    // transaction on user's wallet
+    const userRef = db.ref('users/'+currentUser.uid+'/wallet');
+    try {
+      await userRef.transaction(function(current) {
+        if ((current || 0) < 20) { return; } // abort
+        return (current || 0) - 20;
+      }, async function(error, committed, snapshot) {
+        if (error) { alert('Transaction failed: '+error); }
+        else if (!committed) { alert('Insufficient balance. Recharge to contact.'); }
+        else {
+          // log contact
+          db.ref('contactLogs').push({ uid: currentUser.uid, providerId, cost:20, createdAt: Date.now() });
+          // open whatsapp
+          const num = (p.whatsapp || p.phone || '').replace(/\D/g,'');
+          if (!num) return alert('No WhatsApp number available');
+          window.open('https://wa.me/'+num, '_blank');
+        }
+      });
+    } catch(e){ console.error(e); alert('Could not process contact: '+e.message); }
+  }
+
+  // search box
+  searchBox.addEventListener('input', ()=> {
+    // re-render by reading current public providers snapshot (force)
+    // easier: call listenPublicProviders again? we already have listener; just trigger rerender by re-reading full list from DB
+    db.ref('providers').once('value').then(snap => {
+      const obj = snap.val()||{};
+      const arr = Object.entries(obj).map(([id,v])=>({id,...v}));
+      const approved = arr.filter(a => a.status === 'approved');
+      renderGrid(approved);
+    });
+  });
+
+  // load admin recharge list if admin
+  auth.onAuthStateChanged(user => {
+    if (user && user.email === ADMIN_EMAIL) {
+      listenRechargeRequests();
+    }
+  });
+
+  // initial public provider render already attached. For admin page to work, make sure to show admin panel when admin logged
+  // ensure realtime update for public approvals changes
+  db.ref('providers').on('child_changed', snap => {
+    // rerender public
+    db.ref('providers').once('value').then(snap=> {
+      const obj = snap.val()||{};
+      const arr = Object.entries(obj).map(([id,v])=>({id,...v}));
+      renderGrid(arr.filter(a=>a.status==='approved'));
+    });
+  });
+  db.ref('providers').on('child_removed', snap => {
+    db.ref('providers').once('value').then(snap=> {
+      const obj = snap.val()||{};
+      const arr = Object.entries(obj).map(([id,v])=>({id,...v}));
+      renderGrid(arr.filter(a=>a.status==='approved'));
+    });
+  });
+
+  // show admin recharge UI when admin logged
+  auth.onAuthStateChanged(u => {
+    if (u && u.email === ADMIN_EMAIL) {
+      adminRechargeRequests.classList.remove('hidden');
+      // ensure rechargeList populated
+      db.ref('rechargeRequests').once('value').then(()=> listenRechargeRequests());
+    } else {
+      adminRechargeRequests.classList.add('hidden');
+    }
+  });
+
+  // start - ensure public grid renders live (approved)
+  (async function initial() {
+    const snap = await db.ref('providers').once('value');
+    const obj = snap.val()||{};
+    const arr = Object.entries(obj).map(([id,v])=>({id,...v}));
+    renderGrid(arr.filter(a=>a.status==='approved'));
+  })();
+
+  // small escape helper done; end of script
+  </script>
+</body>
+</html>
