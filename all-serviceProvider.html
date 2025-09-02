@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZaraFix - Service Provider Portal</title>
+  <meta name="description" content="ZaraFix पर सभी Service Providers की सूची। Doctors, Hospitals, Ambulance, Shops, Electricians, Plumbers आदि खोजें।">
+  <meta name="google-site-verification" content="747ecEujhHluFPpMSv_v2bkpZ7IT6pbVqDW1XrpEQBo" />
+  <title>All Service Provider Portal</title>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
   <style>
     body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
     header { background:linear-gradient(135deg,#2196F3,#21CBF3); color:white;
@@ -25,17 +26,32 @@
     .newPostBtn { background:#FF9800; color:#fff; margin-left:10px; }
 
     /* Search Bar */
-    .searchBar { margin:12px; display:flex; justify-content:center; align-items:center; gap:10px; }
-    .searchBar input { padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; min-width:220px; }
+    .searchBar {
+      margin:12px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:10px;
+    }
+    .searchBar input {
+      padding:8px; border-radius:6px; border:1px solid #ccc; font-size:14px; min-width:220px;
+    }
 
     /* Grid */
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
             gap:12px; padding:12px; }
     .card { background:#fff; border-radius:10px; box-shadow:0 3px 5px rgba(0,0,0,0.2);
             padding:10px; position:relative; transition:transform .2s; cursor:pointer;
-            font-size:13px; border:2px solid #1976d2; }
+            font-size:13px; border:2px solid red; }
     .card:hover { transform:scale(1.02); }
-    .card img { width:100%; height:150px; object-fit:cover; border-radius:6px; }
+ .card img { 
+  width:100%; 
+  height:150px; 
+  object-fit:contain;   /* contain उपयोग करें */
+  border-radius:6px; 
+  background:#000;      /* खाली space को fill करने के लिए optional */
+}
+
     .card h3 { margin:6px 0 3px; font-size:15px; }
     .card p { margin:1px 0; font-size:13px; }
 
@@ -48,15 +64,18 @@
                      max-height:90%; overflow:auto; position:relative; font-size:14px; }
     .close { position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; font-size:18px; }
     form label { font-size:13px; font-weight:bold; margin-top:6px; display:block; }
-    form input, form select { width:100%; padding:5px; margin:3px 0 8px;
-                              border:1px solid #ccc; border-radius:6px; font-size:13px; }
+    form input { width:100%; padding:5px; margin:3px 0 8px;
+                 border:1px solid #ccc; border-radius:6px; font-size:13px; }
     .btnRow { margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
   </style>
 </head>
 <body>
 <header>
-  <h1>Service Provider Portal</h1>
+  <h1>All Service Providers</h1>
   <div>
+    <a href="index.html">
+      <button style="background-color:blue; color:white;">🏡 Home</button>
+    </a>
     <button id="loginBtn" style="background-color:#4ade80; color:white;">🔑 Login</button>
     <button id="logoutBtn" style="display:none; background-color:#ef4444; color:white;">Logout</button>
     <button id="newPostBtn" style="display:none; background-color:#2563eb; color:white;">+ New Post</button>
@@ -65,7 +84,7 @@
 
 <!-- 🔍 Search Bar -->
 <div class="searchBar">
-  <input type="text" id="searchInput" placeholder="Search by service, provider name, address...">
+  <input type="text" id="searchInput" placeholder="Search by name, category, address...">
 </div>
 
 <main>
@@ -76,35 +95,25 @@
 <div class="modal" id="postModal">
   <div class="modal-content">
     <span class="close" id="closeForm">&times;</span>
-    <h2>Add Service Provider</h2>
+    <h2>Post Your Service</h2>
     <form id="postForm">
+      
       <label>Service/Business Name</label>
       <input type="text" id="serviceName" required>
       
-      <label>Service Category</label>
-      <select id="serviceCategory" required>
-        <option value="Doctor">Doctor</option>
-        <option value="Hospital">Hospital</option>
-        <option value="Ambulance">Ambulance</option>
-        <option value="Electrician">Electrician</option>
-        <option value="Plumber">Plumber</option>
-        <option value="Carpenter">Carpenter</option>
-        <option value="Shop">Shop</option>
-      </select>
+      <label>Service Category (Doctor, Hospital, Ambulance, Shop, Electrician, Plumber...)</label>
+      <input type="text" id="serviceCategory" required>
 
       <label>Address</label>
       <input type="text" id="address" required>
       
-      <label>Phone (WhatsApp)</label>
+      <label>Mobile/WhatsApp Number</label>
       <input type="tel" id="phone" required>
-      
-      <label>Service Hours</label>
-      <input type="text" id="hours" placeholder="e.g. 9AM - 10PM" required>
       
       <label>Upload Images (max 5)</label>
       <input type="file" id="images" accept="image/*" multiple>
       
-      <button type="submit" class="btn3d">Submit</button>
+      <button type="submit" class="btn3d">Submit Service</button>
     </form>
   </div>
 </div>
@@ -127,6 +136,7 @@ const firebaseConfig = {
   messagingSenderId: "636550144008",
   appId: "1:636550144008:web:a849496ad1d1557d7ab1bd"
 };
+  
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.database();
@@ -151,8 +161,15 @@ logoutBtn.onclick=()=>auth.signOut();
 
 auth.onAuthStateChanged(u=>{
   currentUser=u;
-  if(u){ loginBtn.style.display="none"; logoutBtn.style.display="inline-block"; newPostBtn.style.display="inline-block"; }
-  else { loginBtn.style.display="inline-block"; logoutBtn.style.display="none"; newPostBtn.style.display="none"; }
+  if(u){
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    newPostBtn.style.display="inline-block";
+  } else {
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    newPostBtn.style.display="none";
+  }
   loadPosts();
 });
 
@@ -165,11 +182,14 @@ async function uploadImages(files) {
   const urls = [];
   const apiKey = "cad1f0dbfbd25346460789376cc2d7d5";
   for (let i = 0; i < Math.min(5, files.length); i++) {
-    const f = files[i]; const fd = new FormData(); fd.append("image", f);
+    const f = files[i];
+    const fd = new FormData();
+    fd.append("image", f);
     try {
-      const r = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: fd });
-      const j = await r.json(); if(j?.data?.url) urls.push(j.data.url);
-    } catch(e){ console.error("Upload error:", e); }
+ const r = await fetch("https://api.imgbb.com/1/upload?key=cad1f0dbfbd25346460789376cc2d7d5", {method:"POST", body:fd});
+      const j = await r.json();
+      if (j && j.data && j.data.url) urls.push(j.data.url);
+    } catch (err) { console.error("Upload failed", err); }
   }
   return urls;
 }
@@ -178,82 +198,128 @@ async function uploadImages(files) {
 postForm.onsubmit=async e=>{
   e.preventDefault();
   if(!currentUser) return alert("Login first");
+  const submitBtn=postForm.querySelector("button[type=submit]");
+  submitBtn.disabled=true; submitBtn.textContent="⏳ Submitting...";
+
   const post = {
     serviceName: document.getElementById('serviceName').value,
     serviceCategory: document.getElementById('serviceCategory').value,
     address: document.getElementById('address').value,
     phone: document.getElementById('phone').value,
-    hours: document.getElementById('hours').value,
     posterUid: currentUser.uid,
     posterName: currentUser.displayName,
     posterEmail: currentUser.email,
     status: "pending",
     created: Date.now()
   };
+
   const files=document.getElementById('images').files;
   if(files.length>0) post.images=await uploadImages(files);
+
   db.ref("posts").push(post,(err)=>{
-    if(err) alert("❌ Error");
-    else { alert("✅ Submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    if(err){ alert("❌ Error"); }
+    else{ alert("✅ Post submitted! Waiting for approval."); postForm.reset(); postModal.style.display="none"; }
+    submitBtn.disabled=false; submitBtn.textContent="Submit Service";
   });
 };
 
 // Load posts
 function loadPosts(){
   db.ref("posts").orderByChild("created").on("value",snap=>{
-    allPosts=[]; snap.forEach(ch=>allPosts.push({...ch.val(),id:ch.key})); allPosts.reverse();
+    allPosts=[];
+    snap.forEach(ch=>{ allPosts.push({...ch.val(), id:ch.key}); });
+    allPosts.reverse();
     renderPosts();
   });
 }
 
 // Render posts
-function renderPosts(){
-  postsDiv.innerHTML="";
-  const keyword=searchInput.value.toLowerCase();
-  allPosts.forEach(p=>{
-    if(currentUser?.email!=="zarasamajiksevasanstha@gmail.com"){
-      if(p.status!=="approved" && (!currentUser || p.posterUid!==currentUser.uid)) return;
-    }
-    if(keyword && !(p.serviceName?.toLowerCase().includes(keyword) || p.address?.toLowerCase().includes(keyword) || p.posterName?.toLowerCase().includes(keyword) || p.serviceCategory?.toLowerCase().includes(keyword))) return;
+function renderPosts() {
+  postsDiv.innerHTML = "";
+  const keyword = searchInput.value.toLowerCase();
 
-    const card=document.createElement("div");
-    card.className="card"; if(p.status==="pending") card.classList.add("pending");
-    if(p.images && p.images.length){ const img=document.createElement("img"); img.src=p.images[0]; card.appendChild(img); }
-    card.innerHTML+=`
-      <h3>${p.serviceName}</h3>
+  allPosts.forEach(p => {
+    // Admin sees all, others only approved or their own
+    if (currentUser?.email !== "zarasamajiksevasanstha@gmail.com") {
+      if (p.status !== "approved" && (!currentUser || p.posterUid !== currentUser.uid)) return;
+    }
+
+    if (keyword && !(
+      p.serviceName?.toLowerCase().includes(keyword) ||
+      p.serviceCategory?.toLowerCase().includes(keyword) ||
+      p.address?.toLowerCase().includes(keyword)
+    )) return;
+
+    const card = document.createElement("div");
+    card.className = "card";
+    if (p.status === "pending") card.classList.add("pending");
+    if (p.status === "rejected") card.style.background = "#ffe0b2";
+
+    if (p.images && p.images.length) {
+      const img = document.createElement("img");
+      img.src = p.images[0];
+      card.appendChild(img);
+    }
+
+    card.innerHTML += `
+      <h3>📌 ${p.serviceName}</h3>
       <p>🏷️ ${p.serviceCategory}</p>
       <p>📍 ${p.address}</p>
       <p>📞 ${p.phone}</p>
-      <p>⏰ ${p.hours}</p>
       <p>👤 ${p.posterName}</p>
-      <p>${p.status==="approved"?"✅ Approved":p.status==="rejected"?"❌ Rejected":"⏳ Pending"}</p>`;
-    
-    const btnRow=document.createElement("div"); btnRow.className="btnRow";
-    const waBtn=document.createElement("button");
-    waBtn.textContent="💬 WhatsApp"; waBtn.className="waBtn";
-    waBtn.onclick=e=>{ e.stopPropagation(); window.open(`https://wa.me/${p.phone}?text=Hello, I want to know more about your service: ${p.serviceName}`, "_blank"); };
+      <p>${p.status === "approved" ? "✅ Approved" : p.status === "rejected" ? "❌ Rejected" : "⏳ Pending Approval"}</p>
+    `;
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "btnRow";
+
+    const waBtn = document.createElement("button");
+    waBtn.textContent = "💬 WhatsApp";
+    waBtn.className = "waBtn";
+    waBtn.onclick = e => {
+      e.stopPropagation();
+      const msg = `send by-ZARA FIX - Hello, I want to know more about your service: ${p.serviceName} (${p.serviceCategory}) at ${p.address}.`;
+      window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    };
     btnRow.appendChild(waBtn);
 
-    if(currentUser && currentUser.uid===p.posterUid && currentUser.email!=="zarasamajiksevasanstha@gmail.com"){
-      const delBtn=document.createElement("button");
-      delBtn.textContent="🗑 Delete"; delBtn.className="logoutBtn";
-      delBtn.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete?")) await db.ref("posts/"+p.id).remove(); };
+    if (currentUser && currentUser.email === "zarasamajiksevasanstha@gmail.com") {
+      const apBtn = document.createElement("button");
+      apBtn.textContent = "✅ Approve";
+      apBtn.className = "btn3d";
+      apBtn.onclick = async e => { e.stopPropagation(); await db.ref("posts/" + p.id).update({status:"approved"}); };
+
+      const rjBtn = document.createElement("button");
+      rjBtn.textContent = "❌ Reject";
+      rjBtn.className = "logoutBtn";
+      rjBtn.onclick = async e => { e.stopPropagation(); await db.ref("posts/" + p.id).update({status:"rejected"}); };
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑 Delete";
+      delBtn.className = "logoutBtn";
+      delBtn.onclick = async e => { e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
+
+      btnRow.appendChild(apBtn);
+      btnRow.appendChild(rjBtn);
       btnRow.appendChild(delBtn);
     }
 
-    if(currentUser && currentUser.email==="zarasamajiksevasanstha@gmail.com"){
-      const apBtn=document.createElement("button"); apBtn.textContent="✅ Approve"; apBtn.className="btn3d";
-      apBtn.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"approved"}); };
-      const rjBtn=document.createElement("button"); rjBtn.textContent="❌ Reject"; rjBtn.className="logoutBtn";
-      rjBtn.onclick=async e=>{ e.stopPropagation(); await db.ref("posts/"+p.id).update({status:"rejected"}); };
-      const delBtn=document.createElement("button"); delBtn.textContent="🗑 Delete"; delBtn.className="logoutBtn";
-      delBtn.onclick=async e=>{ e.stopPropagation(); if(confirm("Delete permanently?")) await db.ref("posts/"+p.id).remove(); };
-      btnRow.appendChild(apBtn); btnRow.appendChild(rjBtn); btnRow.appendChild(delBtn);
-    }
     card.appendChild(btnRow);
+
+    card.onclick = () => {
+      cardContent.querySelector('.modal-body').innerHTML = `
+        <h2>${p.serviceName}</h2>
+        <p><b>Category:</b> ${p.serviceCategory}</p>
+        <p><b>Address:</b> ${p.address}</p>
+        <p><b>Phone:</b> ${p.phone}</p>
+      `;
+      cardModal.style.display = "flex";
+    };
+
     postsDiv.appendChild(card);
   });
 }
+
 searchInput.addEventListener("input",renderPosts);
 </script>
 </body>
